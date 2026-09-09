@@ -123,7 +123,22 @@
 
   function rr(ctx,r,rad=24){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(r.x,r.y,r.w,r.h,rad);else ctx.rect(r.x,r.y,r.w,r.h)}
   function rect(el,d){const r=el.getBoundingClientRect(),dr=d.getBoundingClientRect(),s=dr.width/d.offsetWidth||1;return{x:(r.left-dr.left)/s,y:(r.top-dr.top)/s,w:r.width/s,h:r.height/s}}
-  function text(ctx,el,d){if(!el)return;const r=rect(el,d),st=getComputedStyle(el),fs=parseFloat(st.fontSize)||16,w=st.fontWeight||"400",fam=st.fontFamily||"Arial";ctx.save();ctx.font=`${w} ${fs}px ${fam}`;ctx.fillStyle=st.color||"#fff";ctx.textBaseline="top";ctx.textAlign=st.textAlign||"left";let x=r.x;if(st.textAlign==="center")x+=r.w/2;else if(st.textAlign==="right")x+=r.w;ctx.fillText(el.textContent.trim(),x,r.y);ctx.restore()}
+  function text(ctx,el,d){
+    if(!el)return;
+    const r=rect(el,d),st=getComputedStyle(el),fs=parseFloat(st.fontSize)||16,w=st.fontWeight||"400",fam=st.fontFamily||"Arial";
+    const content=el.textContent.trim();if(!content)return;
+    ctx.save();
+    ctx.font=`${w} ${fs}px ${fam}`;
+    ctx.fillStyle=st.color||"#fff";
+    ctx.textAlign=st.textAlign||"left";
+    ctx.textBaseline="middle";
+    if("direction" in ctx)ctx.direction=st.direction==="ltr"?"ltr":"rtl";
+    let x=r.x;
+    if(st.textAlign==="center")x+=r.w/2;else if(st.textAlign==="right")x+=r.w;
+    const y=r.y+r.h/2;
+    ctx.fillText(content,x,y);
+    ctx.restore();
+  }
   function download(c,format,name){const mime=format==="jpg"?"image/jpeg":format==="webp"?"image/webp":"image/png";c.toBlob(b=>{if(!b)return;const u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download=`${name}.${format}`;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)},mime,format==="png"?undefined:.98)}
 
   async function exportCustom(id,format){
