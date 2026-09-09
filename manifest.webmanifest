@@ -1,0 +1,21 @@
+{
+  "name": "برنامج تقاويم الصلاة",
+  "short_name": "تقاويم الصلاة",
+  "description": "برنامج تقاويم الصلاة ومواقيت الصلاة اليومية",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07151e",
+  "theme_color": "#07151e",
+  "icons": [
+    {
+      "src": "/assets/icons/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
