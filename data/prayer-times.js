@@ -21,7 +21,7 @@ window.addEventListener("load", () => {
     script.onload = () => {
         if (document.querySelector('script[data-additional-designs]')) return;
         const extraScript = document.createElement("script");
-        extraScript.src = "js/additional-designs.js?v=1";
+        extraScript.src = "js/additional-designs.js?v=2";
         extraScript.dataset.additionalDesigns = "true";
         document.body.appendChild(extraScript);
     };
