@@ -21,8 +21,15 @@ window.addEventListener("load", () => {
     script.onload = () => {
         if (document.querySelector('script[data-additional-designs]')) return;
         const extraScript = document.createElement("script");
-        extraScript.src = "js/additional-designs.js?v=3";
+        extraScript.src = "js/additional-designs.js?v=4";
         extraScript.dataset.additionalDesigns = "true";
+        extraScript.onload = () => {
+            if (document.querySelector('script[data-night-design]')) return;
+            const nightScript = document.createElement("script");
+            nightScript.src = "js/night-design.js?v=1";
+            nightScript.dataset.nightDesign = "true";
+            document.body.appendChild(nightScript);
+        };
         document.body.appendChild(extraScript);
     };
     document.body.appendChild(script);
