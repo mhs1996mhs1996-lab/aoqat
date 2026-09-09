@@ -62,6 +62,18 @@
 
       #fontPanel label{margin-bottom:4px!important}
 
+      /* أدوات تحريك/حفظ التصميم تنتقل للشريط الجانبي حتى تبقى التصديرات فقط أسفل المعاينة */
+      .sidebar>.drag-info{
+        width:100%!important;
+        margin:0!important;
+        display:flex!important;
+        flex-direction:column!important;
+        gap:7px!important;
+        padding:10px!important;
+      }
+      .sidebar>.drag-info span{display:none!important}
+      .sidebar>.drag-info button{width:100%!important;min-width:0!important}
+
       @media(max-width:800px){
         .sidebar{gap:8px!important}
         .sidebar>.main-panel{padding:10px!important}
@@ -111,6 +123,12 @@
         }
       },true);
     });
+
+    /* تحت صورة المعاينة تبقى فقط أزرار التصدير */
+    const dragInfo=document.querySelector(".workspace .drag-info");
+    if(dragInfo){
+      sidebar.appendChild(dragInfo);
+    }
   }
 
   if(document.readyState==="loading"){
