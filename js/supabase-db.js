@@ -78,4 +78,85 @@ function setupMobileResponsiveView(){
     document.fonts?.ready?.then(resize).catch(()=>{});
 }
 
-async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setTodayDateAutomatically();await loadPrayerFromDatabase(true);}
+/* تثبيت البرنامج كتطبيق على الهاتف PWA */
+function setupPWAInstallation(){
+    if(document.querySelector('link[rel="manifest"]')) return;
+
+    const manifest=document.createElement("link");
+    manifest.rel="manifest";
+    manifest.href="/manifest.webmanifest";
+    document.head.appendChild(manifest);
+
+    const theme=document.createElement("meta");
+    theme.name="theme-color";
+    theme.content="#07151e";
+    document.head.appendChild(theme);
+
+    const appleCapable=document.createElement("meta");
+    appleCapable.name="apple-mobile-web-app-capable";
+    appleCapable.content="yes";
+    document.head.appendChild(appleCapable);
+
+    const appleStatus=document.createElement("meta");
+    appleStatus.name="apple-mobile-web-app-status-bar-style";
+    appleStatus.content="black-translucent";
+    document.head.appendChild(appleStatus);
+
+    const appleTitle=document.createElement("meta");
+    appleTitle.name="apple-mobile-web-app-title";
+    appleTitle.content="تقاويم الصلاة";
+    document.head.appendChild(appleTitle);
+
+    const icon=document.createElement("link");
+    icon.rel="icon";
+    icon.href="/assets/icons/app-icon.svg";
+    icon.type="image/svg+xml";
+    document.head.appendChild(icon);
+
+    if("serviceWorker" in navigator){
+        window.addEventListener("load",()=>{
+            navigator.serviceWorker.register("/sw.js").catch(err=>console.error("SW registration failed",err));
+        });
+    }
+
+    let deferredPrompt=null;
+    const installBtn=document.createElement("button");
+    installBtn.id="installAppBtn";
+    installBtn.type="button";
+    installBtn.textContent="📲 تثبيت التطبيق";
+    installBtn.style.cssText="display:none;border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;color:#fff;background:#b58a22;cursor:pointer;white-space:nowrap";
+
+    const topbar=document.querySelector(".topbar");
+    if(topbar) topbar.appendChild(installBtn);
+
+    const standalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+    const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if(isiOS && !standalone){
+        installBtn.style.display="inline-flex";
+        installBtn.addEventListener("click",()=>{
+            alert("لتثبيت التطبيق على iPhone: افتح زر المشاركة في Safari ثم اختر «إضافة إلى الشاشة الرئيسية».");
+        });
+    }
+
+    window.addEventListener("beforeinstallprompt",event=>{
+        event.preventDefault();
+        deferredPrompt=event;
+        installBtn.style.display="inline-flex";
+    });
+
+    installBtn.addEventListener("click",async()=>{
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt=null;
+        installBtn.style.display="none";
+    });
+
+    window.addEventListener("appinstalled",()=>{
+        deferredPrompt=null;
+        installBtn.style.display="none";
+    });
+}
+
+async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setupPWAInstallation();setTodayDateAutomatically();await loadPrayerFromDatabase(true);}
