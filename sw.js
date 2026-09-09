@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v4";
+const CACHE_NAME = "aoqat-pwa-v5";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -7,6 +7,7 @@ const APP_SHELL = [
   "/js/supabase-db.js",
   "/js/second-design.js",
   "/js/additional-designs.js",
+  "/js/night-design.js",
   "/js/modal-panels.js",
   "/data/prayer-times.js",
   "/manifest.webmanifest",
