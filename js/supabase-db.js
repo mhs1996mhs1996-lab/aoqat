@@ -20,25 +20,62 @@ function currentAnnualPrayerRecord(){const monthName=document.getElementById("gr
 async function savePrayerToDatabase(){try{dbStatus("جاري الحفظ...");const record=currentAnnualPrayerRecord();const response=await fetch(`${SUPABASE_URL}/rest/v1/annual_prayer_times?on_conflict=gregorian_month,gregorian_day`,{method:"POST",headers:dbHeaders({Prefer:"resolution=merge-duplicates,return=representation"}),body:JSON.stringify(record)});if(!response.ok)throw new Error(await response.text());dbStatus("تم حفظ المواقيت في قاعدة البيانات ✓","success");}catch(error){console.error(error);dbStatus("تعذر الحفظ","error");alert("تعذر الحفظ في قاعدة البيانات.");}}
 function setupAutomaticDateChangeLoading(){document.getElementById("gregorianDay")?.addEventListener("change",()=>loadPrayerFromDatabase(true));document.getElementById("gregorianMonth")?.addEventListener("change",()=>loadPrayerFromDatabase(true));}
 
-/* تصحيح المعاينة للهاتف: القياس الحقيقي يؤخذ من CSS بدل افتراض 1024x1448 */
+/* عرض الهاتف: نستخدم zoom بدل transform حتى تبقى المعاينة ظاهرة ومكانها صحيح */
 function setupMobileResponsiveView(){
-    if(document.getElementById("mobileResponsiveStyles"))return;
-    const style=document.createElement("style");style.id="mobileResponsiveStyles";style.textContent=`
-    .mobile-design-wrap{position:relative;flex:0 0 auto;margin:0 auto}
-    @media(max-width:800px){html,body{overflow-x:hidden!important}.topbar{min-height:auto!important;padding:9px 10px!important;gap:8px!important}.brand{gap:8px!important;min-width:0!important}.brand-icon{font-size:27px!important}.brand h1{font-size:17px!important;margin-bottom:0!important;white-space:nowrap}.brand p{display:none!important}.top-export{padding:9px 11px!important;font-size:13px!important;white-space:nowrap}.app{width:100%!important;padding:6px!important;gap:8px!important;grid-template-columns:1fr!important}.workspace,.sidebar{width:100%!important;min-width:0!important}.workspace{order:1!important}.sidebar{order:2!important}.preview-header{padding:5px 3px 7px!important;gap:8px!important}.preview-header h2{font-size:16px!important}.preview-header span{font-size:10px!important}.previewBox{width:100%!important;min-height:0!important;height:auto!important;padding:6px!important;overflow:hidden!important;justify-content:center!important;align-items:flex-start!important}.panel{padding:10px!important;border-radius:7px!important}.panel h2,.font-title h2{font-size:16px!important}.main-action{height:40px!important;margin-top:5px!important;font-size:14px!important}label{font-size:12px!important;margin-bottom:7px!important}select,input[type=number],input[type=text],textarea{min-height:34px!important;padding:6px 8px!important;font-size:13px!important}.font-controls{grid-template-columns:1fr 1fr!important;gap:7px!important}.drag-info{min-height:0!important;padding:8px!important;flex-direction:column!important;align-items:stretch!important}#resetPositions{width:100%!important;min-width:0!important}}
-    @media(max-width:420px){.brand h1{font-size:15px!important}.brand-icon{font-size:23px!important}.preview-header span{display:none!important}.font-controls{grid-template-columns:1fr!important}}
-    `;document.head.appendChild(style);
-    const previewBox=document.querySelector(".previewBox"),design=document.getElementById("design");if(!previewBox||!design)return;
-    /* نقرأ القياس الفعلي للتصميم قبل أي transform */
-    const designStyle=getComputedStyle(design);
-    const DESIGN_WIDTH=parseFloat(designStyle.width)||design.offsetWidth;
-    const DESIGN_HEIGHT=parseFloat(designStyle.height)||design.offsetHeight;
-    let wrapper=design.parentElement;if(!wrapper.classList.contains("mobile-design-wrap")){wrapper=document.createElement("div");wrapper.className="mobile-design-wrap";design.parentNode.insertBefore(wrapper,design);wrapper.appendChild(design);}
+    if(document.getElementById("mobileResponsiveStyles")) return;
+
+    const style=document.createElement("style");
+    style.id="mobileResponsiveStyles";
+    style.textContent=`
+      @media(max-width:800px){
+        html,body{overflow-x:hidden!important}
+        .topbar{min-height:auto!important;padding:9px 10px!important;gap:8px!important}
+        .brand{gap:8px!important;min-width:0!important}.brand-icon{font-size:27px!important}.brand h1{font-size:17px!important;margin:0!important;white-space:nowrap}.brand p{display:none!important}
+        .top-export{padding:9px 11px!important;font-size:13px!important;white-space:nowrap}
+        .app{width:100%!important;padding:6px!important;gap:8px!important;grid-template-columns:1fr!important}
+        .workspace,.sidebar{width:100%!important;min-width:0!important}.workspace{order:1!important}.sidebar{order:2!important}
+        .preview-header{padding:5px 3px 7px!important}.preview-header h2{font-size:16px!important}.preview-header span{font-size:10px!important}
+        .previewBox{width:100%!important;min-height:0!important;height:auto!important;padding:6px!important;overflow:hidden!important;display:block!important;text-align:center!important}
+        .design{margin:0 auto!important;transform:none!important;transform-origin:top center!important}
+        .panel{padding:10px!important}.panel h2,.font-title h2{font-size:16px!important}
+        .main-action{height:40px!important;font-size:14px!important}label{font-size:12px!important}select,input[type=number],input[type=text],textarea{min-height:34px!important;font-size:13px!important}
+        .font-controls{grid-template-columns:1fr 1fr!important}.drag-info{min-height:0!important;flex-direction:column!important;align-items:stretch!important}#resetPositions{width:100%!important;min-width:0!important}
+      }
+      @media(max-width:420px){.brand h1{font-size:15px!important}.brand-icon{font-size:23px!important}.preview-header span{display:none!important}.font-controls{grid-template-columns:1fr!important}}
+    `;
+    document.head.appendChild(style);
+
+    const previewBox=document.querySelector(".previewBox");
+    const design=document.getElementById("design");
+    if(!previewBox||!design) return;
+
+    const DESIGN_WIDTH=1024;
+
     const resize=()=>{
-      if(window.innerWidth>800){wrapper.style.width=DESIGN_WIDTH+"px";wrapper.style.height=DESIGN_HEIGHT+"px";design.style.transform="none";design.style.transformOrigin="top left";return;}
-      const cs=getComputedStyle(previewBox);const padding=parseFloat(cs.paddingLeft||0)+parseFloat(cs.paddingRight||0);const available=Math.max(220,previewBox.clientWidth-padding-2);const scale=Math.min(1,available/DESIGN_WIDTH);
-      wrapper.style.width=(DESIGN_WIDTH*scale)+"px";wrapper.style.height=(DESIGN_HEIGHT*scale)+"px";design.style.transform=`scale(${scale})`;design.style.transformOrigin="top left";
+      if(window.innerWidth>800){
+        design.style.zoom="1";
+        design.style.transform="none";
+        design.style.margin="0 auto";
+        return;
+      }
+
+      const cs=getComputedStyle(previewBox);
+      const padding=parseFloat(cs.paddingLeft||0)+parseFloat(cs.paddingRight||0);
+      const available=Math.max(220, previewBox.clientWidth-padding-2);
+      const scale=Math.min(1, available/DESIGN_WIDTH);
+
+      design.style.transform="none";
+      design.style.zoom=String(scale);
+      design.style.margin="0 auto";
     };
-    resize();requestAnimationFrame(resize);setTimeout(resize,250);window.addEventListener("resize",resize,{passive:true});window.addEventListener("orientationchange",()=>setTimeout(resize,150),{passive:true});
+
+    resize();
+    requestAnimationFrame(resize);
+    setTimeout(resize,150);
+    setTimeout(resize,500);
+    window.addEventListener("resize",resize,{passive:true});
+    window.addEventListener("orientationchange",()=>setTimeout(resize,150),{passive:true});
+    document.fonts?.ready?.then(resize).catch(()=>{});
 }
+
 async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setTodayDateAutomatically();await loadPrayerFromDatabase(true);}
