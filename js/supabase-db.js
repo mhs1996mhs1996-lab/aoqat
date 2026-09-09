@@ -39,7 +39,7 @@ function setupMobileResponsiveView(){
         .design{margin:0 auto!important;transform:none!important;transform-origin:top center!important}
         .panel{padding:10px!important}.panel h2,.font-title h2{font-size:16px!important}
         .main-action{height:40px!important;font-size:14px!important}label{font-size:12px!important}select,input[type=number],input[type=text],textarea{min-height:34px!important;font-size:13px!important}
-        .font-controls{grid-template-columns:1fr 1fr!important}.drag-info{min-height:0!important;flex-direction:column!important;align-items:stretch!important}#resetPositions{width:100%!important;min-width:0!important}
+        .font-controls{grid-template-columns:1fr 1fr!important}.drag-info{min-height:0!important;flex-direction:column!important;align-items:stretch!important}#resetPositions,#saveDesignAdjustments{width:100%!important;min-width:0!important}
       }
       @media(max-width:420px){.brand h1{font-size:15px!important}.brand-icon{font-size:23px!important}.preview-header span{display:none!important}.font-controls{grid-template-columns:1fr!important}}
     `;
@@ -159,4 +159,54 @@ function setupPWAInstallation(){
     });
 }
 
-async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setupPWAInstallation();setTodayDateAutomatically();await loadPrayerFromDatabase(true);}
+/* حفظ تعديلات التصميم: المواضع + تنسيق العناصر */
+function setupDesignSaveSystem(){
+    const STORAGE_KEY="prayerDesignerSavedAdjustmentsV1";
+    const dragInfo=document.querySelector(".drag-info");
+    if(!dragInfo||document.getElementById("saveDesignAdjustments")) return;
+
+    const button=document.createElement("button");
+    button.id="saveDesignAdjustments";
+    button.type="button";
+    button.textContent="💾 حفظ تعديلات التصميم";
+    button.style.cssText="border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;color:#fff;background:#168d4a;cursor:pointer";
+    dragInfo.appendChild(button);
+
+    const getElements=()=>Array.from(document.querySelectorAll(".draggable"));
+
+    const save=()=>{
+        const items=getElements().map((el,index)=>({
+            index,
+            x:el.dataset.x||"0",
+            y:el.dataset.y||"0",
+            style:el.getAttribute("style")||""
+        }));
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(items));
+        const oldText=button.textContent;
+        button.textContent="✅ تم حفظ التعديلات";
+        setTimeout(()=>button.textContent=oldText,1600);
+    };
+
+    const load=()=>{
+        try{
+            const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+            if(!Array.isArray(saved)) return;
+            const elements=getElements();
+            saved.forEach(item=>{
+                const el=elements[item.index];
+                if(!el) return;
+                el.dataset.x=String(item.x??0);
+                el.dataset.y=String(item.y??0);
+                if(item.style) el.setAttribute("style",item.style);
+                else el.removeAttribute("style");
+            });
+        }catch(error){
+            console.error("تعذر تحميل تعديلات التصميم المحفوظة",error);
+        }
+    };
+
+    button.addEventListener("click",save);
+    load();
+}
+
+async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setupPWAInstallation();setupDesignSaveSystem();setTodayDateAutomatically();await loadPrayerFromDatabase(true);}
