@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>برنامج تقاويم الصلاة</title>
+
+<link rel="stylesheet"
+      href="css/style.css">
+
+</head>
+
+
+<body>
+
+
+<!-- =====================================================
+     رأس البرنامج
+===================================================== -->
+
+<header class="topbar">
+
+    <div class="brand">
+
+        <div class="brand-icon">🕌</div>
+
+        <div>
+
+            <h1>
+                برنامج تقاويم الصلاة
+            </h1>
+
+            <p>
+                نموذج قابل للتعديل لأوقات الصلاة والنشر على مواقع التواصل الاجتماعي
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <button id="exportBtn"
+            class="top-export">
+
+        حفظ PNG
+        <span>⬇</span>
+
+    </button>
+
+</header>
+
+
+
+<!-- =====================================================
+     التطبيق
+===================================================== -->
+
+<main class="app">
+
+
+<!-- =====================================================
+     الشريط الجانبي
+===================================================== -->
+
+<aside class="sidebar">
+
+
+    <!-- الأزرار الرئيسية -->
+
+    <section class="panel main-panel">
+
+        <h2>
+            بيانات التصميم
+        </h2>
+
+
+        <button class="main-action green"
+                data-open-panel="datePanel">
+
+            📅
+            <span>بيانات التاريخ</span>
+
+        </button>
+
+
+        <button class="main-action blue"
+                data-open-panel="prayerPanel">
+
+            🕌
+            <span>أوقات الصلاة</span>
+
+        </button>
+
+
+        <button class="main-action purple"
+                data-open-panel="backgroundPanel">
+
+            🎨
+            <span>الخلفية</span>
+
+        </button>
+
+
+        <button class="main-action orange"
+                data-open-panel="footerPanel">
+
+            ✍
+            <span>النص السفلي</span>
+
+        </button>
+
+    </section>
+
+
+
+    <!-- =================================================
+         بيانات التاريخ
+    ================================================== -->
+
+    <section id="datePanel"
+             class="panel accordion-panel active-panel">
+
+        <div class="panel-title">
+
+            <h2>
+                بيانات التاريخ
+            </h2>
+
+            <button class="collapse-btn">
+                −
+            </button>
+
+        </div>
+
+
+        <label>
+
+            اسم اليوم
+
+            <select id="dayName">
+
+                <option value="الأحد">الأحد</option>
+                <option value="الاثنين">الاثنين</option>
+                <option value="الثلاثاء">الثلاثاء</option>
+                <option value="الأربعاء">الأربعاء</option>
+                <option value="الخميس">الخميس</option>
+                <option value="الجمعة">الجمعة</option>
+                <option value="السبت">السبت</option>
+
+            </select>
+
+        </label>
+
+
+
+        <label>
+
+            رقم التاريخ الهجري
+
+            <select id="hijriDay"></select>
+
+        </label>
+
+
+
+        <label>
+
+            رقم التاريخ الميلادي
+
+            <select id="gregorianDay"></select>
+
+        </label>
+
+
+
+        <label>
+
+            اسم الشهر الهجري
+
+            <select id="hijriMonth">
+
+                <option>محرم</option>
+                <option>صفر</option>
+                <option>ربيع الأول</option>
+                <option>ربيع الآخر</option>
+                <option>جمادى الأولى</option>
+                <option>جمادى الآخرة</option>
+                <option>رجب</option>
+                <option>شعبان</option>
+                <option>رمضان</option>
+                <option>شوال</option>
+                <option>ذو القعدة</option>
+                <option>ذو الحجة</option>
+
+            </select>
+
+        </label>
+
+
+
+        <label>
+
+            اسم الشهر الميلادي
+
+            <select id="gregorianMonth">
+
+                <option>كانون الثاني</option>
+                <option>شباط</option>
+                <option>آذار</option>
+                <option>نيسان</option>
+                <option>أيار</option>
+                <option>حزيران</option>
+                <option>تموز</option>
+                <option>آب</option>
+                <option>أيلول</option>
+                <option>تشرين الأول</option>
+                <option>تشرين الثاني</option>
+                <option>كانون الأول</option>
+
+            </select>
+
+        </label>
+
+
+
+        <label>
+
+            رقم السنة الهجرية
+
+            <select id="hijriYear"></select>
+
+        </label>
+
+
+
+        <label>
+
+            رقم السنة الميلادية
+
+            <select id="gregorianYear"></select>
+
+        </label>
+
+    </section>
+
+
+
+    <!-- =================================================
+         أوقات الصلاة
+    ================================================== -->
+
+    <section id="prayerPanel"
+             class="panel accordion-panel">
+
+        <div class="panel-title">
+
+            <h2>
+                أوقات الصلاة
+            </h2>
+
+            <button class="collapse-btn">
+                −
+            </button>
+
+        </div>
+
+
+        <div class="prayer-control">
+
+            <span>الفجر</span>
+            <select id="fajr"></select>
+
+        </div>
+
+
+        <div class="prayer-control">
+
+            <span>الشروق</span>
+            <select id="sunrise"></select>
+
+        </div>
+
+
+        <div class="prayer-control">
+
+            <span>الظهر</span>
+            <select id="dhuhr"></select>
+
+        </div>
+
+
+        <div class="prayer-control">
+
+            <span>العصر</span>
+            <select id="asr"></select>
+
+        </div>
+
+
+        <div class="prayer-control">
+
+            <span>المغرب</span>
+            <select id="maghrib"></select>
+
+        </div>
+
+
+        <div class="prayer-control">
+
+            <span>العشاء</span>
+            <select id="isha"></select>
+
+        </div>
+        <div class="database-actions">
+            <button id="loadPrayerDbBtn" type="button">☁️ تحميل اليوم من قاعدة البيانات</button>
+            <button id="savePrayerDbBtn" type="button">💾 حفظ اليوم في قاعدة البيانات</button>
+            <div id="databaseStatus" class="database-status">قاعدة البيانات جاهزة</div>
+        </div>
+    </section>
+
+
+
+    <!-- =================================================
+         الخلفية
+    ================================================== -->
+
+    <section id="backgroundPanel"
+             class="panel accordion-panel">
+
+        <div class="panel-title">
+
+            <h2>
+                الخلفية
+            </h2>
+
+            <button class="collapse-btn">
+                −
+            </button>
+
+        </div>
+
+
+        <label>
+
+            نوع الخلفية
+
+            <select id="bgType">
+
+                <option value="gradient">
+                    تدرج لوني
+                </option>
+
+                <option value="image">
+                    صورة من الجهاز
+                </option>
+
+            </select>
+
+        </label>
+
+
+        <div id="gradientBox">
+
+            <label>
+
+                اللون الأول
+
+                <input id="color1"
+                       type="color"
+                       value="#031b1b">
+
+            </label>
+
+
+            <label>
+
+                اللون الثاني
+
+                <input id="color2"
+                       type="color"
+                       value="#0b3b37">
+
+            </label>
+
+        </div>
+
+
+        <div id="imageBox"
+             class="hidden">
+
+            <label>
+
+                صورة الخلفية
+
+                <input id="bgFile"
+                       type="file"
+                       accept="image/*">
+
+            </label>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =================================================
+         النص السفلي
+    ================================================== -->
+
+    <section id="footerPanel"
+             class="panel accordion-panel">
+
+        <div class="panel-title">
+
+            <h2>
+                النص السفلي
+            </h2>
+
+            <button class="collapse-btn">
+                −
+            </button>
+
+        </div>
+
+
+        <textarea id="footerText">حسب التوقيت المحلي للمدينة المرغوبة</textarea>
+
+    </section>
+
+
+
+</aside>
+
+
+
+<!-- =====================================================
+     منطقة المعاينة
+===================================================== -->
+
+<section class="workspace">
+
+
+    <div class="preview-header">
+
+        <h2>
+            المعاينة
+        </h2>
+
+        <span>
+            يمكنك سحب وإفلات أي عنصر داخل التصميم
+        </span>
+
+    </div>
+
+
+    <div class="previewBox">
+
+        <div id="design"
+             class="design">
+
+
+            <div class="border"></div>
+
+
+            <div class="ornament">
+                ✦ ❈ ✦
+            </div>
+
+
+            <div class="quran draggable">
+                ﴿إِنَّ الصَّلَاةَ كَانَتْ عَلَى الْمُؤْمِنِينَ كِتَابًا مَوْقُوتًا﴾
+            </div>
+
+
+
+            <!-- التاريخ الهجري -->
+
+            <div class="dateRight draggable">
+
+                <span id="hijriDayP">
+                    17
+                </span>
+
+            </div>
+
+
+
+            <!-- التاريخ الميلادي -->
+
+            <div class="dateLeft draggable">
+
+                <span id="gregorianDayP">
+                    30
+                </span>
+
+            </div>
+
+
+
+            <!-- اليوم -->
+
+            <div id="dayP"
+                 class="weekday draggable">
+
+                الأحد
+
+            </div>
+
+
+
+            <!-- الشهر الهجري -->
+
+            <div id="hijriMonthP"
+                 class="hijri-month draggable">
+
+                ربيع الأول
+
+            </div>
+
+
+
+            <!-- الشهر الميلادي -->
+
+            <div id="gregorianMonthP"
+                 class="gregorian-month draggable">
+
+                آب
+
+            </div>
+
+
+
+            <!-- السنة الهجرية -->
+
+            <div id="hijriYearP"
+                 class="hijri-year draggable">
+
+                1448هـ
+
+            </div>
+
+
+
+            <!-- السنة الميلادية -->
+
+            <div id="gregorianYearP"
+                 class="gregorian-year draggable">
+
+                2026م
+
+            </div>
+
+
+
+            <!-- أوقات الصلاة -->
+
+            <div class="prayers">
+
+
+                <div class="prayer-row draggable">
+
+                    <b id="fajrP">
+                        4:17
+                    </b>
+
+                    <span>
+                        الفجر
+                    </span>
+
+                </div>
+
+
+                <div class="prayer-row draggable">
+
+                    <b id="sunriseP">
+                        5:39
+                    </b>
+
+                    <span>
+                        الشروق
+                    </span>
+
+                </div>
+
+
+                <div class="prayer-row draggable">
+
+                    <b id="dhuhrP">
+                        12:10
+                    </b>
+
+                    <span>
+                        الظهر
+                    </span>
+
+                </div>
+
+
+                <div class="prayer-row draggable">
+
+                    <b id="asrP">
+                        3:50
+                    </b>
+
+                    <span>
+                        العصر
+                    </span>
+
+                </div>
+
+
+                <div class="prayer-row draggable">
+
+                    <b id="maghribP">
+                        6:37
+                    </b>
+
+                    <span>
+                        المغرب
+                    </span>
+
+                </div>
+
+
+                <div class="prayer-row draggable">
+
+                    <b id="ishaP">
+                        7:57
+                    </b>
+
+                    <span>
+                        العشاء
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+
+            <!-- النص السفلي -->
+
+            <div id="footerP"
+                 class="footer draggable">
+
+                حسب التوقيت المحلي للمدينة المرغوبة
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =================================================
+         تنسيق الخط
+    ================================================== -->
+
+    <section class="font-panel">
+
+        <div class="font-title">
+
+            <h2>
+                تنسيق الخط
+            </h2>
+
+            <span>
+                اختر العنصر ثم عدّل الخط
+            </span>
+
+        </div>
+
+
+        <div class="font-controls">
+
+
+            <!-- العنصر -->
+
+            <label>
+
+                العنصر
+
+                <select id="elementSelect">
+
+                    <option value="">
+                        اختر العنصر
+                    </option>
+
+                    <option value=".quran">
+                        نص الآية
+                    </option>
+
+                    <option value="#dayP">
+                        اسم اليوم
+                    </option>
+
+                    <option value="#hijriDayP">
+                        رقم التاريخ الهجري
+                    </option>
+
+                    <option value="#gregorianDayP">
+                        رقم التاريخ الميلادي
+                    </option>
+
+                    <option value="#hijriMonthP">
+                        اسم الشهر الهجري
+                    </option>
+
+                    <option value="#gregorianMonthP">
+                        اسم الشهر الميلادي
+                    </option>
+
+                    <option value="#hijriYearP">
+                        السنة الهجرية
+                    </option>
+
+                    <option value="#gregorianYearP">
+                        السنة الميلادية
+                    </option>
+
+                    <option value=".prayer-row:nth-child(1)">
+                        الفجر
+                    </option>
+
+                    <option value=".prayer-row:nth-child(2)">
+                        الشروق
+                    </option>
+
+                    <option value=".prayer-row:nth-child(3)">
+                        الظهر
+                    </option>
+
+                    <option value=".prayer-row:nth-child(4)">
+                        العصر
+                    </option>
+
+                    <option value=".prayer-row:nth-child(5)">
+                        المغرب
+                    </option>
+
+                    <option value=".prayer-row:nth-child(6)">
+                        العشاء
+                    </option>
+
+                    <option value="#footerP">
+                        النص السفلي
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- الخط -->
+
+            <label>
+
+                نوع الخط
+
+                <select id="fontFamily">
+
+                    <option value="Arial">
+                        Arial
+                    </option>
+
+                    <option value="Tahoma">
+                        Tahoma
+                    </option>
+
+                    <option value="Verdana">
+                        Verdana
+                    </option>
+
+                    <option value="Georgia">
+                        Georgia
+                    </option>
+
+                    <option value="Times New Roman">
+                        Times New Roman
+                    </option>
+
+                    <option value="Cairo">
+                        Cairo
+                    </option>
+
+                    <option value="Amiri">
+                        Amiri
+                    </option>
+
+                    <option value="Traditional Arabic">
+                        Traditional Arabic
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- إضافة خط -->
+
+            <label class="font-upload">
+
+                إضافة خط
+
+                <input id="fontFile"
+                       type="file"
+                       accept=".ttf,.otf,.woff,.woff2">
+
+            </label>
+
+
+
+            <!-- الحجم -->
+
+            <label>
+
+                الحجم
+
+                <input id="fontSize"
+                       type="number"
+                       min="8"
+                       max="200"
+                       value="40">
+
+            </label>
+
+
+
+            <!-- الوزن -->
+
+            <label>
+
+                الوزن
+
+                <select id="fontWeight">
+
+                    <option value="400">
+                        عادي
+                    </option>
+
+                    <option value="500">
+                        متوسط
+                    </option>
+
+                    <option value="600">
+                        شبه عريض
+                    </option>
+
+                    <option value="700">
+                        عريض
+                    </option>
+
+                    <option value="800">
+                        عريض جدًا
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- اللون -->
+
+            <label>
+
+                اللون
+
+                <input id="fontColor"
+                       type="color"
+                       value="#ffffff">
+
+            </label>
+
+
+
+            <!-- المحاذاة -->
+
+            <label>
+
+                المحاذاة
+
+                <select id="textAlign">
+
+                    <option value="right">
+                        يمين
+                    </option>
+
+                    <option value="center">
+                        وسط
+                    </option>
+
+                    <option value="left">
+                        يسار
+                    </option>
+
+                </select>
+
+            </label>
+
+
+
+            <!-- الظل -->
+
+            <label>
+
+                ظل النص
+
+                <select id="textShadow">
+
+                    <option value="none">
+                        بدون ظل
+                    </option>
+
+                    <option value="black">
+                        ظل أسود
+                    </option>
+
+                    <option value="gold">
+                        ظل ذهبي
+                    </option>
+
+                    <option value="green">
+                        ظل أخضر
+                    </option>
+
+                </select>
+
+            </label>
+
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =================================================
+         أزرار التصدير
+    ================================================== -->
+
+    <div class="export-buttons">
+
+        <button data-export-format="png"
+                class="export png">
+
+            تصدير PNG
+            📄
+
+        </button>
+
+
+        <button data-export-format="jpg"
+                class="export jpg">
+
+            تصدير JPG
+            📄
+
+        </button>
+
+
+        <button data-export-format="webp"
+                class="export webp">
+
+            تصدير WEBP
+            📄
+
+        </button>
+
+    </div>
+
+
+
+    <div class="drag-info">
+
+        <span>
+            ✥ يمكنك سحب وإفلات أي عنصر داخل التصميم
+        </span>
+
+        <button id="resetPositions">
+            ↻ إعادة ضبط المواضع
+        </button>
+
+    </div>
+
+
+</section>
+
+</main>
+
+
+
+<script src="data/prayer-times.js"></script>
+
+<script src="js/supabase-db.js"></script>
+<script src="js/script.js"></script>
+
+
+</body>
+
+</html>
