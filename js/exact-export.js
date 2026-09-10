@@ -69,12 +69,27 @@
       clone.classList.add("export-night-design");
       style.textContent=`
         .export-night-design{isolation:isolate!important}
+        .export-night-design:after{display:none!important;content:none!important}
         .export-night-design:before,
-        .export-night-design:after,
         .export-night-design .nd-pattern,
         .export-night-design .nd-stars,
         .export-night-design .nd-moon,
-        .export-night-design .nd-mosque{z-index:0!important}
+        .export-night-design .nd-mosque,
+        .export-night-design .nd-export-arch{z-index:0!important}
+
+        .export-night-design .nd-export-arch{
+          position:absolute!important;
+          left:84px!important;
+          right:84px!important;
+          top:14px!important;
+          height:430px!important;
+          border:6px solid #b97828!important;
+          border-bottom:0!important;
+          border-radius:52% 52% 0 0/70% 70% 0 0!important;
+          box-shadow:inset 0 0 0 5px #061b2e!important;
+          pointer-events:none!important;
+          box-sizing:border-box!important;
+        }
 
         .export-night-design .nd-title,
         .export-night-design .nd-subtitle,
@@ -83,10 +98,10 @@
         .export-night-design .nd-prayers,
         .export-night-design .nd-book,
         .export-night-design .nd-lantern,
-        .export-night-design .nd-footer{z-index:3!important}
+        .export-night-design .nd-footer{position:absolute;z-index:5!important}
 
-        .export-night-design .nd-title,
-        .export-night-design .nd-subtitle{position:absolute!important}
+        .export-night-design .nd-prayers{display:flex!important}
+        .export-night-design .nd-prayer-row{position:relative!important;z-index:6!important}
       `;
     }
 
@@ -94,6 +109,12 @@
   }
 
   function fixSpecialDesignForExport(source,clone){
+    if(source.classList.contains("night-design")){
+      const arch=document.createElement("div");
+      arch.className="nd-export-arch";
+      clone.insertBefore(arch,clone.firstChild);
+    }
+
     if(source.classList.contains("fourth-design")){
       clone.style.boxShadow="none";
 
