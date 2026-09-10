@@ -2,7 +2,6 @@
 // جميع أوقات الصلاة الفعلية يتم تحميلها من Supabase.
 const prayerTimes = [];
 
-// تحميل نظام الأقسام المرتبة داخل بيانات التصميم.
 (function(){
     if (document.querySelector('script[data-modal-panels]')) return;
     const modalScript = document.createElement("script");
@@ -11,30 +10,30 @@ const prayerTimes = [];
     document.head.appendChild(modalScript);
 })();
 
-// تحميل التصاميم الإضافية بالتسلسل بعد اكتمال تشغيل الواجهة الأساسية.
-// تم الرجوع إلى أربعة تصاميم فقط وحذف التصميم الخامس بالكامل.
 window.addEventListener("load", () => {
     if (document.querySelector('script[data-second-design]')) return;
-
     const script = document.createElement("script");
     script.src = "js/second-design.js?v=3";
     script.dataset.secondDesign = "true";
     script.onload = () => {
-        if (document.querySelector('script[data-additional-designs]')) return;
         const extraScript = document.createElement("script");
         extraScript.src = "js/additional-designs.js?v=4";
         extraScript.dataset.additionalDesigns = "true";
         extraScript.onload = () => {
-            if (document.querySelector('script[data-night-design]')) return;
             const nightScript = document.createElement("script");
             nightScript.src = "js/night-design.js?v=1";
             nightScript.dataset.nightDesign = "true";
             nightScript.onload = () => {
-                if (document.querySelector('script[data-exact-export]')) return;
-                const exportScript = document.createElement("script");
-                exportScript.src = "js/exact-export.js?v=5";
-                exportScript.dataset.exactExport = "true";
-                document.body.appendChild(exportScript);
+                const fiveScript = document.createElement("script");
+                fiveScript.src = "js/five-new-designs.js?v=1";
+                fiveScript.dataset.fiveNewDesigns = "true";
+                fiveScript.onload = () => {
+                    const exportScript = document.createElement("script");
+                    exportScript.src = "js/exact-export.js?v=6";
+                    exportScript.dataset.exactExport = "true";
+                    document.body.appendChild(exportScript);
+                };
+                document.body.appendChild(fiveScript);
             };
             document.body.appendChild(nightScript);
         };
