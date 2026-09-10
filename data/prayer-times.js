@@ -11,6 +11,15 @@ const prayerTimes = [];
     document.head.appendChild(modalScript);
 })();
 
+// إزالة نسخة النص السفلي المكررة من أعلى التصاميم إن وجدت.
+(function(){
+    if (document.querySelector('script[data-preview-footer-cleanup]')) return;
+    const cleanupScript = document.createElement("script");
+    cleanupScript.src = "js/preview-footer-cleanup.js?v=1";
+    cleanupScript.dataset.previewFooterCleanup = "true";
+    document.head.appendChild(cleanupScript);
+})();
+
 // تحميل التصاميم الإضافية بالتسلسل بعد اكتمال تشغيل الواجهة الأساسية.
 window.addEventListener("load", () => {
     if (document.querySelector('script[data-second-design]')) return;
