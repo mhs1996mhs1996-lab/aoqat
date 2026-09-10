@@ -3,6 +3,8 @@
 (function(){
   const WIDTH=1024;
   const HEIGHT=1448;
+  let bypass=false;
+  let loaderPromise=null;
 
   function activeDesign(){
     const track=document.querySelector(".design-carousel-track");
@@ -21,116 +23,150 @@
     return slide?.firstElementChild || document.getElementById("design");
   }
 
-  function collectCss(){
-    let css="";
-    for(const sheet of Array.from(document.styleSheets)){
+  function loadHtml2Canvas(){
+    if(typeof window.html2canvas==="function") return Promise.resolve(window.html2canvas);
+    if(loaderPromise) return loaderPromise;
+
+    loaderPromise=new Promise((resolve,reject)=>{
+      const existing=document.querySelector('script[data-html2canvas]');
+      if(existing){
+        existing.addEventListener("load",()=>typeof window.html2canvas==="function"?resolve(window.html2canvas):reject(new Error("html2canvas missing")),{once:true});
+        existing.addEventListener("error",reject,{once:true});
+        return;
+      }
+
+      const s=document.createElement("script");
+      s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+      s.async=true;
+      s.dataset.html2canvas="true";
+      s.onload=()=>typeof window.html2canvas==="function"?resolve(window.html2canvas):reject(new Error("html2canvas missing"));
+      s.onerror=reject;
+      document.head.appendChild(s);
+    });
+
+    return loaderPromise;
+  }
+
+  function copyCanvasContent(source,clone){
+    const src=source.querySelectorAll("canvas");
+    const dst=clone.querySelectorAll("canvas");
+    src.forEach((canvas,i)=>{
+      const target=dst[i];
+      if(!target) return;
       try{
-        for(const rule of Array.from(sheet.cssRules||[])) css+=rule.cssText+"\n";
+        target.width=canvas.width;
+        target.height=canvas.height;
+        target.getContext("2d")?.drawImage(canvas,0,0);
       }catch(e){}
-    }
-    return css;
-  }
-
-  function copyFormValues(source,clone){
-    const src=source.querySelectorAll("input,textarea,select");
-    const dst=clone.querySelectorAll("input,textarea,select");
-    src.forEach((el,i)=>{
-      const c=dst[i]; if(!c) return;
-      if(el.tagName==="TEXTAREA") c.textContent=el.value;
-      else if(el.tagName==="SELECT") Array.from(c.options).forEach((o,n)=>o.selected=el.options[n]?.selected||false);
-      else {c.setAttribute("value",el.value); if(el.checked)c.setAttribute("checked","");}
     });
   }
 
-  function inlineRuntimeStyles(source,clone){
-    const src=[source,...source.querySelectorAll("*")];
-    const dst=[clone,...clone.querySelectorAll("*")];
-    src.forEach((el,i)=>{
-      const c=dst[i]; if(!c) return;
-      const st=getComputedStyle(el);
-      c.style.fontFamily=st.fontFamily;
-      c.style.fontSize=st.fontSize;
-      c.style.fontWeight=st.fontWeight;
-      c.style.fontStyle=st.fontStyle;
-      c.style.lineHeight=st.lineHeight;
-      c.style.letterSpacing=st.letterSpacing;
-      c.style.color=st.color;
-      c.style.textAlign=st.textAlign;
-      c.style.textShadow=st.textShadow;
-      c.style.direction=st.direction;
-      c.style.boxSizing=st.boxSizing;
-    });
-  }
-
-  async function renderExact(design){
-    if(document.fonts?.ready){try{await document.fonts.ready}catch(e){}}
+  function prepareClone(design){
+    const host=document.createElement("div");
+    host.setAttribute("aria-hidden","true");
+    host.style.cssText=`position:fixed;left:-20000px;top:0;width:${WIDTH}px;height:${HEIGHT}px;overflow:hidden;z-index:-2147483647;pointer-events:none;`;
 
     const clone=design.cloneNode(true);
-    copyFormValues(design,clone);
-    inlineRuntimeStyles(design,clone);
-
+    clone.removeAttribute("id");
     clone.style.zoom="1";
     clone.style.transform="none";
     clone.style.transformOrigin="top left";
     clone.style.width=WIDTH+"px";
     clone.style.height=HEIGHT+"px";
     clone.style.margin="0";
-    clone.style.position="relative";
+    clone.style.maxWidth="none";
+    clone.style.maxHeight="none";
+    clone.style.flex="0 0 auto";
 
-    const css=collectCss().replace(/<\/style/gi,"<\\/style");
-    const wrapper=`<div xmlns="http://www.w3.org/1999/xhtml" style="width:${WIDTH}px;height:${HEIGHT}px;margin:0;padding:0;overflow:hidden;">\n<style>${css}</style>\n${clone.outerHTML}\n</div>`;
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}"><foreignObject x="0" y="0" width="100%" height="100%">${wrapper}</foreignObject></svg>`;
+    host.appendChild(clone);
+    document.body.appendChild(host);
+    copyCanvasContent(design,clone);
+    return {host,clone};
+  }
 
-    const blob=new Blob([svg],{type:"image/svg+xml;charset=utf-8"});
-    const url=URL.createObjectURL(blob);
+  async function renderPreview(design){
+    if(document.fonts?.ready){try{await document.fonts.ready}catch(e){}}
+    const html2canvas=await loadHtml2Canvas();
+    const {host,clone}=prepareClone(design);
+
     try{
-      const img=new Image();
-      await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject;img.src=url;});
-      const canvas=document.createElement("canvas");
-      const scale=2;
-      canvas.width=WIDTH*scale;
-      canvas.height=HEIGHT*scale;
-      const ctx=canvas.getContext("2d");
-      ctx.setTransform(scale,0,0,scale,0,0);
-      ctx.drawImage(img,0,0,WIDTH,HEIGHT);
-      return canvas;
-    }finally{URL.revokeObjectURL(url);}
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      return await html2canvas(clone,{
+        backgroundColor:null,
+        scale:2,
+        width:WIDTH,
+        height:HEIGHT,
+        windowWidth:WIDTH,
+        windowHeight:HEIGHT,
+        scrollX:0,
+        scrollY:0,
+        useCORS:true,
+        allowTaint:true,
+        logging:false,
+        imageTimeout:8000,
+        foreignObjectRendering:false,
+        removeContainer:true
+      });
+    }finally{
+      host.remove();
+    }
   }
 
   function download(canvas,format){
     const f=(format||"png").toLowerCase();
-    const mime=f==="jpg"||f==="jpeg"?"image/jpeg":f==="webp"?"image/webp":"image/png";
+    const isJpg=f==="jpg"||f==="jpeg";
+    const mime=isJpg?"image/jpeg":f==="webp"?"image/webp":"image/png";
     const ext=f==="jpeg"?"jpg":f;
+
     canvas.toBlob(blob=>{
-      if(!blob){alert("تعذر إنشاء الصورة");return;}
+      if(!blob) return;
       const url=URL.createObjectURL(blob);
       const a=document.createElement("a");
       a.href=url;
       a.download=`prayer-preview.${ext}`;
       document.body.appendChild(a);
-      a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),2000);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),2500);
     },mime,mime==="image/png"?undefined:.98);
   }
 
-  async function exportExact(format){
+  function fallbackNative(button){
+    bypass=true;
+    try{button.click();}
+    finally{setTimeout(()=>{bypass=false},0);}
+  }
+
+  async function exportExact(format,button){
     const design=activeDesign();
     if(!design) return;
+
+    const oldText=button.textContent;
+    button.disabled=true;
+    button.textContent="جاري التصدير...";
+
     try{
-      const canvas=await renderExact(design);
+      const canvas=await renderPreview(design);
       download(canvas,format);
     }catch(error){
-      console.error("Exact export failed",error);
-      alert("تعذر تصدير المعاينة كما هي. أعد المحاولة بعد لحظة.");
+      console.error("Preview export fallback",error);
+      fallbackNative(button);
+    }finally{
+      setTimeout(()=>{
+        button.disabled=false;
+        button.textContent=oldText;
+      },150);
     }
   }
 
   window.addEventListener("click",function(event){
+    if(bypass) return;
     const btn=event.target.closest?.("[data-export-format],#exportBtn");
     if(!btn) return;
+
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
-    exportExact(btn.dataset.exportFormat||"png");
+    exportExact(btn.dataset.exportFormat||"png",btn);
   },true);
 })();
