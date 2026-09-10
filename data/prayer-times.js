@@ -12,6 +12,7 @@ const prayerTimes = [];
 })();
 
 // تحميل التصاميم الإضافية بالتسلسل بعد اكتمال تشغيل الواجهة الأساسية.
+// تم الرجوع إلى أربعة تصاميم فقط وحذف التصميم الخامس بالكامل.
 window.addEventListener("load", () => {
     if (document.querySelector('script[data-second-design]')) return;
 
@@ -29,24 +30,11 @@ window.addEventListener("load", () => {
             nightScript.src = "js/night-design.js?v=1";
             nightScript.dataset.nightDesign = "true";
             nightScript.onload = () => {
-                if (document.querySelector('script[data-ornate-design]')) return;
-                const ornateScript = document.createElement("script");
-                ornateScript.src = "js/ornate-design.js?v=2";
-                ornateScript.dataset.ornateDesign = "true";
-                ornateScript.onload = () => {
-                    const carouselFix = document.createElement("script");
-                    carouselFix.src = "js/carousel-count-fix.js?v=1";
-                    carouselFix.dataset.carouselCountFix = "true";
-                    carouselFix.onload = () => {
-                        if (document.querySelector('script[data-exact-export]')) return;
-                        const exportScript = document.createElement("script");
-                        exportScript.src = "js/exact-export.js?v=5";
-                        exportScript.dataset.exactExport = "true";
-                        document.body.appendChild(exportScript);
-                    };
-                    document.body.appendChild(carouselFix);
-                };
-                document.body.appendChild(ornateScript);
+                if (document.querySelector('script[data-exact-export]')) return;
+                const exportScript = document.createElement("script");
+                exportScript.src = "js/exact-export.js?v=5";
+                exportScript.dataset.exactExport = "true";
+                document.body.appendChild(exportScript);
             };
             document.body.appendChild(nightScript);
         };
