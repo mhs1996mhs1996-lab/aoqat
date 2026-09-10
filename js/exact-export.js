@@ -61,6 +61,48 @@
     });
   }
 
+  function fixSpecialDesignForExport(source,clone){
+    /*
+      التصميم الفاتح (design4) يحتوي radial-gradients كبيرة.
+      html2canvas على بعض هواتف Android يحولها إلى بقع رمادية عند التصدير.
+      نعوضها بتدرج هادئ مكافئ بصرياً فقط داخل نسخة التصدير.
+    */
+    if(source.classList.contains("fourth-design")){
+      clone.style.boxShadow="none";
+
+      const sky=clone.querySelector(".sd4-sky");
+      if(sky){
+        sky.style.background="linear-gradient(180deg, rgba(99,169,207,.16) 0%, rgba(255,255,255,.10) 30%, rgba(255,255,255,0) 55%)";
+        sky.style.filter="none";
+        sky.style.boxShadow="none";
+      }
+
+      /* منع النص السفلي من ملامسة أو تغطية صف العشاء في ملف التصدير */
+      const prayers=clone.querySelector(".sd4-prayers");
+      if(prayers){
+        prayers.style.top="630px";
+        prayers.style.gap="14px";
+      }
+      clone.querySelectorAll(".sd4-prayer-row").forEach(row=>{
+        row.style.height="88px";
+      });
+
+      const footer=clone.querySelector(".sd4-footer");
+      if(footer){
+        footer.style.boxSizing="border-box";
+        footer.style.height="96px";
+        footer.style.minHeight="96px";
+        footer.style.bottom="38px";
+        footer.style.padding="12px 28px";
+        footer.style.transform=footer.style.transform||"none";
+      }
+
+      clone.querySelectorAll(".sd4-day,.sd4-date-card,.sd4-prayer-row,.sd4-footer").forEach(el=>{
+        el.style.filter="none";
+      });
+    }
+  }
+
   function prepareClone(design){
     const host=document.createElement("div");
     host.setAttribute("aria-hidden","true");
@@ -77,6 +119,8 @@
     clone.style.maxWidth="none";
     clone.style.maxHeight="none";
     clone.style.flex="0 0 auto";
+
+    fixSpecialDesignForExport(design,clone);
 
     host.appendChild(clone);
     document.body.appendChild(host);
