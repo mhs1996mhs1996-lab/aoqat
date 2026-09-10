@@ -61,12 +61,39 @@
     });
   }
 
+  function addExportOnlyStyles(host,source,clone){
+    const style=document.createElement("style");
+    style.dataset.exportOnly="true";
+
+    if(source.classList.contains("night-design")){
+      clone.classList.add("export-night-design");
+      style.textContent=`
+        .export-night-design{isolation:isolate!important}
+        .export-night-design:before,
+        .export-night-design:after,
+        .export-night-design .nd-pattern,
+        .export-night-design .nd-stars,
+        .export-night-design .nd-moon,
+        .export-night-design .nd-mosque{z-index:0!important}
+
+        .export-night-design .nd-title,
+        .export-night-design .nd-subtitle,
+        .export-night-design .nd-date,
+        .export-night-design .nd-day,
+        .export-night-design .nd-prayers,
+        .export-night-design .nd-book,
+        .export-night-design .nd-lantern,
+        .export-night-design .nd-footer{z-index:3!important}
+
+        .export-night-design .nd-title,
+        .export-night-design .nd-subtitle{position:absolute!important}
+      `;
+    }
+
+    host.appendChild(style);
+  }
+
   function fixSpecialDesignForExport(source,clone){
-    /*
-      التصميم الفاتح (design4) يحتوي radial-gradients كبيرة.
-      html2canvas على بعض هواتف Android يحولها إلى بقع رمادية عند التصدير.
-      نعوضها بتدرج هادئ مكافئ بصرياً فقط داخل نسخة التصدير.
-    */
     if(source.classList.contains("fourth-design")){
       clone.style.boxShadow="none";
 
@@ -77,7 +104,6 @@
         sky.style.boxShadow="none";
       }
 
-      /* منع النص السفلي من ملامسة أو تغطية صف العشاء في ملف التصدير */
       const prayers=clone.querySelector(".sd4-prayers");
       if(prayers){
         prayers.style.top="630px";
@@ -120,6 +146,7 @@
     clone.style.maxHeight="none";
     clone.style.flex="0 0 auto";
 
+    addExportOnlyStyles(host,design,clone);
     fixSpecialDesignForExport(design,clone);
 
     host.appendChild(clone);
