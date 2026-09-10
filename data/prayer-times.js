@@ -31,12 +31,12 @@ window.addEventListener("load", () => {
             nightScript.onload = () => {
                 if (document.querySelector('script[data-ornate-design]')) return;
                 const ornateScript = document.createElement("script");
-                ornateScript.src = "js/ornate-design.js?v=1";
+                ornateScript.src = "js/ornate-design.js?v=2";
                 ornateScript.dataset.ornateDesign = "true";
                 ornateScript.onload = () => {
                     if (document.querySelector('script[data-exact-export]')) return;
                     const exportScript = document.createElement("script");
-                    exportScript.src = "js/exact-export.js?v=4";
+                    exportScript.src = "js/exact-export.js?v=5";
                     exportScript.dataset.exactExport = "true";
                     document.body.appendChild(exportScript);
                 };
