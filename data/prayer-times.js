@@ -32,10 +32,16 @@ window.addEventListener("load", () => {
                     fiveScript.src = "js/five-new-designs.js?v=2";
                     fiveScript.dataset.fiveNewDesigns = "true";
                     fiveScript.onload = () => {
-                        const exportScript = document.createElement("script");
-                        exportScript.src = "js/exact-export.js?v=7";
-                        exportScript.dataset.exactExport = "true";
-                        document.body.appendChild(exportScript);
+                        const editScript = document.createElement("script");
+                        editScript.src = "js/manual-edit-toggle.js?v=2";
+                        editScript.dataset.manualEditToggle = "true";
+                        editScript.onload = () => {
+                            const exportScript = document.createElement("script");
+                            exportScript.src = "js/exact-export.js?v=7";
+                            exportScript.dataset.exactExport = "true";
+                            document.body.appendChild(exportScript);
+                        };
+                        document.body.appendChild(editScript);
                     };
                     document.body.appendChild(fiveScript);
                 };
