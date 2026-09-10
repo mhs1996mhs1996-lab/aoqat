@@ -31,7 +31,7 @@ window.addEventListener("load", () => {
             nightScript.onload = () => {
                 if (document.querySelector('script[data-exact-export]')) return;
                 const exportScript = document.createElement("script");
-                exportScript.src = "js/exact-export.js?v=3";
+                exportScript.src = "js/exact-export.js?v=4";
                 exportScript.dataset.exactExport = "true";
                 document.body.appendChild(exportScript);
             };
