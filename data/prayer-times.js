@@ -11,15 +11,6 @@ const prayerTimes = [];
     document.head.appendChild(modalScript);
 })();
 
-// إزالة نسخة النص السفلي المكررة من أعلى التصاميم إن وجدت.
-(function(){
-    if (document.querySelector('script[data-preview-footer-cleanup]')) return;
-    const cleanupScript = document.createElement("script");
-    cleanupScript.src = "js/preview-footer-cleanup.js?v=1";
-    cleanupScript.dataset.previewFooterCleanup = "true";
-    document.head.appendChild(cleanupScript);
-})();
-
 // تحميل التصاميم الإضافية بالتسلسل بعد اكتمال تشغيل الواجهة الأساسية.
 window.addEventListener("load", () => {
     if (document.querySelector('script[data-second-design]')) return;
@@ -37,6 +28,13 @@ window.addEventListener("load", () => {
             const nightScript = document.createElement("script");
             nightScript.src = "js/night-design.js?v=1";
             nightScript.dataset.nightDesign = "true";
+            nightScript.onload = () => {
+                if (document.querySelector('script[data-exact-export]')) return;
+                const exportScript = document.createElement("script");
+                exportScript.src = "js/exact-export.js?v=1";
+                exportScript.dataset.exactExport = "true";
+                document.body.appendChild(exportScript);
+            };
             document.body.appendChild(nightScript);
         };
         document.body.appendChild(extraScript);
