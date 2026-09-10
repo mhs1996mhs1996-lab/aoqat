@@ -29,11 +29,18 @@ window.addEventListener("load", () => {
             nightScript.src = "js/night-design.js?v=1";
             nightScript.dataset.nightDesign = "true";
             nightScript.onload = () => {
-                if (document.querySelector('script[data-exact-export]')) return;
-                const exportScript = document.createElement("script");
-                exportScript.src = "js/exact-export.js?v=4";
-                exportScript.dataset.exactExport = "true";
-                document.body.appendChild(exportScript);
+                if (document.querySelector('script[data-ornate-design]')) return;
+                const ornateScript = document.createElement("script");
+                ornateScript.src = "js/ornate-design.js?v=1";
+                ornateScript.dataset.ornateDesign = "true";
+                ornateScript.onload = () => {
+                    if (document.querySelector('script[data-exact-export]')) return;
+                    const exportScript = document.createElement("script");
+                    exportScript.src = "js/exact-export.js?v=4";
+                    exportScript.dataset.exactExport = "true";
+                    document.body.appendChild(exportScript);
+                };
+                document.body.appendChild(ornateScript);
             };
             document.body.appendChild(nightScript);
         };
