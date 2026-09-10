@@ -3,7 +3,6 @@
 (function(){
   const AUTO_KEY="prayerAutoTomorrowEnabledV1";
   const NOTIFY_KEY="prayerTomorrowNotifyEnabledV1";
-  const BAGHDAD_TZ="Asia/Baghdad";
   const HIJRI_MONTHS=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
   const DAY_NAMES=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
   let manualOverrideUntil=0;
@@ -17,26 +16,29 @@
     if(option) el.value=option.value;
   }
 
-  function baghdadNowParts(){
-    const parts=new Intl.DateTimeFormat("en-US",{
-      timeZone:BAGHDAD_TZ,year:"numeric",month:"2-digit",day:"2-digit",
-      hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"
-    }).formatToParts(new Date());
-    const out={};
-    parts.forEach(p=>{if(p.type!=="literal") out[p.type]=Number(p.value)});
-    return out;
+  /* الساعة الحالية تؤخذ من جهاز المستخدم، أما وقت التبديل نفسه فيؤخذ من وقت العشاء المخزن في قاعدة البيانات */
+  function currentNowParts(){
+    const now=new Date();
+    return {
+      year:now.getFullYear(),
+      month:now.getMonth()+1,
+      day:now.getDate(),
+      hour:now.getHours(),
+      minute:now.getMinutes(),
+      second:now.getSeconds()
+    };
   }
 
   function addDays(dateParts,days){
-    const d=new Date(Date.UTC(dateParts.year,dateParts.month-1,dateParts.day+days,12,0,0));
-    return {year:d.getUTCFullYear(),month:d.getUTCMonth()+1,day:d.getUTCDate(),date:d};
+    const d=new Date(dateParts.year,dateParts.month-1,dateParts.day+days,12,0,0);
+    return {year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate(),date:d};
   }
 
   function hijriFor(dateParts){
     try{
-      const d=new Date(Date.UTC(dateParts.year,dateParts.month-1,dateParts.day,12,0,0));
+      const d=new Date(dateParts.year,dateParts.month-1,dateParts.day,12,0,0);
       const parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{
-        timeZone:BAGHDAD_TZ,year:"numeric",month:"numeric",day:"numeric"
+        year:"numeric",month:"numeric",day:"numeric"
       }).formatToParts(d);
       const out={};
       parts.forEach(p=>{if(p.type!=="literal"&&p.type!=="era") out[p.type]=Number(p.value)});
@@ -45,8 +47,8 @@
   }
 
   function weekdayFor(dateParts){
-    const d=new Date(Date.UTC(dateParts.year,dateParts.month-1,dateParts.day,12,0,0));
-    return DAY_NAMES[d.getUTCDay()];
+    const d=new Date(dateParts.year,dateParts.month-1,dateParts.day,12,0,0);
+    return DAY_NAMES[d.getDay()];
   }
 
   function monthName(month){
@@ -146,12 +148,12 @@
   async function evaluateAutoSwitch(force=false){
     if(!autoEnabled()||Date.now()<manualOverrideUntil) return;
     try{
-      const now=baghdadNowParts();
+      const now=currentNowParts();
       const today={year:now.year,month:now.month,day:now.day};
       const todayRow=await fetchAnnualPrayer(today.month,today.day);
-      if(!todayRow){setSwitchStatus("تعذر قراءة وقت العشاء لليوم","error");return;}
+      if(!todayRow){setSwitchStatus("تعذر قراءة وقت العشاء لليوم من قاعدة البيانات","error");return;}
       const isha=parseIshaMinutes(todayRow.isha);
-      if(isha==null){setSwitchStatus("وقت العشاء غير صالح","error");return;}
+      if(isha==null){setSwitchStatus("وقت العشاء المخزن في قاعدة البيانات غير صالح","error");return;}
 
       const nowMinutes=now.hour*60+now.minute;
       const switchMinutes=isha+35;
@@ -169,10 +171,10 @@
       const switchText=`${String(switchHour).padStart(2,"0")}:${String(switchMinute).padStart(2,"0")}`;
 
       if(force||!alreadyTarget||lastAutoMode!==desired){
-        const changed=await applyPreviewDate(target,shouldTomorrow?`تم عرض مواقيت اليوم التالي تلقائياً بعد العشاء بـ35 دقيقة`:`المعاينة تعرض مواقيت اليوم. التبديل التلقائي الساعة ${switchText}`);
+        const changed=await applyPreviewDate(target,shouldTomorrow?`تم عرض مواقيت اليوم التالي تلقائياً بعد وقت العشاء المخزن بقاعدة البيانات بـ35 دقيقة`:`المعاينة تعرض مواقيت اليوم. التبديل حسب وقت العشاء المخزن بقاعدة البيانات الساعة ${switchText}`);
         if(changed&&shouldTomorrow&&lastAutoMode&&lastAutoMode!=="tomorrow") sendTomorrowNotification();
       }else{
-        setSwitchStatus(shouldTomorrow?"المعاينة الآن تعرض مواقيت اليوم التالي تلقائياً":`المعاينة تعرض مواقيت اليوم. التبديل التلقائي الساعة ${switchText}` ,"success");
+        setSwitchStatus(shouldTomorrow?"المعاينة الآن تعرض مواقيت اليوم التالي تلقائياً":`المعاينة تعرض مواقيت اليوم. التبديل حسب وقت العشاء المخزن بقاعدة البيانات الساعة ${switchText}` ,"success");
       }
       lastAutoMode=desired;
     }catch(error){
@@ -182,13 +184,13 @@
   }
 
   async function showTomorrowManual(){
-    const now=baghdadNowParts();
+    const now=currentNowParts();
     manualOverrideUntil=Date.now()+10*60*1000;
     await applyPreviewDate(addDays({year:now.year,month:now.month,day:now.day},1),"تم عرض مواقيت اليوم التالي يدويًا");
   }
 
   async function showTodayManual(){
-    const now=baghdadNowParts();
+    const now=currentNowParts();
     manualOverrideUntil=Date.now()+10*60*1000;
     await applyPreviewDate({year:now.year,month:now.month,day:now.day},"تم الرجوع إلى مواقيت اليوم يدويًا");
   }
@@ -209,12 +211,12 @@
       panel.id="switchPanel";
       panel.className="panel inline-control-panel";
       panel.innerHTML=`
-        <div class="switch-help">يتم تجهيز صورة اليوم التالي تلقائيًا بعد وقت صلاة العشاء بـ 35 دقيقة.</div>
+        <div class="switch-help">يتم تجهيز صورة اليوم التالي تلقائيًا بعد وقت صلاة العشاء المخزن في قاعدة البيانات بـ 35 دقيقة.</div>
         <button type="button" id="autoTomorrowToggle" class="switch-control-btn"></button>
         <button type="button" id="tomorrowNotifyToggle" class="switch-control-btn"></button>
         <button type="button" id="showTomorrowNowBtn" class="switch-control-btn manual">➡ عرض اليوم التالي الآن</button>
         <button type="button" id="showTodayNowBtn" class="switch-control-btn manual secondary">↩ الرجوع إلى اليوم</button>
-        <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">جاري فحص وقت العشاء...</div>`;
+        <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">جاري قراءة وقت العشاء من قاعدة البيانات...</div>`;
       button.insertAdjacentElement("afterend",panel);
     }
     return {button,panel};
