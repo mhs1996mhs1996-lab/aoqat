@@ -6,7 +6,7 @@ const prayerTimes = [];
 (function(){
     if (document.querySelector('script[data-modal-panels]')) return;
     const modalScript = document.createElement("script");
-    modalScript.src = "js/modal-panels.js?v=3";
+    modalScript.src = "js/modal-panels.js?v=4";
     modalScript.dataset.modalPanels = "true";
     document.head.appendChild(modalScript);
 })();
