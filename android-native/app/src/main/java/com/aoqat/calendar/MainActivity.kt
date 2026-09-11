@@ -22,6 +22,8 @@ import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
+    private var pageReady = false
+    private var alarmPermissionPrompted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,12 +44,14 @@ class MainActivity : Activity() {
             settings.builtInZoomControls = false
             settings.displayZoomControls = false
             settings.cacheMode = WebSettings.LOAD_DEFAULT
-            setInitialScale(100)
             addJavascriptInterface(NativeAlarmBridge(), "AndroidAlarm")
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    pageReady = true
                     injectNativeAlarmButtonBridge()
+                    requestNotificationPermissionIfNeeded()
+                    AlarmScheduler.scheduleFromDatabase(this@MainActivity)
                 }
             }
             webChromeClient = object : WebChromeClient() {
@@ -72,18 +76,16 @@ class MainActivity : Activity() {
         setContentView(webView)
         ViewCompat.requestApplyInsets(webView)
         webView.loadUrl("https://aoqat.vercel.app")
-
-        requestNotificationPermissionIfNeeded()
-        requestExactAlarmPermissionIfNeeded()
-        AlarmScheduler.scheduleFromDatabase(this)
     }
 
     override fun onResume() {
         super.onResume()
-        AlarmScheduler.scheduleFromDatabase(this)
         if (::webView.isInitialized) {
             ViewCompat.requestApplyInsets(webView)
-            injectNativeAlarmButtonBridge()
+            if (pageReady) {
+                injectNativeAlarmButtonBridge()
+                AlarmScheduler.scheduleFromDatabase(this)
+            }
         }
     }
 
@@ -96,7 +98,8 @@ class MainActivity : Activity() {
     private fun requestExactAlarmPermissionIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val alarm = getSystemService(ALARM_SERVICE) as AlarmManager
-            if (!alarm.canScheduleExactAlarms()) {
+            if (!alarm.canScheduleExactAlarms() && !alarmPermissionPrompted) {
+                alarmPermissionPrompted = true
                 startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
             }
         }
@@ -109,11 +112,10 @@ class MainActivity : Activity() {
     }
 
     private fun injectNativeAlarmButtonBridge() {
-        if (!::webView.isInitialized) return
+        if (!::webView.isInitialized || !pageReady) return
         val script = """
             (function(){
               const KEY='prayerTomorrowAlarmEnabledV1';
-
               function statusElement(){
                 let el=document.getElementById('serverPushStatus');
                 const button=document.getElementById('tomorrowAlarmEnable');
@@ -126,7 +128,6 @@ class MainActivity : Activity() {
                 }
                 return el;
               }
-
               function refresh(){
                 const b=document.getElementById('tomorrowAlarmEnable');
                 if(!b)return false;
@@ -134,16 +135,11 @@ class MainActivity : Activity() {
                 b.classList.add('enabled');
                 b.textContent='⏰ تنبيه Android: تشغيل';
                 const el=statusElement();
-                if(el){
-                  el.textContent='✅ تنبيه Android الأصلي مفعّل. لا يعتمد على إشعارات المتصفح.';
-                  el.style.color='#83e2ad';
-                }
+                if(el){el.textContent='✅ تنبيه Android الأصلي مفعّل. لا يعتمد على إشعارات المتصفح.';el.style.color='#83e2ad';}
                 return true;
               }
-
               window.__aoqatNativeAlarmRefresh=refresh;
               window.__AOQAT_NATIVE_ANDROID__=true;
-
               if(!window.__aoqatNativeAlarmClickInstalled){
                 window.__aoqatNativeAlarmClickInstalled=true;
                 document.addEventListener('click',function(event){
@@ -153,25 +149,15 @@ class MainActivity : Activity() {
                   event.stopPropagation();
                   event.stopImmediatePropagation();
                   localStorage.setItem(KEY,'1');
-                  try{
-                    if(window.AndroidAlarm && AndroidAlarm.enableNativeAlarm){
-                      AndroidAlarm.enableNativeAlarm();
-                    }
-                  }catch(e){}
+                  try{if(window.AndroidAlarm && AndroidAlarm.enableNativeAlarm){AndroidAlarm.enableNativeAlarm();}}catch(e){}
                   refresh();
                 },true);
               }
-
               if(!window.__aoqatNativeAlarmObserver){
                 window.__aoqatNativeAlarmObserver=new MutationObserver(function(){refresh();});
                 window.__aoqatNativeAlarmObserver.observe(document.documentElement,{childList:true,subtree:true});
               }
-
-              refresh();
-              setTimeout(refresh,200);
-              setTimeout(refresh,700);
-              setTimeout(refresh,1500);
-              setTimeout(refresh,3000);
+              refresh(); setTimeout(refresh,300); setTimeout(refresh,1000); setTimeout(refresh,2500);
             })();
         """.trimIndent()
         webView.evaluateJavascript(script, null)
@@ -186,7 +172,6 @@ class MainActivity : Activity() {
             }
             return "ok"
         }
-
         @JavascriptInterface
         fun isNativeAndroid(): Boolean = true
     }
