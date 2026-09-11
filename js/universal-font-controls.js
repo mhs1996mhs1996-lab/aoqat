@@ -56,6 +56,12 @@
     });
   }
 
+  function applyColor(color){
+    const role=roleFromValue(document.getElementById('elementSelect')?.value||''),targets=roleTargets(role);if(!targets.length)return;
+    targets.forEach(target=>target.style.color=color);
+    const input=document.getElementById('fontColor');if(input)input.value=color;
+  }
+
   function rgbToHex(rgb){const m=String(rgb||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);if(!m)return '#ffffff';return '#'+[m[1],m[2],m[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('');}
   function collectDesignColors(){
     const colors=new Set();
@@ -66,14 +72,25 @@
     });
     return Array.from(colors).filter(c=>/^#[0-9a-f]{6}$/i.test(c));
   }
+
   function buildColorPalette(){
     const input=document.getElementById('fontColor');if(!input||document.getElementById('designColorPalette'))return;
-    input.disabled=true;input.title='لون النص محفوظ من التصميم ولا يتغير عند تعديل الخط';input.style.opacity='.7';
-    const box=document.createElement('div');box.id='designColorPalette';box.innerHTML='<div class="design-color-title">ألوان التصاميم</div><div class="design-color-swatches"></div><small>للمعاينة فقط — لون النص الأصلي يبقى محفوظاً</small>';
-    const style=document.createElement('style');style.textContent=`#designColorPalette{margin-top:7px}.design-color-title{font-size:12px;font-weight:800;margin-bottom:6px}.design-color-swatches{display:flex;flex-wrap:wrap;gap:5px}.design-color-swatch{width:24px;height:24px;border-radius:6px;border:1px solid rgba(255,255,255,.28);box-shadow:0 1px 3px rgba(0,0,0,.2)}#designColorPalette small{display:block;margin-top:5px;opacity:.72;font-size:10px}`;document.head.appendChild(style);input.insertAdjacentElement('afterend',box);
-    const render=()=>{const sw=box.querySelector('.design-color-swatches');sw.innerHTML='';collectDesignColors().forEach(color=>{const x=document.createElement('span');x.className='design-color-swatch';x.style.background=color;x.title=color;sw.appendChild(x);});};
-    setTimeout(render,600);setTimeout(render,1800);
+    input.disabled=false;input.style.opacity='1';input.title='اختر أي لون من منتقي الألوان';
+    const box=document.createElement('div');
+    box.id='designColorPalette';
+    box.innerHTML='<div class="design-color-title">ألوان التصاميم الجاهزة</div><div class="design-color-swatches"></div><small>اضغط على أي لون لتطبيقه، أو استخدم مربع اللون أعلاه لاختيار أي لون آخر.</small>';
+    const style=document.createElement('style');
+    style.textContent=`#designColorPalette{margin-top:7px}.design-color-title{font-size:12px;font-weight:800;margin-bottom:6px}.design-color-swatches{display:flex;flex-wrap:wrap;gap:5px}.design-color-swatch{width:26px;height:26px;padding:0;border-radius:6px;border:1px solid rgba(255,255,255,.28);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:pointer}.design-color-swatch:hover{transform:scale(1.08)}#designColorPalette small{display:block;margin-top:5px;opacity:.78;font-size:10px;line-height:1.5}`;
+    document.head.appendChild(style);input.insertAdjacentElement('afterend',box);
+    const render=()=>{
+      const sw=box.querySelector('.design-color-swatches');sw.innerHTML='';
+      collectDesignColors().forEach(color=>{
+        const x=document.createElement('button');x.type='button';x.className='design-color-swatch';x.style.background=color;x.title=`استخدام ${color}`;x.setAttribute('aria-label',`استخدام اللون ${color}`);x.addEventListener('click',()=>applyColor(color));sw.appendChild(x);
+      });
+    };
+    render();setTimeout(render,600);setTimeout(render,1800);
   }
+
   function load(){
     const role=roleFromValue(document.getElementById('elementSelect')?.value||''),target=roleTargets(role)[0];if(!target)return;const s=getComputedStyle(target);
     const family=(s.fontFamily.split(',')[0]||'').replace(/["']/g,'').trim(),familySelect=document.getElementById('fontFamily');
@@ -83,10 +100,21 @@
     const color=document.getElementById('fontColor');if(color)color.value=rgbToHex(s.color);
     const align=document.getElementById('textAlign');if(align&&['right','center','left'].includes(s.textAlign))align.value=s.textAlign;
   }
+
   function bind(){
-    const select=document.getElementById('elementSelect');if(!select||select.dataset.universalFontBound==='1')return;select.dataset.universalFontBound='1';select.addEventListener('change',()=>setTimeout(load,0));
+    const select=document.getElementById('elementSelect');if(!select||select.dataset.universalFontBound==='1')return;
+    select.dataset.universalFontBound='1';
+    select.addEventListener('change',()=>setTimeout(load,0));
     CONTROL_IDS.forEach(id=>{const el=document.getElementById(id);if(!el)return;el.addEventListener(id==='fontSize'?'input':'change',()=>setTimeout(()=>applyControl(id),0));});
-    document.addEventListener('click',e=>{if(e.target.closest('.design-carousel-btn,.design-carousel-dot'))setTimeout(load,100);});window.addEventListener('prayerDesignChanged',()=>setTimeout(load,0));buildColorPalette();
+    const color=document.getElementById('fontColor');
+    if(color&&!color.dataset.universalColorBound){
+      color.dataset.universalColorBound='1';
+      color.addEventListener('input',()=>applyColor(color.value));
+      color.addEventListener('change',()=>applyColor(color.value));
+    }
+    document.addEventListener('click',e=>{if(e.target.closest('.design-carousel-btn,.design-carousel-dot'))setTimeout(load,100);});
+    window.addEventListener('prayerDesignChanged',()=>setTimeout(load,0));
+    buildColorPalette();
   }
   function futureProof(){const observer=new MutationObserver(()=>bind());observer.observe(document.body,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();futureProof();},{once:true});else{bind();futureProof();}
