@@ -24,6 +24,7 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var pageReady = false
     private var alarmPermissionPrompted = false
+    private var nativeCleanupDone = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,11 +44,18 @@ class MainActivity : Activity() {
             settings.setSupportZoom(false)
             settings.builtInZoomControls = false
             settings.displayZoomControls = false
-            settings.cacheMode = WebSettings.LOAD_DEFAULT
+            settings.cacheMode = WebSettings.LOAD_NO_CACHE
+            clearCache(true)
+            clearHistory()
             addJavascriptInterface(NativeAlarmBridge(), "AndroidAlarm")
             webViewClient = object : WebViewClient() {
                 override fun onPageFinished(view: WebView?, url: String?) {
                     super.onPageFinished(view, url)
+                    if (!nativeCleanupDone) {
+                        nativeCleanupDone = true
+                        performNativeWebCleanup()
+                        return
+                    }
                     pageReady = true
                     injectNativeAlarmButtonBridge()
                     requestNotificationPermissionIfNeeded()
@@ -75,7 +83,26 @@ class MainActivity : Activity() {
 
         setContentView(webView)
         ViewCompat.requestApplyInsets(webView)
-        webView.loadUrl("https://aoqat.vercel.app")
+        webView.loadUrl("https://aoqat.vercel.app/?nativeAndroid=1&nativeVersion=14")
+    }
+
+    private fun performNativeWebCleanup() {
+        val cleanupScript = """
+            (async function(){
+              try {
+                if ('serviceWorker' in navigator) {
+                  const regs = await navigator.serviceWorker.getRegistrations();
+                  await Promise.all(regs.map(r => r.unregister()));
+                }
+                if ('caches' in window) {
+                  const keys = await caches.keys();
+                  await Promise.all(keys.map(k => caches.delete(k)));
+                }
+              } catch(e) {}
+              location.replace('https://aoqat.vercel.app/?nativeAndroid=1&nativeVersion=14&clean=1');
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(cleanupScript, null)
     }
 
     override fun onResume() {
