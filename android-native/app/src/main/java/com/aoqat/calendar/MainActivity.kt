@@ -5,14 +5,20 @@ import android.app.Activity
 import android.app.AlarmManager
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.webkit.JavascriptInterface
+import android.webkit.JsResult
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : Activity() {
     private lateinit var webView: WebView
@@ -20,20 +26,52 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        webView = WebView(this)
-        webView.settings.javaScriptEnabled = true
-        webView.settings.domStorageEnabled = true
-        webView.settings.allowFileAccess = true
-        webView.addJavascriptInterface(NativeAlarmBridge(), "AndroidAlarm")
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                injectNativeAlarmButtonBridge()
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = Color.TRANSPARENT
+        window.navigationBarColor = Color.TRANSPARENT
+
+        webView = WebView(this).apply {
+            setBackgroundColor(Color.rgb(5, 24, 34))
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.allowFileAccess = true
+            settings.useWideViewPort = true
+            settings.loadWithOverviewMode = false
+            settings.textZoom = 100
+            settings.setSupportZoom(false)
+            settings.builtInZoomControls = false
+            settings.displayZoomControls = false
+            settings.cacheMode = WebSettings.LOAD_DEFAULT
+            setInitialScale(100)
+            addJavascriptInterface(NativeAlarmBridge(), "AndroidAlarm")
+            webViewClient = object : WebViewClient() {
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    injectNativeAlarmButtonBridge()
+                }
+            }
+            webChromeClient = object : WebChromeClient() {
+                override fun onJsAlert(view: WebView?, url: String?, message: String?, result: JsResult?): Boolean {
+                    if (message?.contains("هذا المتصفح لا يدعم إشعارات الهاتف") == true) {
+                        enableNativeAlarmFromUi()
+                        result?.confirm()
+                        injectNativeAlarmButtonBridge()
+                        return true
+                    }
+                    return super.onJsAlert(view, url, message, result)
+                }
             }
         }
-        webView.webChromeClient = WebChromeClient()
-        webView.loadUrl("https://aoqat.vercel.app")
+
+        ViewCompat.setOnApplyWindowInsetsListener(webView) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(0, bars.top, 0, bars.bottom)
+            insets
+        }
+
         setContentView(webView)
+        ViewCompat.requestApplyInsets(webView)
+        webView.loadUrl("https://aoqat.vercel.app")
 
         requestNotificationPermissionIfNeeded()
         requestExactAlarmPermissionIfNeeded()
@@ -43,7 +81,10 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         AlarmScheduler.scheduleFromDatabase(this)
-        if (::webView.isInitialized) injectNativeAlarmButtonBridge()
+        if (::webView.isInitialized) {
+            ViewCompat.requestApplyInsets(webView)
+            injectNativeAlarmButtonBridge()
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -61,15 +102,16 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun enableNativeAlarmFromUi() {
+        requestNotificationPermissionIfNeeded()
+        requestExactAlarmPermissionIfNeeded()
+        AlarmScheduler.scheduleFromDatabase(this)
+    }
+
     private fun injectNativeAlarmButtonBridge() {
         if (!::webView.isInitialized) return
         val script = """
             (function(){
-              if(window.__aoqatNativeAlarmBridgeInstalled){
-                if(window.__aoqatNativeAlarmRefresh) window.__aoqatNativeAlarmRefresh();
-                return;
-              }
-              window.__aoqatNativeAlarmBridgeInstalled=true;
               const KEY='prayerTomorrowAlarmEnabledV1';
 
               function statusElement(){
@@ -87,7 +129,7 @@ class MainActivity : Activity() {
 
               function refresh(){
                 const b=document.getElementById('tomorrowAlarmEnable');
-                if(!b)return;
+                if(!b)return false;
                 localStorage.setItem(KEY,'1');
                 b.classList.add('enabled');
                 b.textContent='⏰ تنبيه Android: تشغيل';
@@ -96,31 +138,40 @@ class MainActivity : Activity() {
                   el.textContent='✅ تنبيه Android الأصلي مفعّل. لا يعتمد على إشعارات المتصفح.';
                   el.style.color='#83e2ad';
                 }
+                return true;
               }
+
               window.__aoqatNativeAlarmRefresh=refresh;
+              window.__AOQAT_NATIVE_ANDROID__=true;
 
-              document.addEventListener('click',function(event){
-                const b=event.target && event.target.closest ? event.target.closest('#tomorrowAlarmEnable') : null;
-                if(!b)return;
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                try{
-                  if(window.AndroidAlarm && AndroidAlarm.enableNativeAlarm){
-                    AndroidAlarm.enableNativeAlarm();
-                    refresh();
-                  }
-                }catch(e){
-                  const el=statusElement();
-                  if(el){el.textContent='تعذر تفعيل تنبيه Android.';el.style.color='#ff9b9b';}
-                }
-              },true);
+              if(!window.__aoqatNativeAlarmClickInstalled){
+                window.__aoqatNativeAlarmClickInstalled=true;
+                document.addEventListener('click',function(event){
+                  const b=event.target && event.target.closest ? event.target.closest('#tomorrowAlarmEnable') : null;
+                  if(!b)return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  event.stopImmediatePropagation();
+                  localStorage.setItem(KEY,'1');
+                  try{
+                    if(window.AndroidAlarm && AndroidAlarm.enableNativeAlarm){
+                      AndroidAlarm.enableNativeAlarm();
+                    }
+                  }catch(e){}
+                  refresh();
+                },true);
+              }
 
-              const observer=new MutationObserver(refresh);
-              observer.observe(document.documentElement,{childList:true,subtree:true});
-              setTimeout(refresh,250);
-              setTimeout(refresh,1000);
-              setTimeout(refresh,2500);
+              if(!window.__aoqatNativeAlarmObserver){
+                window.__aoqatNativeAlarmObserver=new MutationObserver(function(){refresh();});
+                window.__aoqatNativeAlarmObserver.observe(document.documentElement,{childList:true,subtree:true});
+              }
+
+              refresh();
+              setTimeout(refresh,200);
+              setTimeout(refresh,700);
+              setTimeout(refresh,1500);
+              setTimeout(refresh,3000);
             })();
         """.trimIndent()
         webView.evaluateJavascript(script, null)
@@ -130,11 +181,13 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun enableNativeAlarm(): String {
             runOnUiThread {
-                requestNotificationPermissionIfNeeded()
-                requestExactAlarmPermissionIfNeeded()
-                AlarmScheduler.scheduleFromDatabase(this@MainActivity)
+                enableNativeAlarmFromUi()
+                injectNativeAlarmButtonBridge()
             }
             return "ok"
         }
+
+        @JavascriptInterface
+        fun isNativeAndroid(): Boolean = true
     }
 }
