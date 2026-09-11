@@ -33,11 +33,11 @@ window.addEventListener("load", () => {
                     fiveScript.dataset.fiveNewDesigns = "true";
                     fiveScript.onload = () => {
                         const editScript = document.createElement("script");
-                        editScript.src = "js/manual-edit-toggle.js?v=3";
+                        editScript.src = "js/manual-edit-toggle.js?v=4";
                         editScript.dataset.manualEditToggle = "true";
                         editScript.onload = () => {
                             const toolsScript = document.createElement("script");
-                            toolsScript.src = "js/background-tools-organizer.js?v=1";
+                            toolsScript.src = "js/background-tools-organizer.js?v=2";
                             toolsScript.dataset.backgroundToolsOrganizer = "true";
                             toolsScript.onload = () => {
                                 const footerScript = document.createElement("script");
