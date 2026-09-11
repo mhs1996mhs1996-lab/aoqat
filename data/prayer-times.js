@@ -29,7 +29,7 @@ window.addEventListener("load", () => {
                 nightScript.dataset.nightDesign = "true";
                 nightScript.onload = () => {
                     const fiveScript = document.createElement("script");
-                    fiveScript.src = "js/five-new-designs.js?v=4";
+                    fiveScript.src = "js/five-new-designs.js?v=5";
                     fiveScript.dataset.fiveNewDesigns = "true";
                     fiveScript.onload = () => {
                         const editScript = document.createElement("script");
