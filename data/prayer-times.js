@@ -45,31 +45,37 @@ window.addEventListener("load", () => {
                                 footerScript.dataset.footerBackgroundOrganizer = "true";
                                 footerScript.onload = () => {
                                     const fontScript = document.createElement("script");
-                                    fontScript.src = "js/universal-font-controls.js?v=3";
+                                    fontScript.src = "js/universal-font-controls.js?v=4";
                                     fontScript.dataset.universalFontControls = "true";
                                     fontScript.onload = () => {
-                                        const historyScript = document.createElement("script");
-                                        historyScript.src = "js/design-history.js?v=1";
-                                        historyScript.dataset.designHistory = "true";
-                                        historyScript.onload = () => {
-                                            const previewEditScript = document.createElement("script");
-                                            previewEditScript.src = "js/universal-preview-editor.js?v=1";
-                                            previewEditScript.dataset.universalPreviewEditor = "true";
-                                            previewEditScript.onload = () => {
-                                                const toolbarScript = document.createElement("script");
-                                                toolbarScript.src = "js/export-toolbar.js?v=3";
-                                                toolbarScript.dataset.exportToolbar = "true";
-                                                toolbarScript.onload = () => {
-                                                    const exportScript = document.createElement("script");
-                                                    exportScript.src = "js/exact-export.js?v=13";
-                                                    exportScript.dataset.exactExport = "true";
-                                                    document.body.appendChild(exportScript);
+                                        const fontManagerScript = document.createElement("script");
+                                        fontManagerScript.src = "js/font-design-manager.js?v=1";
+                                        fontManagerScript.dataset.fontDesignManager = "true";
+                                        fontManagerScript.onload = () => {
+                                            const historyScript = document.createElement("script");
+                                            historyScript.src = "js/design-history.js?v=1";
+                                            historyScript.dataset.designHistory = "true";
+                                            historyScript.onload = () => {
+                                                const previewEditScript = document.createElement("script");
+                                                previewEditScript.src = "js/universal-preview-editor.js?v=1";
+                                                previewEditScript.dataset.universalPreviewEditor = "true";
+                                                previewEditScript.onload = () => {
+                                                    const toolbarScript = document.createElement("script");
+                                                    toolbarScript.src = "js/export-toolbar.js?v=3";
+                                                    toolbarScript.dataset.exportToolbar = "true";
+                                                    toolbarScript.onload = () => {
+                                                        const exportScript = document.createElement("script");
+                                                        exportScript.src = "js/exact-export.js?v=13";
+                                                        exportScript.dataset.exactExport = "true";
+                                                        document.body.appendChild(exportScript);
+                                                    };
+                                                    document.body.appendChild(toolbarScript);
                                                 };
-                                                document.body.appendChild(toolbarScript);
+                                                document.body.appendChild(previewEditScript);
                                             };
-                                            document.body.appendChild(previewEditScript);
+                                            document.body.appendChild(historyScript);
                                         };
-                                        document.body.appendChild(historyScript);
+                                        document.body.appendChild(fontManagerScript);
                                     };
                                     document.body.appendChild(fontScript);
                                 };
