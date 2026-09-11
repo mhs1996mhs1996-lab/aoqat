@@ -29,7 +29,7 @@ window.addEventListener("load", () => {
                 nightScript.dataset.nightDesign = "true";
                 nightScript.onload = () => {
                     const fiveScript = document.createElement("script");
-                    fiveScript.src = "js/five-new-designs.js?v=3";
+                    fiveScript.src = "js/five-new-designs.js?v=4";
                     fiveScript.dataset.fiveNewDesigns = "true";
                     fiveScript.onload = () => {
                         const editScript = document.createElement("script");
@@ -41,7 +41,7 @@ window.addEventListener("load", () => {
                             toolsScript.dataset.backgroundToolsOrganizer = "true";
                             toolsScript.onload = () => {
                                 const exportScript = document.createElement("script");
-                                exportScript.src = "js/exact-export.js?v=8";
+                                exportScript.src = "js/exact-export.js?v=9";
                                 exportScript.dataset.exactExport = "true";
                                 document.body.appendChild(exportScript);
                             };
