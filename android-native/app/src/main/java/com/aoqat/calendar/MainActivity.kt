@@ -57,6 +57,7 @@ class MainActivity : Activity() {
                         return
                     }
                     pageReady = true
+                    forceWebUiVisible()
                     injectNativeAlarmButtonBridge()
                     requestNotificationPermissionIfNeeded()
                     AlarmScheduler.scheduleFromDatabase(this@MainActivity)
@@ -83,7 +84,7 @@ class MainActivity : Activity() {
 
         setContentView(webView)
         ViewCompat.requestApplyInsets(webView)
-        webView.loadUrl("https://aoqat.vercel.app/?nativeAndroid=1&nativeVersion=14")
+        webView.loadUrl("https://aoqat.vercel.app/?nativeAndroid=1&nativeVersion=15")
     }
 
     private fun performNativeWebCleanup() {
@@ -99,10 +100,37 @@ class MainActivity : Activity() {
                   await Promise.all(keys.map(k => caches.delete(k)));
                 }
               } catch(e) {}
-              location.replace('https://aoqat.vercel.app/?nativeAndroid=1&nativeVersion=14&clean=1');
+              location.replace('https://aoqat.vercel.app/?nativeAndroid=1&nativeVersion=15&clean=1');
             })();
         """.trimIndent()
         webView.evaluateJavascript(cleanupScript, null)
+    }
+
+    private fun forceWebUiVisible() {
+        if (!::webView.isInitialized) return
+        val script = """
+            (function(){
+              function showUi(){
+                try{
+                  document.body.classList.remove('aoqat-booting');
+                  document.body.classList.add('aoqat-ready');
+                  document.querySelectorAll('.workspace,.sidebar,.app').forEach(function(el){
+                    el.style.setProperty('visibility','visible','important');
+                    el.style.setProperty('opacity','1','important');
+                  });
+                  const app=document.querySelector('.app');
+                  if(app) app.style.removeProperty('display');
+                }catch(e){}
+              }
+              showUi();
+              setTimeout(showUi,250);
+              setTimeout(showUi,800);
+              setTimeout(showUi,1600);
+              setTimeout(showUi,3000);
+              setTimeout(showUi,6000);
+            })();
+        """.trimIndent()
+        webView.evaluateJavascript(script, null)
     }
 
     override fun onResume() {
@@ -110,6 +138,7 @@ class MainActivity : Activity() {
         if (::webView.isInitialized) {
             ViewCompat.requestApplyInsets(webView)
             if (pageReady) {
+                forceWebUiVisible()
                 injectNativeAlarmButtonBridge()
                 AlarmScheduler.scheduleFromDatabase(this)
             }
