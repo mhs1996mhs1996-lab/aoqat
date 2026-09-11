@@ -43,6 +43,10 @@
             android:exported="false" />
 
         <receiver
+            android:name=".AlarmActionReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".BootReceiver"
             android:enabled="true"
             android:exported="true">
