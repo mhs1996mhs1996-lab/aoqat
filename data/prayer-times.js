@@ -64,7 +64,7 @@ window.addEventListener("load", () => {
                                     footerScript.dataset.footerBackgroundOrganizer = "true";
                                     footerScript.onload = () => {
                                         const fontScript = document.createElement("script");
-                                        fontScript.src = "js/universal-font-controls.js?v=5";
+                                        fontScript.src = "js/universal-font-controls.js?v=6";
                                         fontScript.dataset.universalFontControls = "true";
                                         fontScript.onload = () => {
                                             const fontManagerScript = document.createElement("script");
