@@ -33,13 +33,19 @@ window.addEventListener("load", () => {
                     fiveScript.dataset.fiveNewDesigns = "true";
                     fiveScript.onload = () => {
                         const editScript = document.createElement("script");
-                        editScript.src = "js/manual-edit-toggle.js?v=2";
+                        editScript.src = "js/manual-edit-toggle.js?v=3";
                         editScript.dataset.manualEditToggle = "true";
                         editScript.onload = () => {
-                            const exportScript = document.createElement("script");
-                            exportScript.src = "js/exact-export.js?v=7";
-                            exportScript.dataset.exactExport = "true";
-                            document.body.appendChild(exportScript);
+                            const toolsScript = document.createElement("script");
+                            toolsScript.src = "js/background-tools-organizer.js?v=1";
+                            toolsScript.dataset.backgroundToolsOrganizer = "true";
+                            toolsScript.onload = () => {
+                                const exportScript = document.createElement("script");
+                                exportScript.src = "js/exact-export.js?v=7";
+                                exportScript.dataset.exactExport = "true";
+                                document.body.appendChild(exportScript);
+                            };
+                            document.body.appendChild(toolsScript);
                         };
                         document.body.appendChild(editScript);
                     };
