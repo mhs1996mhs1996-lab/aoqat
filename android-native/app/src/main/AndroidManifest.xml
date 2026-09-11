@@ -12,7 +12,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="برنامج تقاويم الصلاة"
+        android:label="تقاويم الصلاة Android"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
