@@ -56,7 +56,7 @@ window.addEventListener("load", () => {
                             footerGuardScript.dataset.footerPlacementGuard = "true";
                             footerGuardScript.onload = () => {
                                 const ornateScript = document.createElement("script");
-                                ornateScript.src = "js/ornate-reference-design.js?v=1";
+                                ornateScript.src = "js/ornate-reference-design.js?v=2";
                                 ornateScript.dataset.ornateReferenceDesign = "true";
                                 ornateScript.onload = () => {
                                     const editScript = document.createElement("script");
@@ -72,7 +72,7 @@ window.addEventListener("load", () => {
                                             footerScript.dataset.footerBackgroundOrganizer = "true";
                                             footerScript.onload = () => {
                                                 const fontScript = document.createElement("script");
-                                                fontScript.src = "js/universal-font-controls.js?v=7";
+                                                fontScript.src = "js/universal-font-controls.js?v=8";
                                                 fontScript.dataset.universalFontControls = "true";
                                                 fontScript.onload = () => {
                                                     const fontManagerScript = document.createElement("script");
