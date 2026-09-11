@@ -45,7 +45,7 @@ window.addEventListener("load", () => {
                                 footerScript.dataset.footerBackgroundOrganizer = "true";
                                 footerScript.onload = () => {
                                     const fontScript = document.createElement("script");
-                                    fontScript.src = "js/universal-font-controls.js?v=2";
+                                    fontScript.src = "js/universal-font-controls.js?v=3";
                                     fontScript.dataset.universalFontControls = "true";
                                     fontScript.onload = () => {
                                         const historyScript = document.createElement("script");
