@@ -44,10 +44,16 @@ window.addEventListener("load", () => {
                                 fontScript.src = "js/universal-font-controls.js?v=1";
                                 fontScript.dataset.universalFontControls = "true";
                                 fontScript.onload = () => {
-                                    const exportScript = document.createElement("script");
-                                    exportScript.src = "js/exact-export.js?v=10";
-                                    exportScript.dataset.exactExport = "true";
-                                    document.body.appendChild(exportScript);
+                                    const historyScript = document.createElement("script");
+                                    historyScript.src = "js/design-history.js?v=1";
+                                    historyScript.dataset.designHistory = "true";
+                                    historyScript.onload = () => {
+                                        const exportScript = document.createElement("script");
+                                        exportScript.src = "js/exact-export.js?v=11";
+                                        exportScript.dataset.exactExport = "true";
+                                        document.body.appendChild(exportScript);
+                                    };
+                                    document.body.appendChild(historyScript);
                                 };
                                 document.body.appendChild(fontScript);
                             };
