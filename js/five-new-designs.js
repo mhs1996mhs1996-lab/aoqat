@@ -1,27 +1,51 @@
 "use strict";
 (function(){
- const W=1024,H=1448,TOTAL=6; let active=0;
- const val=id=>document.getElementById(id)?.value||"";
- const model=()=>({day:val("dayName"),gd:val("gregorianDay"),gm:val("gregorianMonth"),gy:val("gregorianYear")?val("gregorianYear")+"م":"",hd:val("hijriDay"),hm:val("hijriMonth"),hy:val("hijriYear")?val("hijriYear")+"هـ":"",fajr:val("fajr"),sunrise:val("sunrise"),dhuhr:val("dhuhr"),asr:val("asr"),maghrib:val("maghrib"),isha:val("isha"),footer:val("footerText")||"حسب التوقيت المحلي لمدينة الحويجة وضواحيها"});
- const prayers=[['fajr','الفجر'],['sunrise','الشروق'],['dhuhr','الظهر'],['asr','العصر'],['maghrib','المغرب'],['isha','العشاء']];
- function css(){if(document.getElementById('newFiveStyles'))return;let s=document.createElement('style');s.id='newFiveStyles';s.textContent=`
- .nf{position:relative;width:${W}px;height:${H}px;flex:0 0 ${W}px;overflow:hidden;direction:rtl;box-sizing:border-box;font-family:Cairo,Arial,sans-serif}.nf *{box-sizing:border-box}.nf .drag{cursor:move;touch-action:none;user-select:none}.nf-head{position:absolute;top:78px;left:70px;right:70px;text-align:center}.nf-title{font-size:68px;font-weight:900;line-height:1.25}.nf-sub{font-size:27px;margin-top:12px}.nf-day{position:absolute;top:270px;left:332px;width:360px;height:112px;display:flex;align-items:center;justify-content:center;font-size:46px;font-weight:900}.nf-dates{position:absolute;top:415px;left:105px;right:105px;display:grid;grid-template-columns:1fr 1fr;gap:28px}.nf-date{height:154px;display:flex;align-items:center;justify-content:center;flex-direction:column;font-weight:800}.nf-num{font-size:48px;line-height:1}.nf-month{font-size:26px}.nf-year{font-size:20px}.nf-prayers{position:absolute;top:625px;left:105px;right:105px;display:grid;grid-template-columns:1fr 1fr;gap:22px}.nf-row{height:150px;padding:18px 25px;display:flex;flex-direction:column;align-items:center;justify-content:center}.nf-label{font-size:29px;font-weight:800}.nf-time{font-size:46px;font-weight:900;direction:ltr}.nf-footer{position:absolute;left:105px;right:105px;bottom:70px;min-height:105px;padding:18px 30px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:27px;font-weight:800}
- .nf-sand{background:linear-gradient(180deg,#f5ead2,#e7c995 52%,#b97642);color:#3c2619;border:22px solid #6e3f24}.nf-sand:before{content:"";position:absolute;inset:38px;border:3px double #8b5632}.nf-sand .nf-title{color:#6f351d}.nf-sand .nf-day{background:#6f351d;color:#fff4dc;border-radius:60px}.nf-sand .nf-date,.nf-sand .nf-row{background:#fff4dcaa;border:2px solid #8d5a37;border-radius:24px}.nf-sand .nf-time{color:#6f351d}.nf-sand .nf-footer{background:#3f291e;color:#fff1d5;border-radius:18px}
- .nf-glass{background:linear-gradient(145deg,#5d2d86,#163c75 48%,#087d8b);color:white}.nf-glass:before,.nf-glass:after{content:"";position:absolute;border-radius:50%;filter:blur(2px);opacity:.45}.nf-glass:before{width:500px;height:500px;left:-180px;top:-120px;background:#ff6db3}.nf-glass:after{width:560px;height:560px;right:-220px;bottom:-130px;background:#19d7c6}.nf-glass .nf-day,.nf-glass .nf-date,.nf-glass .nf-row,.nf-glass .nf-footer{background:#ffffff18;border:2px solid #ffffff50;box-shadow:0 16px 35px #07152c55;backdrop-filter:blur(8px);border-radius:30px}.nf-glass .nf-title{color:#fff}.nf-glass .nf-time{color:#ffe78a}
- .nf-sky{background:linear-gradient(180deg,#bce7ff 0,#edf9ff 42%,#f4dfb9 68%,#d49561 100%);color:#15344c}.nf-sky:before{content:"☀";position:absolute;top:130px;left:110px;font-size:170px;color:#ffb83d;text-shadow:0 0 45px #fff}.nf-sky:after{content:"";position:absolute;left:-100px;right:-100px;bottom:0;height:420px;background:linear-gradient(155deg,transparent 35%,#315a53 36% 50%,#1d3c39 51%);opacity:.92}.nf-sky .nf-title{color:#17415b}.nf-sky .nf-day{background:#fff9;border:2px solid #17415b;border-radius:18px}.nf-sky .nf-date,.nf-sky .nf-row{background:#ffffffb8;border:1px solid #608ca1;border-radius:16px;box-shadow:0 8px 18px #17415b22}.nf-sky .nf-time{color:#c35b2e}.nf-sky .nf-footer{z-index:2;background:#173e3b;color:white;border-radius:50px}
- `;document.head.appendChild(s)}
- function dateBox(type){return `<div class="nf-date drag"><div class="nf-num" data-f="${type==='g'?'gd':'hd'}"></div><div class="nf-month" data-f="${type==='g'?'gm':'hm'}"></div><div class="nf-year" data-f="${type==='g'?'gy':'hy'}"></div></div>`}
- function create(cls,title,sub){let d=document.createElement('div');d.className=`nf ${cls}`;d.innerHTML=`<div class="nf-head"><div class="nf-title drag">${title}</div><div class="nf-sub drag">${sub}</div></div><div class="nf-day drag" data-f="day"></div><div class="nf-dates">${dateBox('g')}${dateBox('h')}</div><div class="nf-prayers">${prayers.map(([f,l])=>`<div class="nf-row drag"><span class="nf-label">${l}</span><b class="nf-time" data-f="${f}"></b></div>`).join('')}</div><div class="nf-footer drag" data-f="footer"></div>`;return d}
- function sync(){let m=model();document.querySelectorAll('.nf').forEach(d=>Object.entries(m).forEach(([k,v])=>d.querySelectorAll(`[data-f="${k}"]`).forEach(x=>x.textContent=v)))}
- function drag(d){d.querySelectorAll('.drag').forEach(el=>{let on=false,sx=0,sy=0,bx=0,by=0,sc=1;let pt=e=>e.touches?e.touches[0]:e;let st=e=>{if(e.button!==undefined&&e.button!==0)return;let p=pt(e),r=d.getBoundingClientRect();sc=r.width/d.offsetWidth||1;sx=p.clientX;sy=p.clientY;bx=+el.dataset.x||0;by=+el.dataset.y||0;on=true;e.preventDefault()};let mv=e=>{if(!on)return;let p=pt(e),x=bx+(p.clientX-sx)/sc,y=by+(p.clientY-sy)/sc;el.dataset.x=x;el.dataset.y=y;el.style.transform=`translate(${x}px,${y}px)`;e.preventDefault()};let en=()=>on=false;el.addEventListener('mousedown',st);el.addEventListener('touchstart',st,{passive:false});window.addEventListener('mousemove',mv,{passive:false});window.addEventListener('touchmove',mv,{passive:false});window.addEventListener('mouseup',en);window.addEventListener('touchend',en)})}
- function init(){let tries=0,t=setInterval(()=>{tries++;let track=document.querySelector('.design-carousel-track'),car=document.querySelector('.design-carousel');if(!track||!car){if(tries>80)clearInterval(t);return}let slides=Array.from(track.querySelectorAll(':scope > .design-slide'));if(slides.length<4)return;if(document.querySelector('.nf')){clearInterval(t);return}clearInterval(t);css();
- // حذف التصميم رقم 2 من المجموعة الأصلية.
- slides[1]?.remove();
- // من التصاميم الخمسة الجديدة نبقي 5 و6 و8 فقط؛ أي حذف التسلسلين 7 و9.
- [['nf-sand','سكينة الفجر','مواقيت الصلاة اليومية'],['nf-glass','نور الصلاة','لحظات روحانية كل يوم'],['nf-sky','يوم مبارك','ابدأ يومك بالصلاة']].forEach(a=>{let d=create(...a),sl=document.createElement('div');sl.className='design-slide';sl.appendChild(d);track.appendChild(sl);drag(d)});sync();
- let oldControls=[...document.querySelectorAll('.design-carousel-controls')];oldControls.forEach(x=>x.style.display='none');[...document.querySelectorAll('.design-carousel-dots')].forEach(x=>x.style.display='none');let wrap=car.parentElement,c=document.createElement('div'),dots=document.createElement('div');c.className='design-carousel-controls ten-carousel-controls';dots.className='design-carousel-dots ten-carousel-dots';c.innerHTML=`<button class="design-carousel-btn" data-prev>‹</button><span class="design-carousel-status">التصميم 1 من ${TOTAL}</span><button class="design-carousel-btn" data-next>›</button>`;dots.innerHTML=Array.from({length:TOTAL},(_,i)=>`<button class="design-carousel-dot${i?'':' active'}" data-dot="${i}"></button>`).join('');wrap.append(c,dots);
- let render=()=>{window.__prayerActiveDesignIndex=active;track.style.transform=`translateX(-${active*100}%)`;c.querySelector('.design-carousel-status').textContent=`التصميم ${active+1} من ${TOTAL}`;dots.querySelectorAll('[data-dot]').forEach((x,i)=>x.classList.toggle('active',i===active));let p=document.querySelector('.previewBox'),scale=1;if(innerWidth<=800&&p)scale=Math.min(1,Math.max(220,p.clientWidth-14)/W);track.querySelectorAll('.nf').forEach(x=>x.style.zoom=String(scale));car.style.height=Math.ceil(H*scale)+'px'};c.querySelector('[data-prev]').onclick=()=>{active=(active-1+TOTAL)%TOTAL;render()};c.querySelector('[data-next]').onclick=()=>{active=(active+1)%TOTAL;render()};dots.querySelectorAll('[data-dot]').forEach(x=>x.onclick=()=>{active=+x.dataset.dot;render()});window.addEventListener('resize',render,{passive:true});render();
- ['dayName','hijriDay','gregorianDay','hijriMonth','gregorianMonth','hijriYear','gregorianYear','fajr','sunrise','dhuhr','asr','maghrib','isha'].forEach(id=>document.getElementById(id)?.addEventListener('change',()=>setTimeout(sync,0)));document.getElementById('footerText')?.addEventListener('input',sync);let p=document.getElementById('design');if(p)new MutationObserver(sync).observe(p,{subtree:true,characterData:true,childList:true});
- },150)}
+ const W=1024,H=1448,TOTAL=2; let active=0;
+ function init(){
+  let tries=0;
+  const timer=setInterval(()=>{
+   tries++;
+   const track=document.querySelector('.design-carousel-track');
+   const car=document.querySelector('.design-carousel');
+   if(!track||!car){if(tries>80)clearInterval(timer);return;}
+   let slides=Array.from(track.querySelectorAll(':scope > .design-slide'));
+   if(slides.length<6)return;
+   clearInterval(timer);
+
+   // بعد الترتيب السابق لدينا 6 تصاميم. المطلوب الآن حذف 2 و4 و5 و6 والإبقاء على 1 و3 فقط.
+   const keep=[slides[0],slides[2]].filter(Boolean);
+   slides.forEach(slide=>{if(!keep.includes(slide))slide.remove();});
+   keep.forEach(slide=>track.appendChild(slide));
+
+   document.querySelectorAll('.design-carousel-controls,.design-carousel-dots').forEach(el=>el.style.display='none');
+   const wrap=car.parentElement;
+   const controls=document.createElement('div');
+   const dots=document.createElement('div');
+   controls.className='design-carousel-controls final-two-carousel-controls';
+   dots.className='design-carousel-dots final-two-carousel-dots';
+   controls.style.display='flex';
+   dots.style.display='flex';
+   controls.innerHTML=`<button class="design-carousel-btn" data-prev>‹</button><span class="design-carousel-status">التصميم 1 من ${TOTAL}</span><button class="design-carousel-btn" data-next>›</button>`;
+   dots.innerHTML=Array.from({length:TOTAL},(_,i)=>`<button class="design-carousel-dot${i?'':' active'}" data-dot="${i}"></button>`).join('');
+   wrap.append(controls,dots);
+
+   const render=()=>{
+    active=Math.max(0,Math.min(active,TOTAL-1));
+    window.__prayerActiveDesignIndex=active;
+    track.style.transform=`translateX(-${active*100}%)`;
+    controls.querySelector('.design-carousel-status').textContent=`التصميم ${active+1} من ${TOTAL}`;
+    dots.querySelectorAll('[data-dot]').forEach((el,i)=>el.classList.toggle('active',i===active));
+    const p=document.querySelector('.previewBox');
+    let scale=1;
+    if(innerWidth<=800&&p)scale=Math.min(1,Math.max(220,p.clientWidth-14)/W);
+    car.style.height=Math.ceil(H*scale)+'px';
+   };
+   controls.querySelector('[data-prev]').onclick=()=>{active=(active-1+TOTAL)%TOTAL;render();};
+   controls.querySelector('[data-next]').onclick=()=>{active=(active+1)%TOTAL;render();};
+   dots.querySelectorAll('[data-dot]').forEach(el=>el.onclick=()=>{active=Number(el.dataset.dot)||0;render();});
+   window.addEventListener('resize',render,{passive:true});
+   render();
+  },150);
+ }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
