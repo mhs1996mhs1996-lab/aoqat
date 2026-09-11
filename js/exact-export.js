@@ -6,22 +6,66 @@
   let bypass=false;
   let loaderPromise=null;
 
-  function activeDesign(){
-    const explicit=window.__prayerActiveDesignElement;
-    if(explicit&&document.contains(explicit)) return explicit;
-    const track=document.querySelector(".design-carousel-track");
-    if(!track) return document.getElementById("design");
-    const slides=Array.from(track.querySelectorAll(":scope > .design-slide")).filter(slide=>{
+  function usableSlides(track){
+    return Array.from(track.querySelectorAll(":scope > .design-slide")).filter(slide=>{
       if(slide.dataset.legacySlide==='true'||slide.querySelector('#design')) return false;
+      if(slide.classList.contains('removed-design-storage')||slide.closest('.removed-design-storage')) return false;
       const cs=getComputedStyle(slide);
       return cs.display!=="none"&&!slide.hidden;
     });
+  }
+
+  function activeDesign(){
+    const track=document.querySelector(".design-carousel-track");
+    if(!track) return document.getElementById("design");
+    const slides=usableSlides(track);
     if(!slides.length) return document.getElementById("design");
+
+    // نعتمد أولاً على التصميم الموجود فعلياً في منتصف نافذة المعاينة.
+    // هذا يمنع تصدير تصميم آخر عند اختلاف أرقام الشرائح الداخلية عن العداد الظاهر.
+    const car=document.querySelector('.design-carousel');
+    if(car){
+      const cr=car.getBoundingClientRect();
+      if(cr.width>0){
+        const center=cr.left+(cr.width/2);
+        let best=null,bestDistance=Infinity;
+        slides.forEach(slide=>{
+          const r=slide.getBoundingClientRect();
+          if(!r.width)return;
+          const distance=Math.abs((r.left+r.width/2)-center);
+          if(distance<bestDistance){bestDistance=distance;best=slide;}
+        });
+        if(best&&bestDistance<=Math.max(cr.width*.8,80)){
+          const design=best.firstElementChild;
+          if(design){
+            window.__prayerActiveDesignElement=design;
+            window.__prayerActiveVisibleIndex=slides.indexOf(best);
+            return design;
+          }
+        }
+      }
+    }
+
+    // احتياط: نحسب الشريحة من حركة المسار نفسها.
+    try{
+      const transform=getComputedStyle(track).transform;
+      const m=transform&&transform!=="none"?new DOMMatrixReadOnly(transform):null;
+      const slideWidth=car?.getBoundingClientRect().width||slides[0].getBoundingClientRect().width;
+      if(m&&slideWidth>0){
+        const all=Array.from(track.querySelectorAll(":scope > .design-slide"));
+        const domIndex=Math.max(0,Math.round(Math.abs(m.m41)/slideWidth));
+        const domSlide=all[domIndex];
+        if(domSlide&&slides.includes(domSlide)&&domSlide.firstElementChild)return domSlide.firstElementChild;
+      }
+    }catch(_){ }
+
+    const explicit=window.__prayerActiveDesignElement;
+    if(explicit&&document.contains(explicit))return explicit;
     let index=Number(window.__prayerActiveVisibleIndex);
-    if(!Number.isFinite(index)) index=Number(window.__prayerActiveDesignIndex);
-    if(!Number.isFinite(index)) index=0;
+    if(!Number.isFinite(index))index=Number(window.__prayerActiveDesignIndex);
+    if(!Number.isFinite(index))index=0;
     index=Math.max(0,Math.min(index,slides.length-1));
-    return slides[index]?.firstElementChild || document.getElementById("design");
+    return slides[index]?.firstElementChild||document.getElementById("design");
   }
 
   function loadHtml2Canvas(){
