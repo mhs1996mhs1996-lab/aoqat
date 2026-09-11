@@ -96,7 +96,7 @@ window.addEventListener("load", () => {
                                                                     toolbarScript.dataset.exportToolbar = "true";
                                                                     toolbarScript.onload = () => {
                                                                         const exportScript = document.createElement("script");
-                                                                        exportScript.src = "js/exact-export.js?v=14";
+                                                                        exportScript.src = "js/exact-export.js?v=15";
                                                                         exportScript.dataset.exactExport = "true";
                                                                         document.body.appendChild(exportScript);
                                                                     };
