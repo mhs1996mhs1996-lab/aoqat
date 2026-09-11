@@ -5,10 +5,11 @@
     if(document.getElementById("manualEditToggleStyle"))return;
     const s=document.createElement("style");s.id="manualEditToggleStyle";
     s.textContent=`
-      .manual-edit-toggle-wrap{display:flex;align-items:center;justify-content:center;margin:12px 0 8px}
-      #manualEditToggle{width:min(100%,420px);border:0;border-radius:12px;padding:13px 18px;font-family:inherit;font-size:16px;font-weight:800;cursor:pointer;transition:.2s;background:#233746;color:#fff;box-shadow:0 5px 16px rgba(0,0,0,.18)}
-      #manualEditToggle.is-on{background:#168b52;color:#fff}
-      #manualEditToggle .state{display:inline-block;min-width:58px;margin-right:8px}
+      .manual-edit-toggle-wrap{display:flex;align-items:center;justify-content:center;margin:0}
+      #manualEditToggle{width:100%;min-height:34px;border:1px solid rgba(255,255,255,.16);border-radius:8px;padding:7px 10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:.2s;background:#263746;color:#fff;box-shadow:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+      #manualEditToggle.is-on{background:#147c49;color:#fff}
+      #manualEditToggle .manual-label{white-space:nowrap}
+      #manualEditToggle .state{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.12);font-size:11px;font-weight:800}
       body.manual-edit-off .previewBox .draggable,body.manual-edit-off .previewBox .drag{pointer-events:none!important;cursor:default!important;touch-action:auto!important;user-select:none!important}
       body.manual-edit-on .previewBox .draggable,body.manual-edit-on .previewBox .drag{pointer-events:auto!important;cursor:move!important;touch-action:none!important}
     `;document.head.appendChild(s);
@@ -20,7 +21,7 @@
     const b=document.getElementById("manualEditToggle");if(!b)return;
     b.classList.toggle("is-on",enabled);
     b.setAttribute("aria-pressed",String(enabled));
-    b.innerHTML=enabled?'✋ التعديل اليدوي <span class="state">مُشغّل</span>':'🔒 التعديل اليدوي <span class="state">مُطفأ</span>';
+    b.innerHTML=enabled?'<span class="manual-label">✋ التعديل اليدوي</span><span class="state">تشغيل</span>':'<span class="manual-label">🔒 التعديل اليدوي</span><span class="state">إيقاف</span>';
   }
   function init(){
     injectStyle();setState(false);
