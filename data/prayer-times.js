@@ -29,11 +29,11 @@ window.addEventListener("load", () => {
                 nightScript.dataset.nightDesign = "true";
                 nightScript.onload = () => {
                     const fiveScript = document.createElement("script");
-                    fiveScript.src = "js/five-new-designs.js?v=5";
+                    fiveScript.src = "js/five-new-designs.js?v=6";
                     fiveScript.dataset.fiveNewDesigns = "true";
                     fiveScript.onload = () => {
                         const editScript = document.createElement("script");
-                        editScript.src = "js/manual-edit-toggle.js?v=4";
+                        editScript.src = "js/manual-edit-toggle.js?v=5";
                         editScript.dataset.manualEditToggle = "true";
                         editScript.onload = () => {
                             const toolsScript = document.createElement("script");
@@ -45,11 +45,11 @@ window.addEventListener("load", () => {
                                 footerScript.dataset.footerBackgroundOrganizer = "true";
                                 footerScript.onload = () => {
                                     const fontScript = document.createElement("script");
-                                    fontScript.src = "js/universal-font-controls.js?v=4";
+                                    fontScript.src = "js/universal-font-controls.js?v=5";
                                     fontScript.dataset.universalFontControls = "true";
                                     fontScript.onload = () => {
                                         const fontManagerScript = document.createElement("script");
-                                        fontManagerScript.src = "js/font-design-manager.js?v=1";
+                                        fontManagerScript.src = "js/font-design-manager.js?v=2";
                                         fontManagerScript.dataset.fontDesignManager = "true";
                                         fontManagerScript.onload = () => {
                                             const historyScript = document.createElement("script");
@@ -57,7 +57,7 @@ window.addEventListener("load", () => {
                                             historyScript.dataset.designHistory = "true";
                                             historyScript.onload = () => {
                                                 const previewEditScript = document.createElement("script");
-                                                previewEditScript.src = "js/universal-preview-editor.js?v=1";
+                                                previewEditScript.src = "js/universal-preview-editor.js?v=2";
                                                 previewEditScript.dataset.universalPreviewEditor = "true";
                                                 previewEditScript.onload = () => {
                                                     const toolbarScript = document.createElement("script");
