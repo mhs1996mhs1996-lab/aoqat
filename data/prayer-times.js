@@ -10,6 +10,14 @@ const prayerTimes = [];
     document.head.appendChild(modalScript);
 })();
 
+(function(){
+    if (document.querySelector('script[data-tomorrow-alarm]')) return;
+    const alarmScript = document.createElement("script");
+    alarmScript.src = "js/tomorrow-alarm.js?v=1";
+    alarmScript.dataset.tomorrowAlarm = "true";
+    document.head.appendChild(alarmScript);
+})();
+
 window.addEventListener("load", () => {
     const hideLegacy = document.createElement("script");
     hideLegacy.src = "js/hide-legacy-design.js?v=1";
