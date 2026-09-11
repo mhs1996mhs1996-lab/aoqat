@@ -40,22 +40,28 @@ window.addEventListener("load", () => {
                             toolsScript.src = "js/background-tools-organizer.js?v=1";
                             toolsScript.dataset.backgroundToolsOrganizer = "true";
                             toolsScript.onload = () => {
-                                const fontScript = document.createElement("script");
-                                fontScript.src = "js/universal-font-controls.js?v=1";
-                                fontScript.dataset.universalFontControls = "true";
-                                fontScript.onload = () => {
-                                    const historyScript = document.createElement("script");
-                                    historyScript.src = "js/design-history.js?v=1";
-                                    historyScript.dataset.designHistory = "true";
-                                    historyScript.onload = () => {
-                                        const exportScript = document.createElement("script");
-                                        exportScript.src = "js/exact-export.js?v=11";
-                                        exportScript.dataset.exactExport = "true";
-                                        document.body.appendChild(exportScript);
+                                const footerScript = document.createElement("script");
+                                footerScript.src = "js/footer-background-organizer.js?v=1";
+                                footerScript.dataset.footerBackgroundOrganizer = "true";
+                                footerScript.onload = () => {
+                                    const fontScript = document.createElement("script");
+                                    fontScript.src = "js/universal-font-controls.js?v=1";
+                                    fontScript.dataset.universalFontControls = "true";
+                                    fontScript.onload = () => {
+                                        const historyScript = document.createElement("script");
+                                        historyScript.src = "js/design-history.js?v=1";
+                                        historyScript.dataset.designHistory = "true";
+                                        historyScript.onload = () => {
+                                            const exportScript = document.createElement("script");
+                                            exportScript.src = "js/exact-export.js?v=12";
+                                            exportScript.dataset.exactExport = "true";
+                                            document.body.appendChild(exportScript);
+                                        };
+                                        document.body.appendChild(historyScript);
                                     };
-                                    document.body.appendChild(historyScript);
+                                    document.body.appendChild(fontScript);
                                 };
-                                document.body.appendChild(fontScript);
+                                document.body.appendChild(footerScript);
                             };
                             document.body.appendChild(toolsScript);
                         };
