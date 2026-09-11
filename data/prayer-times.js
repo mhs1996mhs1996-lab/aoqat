@@ -56,7 +56,7 @@ window.addEventListener("load", () => {
                             footerGuardScript.dataset.footerPlacementGuard = "true";
                             footerGuardScript.onload = () => {
                                 const ornateScript = document.createElement("script");
-                                ornateScript.src = "js/ornate-reference-design.js?v=3";
+                                ornateScript.src = "js/ornate-reference-design.js?v=4";
                                 ornateScript.dataset.ornateReferenceDesign = "true";
                                 ornateScript.onload = () => {
                                     const editScript = document.createElement("script");
@@ -92,7 +92,7 @@ window.addEventListener("load", () => {
                                                                 toolbarScript.dataset.exportToolbar = "true";
                                                                 toolbarScript.onload = () => {
                                                                     const exportScript = document.createElement("script");
-                                                                    exportScript.src = "js/exact-export.js?v=16";
+                                                                    exportScript.src = "js/exact-export.js?v=17";
                                                                     exportScript.dataset.exactExport = "true";
                                                                     document.body.appendChild(exportScript);
                                                                 };
