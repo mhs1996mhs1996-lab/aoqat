@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v6";
+const CACHE_NAME = "aoqat-pwa-v7";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -10,10 +10,13 @@ const APP_SHELL = [
   "/js/night-design.js",
   "/js/modal-panels.js",
   "/js/tomorrow-alarm.js",
+  "/js/push-notifications.js",
   "/data/prayer-times.js",
   "/manifest.webmanifest",
   "/assets/icons/app-icon.svg"
 ];
+
+const PUSH_ACTION_URL="https://ytdvhiijxxaqofduorwm.supabase.co/functions/v1/push-action";
 
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
@@ -40,6 +43,35 @@ self.addEventListener("fetch", event => {
   );
 });
 
+self.addEventListener("push", event => {
+  let payload={};
+  try{payload=event.data?.json()||{};}catch(_){payload={body:event.data?.text()||"تم تبديل التوقيت إلى اليوم التالي. انشر المواقيت."};}
+  const title=payload.title||"⏰ مواقيت الغد جاهزة";
+  const options={
+    body:payload.body||"تم تبديل التوقيت إلى اليوم التالي. انشر المواقيت.",
+    icon:"/assets/icons/app-icon.svg",
+    badge:"/assets/icons/app-icon.svg",
+    tag:payload.tag||"prayer-tomorrow-publish-alarm",
+    renotify:true,
+    requireInteraction:true,
+    vibrate:[700,300,700,300,900],
+    data:payload.data||{kind:"tomorrow-publish-alarm",url:"/"},
+    actions:payload.actions||[
+      {action:"snooze",title:"غفوة 10 دقائق"},
+      {action:"stop",title:"إيقاف التنبيه"}
+    ]
+  };
+  event.waitUntil(self.registration.showNotification(title,options));
+});
+
+async function sendPushAction(action){
+  try{
+    const sub=await self.registration.pushManager.getSubscription();
+    if(!sub)return;
+    await fetch(PUSH_ACTION_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({endpoint:sub.endpoint,action})});
+  }catch(_){ }
+}
+
 self.addEventListener("notificationclick", event => {
   const notification = event.notification;
   const data = notification?.data || {};
@@ -48,26 +80,22 @@ self.addEventListener("notificationclick", event => {
   if (data.kind !== "tomorrow-publish-alarm") return;
 
   if (event.action === "stop") {
-    event.waitUntil(
+    event.waitUntil(Promise.all([
+      sendPushAction("stop"),
       self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients => {
         clients.forEach(client => client.postMessage({type:"PRAYER_ALARM_STOP"}));
       })
-    );
+    ]));
     return;
   }
 
   if (event.action === "snooze") {
-    event.waitUntil(
-      self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients => {
-        const client = clients[0];
-        if (client) {
-          client.postMessage({type:"PRAYER_ALARM_SNOOZE"});
-          if (client.focus) await client.focus();
-          return;
-        }
-        if (self.clients.openWindow) await self.clients.openWindow("/?alarm=snooze");
+    event.waitUntil(Promise.all([
+      sendPushAction("snooze"),
+      self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients => {
+        clients.forEach(client => client.postMessage({type:"PRAYER_ALARM_SNOOZE"}));
       })
-    );
+    ]));
     return;
   }
 
