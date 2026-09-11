@@ -7,75 +7,30 @@
     ".prayer-row:nth-child(1)":"fajr",".prayer-row:nth-child(2)":"sunrise",".prayer-row:nth-child(3)":"dhuhr",
     ".prayer-row:nth-child(4)":"asr",".prayer-row:nth-child(5)":"maghrib",".prayer-row:nth-child(6)":"isha","#footerP":"footer"
   })[value]||null;
-
   function visibleSlides(){const track=document.querySelector('.design-carousel-track');return track?Array.from(track.querySelectorAll(':scope > .design-slide')).filter(s=>getComputedStyle(s).display!=="none"):[];}
-  function activeDesign(){
-    const slides=visibleSlides();
-    if(slides.length){
-      const car=document.querySelector('.design-carousel');
-      const cr=car?.getBoundingClientRect();
-      if(cr&&cr.width){
-        const center=cr.left+cr.width/2;let best=null,dist=Infinity;
-        slides.forEach(slide=>{const r=slide.getBoundingClientRect();if(!r.width)return;const d=Math.abs((r.left+r.width/2)-center);if(d<dist){dist=d;best=slide;}});
-        if(best&&dist<Math.max(cr.width,350))return best.firstElementChild;
-      }
-      const dot=document.querySelector('.design-carousel-dot.active[data-dot]');
-      let i=dot?Number(dot.dataset.dot):Number(window.__prayerActiveDesignIndex);if(!Number.isFinite(i))i=0;i=Math.max(0,Math.min(i,slides.length-1));
-      return slides[i]?.firstElementChild||null;
-    }
-    return document.getElementById('design');
-  }
-
-  const fieldSelectors={
-    day:['[data-field="day"]','[data-f="day"]','#dayP','.weekday','.sd2-day','.sd3-day','.sd4-day','.nd-day','.ref-day'],
-    hday:['[data-field="hday"]','[data-f="hd"]','#hijriDayP','.hijri-day','.sd2-date-card.hijri .sd2-date-number','.sd4-date-card.hijri .sd4-date-number','.ref-date-card.hijri .ref-date-num'],
-    gday:['[data-field="gday"]','[data-f="gd"]','#gregorianDayP','.gregorian-day','.sd2-date-card.greg .sd2-date-number','.sd4-date-card.greg .sd4-date-number','.ref-date-card.greg .ref-date-num'],
-    hmonth:['[data-field="hmonth"]','[data-f="hm"]','#hijriMonthP','.hijri-month','.sd2-date-card.hijri .sd2-date-month','.sd4-date-card.hijri .sd4-date-month','.ref-date-card.hijri .ref-date-month'],
-    gmonth:['[data-field="gmonth"]','[data-f="gm"]','#gregorianMonthP','.gregorian-month','.sd2-date-card.greg .sd2-date-month','.sd4-date-card.greg .sd4-date-month','.ref-date-card.greg .ref-date-month'],
-    hyear:['[data-field="hyear"]','[data-f="hy"]','#hijriYearP','.hijri-year','.sd2-date-card.hijri .sd2-date-year','.sd4-date-card.hijri .sd4-date-year','.ref-date-card.hijri .ref-date-year'],
-    gyear:['[data-field="gyear"]','[data-f="gy"]','#gregorianYearP','.gregorian-year','.sd2-date-card.greg .sd2-date-year','.sd4-date-card.greg .sd4-date-year','.ref-date-card.greg .ref-date-year'],
-    footer:['[data-field="footer"]','[data-f="footer"]','#footerP','.footer','.sd2-footer','.sd3-footer-card','.sd4-footer','.nd-footer','.nf-footer','.ref-footer'],
-    quran:['[data-field="quran"]','[data-f="quran"]','.quran','.verse','.sd4-verse','.nd-verse','.ref-verse']
-  };
-  const labels={fajr:'الفجر',sunrise:'الشروق',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
-  const rowSel='.prayer-row,.sd2-prayer-row,.sd3-prayer-row,.sd4-prayer-row,.nd-prayer-row,.nf-row,.ref-prayer-row,[data-prayer-row]';
-  const unique=a=>Array.from(new Set(a.filter(Boolean)));
-  function roleTargets(role){
-    const root=activeDesign();if(!root||!role)return [];
-    if(labels[role]){
-      const direct=Array.from(root.querySelectorAll(`[data-field="${role}"],[data-f="${role}"]`)),rows=[];
-      direct.forEach(el=>{const r=el.closest(rowSel);if(r)rows.push(r);});
-      if(!rows.length)root.querySelectorAll(rowSel).forEach(r=>{if((r.textContent||'').includes(labels[role]))rows.push(r);});
-      const out=[];rows.forEach(r=>{out.push(r);r.querySelectorAll('span,b,strong,em,i,div').forEach(el=>{if(el.matches('.ref-prayer-icon,[data-icon]'))return;if(el.children.length===0&&(el.textContent||'').trim())out.push(el);});});direct.forEach(el=>out.push(el));return unique(out);
-    }
-    const out=[];(fieldSelectors[role]||[]).forEach(sel=>{try{root.querySelectorAll(sel).forEach(el=>out.push(el));}catch(_){}});return unique(out);
-  }
+  function activeDesign(){const slides=visibleSlides();if(slides.length){const car=document.querySelector('.design-carousel'),cr=car?.getBoundingClientRect();if(cr&&cr.width){const center=cr.left+cr.width/2;let best=null,dist=Infinity;slides.forEach(slide=>{const r=slide.getBoundingClientRect();if(!r.width)return;const d=Math.abs((r.left+r.width/2)-center);if(d<dist){dist=d;best=slide;}});if(best&&dist<Math.max(cr.width,350))return best.firstElementChild;}const dot=document.querySelector('.design-carousel-dot.active[data-dot]');let i=dot?Number(dot.dataset.dot):Number(window.__prayerActiveDesignIndex);if(!Number.isFinite(i))i=0;i=Math.max(0,Math.min(i,slides.length-1));return slides[i]?.firstElementChild||null;}return document.getElementById('design');}
+  const fieldSelectors={day:['[data-field="day"]','[data-f="day"]','#dayP','.weekday','.sd2-day','.sd3-day','.sd4-day','.nd-day','.ref-day'],hday:['[data-field="hday"]','[data-f="hd"]','#hijriDayP','.hijri-day','.sd2-date-card.hijri .sd2-date-number','.sd4-date-card.hijri .sd4-date-number','.ref-date-card.hijri .ref-date-num'],gday:['[data-field="gday"]','[data-f="gd"]','#gregorianDayP','.gregorian-day','.sd2-date-card.greg .sd2-date-number','.sd4-date-card.greg .sd4-date-number','.ref-date-card.greg .ref-date-num'],hmonth:['[data-field="hmonth"]','[data-f="hm"]','#hijriMonthP','.hijri-month','.sd2-date-card.hijri .sd2-date-month','.sd4-date-card.hijri .sd4-date-month','.ref-date-card.hijri .ref-date-month'],gmonth:['[data-field="gmonth"]','[data-f="gm"]','#gregorianMonthP','.gregorian-month','.sd2-date-card.greg .sd2-date-month','.sd4-date-card.greg .sd4-date-month','.ref-date-card.greg .ref-date-month'],hyear:['[data-field="hyear"]','[data-f="hy"]','#hijriYearP','.hijri-year','.sd2-date-card.hijri .sd2-date-year','.sd4-date-card.hijri .sd4-date-year','.ref-date-card.hijri .ref-date-year'],gyear:['[data-field="gyear"]','[data-f="gy"]','#gregorianYearP','.gregorian-year','.sd2-date-card.greg .sd2-date-year','.sd4-date-card.greg .sd4-date-year','.ref-date-card.greg .ref-date-year'],footer:['[data-field="footer"]','[data-f="footer"]','#footerP','.footer','.sd2-footer','.sd3-footer-card','.sd4-footer','.nd-footer','.nf-footer','.ref-footer'],quran:['[data-field="quran"]','[data-f="quran"]','.quran','.verse','.sd4-verse','.nd-verse','.ref-verse']};
+  const labels={fajr:'الفجر',sunrise:'الشروق',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'},rowSel='.prayer-row,.sd2-prayer-row,.sd3-prayer-row,.sd4-prayer-row,.nd-prayer-row,.nf-row,.ref-prayer-row,[data-prayer-row]',unique=a=>Array.from(new Set(a.filter(Boolean)));
+  function roleTargets(role){const root=activeDesign();if(!root||!role)return [];if(labels[role]){const direct=Array.from(root.querySelectorAll(`[data-field="${role}"],[data-f="${role}"]`)),rows=[];direct.forEach(el=>{const r=el.closest(rowSel);if(r)rows.push(r);});if(!rows.length)root.querySelectorAll(rowSel).forEach(r=>{if((r.textContent||'').includes(labels[role]))rows.push(r);});const out=[];rows.forEach(r=>{out.push(r);r.querySelectorAll('span,b,strong,em,i,div').forEach(el=>{if(el.matches('.ref-prayer-icon,[data-icon]'))return;if(el.children.length===0&&(el.textContent||'').trim())out.push(el);});});direct.forEach(el=>out.push(el));return unique(out);}const out=[];(fieldSelectors[role]||[]).forEach(sel=>{try{root.querySelectorAll(sel).forEach(el=>out.push(el));}catch(_){}});return unique(out);}
   function shadowValue(v){if(v==='black')return '2px 2px 6px rgba(0,0,0,.85)';if(v==='gold')return '2px 2px 8px rgba(212,168,63,.9)';if(v==='green')return '2px 2px 8px rgba(25,130,75,.9)';return 'none';}
   function announce(){window.dispatchEvent(new CustomEvent('prayerFontChanged',{detail:{design:activeDesign()}}));}
-  function applyControl(id){
-    const role=roleFromValue(document.getElementById('elementSelect')?.value||''),targets=roleTargets(role);if(!targets.length)return;const v=document.getElementById(id)?.value;if(v==null)return;
-    targets.forEach(t=>{if(id==='fontFamily'&&v)t.style.fontFamily=`"${v}", Arial, sans-serif`;else if(id==='fontSize'&&v)t.style.fontSize=`${v}px`;else if(id==='fontWeight'&&v)t.style.fontWeight=v;else if(id==='textAlign'&&v)t.style.textAlign=v;else if(id==='textShadow')t.style.textShadow=shadowValue(v);});announce();
-  }
+  function applyControl(id){const role=roleFromValue(document.getElementById('elementSelect')?.value||''),targets=roleTargets(role);if(!targets.length)return;const v=document.getElementById(id)?.value;if(v==null)return;targets.forEach(t=>{if(id==='fontFamily'&&v)t.style.fontFamily=`"${v}", Arial, sans-serif`;else if(id==='fontSize'&&v)t.style.fontSize=`${v}px`;else if(id==='fontWeight'&&v)t.style.fontWeight=v;else if(id==='textAlign'&&v)t.style.textAlign=v;else if(id==='textShadow')t.style.textShadow=shadowValue(v);});announce();}
   function applyColor(c){const role=roleFromValue(document.getElementById('elementSelect')?.value||''),targets=roleTargets(role);if(!targets.length)return;targets.forEach(t=>t.style.color=c);const input=document.getElementById('fontColor');if(input)input.value=c;announce();}
   function rgbToHex(rgb){const m=String(rgb||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);if(!m)return '#ffffff';return '#'+[m[1],m[2],m[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('');}
   function collectDesignColors(){const colors=new Set();document.querySelectorAll('.previewBox .design-slide > *, .previewBox #design').forEach(root=>[root,...root.querySelectorAll('*')].forEach(el=>{const c=getComputedStyle(el).color;if(c&&c!=='rgba(0, 0, 0, 0)')colors.add(rgbToHex(c));}));return Array.from(colors).filter(c=>/^#[0-9a-f]{6}$/i.test(c));}
   function buildColorPalette(){
     const input=document.getElementById('fontColor');if(!input||document.getElementById('designColorPalette'))return;input.disabled=false;input.style.opacity='1';
-    const box=document.createElement('div');box.id='designColorPalette';box.innerHTML='<div class="design-color-title">ألوان التصاميم الجاهزة</div><div class="design-color-swatches"></div>';
-    const st=document.createElement('style');st.textContent=`#designColorPalette{margin-top:7px}.design-color-title{font-size:12px;font-weight:800;margin-bottom:6px}.design-color-swatches{display:flex;flex-wrap:wrap;gap:5px}.design-color-swatch{width:26px;height:26px;padding:0;border-radius:6px;border:1px solid rgba(255,255,255,.28);cursor:pointer}`;document.head.appendChild(st);input.insertAdjacentElement('afterend',box);
-    const render=()=>{const sw=box.querySelector('.design-color-swatches');sw.innerHTML='';collectDesignColors().forEach(c=>{const b=document.createElement('button');b.type='button';b.className='design-color-swatch';b.style.background=c;b.title=c;b.onclick=()=>applyColor(c);sw.appendChild(b);});};render();setTimeout(render,700);
+    const box=document.createElement('div');box.id='designColorPalette';box.innerHTML='<div class="full-color-title">جميع الألوان</div><div class="full-color-spectrum" role="button" aria-label="اختيار أي لون"></div><div class="full-color-controls"><input class="full-color-hue" type="range" min="0" max="360" value="0"><input class="full-color-hex" type="text" maxlength="7" value="#ffffff" dir="ltr"><button class="full-color-apply" type="button">تطبيق اللون</button></div><div class="design-color-title">ألوان التصاميم الجاهزة</div><div class="design-color-swatches"></div>';
+    const st=document.createElement('style');st.textContent=`#designColorPalette{margin-top:10px}.full-color-title,.design-color-title{font-size:13px;font-weight:800;margin:8px 0 6px}.full-color-spectrum{height:150px;border-radius:10px;border:1px solid rgba(255,255,255,.25);cursor:crosshair;background:linear-gradient(to top,#0000,#000),linear-gradient(to right,#fff,hsl(0 100% 50%));touch-action:none}.full-color-controls{display:grid;grid-template-columns:1fr 90px;gap:6px;margin:7px 0 12px}.full-color-hue{grid-column:1/-1;width:100%;height:22px;padding:0;background:linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00);appearance:none;border-radius:8px}.full-color-hex{min-width:0;border:1px solid rgba(255,255,255,.2);border-radius:7px;padding:7px;text-align:center}.full-color-apply{border:0;border-radius:7px;background:#168b52;color:#fff;font-family:inherit;font-weight:800;cursor:pointer}.design-color-swatches{display:flex;flex-wrap:wrap;gap:5px}.design-color-swatch{width:26px;height:26px;padding:0;border-radius:6px;border:1px solid rgba(255,255,255,.28);cursor:pointer}`;document.head.appendChild(st);input.insertAdjacentElement('afterend',box);
+    const spectrum=box.querySelector('.full-color-spectrum'),hue=box.querySelector('.full-color-hue'),hex=box.querySelector('.full-color-hex'),apply=box.querySelector('.full-color-apply');let h=0;
+    function hsvHex(h,s,v){const f=(n,k=(n+h/60)%6)=>v-v*s*Math.max(0,Math.min(k,4-k,1)),to=x=>Math.round(x*255).toString(16).padStart(2,'0');return '#'+to(f(5))+to(f(3))+to(f(1));}
+    function setHue(){h=Number(hue.value)||0;spectrum.style.background=`linear-gradient(to top,#0000,#000),linear-gradient(to right,#fff,hsl(${h} 100% 50%))`;}
+    function pick(e){const r=spectrum.getBoundingClientRect(),p=e.touches?.[0]||e,x=Math.max(0,Math.min(1,(p.clientX-r.left)/r.width)),y=Math.max(0,Math.min(1,(p.clientY-r.top)/r.height)),c=hsvHex(h,x,1-y);hex.value=c;input.value=c;applyColor(c);}
+    hue.addEventListener('input',setHue);spectrum.addEventListener('pointerdown',e=>{pick(e);spectrum.setPointerCapture?.(e.pointerId);});spectrum.addEventListener('pointermove',e=>{if(e.buttons)pick(e);});apply.onclick=()=>{if(/^#[0-9a-f]{6}$/i.test(hex.value))applyColor(hex.value);};hex.addEventListener('change',()=>apply.click());setHue();
+    const render=()=>{const sw=box.querySelector('.design-color-swatches');sw.innerHTML='';collectDesignColors().forEach(c=>{const b=document.createElement('button');b.type='button';b.className='design-color-swatch';b.style.background=c;b.title=c;b.onclick=()=>{hex.value=c;applyColor(c);};sw.appendChild(b);});};render();setTimeout(render,700);
   }
-  function load(){
-    const role=roleFromValue(document.getElementById('elementSelect')?.value||''),target=roleTargets(role)[0];if(!target)return;const s=getComputedStyle(target);
-    const family=(s.fontFamily.split(',')[0]||'').replace(/["']/g,'').trim(),fs=document.getElementById('fontFamily');if(fs){let o=Array.from(fs.options).find(x=>x.value===family);if(!o&&family){o=new Option(family,family);fs.add(o);}if(family)fs.value=family;}
-    const size=document.getElementById('fontSize');if(size)size.value=Math.round(parseFloat(s.fontSize)||40);const weight=document.getElementById('fontWeight');if(weight){const w=String(Math.round((parseInt(s.fontWeight)||400)/100)*100);if(Array.from(weight.options).some(o=>o.value===w))weight.value=w;}const color=document.getElementById('fontColor');if(color)color.value=rgbToHex(s.color);const align=document.getElementById('textAlign');if(align&&['right','center','left'].includes(s.textAlign))align.value=s.textAlign;
-  }
-  function bind(){
-    const select=document.getElementById('elementSelect');if(!select||select.dataset.universalFontBound==='1')return;select.dataset.universalFontBound='1';select.addEventListener('change',()=>setTimeout(load,0));
-    CONTROL_IDS.forEach(id=>{const el=document.getElementById(id);if(!el)return;el.addEventListener(id==='fontSize'?'input':'change',()=>applyControl(id));});const color=document.getElementById('fontColor');if(color&&!color.dataset.universalColorBound){color.dataset.universalColorBound='1';color.addEventListener('input',()=>applyColor(color.value));color.addEventListener('change',()=>applyColor(color.value));}
-    document.addEventListener('click',e=>{if(e.target.closest('.design-carousel-btn,.design-carousel-dot'))setTimeout(load,180);});buildColorPalette();
-  }
+  function load(){const role=roleFromValue(document.getElementById('elementSelect')?.value||''),target=roleTargets(role)[0];if(!target)return;const s=getComputedStyle(target),family=(s.fontFamily.split(',')[0]||'').replace(/["']/g,'').trim(),fs=document.getElementById('fontFamily');if(fs){let o=Array.from(fs.options).find(x=>x.value===family);if(!o&&family){o=new Option(family,family);fs.add(o);}if(family)fs.value=family;}const size=document.getElementById('fontSize');if(size)size.value=Math.round(parseFloat(s.fontSize)||40);const weight=document.getElementById('fontWeight');if(weight){const w=String(Math.round((parseInt(s.fontWeight)||400)/100)*100);if(Array.from(weight.options).some(o=>o.value===w))weight.value=w;}const color=document.getElementById('fontColor');if(color)color.value=rgbToHex(s.color);const align=document.getElementById('textAlign');if(align&&['right','center','left'].includes(s.textAlign))align.value=s.textAlign;}
+  function bind(){const select=document.getElementById('elementSelect');if(!select||select.dataset.universalFontBound==='1')return;select.dataset.universalFontBound='1';select.addEventListener('change',()=>setTimeout(load,0));CONTROL_IDS.forEach(id=>{const el=document.getElementById(id);if(!el)return;el.addEventListener(id==='fontSize'?'input':'change',()=>applyControl(id));});const color=document.getElementById('fontColor');if(color&&!color.dataset.universalColorBound){color.dataset.universalColorBound='1';color.addEventListener('input',()=>applyColor(color.value));color.addEventListener('change',()=>applyColor(color.value));}document.addEventListener('click',e=>{if(e.target.closest('.design-carousel-btn,.design-carousel-dot'))setTimeout(load,180);});buildColorPalette();}
   function futureProof(){const ob=new MutationObserver(()=>bind());ob.observe(document.body,{childList:true,subtree:true});}
-  window.PrayerUniversalFonts={activeDesign,roleTargets,load};
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();futureProof();},{once:true});else{bind();futureProof();}
+  window.PrayerUniversalFonts={activeDesign,roleTargets,load};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();futureProof();},{once:true});else{bind();futureProof();}
 })();
