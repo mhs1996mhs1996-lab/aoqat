@@ -53,7 +53,7 @@ window.addEventListener("load", () => {
                                         historyScript.dataset.designHistory = "true";
                                         historyScript.onload = () => {
                                             const toolbarScript = document.createElement("script");
-                                            toolbarScript.src = "js/export-toolbar.js?v=2";
+                                            toolbarScript.src = "js/export-toolbar.js?v=3";
                                             toolbarScript.dataset.exportToolbar = "true";
                                             toolbarScript.onload = () => {
                                                 const exportScript = document.createElement("script");
