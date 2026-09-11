@@ -87,17 +87,42 @@
     try{await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));return await html2canvas(clone,{backgroundColor:null,scale:2,width:WIDTH,height:HEIGHT,windowWidth:WIDTH,windowHeight:HEIGHT,scrollX:0,scrollY:0,useCORS:true,allowTaint:true,logging:false,imageTimeout:8000,foreignObjectRendering:false,removeContainer:true})}finally{host.remove()}
   }
 
-  function download(canvas,format){
-    const f=(format||"png").toLowerCase(),isJpg=f==="jpg"||f==="jpeg",mime=isJpg?"image/jpeg":f==="webp"?"image/webp":"image/png",ext=f==="jpeg"?"jpg":f;
-    canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`prayer-preview.${ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500)},mime,mime==="image/png"?undefined:.98);
+  function canvasBlob(canvas,format="jpg"){
+    const f=(format||"jpg").toLowerCase(),isJpg=f==="jpg"||f==="jpeg",mime=isJpg?"image/jpeg":f==="webp"?"image/webp":"image/png";
+    return new Promise(resolve=>canvas.toBlob(resolve,mime,mime==="image/png"?undefined:.98));
+  }
+
+  function downloadBlob(blob,ext="jpg"){
+    if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`prayer-preview.${ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500);
+  }
+
+  async function download(canvas,format){
+    const f=(format||"jpg").toLowerCase(),ext=f==="jpeg"?"jpg":f;
+    const blob=await canvasBlob(canvas,f);downloadBlob(blob,ext);
+  }
+
+  async function saveToPhone(canvas){
+    const blob=await canvasBlob(canvas,"jpg");if(!blob)return;
+    const file=new File([blob],"prayer-preview.jpg",{type:"image/jpeg"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{await navigator.share({files:[file],title:"مواقيت الصلاة"});return}catch(error){if(error?.name==="AbortError")return;}
+    }
+    downloadBlob(blob,"jpg");
   }
 
   function fallbackNative(button){bypass=true;try{button.click()}finally{setTimeout(()=>{bypass=false},0)}}
 
-  async function exportExact(format,button){
-    const design=activeDesign();if(!design)return;const oldText=button.textContent;button.disabled=true;button.textContent="جاري التصدير...";
-    try{const canvas=await renderPreview(design);download(canvas,format)}catch(error){console.error("Preview export fallback",error);fallbackNative(button)}finally{setTimeout(()=>{button.disabled=false;button.textContent=oldText},150)}
+  async function exportExact(format,button,phoneMode=false){
+    const design=activeDesign();if(!design)return;const oldText=button.textContent;button.disabled=true;button.textContent=phoneMode?"جاري الحفظ...":"جاري التصدير...";
+    try{const canvas=await renderPreview(design);if(phoneMode)await saveToPhone(canvas);else await download(canvas,format)}catch(error){console.error("Preview export fallback",error);if(!phoneMode)fallbackNative(button)}finally{setTimeout(()=>{button.disabled=false;button.textContent=oldText},150)}
   }
 
-  window.addEventListener("click",function(event){if(bypass)return;const btn=event.target.closest?.("[data-export-format],#exportBtn");if(!btn)return;event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();exportExact(btn.dataset.exportFormat||"png",btn)},true);
+  window.addEventListener("click",function(event){
+    if(bypass)return;
+    const btn=event.target.closest?.("[data-export-format],[data-save-phone],#exportBtn");
+    if(!btn)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    const phoneMode=btn.hasAttribute("data-save-phone");
+    exportExact(phoneMode?"jpg":(btn.dataset.exportFormat||"jpg"),btn,phoneMode);
+  },true);
 })();
