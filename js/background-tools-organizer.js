@@ -5,12 +5,14 @@
     const s=document.createElement("style");
     s.id="backgroundToolsStyles";
     s.textContent=`
-      #backgroundDesignTools{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}
-      #backgroundDesignTools .bg-tools-title{font-size:14px;font-weight:800;margin:0 0 10px;color:#e7eef3}
-      #backgroundDesignTools .bg-tools-grid{display:grid;grid-template-columns:1fr;gap:8px}
-      #backgroundDesignTools button{width:100%!important;min-width:0!important;margin:0!important}
+      #backgroundDesignTools{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.10)}
+      #backgroundDesignTools .bg-tools-title{font-size:13px;font-weight:800;margin:0 0 7px;color:#e7eef3}
+      #backgroundDesignTools .bg-tools-grid{display:grid;grid-template-columns:1fr;gap:5px}
+      #backgroundDesignTools button{width:100%!important;min-width:0!important;margin:0!important;min-height:34px!important;border-radius:8px!important;padding:7px 10px!important;font-size:13px!important;font-weight:700!important;box-shadow:none!important}
       #backgroundDesignTools .manual-edit-toggle-wrap{margin:0!important;width:100%!important}
       #backgroundDesignTools #manualEditToggle{width:100%!important}
+      #backgroundDesignTools #saveDesignAdjustments,#backgroundDesignTools #resetPositions{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;background:#263746!important;color:#fff!important;border:1px solid rgba(255,255,255,.16)!important}
+      #backgroundDesignTools #saveDesignAdjustments:hover,#backgroundDesignTools #resetPositions:hover{filter:brightness(1.08)}
     `;
     document.head.appendChild(s);
   }
@@ -35,6 +37,9 @@
     if(manualWrap&&manualWrap.parentElement!==grid)grid.appendChild(manualWrap);
     if(save&&save.parentElement!==grid)grid.appendChild(save);
     if(reset&&reset.parentElement!==grid)grid.appendChild(reset);
+
+    if(save) save.textContent="💾 حفظ التعديلات";
+    if(reset) reset.textContent="↻ إعادة التموضع";
 
     return !!(manualWrap&&save&&reset);
   }
