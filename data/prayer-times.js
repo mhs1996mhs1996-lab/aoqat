@@ -15,6 +15,13 @@ const prayerTimes = [];
     const alarmScript = document.createElement("script");
     alarmScript.src = "js/tomorrow-alarm.js?v=1";
     alarmScript.dataset.tomorrowAlarm = "true";
+    alarmScript.onload = () => {
+        if (document.querySelector('script[data-push-notifications]')) return;
+        const pushScript = document.createElement("script");
+        pushScript.src = "js/push-notifications.js?v=1";
+        pushScript.dataset.pushNotifications = "true";
+        document.head.appendChild(pushScript);
+    };
     document.head.appendChild(alarmScript);
 })();
 
