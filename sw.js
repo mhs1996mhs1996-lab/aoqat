@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v5";
+const CACHE_NAME = "aoqat-pwa-v6";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -9,6 +9,7 @@ const APP_SHELL = [
   "/js/additional-designs.js",
   "/js/night-design.js",
   "/js/modal-panels.js",
+  "/js/tomorrow-alarm.js",
   "/data/prayer-times.js",
   "/manifest.webmanifest",
   "/assets/icons/app-icon.svg"
@@ -36,5 +37,45 @@ self.addEventListener("fetch", event => {
         return response;
       })
       .catch(() => caches.match(event.request).then(cached => cached || caches.match("/index.html")))
+  );
+});
+
+self.addEventListener("notificationclick", event => {
+  const notification = event.notification;
+  const data = notification?.data || {};
+  notification?.close();
+
+  if (data.kind !== "tomorrow-publish-alarm") return;
+
+  if (event.action === "stop") {
+    event.waitUntil(
+      self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients => {
+        clients.forEach(client => client.postMessage({type:"PRAYER_ALARM_STOP"}));
+      })
+    );
+    return;
+  }
+
+  if (event.action === "snooze") {
+    event.waitUntil(
+      self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients => {
+        const client = clients[0];
+        if (client) {
+          client.postMessage({type:"PRAYER_ALARM_SNOOZE"});
+          if (client.focus) await client.focus();
+          return;
+        }
+        if (self.clients.openWindow) await self.clients.openWindow("/?alarm=snooze");
+      })
+    );
+    return;
+  }
+
+  event.waitUntil(
+    self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients => {
+      const client = clients[0];
+      if (client?.focus) return client.focus();
+      if (self.clients.openWindow) return self.clients.openWindow(data.url || "/");
+    })
   );
 });
