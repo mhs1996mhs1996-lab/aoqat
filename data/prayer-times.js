@@ -52,10 +52,16 @@ window.addEventListener("load", () => {
                                         historyScript.src = "js/design-history.js?v=1";
                                         historyScript.dataset.designHistory = "true";
                                         historyScript.onload = () => {
-                                            const exportScript = document.createElement("script");
-                                            exportScript.src = "js/exact-export.js?v=12";
-                                            exportScript.dataset.exactExport = "true";
-                                            document.body.appendChild(exportScript);
+                                            const toolbarScript = document.createElement("script");
+                                            toolbarScript.src = "js/export-toolbar.js?v=1";
+                                            toolbarScript.dataset.exportToolbar = "true";
+                                            toolbarScript.onload = () => {
+                                                const exportScript = document.createElement("script");
+                                                exportScript.src = "js/exact-export.js?v=13";
+                                                exportScript.dataset.exactExport = "true";
+                                                document.body.appendChild(exportScript);
+                                            };
+                                            document.body.appendChild(toolbarScript);
                                         };
                                         document.body.appendChild(historyScript);
                                     };
