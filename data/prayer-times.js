@@ -36,6 +36,7 @@ const prayerTimes = [];
         await loadScript("js/manual-edit-toggle.js?v=5","manual-edit-toggle");
         await loadScript("js/background-tools-organizer.js?v=2","background-tools-organizer");
         await loadScript("js/footer-background-organizer.js?v=1","footer-background-organizer");
+        await loadScript("js/interface-clock.js?v=1","interface-clock");
         await loadScript("js/universal-font-controls.js?v=8","universal-font-controls");
         await loadScript("js/font-design-manager.js?v=2","font-design-manager");
         await loadScript("js/design-history.js?v=2","design-history");
