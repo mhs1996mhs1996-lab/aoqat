@@ -11,8 +11,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 35
-        versionCode 8
-        versionName '1.7'
+        versionCode 9
+        versionName '1.8'
     }
 
     compileOptions {
@@ -33,6 +33,26 @@ android {
         }
     }
 }
+
+// Android-only packaging: copy a snapshot of the existing web project into the APK
+// at build time. The original web files are never modified.
+def webSourceRoot = rootProject.projectDir.parentFile
+def webAssetDir = file("$projectDir/src/main/assets/www")
+
+tasks.register('syncWebAssets', Sync) {
+    from(webSourceRoot) {
+        include 'index.html'
+        include 'css/**'
+        include 'js/**'
+        include 'data/**'
+        include 'assets/**'
+        include 'pages/**'
+        include 'manifest.webmanifest'
+    }
+    into(webAssetDir)
+}
+
+preBuild.dependsOn(tasks.named('syncWebAssets'))
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.15.0'
