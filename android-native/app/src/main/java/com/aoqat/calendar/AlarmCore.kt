@@ -7,7 +7,9 @@ import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -23,7 +25,6 @@ import java.net.URLEncoder
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import org.json.JSONArray
 
 object AlarmScheduler {
@@ -48,8 +49,7 @@ object AlarmScheduler {
     }
 
     fun scheduleSnooze(context: Context, minutes: Long = 10L) {
-        val target = System.currentTimeMillis() + minutes * 60_000L
-        scheduleExactMillis(context, target)
+        scheduleExactMillis(context, System.currentTimeMillis() + minutes * 60_000L)
     }
 
     private fun targetForDate(date: LocalDate): LocalDateTime? {
@@ -83,8 +83,7 @@ object AlarmScheduler {
     }
 
     private fun scheduleExact(context: Context, target: LocalDateTime) {
-        val millis = target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        scheduleExactMillis(context, millis)
+        scheduleExactMillis(context, target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
 
     private fun scheduleExactMillis(context: Context, millis: Long) {
@@ -100,6 +99,11 @@ class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         AlarmSoundService.start(context)
         AlarmUi.showFullScreenNotification(context)
+        try {
+            context.startActivity(Intent(context, AlarmActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            })
+        } catch (_: Exception) { }
         AlarmScheduler.scheduleFromDatabase(context)
     }
 }
@@ -111,16 +115,19 @@ class BootReceiver : BroadcastReceiver() {
 }
 
 object AlarmUi {
-    const val CHANNEL_ID = "prayer_publish_alarm_v1"
+    const val CHANNEL_ID = "prayer_publish_alarm_v2"
     const val NOTIFICATION_ID = 45101
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
         val channel = NotificationChannel(CHANNEL_ID, "تنبيه نشر مواقيت الصلاة", NotificationManager.IMPORTANCE_HIGH).apply {
-            description = "تنبيه تبديل مواقيت اليوم التالي"
+            description = "منبه نشر مواقيت اليوم التالي"
             enableVibration(true)
             vibrationPattern = longArrayOf(0, 800, 300, 800, 300, 1200)
             setSound(sound, attrs)
@@ -129,28 +136,39 @@ object AlarmUi {
         manager.createNotificationChannel(channel)
     }
 
-    fun showFullScreenNotification(context: Context) {
+    fun buildAlarmNotification(context: Context): Notification {
         ensureChannel(context)
-        val fullIntent = Intent(context, AlarmActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        val fullIntent = Intent(context, AlarmActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        }
         val fullPending = PendingIntent.getActivity(context, 45102, fullIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         val stopIntent = Intent(context, AlarmActionReceiver::class.java).setAction("STOP")
         val snoozeIntent = Intent(context, AlarmActionReceiver::class.java).setAction("SNOOZE")
         val stopPending = PendingIntent.getBroadcast(context, 45103, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val snoozePending = PendingIntent.getBroadcast(context, 45104, snoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+
+        return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("⏰ مواقيت الغد جاهزة")
-            .setContentText("تم تبديل التوقيت إلى اليوم التالي. انشر المواقيت.")
+            .setContentText("اضغط إيقاف التنبيه أو غفوة 10 دقائق")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("تم تبديل التوقيت إلى اليوم التالي. اختر إيقاف التنبيه أو غفوة 10 دقائق."))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setContentIntent(fullPending)
             .setFullScreenIntent(fullPending, true)
-            .addAction(0, "غفوة 10 دقائق", snoozePending)
-            .addAction(0, "إيقاف التنبيه", stopPending)
+            .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة 10 دقائق", snoozePending)
+            .addAction(android.R.drawable.ic_media_pause, "إيقاف التنبيه", stopPending)
             .build()
-        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).notify(NOTIFICATION_ID, notification)
+    }
+
+    fun showFullScreenNotification(context: Context) {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, buildAlarmNotification(context))
     }
 
     fun dismiss(context: Context) {
@@ -178,40 +196,55 @@ class AlarmSoundService : Service() {
     private var player: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var vibrator: Vibrator? = null
+    private val stopHandler = Handler(Looper.getMainLooper())
+    private val safetyStop = Runnable { stopSelf() }
 
     override fun onCreate() {
         super.onCreate()
         AlarmUi.ensureChannel(this)
-        val notification = NotificationCompat.Builder(this, AlarmUi.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("⏰ تنبيه مواقيت الغد")
-            .setContentText("انشر مواقيت اليوم التالي")
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setOngoing(true)
-            .build()
-        startForeground(AlarmUi.NOTIFICATION_ID + 1, notification)
+        startForeground(AlarmUi.NOTIFICATION_ID, AlarmUi.buildAlarmNotification(this))
 
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "aoqat:alarm").apply { acquire(15 * 60_000L) }
 
-        val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-        player = MediaPlayer().apply {
-            setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-            setDataSource(this@AlarmSoundService, uri)
-            isLooping = true
-            prepare()
-            start()
-        }
+        try {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+            player = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_ALARM)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                setDataSource(this@AlarmSoundService, uri)
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (_: Exception) { }
 
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val pattern = longArrayOf(0, 800, 300, 800, 300, 1200)
-        if (Build.VERSION.SDK_INT >= 26) vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0)) else @Suppress("DEPRECATION") vibrator?.vibrate(pattern, 0)
+        if (Build.VERSION.SDK_INT >= 26) {
+            vibrator?.vibrate(VibrationEffect.createWaveform(pattern, 0))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(pattern, 0)
+        }
+
+        // حماية احتياطية حتى لا يبقى الصوت يعمل بلا نهاية إذا منع النظام ظهور الواجهة.
+        stopHandler.postDelayed(safetyStop, 15 * 60_000L)
     }
 
     override fun onDestroy() {
-        player?.stop(); player?.release(); player = null
-        vibrator?.cancel(); wakeLock?.release(); wakeLock = null
+        stopHandler.removeCallbacks(safetyStop)
+        try { player?.stop() } catch (_: Exception) { }
+        player?.release(); player = null
+        vibrator?.cancel()
+        if (wakeLock?.isHeld == true) wakeLock?.release()
+        wakeLock = null
+        if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else @Suppress("DEPRECATION") stopForeground(true)
+        AlarmUi.dismiss(this)
         super.onDestroy()
     }
 
@@ -222,7 +255,11 @@ class AlarmSoundService : Service() {
             val i = Intent(context, AlarmSoundService::class.java)
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(i) else context.startService(i)
         }
-        fun stop(context: Context) { context.stopService(Intent(context, AlarmSoundService::class.java)) }
+
+        fun stop(context: Context) {
+            context.stopService(Intent(context, AlarmSoundService::class.java))
+            AlarmUi.dismiss(context)
+        }
     }
 }
 
@@ -258,7 +295,6 @@ class AlarmActivity : Activity() {
             textSize = 18f
             setOnClickListener {
                 AlarmSoundService.stop(this@AlarmActivity)
-                AlarmUi.dismiss(this@AlarmActivity)
                 AlarmScheduler.scheduleSnooze(this@AlarmActivity, 10)
                 finish()
             }
@@ -268,7 +304,6 @@ class AlarmActivity : Activity() {
             textSize = 18f
             setOnClickListener {
                 AlarmSoundService.stop(this@AlarmActivity)
-                AlarmUi.dismiss(this@AlarmActivity)
                 finish()
             }
         }
