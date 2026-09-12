@@ -20,11 +20,9 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         // Keep the app content inside the normal system-bar-safe area.
-        // targetSdk 35 forces edge-to-edge on recent Android versions,
-        // which caused the web header to sit under the clock/network/battery bar.
         targetSdk 34
-        versionCode 15
-        versionName '1.14'
+        versionCode 16
+        versionName '1.15'
     }
 
     compileOptions {
@@ -47,11 +45,11 @@ android {
     }
 }
 
-// Android-only packaging: copy the existing web project into the APK at build time.
-// No CSS/JS/layout overrides are injected here, so the APK interface keeps the
-// same responsive sizing rules as the web version. Original web files are untouched.
+// Android-only packaging: copy the original web project unchanged into the APK,
+// then add a small APK-only compatibility layer. The source web files are never edited.
 def webSourceRoot = rootProject.projectDir.parentFile
 def webAssetDir = file("$projectDir/src/main/assets/www")
+def apkOverrideRoot = file("$rootProject.projectDir/apk-overrides")
 
 tasks.register('syncWebAssets', Sync) {
     from(webSourceRoot) {
@@ -63,7 +61,23 @@ tasks.register('syncWebAssets', Sync) {
         include 'pages/**'
         include 'manifest.webmanifest'
     }
+    from(apkOverrideRoot) {
+        include 'android-ui-fixes.js'
+        into 'js'
+    }
     into(webAssetDir)
+
+    doLast {
+        def indexFile = file("$webAssetDir/index.html")
+        if (indexFile.exists()) {
+            def html = indexFile.getText('UTF-8')
+            def tag = '<script src="js/android-ui-fixes.js"></script>'
+            if (!html.contains(tag)) {
+                html = html.replace('</body>', "${tag}\n</body>")
+                indexFile.write(html, 'UTF-8')
+            }
+        }
+    }
 }
 
 preBuild.dependsOn(tasks.named('syncWebAssets'))
