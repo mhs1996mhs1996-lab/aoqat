@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 35
-        versionCode 12
-        versionName '1.11'
+        versionCode 13
+        versionName '1.12'
     }
 
     compileOptions {
@@ -44,8 +44,8 @@ android {
     }
 }
 
-// Android-only packaging: copy a snapshot of the existing web project into the APK
-// at build time. The original web files are never modified.
+// Android-only packaging: copy a snapshot of the existing web project into the APK.
+// The original web files are never modified.
 def webSourceRoot = rootProject.projectDir.parentFile
 def webAssetDir = file("$projectDir/src/main/assets/www")
 
@@ -60,6 +60,55 @@ tasks.register('syncWebAssets', Sync) {
         include 'manifest.webmanifest'
     }
     into(webAssetDir)
+
+    doLast {
+        def androidFix = new File(webAssetDir, 'android-layout-fix.js')
+        androidFix.text = '''
+(function(){
+  function applyAndroidLayout(){
+    if(!document.head || !document.body) return;
+    var id='aoqat-android-layout-v2';
+    if(!document.getElementById(id)){
+      var style=document.createElement('style');
+      style.id=id;
+      style.textContent=`
+        html,body{max-width:100%;overflow-x:hidden!important;}
+        @media (max-width:800px){
+          .topbar{min-height:86px!important;padding:14px 16px!important;gap:8px!important;}
+          .brand{gap:8px!important;min-width:0!important;}
+          .brand-icon{font-size:32px!important;}
+          .brand h1{font-size:22px!important;line-height:1.25!important;white-space:nowrap!important;}
+          .brand p{display:none!important;}
+          .top-export{padding:10px 12px!important;font-size:14px!important;white-space:nowrap!important;}
+          .app{width:100%!important;max-width:100%!important;padding:10px!important;gap:10px!important;}
+          .workspace,.previewBox,.design-carousel{width:100%!important;max-width:100%!important;min-width:0!important;}
+          .previewBox{padding:32px!important;overflow:hidden!important;}
+          .design-carousel{margin:0 auto!important;}
+          .design-carousel-controls{padding-left:10px!important;padding-right:10px!important;}
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    setTimeout(function(){window.dispatchEvent(new Event('resize'));},50);
+    setTimeout(function(){window.dispatchEvent(new Event('resize'));},300);
+    setTimeout(function(){window.dispatchEvent(new Event('resize'));},900);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',applyAndroidLayout,{once:true});
+  else applyAndroidLayout();
+  window.addEventListener('load',applyAndroidLayout,{once:true});
+})();
+'''.trim()
+
+        def indexFile = new File(webAssetDir, 'index.html')
+        if (indexFile.exists()) {
+            def html = indexFile.getText('UTF-8')
+            def tag = '<script src="android-layout-fix.js"></script>'
+            if (!html.contains(tag)) {
+                html = html.contains('</body>') ? html.replace('</body>', tag + '\n</body>') : html + '\n' + tag
+                indexFile.write(html, 'UTF-8')
+            }
+        }
+    }
 }
 
 preBuild.dependsOn(tasks.named('syncWebAssets'))
