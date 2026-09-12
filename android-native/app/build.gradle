@@ -19,9 +19,12 @@ android {
     defaultConfig {
         applicationId 'com.aoqat.calendar'
         minSdk 26
-        targetSdk 35
-        versionCode 14
-        versionName '1.13'
+        // Keep the app content inside the normal system-bar-safe area.
+        // targetSdk 35 forces edge-to-edge on recent Android versions,
+        // which caused the web header to sit under the clock/network/battery bar.
+        targetSdk 34
+        versionCode 15
+        versionName '1.14'
     }
 
     compileOptions {
@@ -44,8 +47,9 @@ android {
     }
 }
 
-// Android-only packaging: copy a snapshot of the existing web project into the APK.
-// The original web files are never modified.
+// Android-only packaging: copy the existing web project into the APK at build time.
+// No CSS/JS/layout overrides are injected here, so the APK interface keeps the
+// same responsive sizing rules as the web version. Original web files are untouched.
 def webSourceRoot = rootProject.projectDir.parentFile
 def webAssetDir = file("$projectDir/src/main/assets/www")
 
@@ -60,59 +64,6 @@ tasks.register('syncWebAssets', Sync) {
         include 'manifest.webmanifest'
     }
     into(webAssetDir)
-
-    doLast {
-        def androidFix = new File(webAssetDir, 'android-layout-fix.js')
-        androidFix.text = '''
-(function(){
-  function applyAndroidLayout(){
-    if(!document.head || !document.body) return;
-    var id='aoqat-android-layout-v3';
-    if(!document.getElementById(id)){
-      var old=document.getElementById('aoqat-android-layout-v2');
-      if(old) old.remove();
-      var style=document.createElement('style');
-      style.id=id;
-      style.textContent=`
-        html,body{max-width:100%;overflow-x:hidden!important;}
-        @media (max-width:800px){
-          .topbar{min-height:82px!important;padding:12px 14px!important;gap:6px!important;}
-          .brand{gap:6px!important;min-width:0!important;flex:1 1 auto!important;}
-          .brand-icon{font-size:30px!important;flex:0 0 auto!important;}
-          .brand h1{font-size:20px!important;line-height:1.2!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:clip!important;}
-          .brand p{display:none!important;}
-          .top-export{padding:9px 10px!important;font-size:13px!important;white-space:nowrap!important;flex:0 0 auto!important;}
-          .app{width:100%!important;max-width:100%!important;padding:8px!important;gap:8px!important;}
-          .workspace,.previewBox,.design-carousel{width:100%!important;max-width:100%!important;min-width:0!important;}
-          .previewBox{padding:8px 6px 14px!important;overflow:hidden!important;}
-          .design-carousel{margin:0 auto!important;}
-          .design-carousel-track,.design-slide{width:100%!important;max-width:100%!important;}
-          .design-slide{justify-content:center!important;align-items:flex-start!important;}
-          .design-carousel-controls{padding-left:4px!important;padding-right:4px!important;}
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    [0,80,250,600,1200].forEach(function(ms){
-      setTimeout(function(){window.dispatchEvent(new Event('resize'));},ms);
-    });
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',applyAndroidLayout,{once:true});
-  else applyAndroidLayout();
-  window.addEventListener('load',applyAndroidLayout,{once:true});
-})();
-'''.trim()
-
-        def indexFile = new File(webAssetDir, 'index.html')
-        if (indexFile.exists()) {
-            def html = indexFile.getText('UTF-8')
-            def tag = '<script src="android-layout-fix.js"></script>'
-            if (!html.contains(tag)) {
-                html = html.contains('</body>') ? html.replace('</body>', tag + '\n</body>') : html + '\n' + tag
-                indexFile.write(html, 'UTF-8')
-            }
-        }
-    }
 }
 
 preBuild.dependsOn(tasks.named('syncWebAssets'))
