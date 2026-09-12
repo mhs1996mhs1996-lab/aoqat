@@ -2,30 +2,34 @@ package com.aoqat.calendar
 
 import android.Manifest
 import android.app.Activity
-import android.app.AlarmManager
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Gravity
-import android.view.ViewGroup
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.TextView
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
+import android.webkit.WebViewClient
 
 class MainActivity : Activity() {
 
-    private val appUrl = "https://aoqat.vercel.app/?androidNativeLauncher=1"
-    private var exactAlarmPrompted = false
+    private lateinit var webView: WebView
+    private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        buildNativeLauncher()
+
+        webView = WebView(this)
+        setContentView(webView)
+
+        configureWebView()
         requestNotificationPermissionIfNeeded()
         AlarmScheduler.scheduleFromDatabase(this)
+
+        webView.loadUrl("file:///android_asset/www/index.html")
     }
 
     override fun onResume() {
@@ -33,96 +37,108 @@ class MainActivity : Activity() {
         AlarmScheduler.scheduleFromDatabase(this)
     }
 
-    private fun buildNativeLauncher() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(48, 64, 48, 64)
-            setBackgroundColor(Color.rgb(5, 24, 34))
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
+    private fun configureWebView() {
+        with(webView.settings) {
+            javaScriptEnabled = true
+            domStorageEnabled = true
+            databaseEnabled = true
+            allowFileAccess = true
+            allowContentAccess = true
+            @Suppress("DEPRECATION")
+            allowFileAccessFromFileURLs = true
+            @Suppress("DEPRECATION")
+            allowUniversalAccessFromFileURLs = true
+            cacheMode = WebSettings.LOAD_DEFAULT
+            builtInZoomControls = false
+            displayZoomControls = false
+            useWideViewPort = true
+            loadWithOverviewMode = false
+            mediaPlaybackRequiresUserGesture = false
         }
 
-        val title = TextView(this).apply {
-            text = "تقاويم الصلاة Android"
-            textSize = 26f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 18)
-        }
-
-        val info = TextView(this).apply {
-            text = "نسخة Android مستقلة للتنبيه الدقيق.\nواجهة البرنامج تفتح من الموقع الأصلي بدون WebView."
-            textSize = 16f
-            setTextColor(Color.rgb(210, 225, 232))
-            gravity = Gravity.CENTER
-            setPadding(0, 0, 0, 28)
-        }
-
-        val openButton = Button(this).apply {
-            text = "فتح برنامج تقاويم الصلاة"
-            textSize = 18f
-            setOnClickListener { openProjectInBrowser() }
-        }
-
-        val alarmButton = Button(this).apply {
-            text = "تفعيل تنبيه Android الأصلي"
-            textSize = 18f
-            setOnClickListener { enableNativeAlarm() }
-        }
-
-        val status = TextView(this).apply {
-            text = "المنبّه يعتمد على وقت العشاء في قاعدة البيانات + 35 دقيقة."
-            textSize = 14f
-            setTextColor(Color.rgb(160, 220, 185))
-            gravity = Gravity.CENTER
-            setPadding(0, 28, 0, 0)
-        }
-
-        root.addView(title)
-        root.addView(info)
-        root.addView(openButton, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = 18 })
-        root.addView(alarmButton, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            LinearLayout.LayoutParams.WRAP_CONTENT
-        ))
-        root.addView(status)
-
-        setContentView(root)
-    }
-
-    private fun openProjectInBrowser() {
-        val uri = Uri.parse(appUrl)
-        val preferredPackages = listOf(
-            "com.android.chrome",
-            "com.microsoft.emmx",
-            "com.sec.android.app.sbrowser",
-            "org.mozilla.firefox"
-        )
-
-        for (pkg in preferredPackages) {
-            val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-                setPackage(pkg)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            if (intent.resolveActivity(packageManager) != null) {
-                startActivity(intent)
-                return
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView, url: String) {
+                super.onPageFinished(view, url)
+                applyAndroidCompatibilityFixes(view)
             }
         }
 
-        startActivity(Intent(Intent.ACTION_VIEW, uri))
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>?,
+                fileChooserParams: FileChooserParams?
+            ): Boolean {
+                fileCallback?.onReceiveValue(null)
+                fileCallback = filePathCallback
+
+                val intent = try {
+                    fileChooserParams?.createIntent() ?: Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "image/*"
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                    }
+                } catch (_: Exception) {
+                    Intent(Intent.ACTION_GET_CONTENT).apply {
+                        type = "image/*"
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                    }
+                }
+
+                return try {
+                    startActivityForResult(intent, FILE_CHOOSER_REQUEST)
+                    true
+                } catch (_: Exception) {
+                    fileCallback?.onReceiveValue(null)
+                    fileCallback = null
+                    false
+                }
+            }
+        }
     }
 
-    private fun enableNativeAlarm() {
-        requestNotificationPermissionIfNeeded()
-        requestExactAlarmPermissionIfNeeded()
-        AlarmScheduler.scheduleFromDatabase(this)
+    private fun applyAndroidCompatibilityFixes(view: WebView) {
+        val js = """
+            (function () {
+                function ready() {
+                    if (!document.body) return;
+                    document.body.classList.remove('aoqat-booting');
+                    document.body.classList.add('aoqat-ready');
+
+                    document.querySelectorAll('button').forEach(function (b) {
+                        var t = (b.innerText || '').trim();
+                        if (t.indexOf('تثبيت التطبيق') !== -1 || t.indexOf('حفظ على الهاتف') !== -1) {
+                            b.style.display = 'none';
+                        }
+                    });
+                }
+                ready();
+                setTimeout(ready, 500);
+                setTimeout(ready, 1500);
+                setTimeout(ready, 3000);
+            })();
+        """.trimIndent()
+        view.evaluateJavascript(js, null)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != FILE_CHOOSER_REQUEST) return
+
+        val result = if (resultCode == RESULT_OK) {
+            WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+        } else {
+            null
+        }
+        fileCallback?.onReceiveValue(result)
+        fileCallback = null
+    }
+
+    override fun onBackPressed() {
+        if (::webView.isInitialized && webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            super.onBackPressed()
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {
@@ -133,11 +149,10 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun requestExactAlarmPermissionIfNeeded() {
+    private fun openExactAlarmSettingsIfNeeded() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val alarm = getSystemService(ALARM_SERVICE) as AlarmManager
-            if (!alarm.canScheduleExactAlarms() && !exactAlarmPrompted) {
-                exactAlarmPrompted = true
+            val alarmManager = getSystemService(ALARM_SERVICE) as android.app.AlarmManager
+            if (!alarmManager.canScheduleExactAlarms()) {
                 startActivity(
                     Intent(
                         Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
@@ -146,5 +161,9 @@ class MainActivity : Activity() {
                 )
             }
         }
+    }
+
+    companion object {
+        private const val FILE_CHOOSER_REQUEST = 3011
     }
 }
