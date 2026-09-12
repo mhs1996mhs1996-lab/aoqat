@@ -49,7 +49,7 @@ class MainActivity : Activity() {
 
         webView.loadUrl("file:///android_asset/www/index.html")
 
-        // حماية من بقاء شاشة البدء مخفية في أول تشغيل لبعض أجهزة Android.
+        // Android-only startup assistance. We do not modify the original web project.
         listOf(250L, 700L, 1400L, 2500L, 4500L).forEach { delay ->
             webView.postDelayed({
                 if (!isFinishing && ::webView.isInitialized) {
@@ -151,8 +151,9 @@ class MainActivity : Activity() {
                 function nativeStatus() {
                     var status = document.getElementById('serverPushStatus');
                     if (!status) return;
-                    status.textContent = '✅ داخل نسخة Android يتم استخدام منبّه Android الأصلي، وليس إشعارات المتصفح.';
-                    status.style.color = '#83e2ad';
+                    var text = '✅ داخل نسخة Android يتم استخدام منبّه Android الأصلي، وليس إشعارات المتصفح.';
+                    if (status.textContent !== text) status.textContent = text;
+                    if (status.style.color !== 'rgb(131, 226, 173)') status.style.color = '#83e2ad';
                     status.style.borderLeftColor = '#2dbe73';
                 }
 
@@ -178,18 +179,19 @@ class MainActivity : Activity() {
                     });
                 }
 
-                // Web Push غير مطلوب داخل APK. نبقي منطق الويب الأصلي بدون تعديل،
-                // لكن داخل WebView نعرض حالة Android الصحيحة بدل رسالة عدم دعم المتصفح.
-                if (!window.__aoqatAndroidStatusObserver && document.documentElement) {
-                    window.__aoqatAndroidStatusObserver = new MutationObserver(function () {
+                // Do NOT observe the whole DOM here. A previous MutationObserver reacted
+                // to its own status updates and could keep the WebView main thread busy,
+                // making the screen visible but untouchable.
+                if (!window.__aoqatAndroidPeriodicFix) {
+                    window.__aoqatAndroidPeriodicFix = true;
+                    var runs = 0;
+                    var timer = setInterval(function () {
                         makeReady();
+                        wireNativeAlarm();
                         nativeStatus();
-                    });
-                    window.__aoqatAndroidStatusObserver.observe(document.documentElement, {
-                        childList: true,
-                        subtree: true,
-                        characterData: true
-                    });
+                        runs++;
+                        if (runs >= 12) clearInterval(timer);
+                    }, 500);
                 }
 
                 if (!window.__aoqatAndroidAnchorPatched) {
@@ -227,10 +229,6 @@ class MainActivity : Activity() {
                 makeReady();
                 wireNativeAlarm();
                 nativeStatus();
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 300);
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 900);
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 1800);
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 3200);
             })();
         """.trimIndent()
         view.evaluateJavascript(js, null)
