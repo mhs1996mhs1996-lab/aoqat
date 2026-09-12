@@ -28,11 +28,10 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore stable Android signing key
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: aoqat-debug-keystore-v1
+      - name: Prepare deterministic Android signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
       - name: Build debug APK
         run: gradle -p android-native --no-daemon assembleDebug
