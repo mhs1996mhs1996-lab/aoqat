@@ -1,7 +1,6 @@
 "use strict";
 (function(){
   const STYLE_KEY="prayerDesignerInterfaceClockStylesV1";
-  const MONTHS=["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
 
   function pad(value){return String(value).padStart(2,"0");}
 
@@ -164,18 +163,36 @@
     });
   }
 
+  function currentClockSelector(){
+    const selected=document.getElementById("elementSelect")?.value;
+    return selected==="#liveClockTime"||selected==="#liveClockDate"?selected:null;
+  }
+
   function bindFontPersistence(){
     if(document.documentElement.dataset.interfaceClockFontBound==="1")return;
     document.documentElement.dataset.interfaceClockFontBound="1";
     const controlIds=new Set(["fontFamily","fontSize","fontWeight","fontColor","textAlign","textShadow"]);
     const saveIfClock=event=>{
       if(!controlIds.has(event.target?.id))return;
-      const selected=document.getElementById("elementSelect")?.value;
-      if(selected!=="#liveClockTime"&&selected!=="#liveClockDate")return;
+      const selected=currentClockSelector();
+      if(!selected)return;
       setTimeout(()=>saveTargetStyle(selected),0);
     };
     document.addEventListener("input",saveIfClock,true);
     document.addEventListener("change",saveIfClock,true);
+    document.addEventListener("click",event=>{
+      const swatch=event.target?.closest?.("#designColorPalette .palette-color");
+      const selected=currentClockSelector();
+      if(!swatch||!selected)return;
+      const target=document.querySelector(selected);
+      const color=swatch.dataset.color;
+      if(target&&color){
+        target.style.color=color;
+        const input=document.getElementById("fontColor");
+        if(input)input.value=color;
+        saveTargetStyle(selected);
+      }
+    });
   }
 
   function init(){
