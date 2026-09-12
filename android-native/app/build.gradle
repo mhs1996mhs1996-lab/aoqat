@@ -21,8 +21,8 @@ android {
         minSdk 26
         // Keep the app content inside the normal system-bar-safe area.
         targetSdk 34
-        versionCode 16
-        versionName '1.15'
+        versionCode 17
+        versionName '1.16'
     }
 
     compileOptions {
