@@ -6,6 +6,7 @@ import android.app.AlarmManager
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -31,7 +32,15 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        webView = WebView(this)
+        window.statusBarColor = Color.rgb(5, 24, 34)
+        window.navigationBarColor = Color.rgb(4, 18, 26)
+        if (Build.VERSION.SDK_INT >= 30) {
+            window.setDecorFitsSystemWindows(true)
+        }
+
+        webView = WebView(this).apply {
+            setBackgroundColor(Color.rgb(5, 24, 34))
+        }
         setContentView(webView)
 
         configureWebView()
@@ -39,11 +48,23 @@ class MainActivity : Activity() {
         AlarmScheduler.scheduleFromDatabase(this)
 
         webView.loadUrl("file:///android_asset/www/index.html")
+
+        // حماية من بقاء شاشة البدء مخفية في أول تشغيل لبعض أجهزة Android.
+        listOf(250L, 700L, 1400L, 2500L, 4500L).forEach { delay ->
+            webView.postDelayed({
+                if (!isFinishing && ::webView.isInitialized) {
+                    applyAndroidCompatibilityFixes(webView)
+                }
+            }, delay)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         AlarmScheduler.scheduleFromDatabase(this)
+        if (::webView.isInitialized) {
+            webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
+        }
     }
 
     private fun configureWebView() {
@@ -68,6 +89,11 @@ class MainActivity : Activity() {
         webView.addJavascriptInterface(AndroidBridge(), "AndroidNative")
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageCommitVisible(view: WebView, url: String) {
+                super.onPageCommitVisible(view, url)
+                applyAndroidCompatibilityFixes(view)
+            }
+
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
                 applyAndroidCompatibilityFixes(view)
@@ -114,6 +140,20 @@ class MainActivity : Activity() {
                     if (!document.body) return;
                     document.body.classList.remove('aoqat-booting');
                     document.body.classList.add('aoqat-ready');
+                    var app = document.querySelector('.app');
+                    var workspace = document.querySelector('.workspace');
+                    var sidebar = document.querySelector('.sidebar');
+                    if (app) { app.style.visibility = 'visible'; app.style.opacity = '1'; }
+                    if (workspace) { workspace.style.visibility = 'visible'; workspace.style.opacity = '1'; }
+                    if (sidebar) { sidebar.style.visibility = 'visible'; sidebar.style.opacity = '1'; }
+                }
+
+                function nativeStatus() {
+                    var status = document.getElementById('serverPushStatus');
+                    if (!status) return;
+                    status.textContent = '✅ داخل نسخة Android يتم استخدام منبّه Android الأصلي، وليس إشعارات المتصفح.';
+                    status.style.color = '#83e2ad';
+                    status.style.borderLeftColor = '#2dbe73';
                 }
 
                 function wireNativeAlarm() {
@@ -131,8 +171,24 @@ class MainActivity : Activity() {
                             event.stopImmediatePropagation();
                             if (window.AndroidNative && AndroidNative.enableAlarm) {
                                 AndroidNative.enableAlarm();
+                                setTimeout(nativeStatus, 50);
+                                setTimeout(nativeStatus, 1000);
                             }
                         }, true);
+                    });
+                }
+
+                // Web Push غير مطلوب داخل APK. نبقي منطق الويب الأصلي بدون تعديل،
+                // لكن داخل WebView نعرض حالة Android الصحيحة بدل رسالة عدم دعم المتصفح.
+                if (!window.__aoqatAndroidStatusObserver && document.documentElement) {
+                    window.__aoqatAndroidStatusObserver = new MutationObserver(function () {
+                        makeReady();
+                        nativeStatus();
+                    });
+                    window.__aoqatAndroidStatusObserver.observe(document.documentElement, {
+                        childList: true,
+                        subtree: true,
+                        characterData: true
                     });
                 }
 
@@ -170,9 +226,11 @@ class MainActivity : Activity() {
 
                 makeReady();
                 wireNativeAlarm();
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); }, 500);
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); }, 1500);
-                setTimeout(function(){ makeReady(); wireNativeAlarm(); }, 3000);
+                nativeStatus();
+                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 300);
+                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 900);
+                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 1800);
+                setTimeout(function(){ makeReady(); wireNativeAlarm(); nativeStatus(); }, 3200);
             })();
         """.trimIndent()
         view.evaluateJavascript(js, null)
@@ -190,6 +248,7 @@ class MainActivity : Activity() {
                     "تم تفعيل منبّه Android الأصلي وسيُجدول حسب وقت العشاء + 35 دقيقة",
                     Toast.LENGTH_LONG
                 ).show()
+                webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 100L)
             }
         }
 
