@@ -1,34 +1,60 @@
 "use strict";
+/*
+ * واجهة مساعدة فقط لنظام الخطوط.
+ * مصدر الحقيقة الوحيد لتحديد التصميم النشط وتطبيق التنسيق هو PrayerFontCore.
+ * هذا يمنع أي مستمع قديم من تعديل تصميم آخر بعد إعادة ترتيب الكاروسيل.
+ */
 (function(){
-  const CONTROL_IDS=["fontFamily","fontSize","fontWeight","textAlign","textShadow"];
-  const roleFromValue=value=>({
-    ".quran":"quran","#dayP":"day","#hijriDayP":"hday","#gregorianDayP":"gday",
-    "#hijriMonthP":"hmonth","#gregorianMonthP":"gmonth","#hijriYearP":"hyear","#gregorianYearP":"gyear",
-    ".prayer-row:nth-child(1)":"fajr",".prayer-row:nth-child(2)":"sunrise",".prayer-row:nth-child(3)":"dhuhr",
-    ".prayer-row:nth-child(4)":"asr",".prayer-row:nth-child(5)":"maghrib",".prayer-row:nth-child(6)":"isha","#footerP":"footer"
-  })[value]||null;
-  function visibleSlides(){const track=document.querySelector('.design-carousel-track');return track?Array.from(track.querySelectorAll(':scope > .design-slide')).filter(s=>getComputedStyle(s).display!=="none"):[];}
-  function activeDesign(){const slides=visibleSlides();if(slides.length){if(window.__prayerActiveDesignElement&&document.body.contains(window.__prayerActiveDesignElement))return window.__prayerActiveDesignElement;const car=document.querySelector('.design-carousel'),cr=car?.getBoundingClientRect();if(cr&&cr.width){const center=cr.left+cr.width/2;let best=null,dist=Infinity;slides.forEach(slide=>{const r=slide.getBoundingClientRect();if(!r.width)return;const d=Math.abs((r.left+r.width/2)-center);if(d<dist){dist=d;best=slide;}});if(best&&dist<Math.max(cr.width,350))return best.firstElementChild;}let i=Number(window.__prayerActiveDesignIndex);if(!Number.isFinite(i))i=0;i=Math.max(0,Math.min(i,slides.length-1));return slides[i]?.firstElementChild||null;}return document.getElementById('design');}
-  const fieldSelectors={day:['[data-field="day"]','[data-f="day"]','#dayP','.weekday','.sd2-day','.sd3-day','.sd4-day','.nd-day','.ref-day','.or-day'],hday:['[data-field="hday"]','[data-f="hd"]','#hijriDayP','.hijri-day','.sd2-date-card.hijri .sd2-date-number','.sd4-date-card.hijri .sd4-date-number','.ref-date-card.hijri .ref-date-num','.or-date.hijri .or-date-day'],gday:['[data-field="gday"]','[data-f="gd"]','#gregorianDayP','.gregorian-day','.sd2-date-card.greg .sd2-date-number','.sd4-date-card.greg .sd4-date-number','.ref-date-card.greg .ref-date-num','.or-date.greg .or-date-day'],hmonth:['[data-field="hmonth"]','[data-f="hm"]','#hijriMonthP','.hijri-month','.sd2-date-card.hijri .sd2-date-month','.sd4-date-card.hijri .sd4-date-month','.ref-date-card.hijri .ref-date-month','.or-date.hijri .or-date-month'],gmonth:['[data-field="gmonth"]','[data-f="gm"]','#gregorianMonthP','.gregorian-month','.sd2-date-card.greg .sd2-date-month','.sd4-date-card.greg .sd4-date-month','.ref-date-card.greg .ref-date-month','.or-date.greg .or-date-month'],hyear:['[data-field="hyear"]','[data-f="hy"]','#hijriYearP','.hijri-year','.sd2-date-card.hijri .sd2-date-year','.sd4-date-card.hijri .sd4-date-year','.ref-date-card.hijri .ref-date-year','.or-year.hijri'],gyear:['[data-field="gyear"]','[data-f="gy"]','#gregorianYearP','.gregorian-year','.sd2-date-card.greg .sd2-date-year','.sd4-date-card.greg .sd4-date-year','.ref-date-card.greg .ref-date-year','.or-year.greg'],footer:['[data-field="footer"]','[data-f="footer"]','#footerP','.footer','.sd2-footer','.sd3-footer-card','.sd4-footer','.nd-footer','.nf-footer','.ref-footer','.or-footer'],quran:['[data-field="quran"]','[data-f="quran"]','.quran','.verse','.sd4-verse','.nd-verse','.ref-verse','.or-verse']};
-  const labels={fajr:'الفجر',sunrise:'الشروق',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'},rowSel='.prayer-row,.sd2-prayer-row,.sd3-prayer-row,.sd4-prayer-row,.nd-prayer-row,.nf-row,.ref-prayer-row,.or-row,[data-prayer-row]',unique=a=>Array.from(new Set(a.filter(Boolean)));
-  function roleTargets(role){const root=activeDesign();if(!root||!role)return [];if(labels[role]){const direct=Array.from(root.querySelectorAll(`[data-field="${role}"],[data-f="${role}"]`)),rows=[];direct.forEach(el=>{const r=el.closest(rowSel);if(r)rows.push(r);});if(!rows.length)root.querySelectorAll(rowSel).forEach(r=>{if((r.textContent||'').includes(labels[role]))rows.push(r);});const out=[];rows.forEach(r=>{out.push(r);r.querySelectorAll('span,b,strong,em,i,div').forEach(el=>{if(el.matches('.ref-prayer-icon,[data-icon]'))return;if(el.children.length===0&&(el.textContent||'').trim())out.push(el);});});direct.forEach(el=>out.push(el));return unique(out);}const out=[];(fieldSelectors[role]||[]).forEach(sel=>{try{root.querySelectorAll(sel).forEach(el=>out.push(el));}catch(_){}});return unique(out);}
-  function shadowValue(v){if(v==='black')return '2px 2px 6px rgba(0,0,0,.85)';if(v==='gold')return '2px 2px 8px rgba(212,168,63,.9)';if(v==='green')return '2px 2px 8px rgba(25,130,75,.9)';return 'none';}
-  function announce(){window.dispatchEvent(new CustomEvent('prayerFontChanged',{detail:{design:activeDesign()}}));}
-  function applyControl(id){const role=roleFromValue(document.getElementById('elementSelect')?.value||''),targets=roleTargets(role);if(!targets.length)return;const v=document.getElementById(id)?.value;if(v==null)return;targets.forEach(t=>{if(id==='fontFamily'&&v)t.style.fontFamily=`"${v}", Arial, sans-serif`;else if(id==='fontSize'&&v)t.style.fontSize=`${v}px`;else if(id==='fontWeight'&&v)t.style.fontWeight=v;else if(id==='textAlign'&&v)t.style.textAlign=v;else if(id==='textShadow')t.style.textShadow=shadowValue(v);});announce();}
-  function applyColor(c){const role=roleFromValue(document.getElementById('elementSelect')?.value||''),targets=roleTargets(role);if(!targets.length)return;targets.forEach(t=>t.style.color=c);const input=document.getElementById('fontColor');if(input)input.value=c;announce();markSelected(c);}
-  function rgbToHex(rgb){const m=String(rgb||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);if(!m)return '#ffffff';return '#'+[m[1],m[2],m[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('');}
-  function collectDesignColors(){const colors=new Set();document.querySelectorAll('.previewBox .design-slide > *, .previewBox #design').forEach(root=>[root,...root.querySelectorAll('*')].forEach(el=>{const c=getComputedStyle(el).color;if(c&&c!=='rgba(0, 0, 0, 0)')colors.add(rgbToHex(c));}));return Array.from(colors).filter(c=>/^#[0-9a-f]{6}$/i.test(c));}
-  function markSelected(c){document.querySelectorAll('#designColorPalette .palette-color').forEach(b=>b.classList.toggle('selected',(b.dataset.color||'').toLowerCase()===String(c||'').toLowerCase()));}
-  function addSwatch(parent,color,cls=''){const b=document.createElement('button');b.type='button';b.className=`palette-color ${cls}`.trim();b.dataset.color=color;b.style.background=color;b.title=color;b.addEventListener('click',()=>applyColor(color));parent.appendChild(b);return b;}
+  function core(){return window.PrayerFontCore||null;}
+  function activeDesign(){return core()?.activeRoot?.()||null;}
+  function roleTargets(role){return core()?.targetsFor?.(role)||[];}
+  function load(){core()?.load?.();}
+
+  function rgbToHex(rgb){
+    const m=String(rgb||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if(!m)return '#ffffff';
+    return '#'+[m[1],m[2],m[3]].map(n=>Number(n).toString(16).padStart(2,'0')).join('');
+  }
+  function collectDesignColors(){
+    const root=activeDesign();if(!root)return [];
+    const colors=new Set();
+    [root,...root.querySelectorAll('*')].forEach(el=>{
+      const c=getComputedStyle(el).color;
+      if(c&&c!=='rgba(0, 0, 0, 0)')colors.add(rgbToHex(c));
+    });
+    return Array.from(colors).filter(c=>/^#[0-9a-f]{6}$/i.test(c));
+  }
+  function markSelected(c){
+    document.querySelectorAll('#designColorPalette .palette-color').forEach(b=>b.classList.toggle('selected',(b.dataset.color||'').toLowerCase()===String(c||'').toLowerCase()));
+  }
+  function applyColor(c){
+    const input=document.getElementById('fontColor');if(!input)return;
+    input.value=c;markSelected(c);core()?.apply?.('fontColor');
+  }
+  function addSwatch(parent,color,cls=''){
+    const b=document.createElement('button');b.type='button';b.className=`palette-color ${cls}`.trim();b.dataset.color=color;b.style.background=color;b.title=color;b.addEventListener('click',()=>applyColor(color));parent.appendChild(b);
+  }
+  function renderDesignColors(){
+    const sw=document.querySelector('#designColorPalette .design-color-swatches');if(!sw)return;
+    sw.innerHTML='';collectDesignColors().forEach(c=>addSwatch(sw,c,'design-swatch'));markSelected(document.getElementById('fontColor')?.value);
+  }
   function buildColorPalette(){
     const input=document.getElementById('fontColor');if(!input||document.getElementById('designColorPalette'))return;
-    input.style.display='none';const box=document.createElement('div');box.id='designColorPalette';box.innerHTML='<div class="palette-title">ألوان النسق</div><div class="theme-base-row"></div><div class="theme-shade-grid"></div><div class="palette-title standard-title">ألوان قياسية</div><div class="standard-colors"></div><div class="palette-title design-title">ألوان التصاميم الجاهزة</div><div class="design-color-swatches"></div>';
-    const st=document.createElement('style');st.id='officeLikeColorPaletteStyles';st.textContent=`#designColorPalette{margin-top:8px;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(3,16,24,.28)}#designColorPalette .palette-title{font-size:13px;font-weight:800;margin:2px 0 8px}#designColorPalette .theme-base-row,#designColorPalette .theme-shade-grid{display:grid;grid-template-columns:repeat(10,minmax(22px,1fr));gap:4px}#designColorPalette .theme-base-row{margin-bottom:5px}#designColorPalette .theme-shade-grid{grid-auto-flow:column;grid-template-rows:repeat(5,28px);grid-template-columns:repeat(10,minmax(22px,1fr));margin-bottom:12px}#designColorPalette .standard-colors{display:grid;grid-template-columns:repeat(10,minmax(22px,1fr));gap:4px;margin-bottom:12px}#designColorPalette .design-color-swatches{display:flex;flex-wrap:wrap;gap:5px}.palette-color{width:100%;height:30px;min-width:0;padding:0;border:1px solid rgba(255,255,255,.28);border-radius:3px;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}.theme-base-row .palette-color{height:34px}.design-color-swatches .palette-color{width:28px;height:28px;border-radius:5px}.palette-color.selected{outline:2px solid #fff;outline-offset:2px}.standard-title,.design-title{margin-top:10px!important}@media(max-width:430px){#designColorPalette{padding:8px}#designColorPalette .theme-base-row,#designColorPalette .theme-shade-grid,#designColorPalette .standard-colors{gap:3px}.palette-color{height:27px}.theme-base-row .palette-color{height:31px}}`;document.head.appendChild(st);input.insertAdjacentElement('afterend',box);
-    const base=['#70ad47','#4472c4','#ffc000','#a5a5a5','#ed7d31','#5b9bd5','#44546a','#e7e6e6','#000000','#ffffff'],shades=[['#e2f0d9','#c6e0b4','#a9d18e','#548235','#375623'],['#d9e2f3','#b4c6e7','#8eaadb','#2f5597','#203864'],['#fff2cc','#ffe699','#ffd966','#bf9000','#7f6000'],['#ededed','#dbdbdb','#c9c9c9','#7b7b7b','#525252'],['#fce4d6','#f8cbad','#f4b183','#c65911','#843c0c'],['#ddebf7','#bdd7ee','#9dc3e6','#2e75b6','#1f4e78'],['#d6dce4','#adb9ca','#8497b0','#323f4f','#222a35'],['#f2f2f2','#d9d9d9','#bfbfbf','#7f7f7f','#3f3f3f'],['#d9d9d9','#a6a6a6','#737373','#404040','#0d0d0d'],['#ffffff','#f2f2f2','#d9d9d9','#bfbfbf','#7f7f7f']],standard=['#7030a0','#002060','#0070c0','#00b0f0','#00b050','#92d050','#ffff00','#ffc000','#ff0000','#c00000'];
-    const baseRow=box.querySelector('.theme-base-row');base.forEach(c=>addSwatch(baseRow,c));const shadeGrid=box.querySelector('.theme-shade-grid');shades.forEach(col=>col.forEach(c=>addSwatch(shadeGrid,c)));const std=box.querySelector('.standard-colors');standard.forEach(c=>addSwatch(std,c));const renderDesign=()=>{const sw=box.querySelector('.design-color-swatches');sw.innerHTML='';collectDesignColors().forEach(c=>addSwatch(sw,c,'design-swatch'));markSelected(input.value);};renderDesign();setTimeout(renderDesign,800);setTimeout(renderDesign,1800);
+    input.style.display='none';
+    const box=document.createElement('div');box.id='designColorPalette';box.innerHTML='<div class="palette-title">ألوان النسق</div><div class="theme-base-row"></div><div class="theme-shade-grid"></div><div class="palette-title standard-title">ألوان قياسية</div><div class="standard-colors"></div><div class="palette-title design-title">ألوان التصميم الحالي</div><div class="design-color-swatches"></div>';
+    const st=document.createElement('style');st.id='officeLikeColorPaletteStyles';st.textContent='#designColorPalette{margin-top:8px;padding:10px;border:1px solid rgba(255,255,255,.12);border-radius:10px;background:rgba(3,16,24,.28)}#designColorPalette .palette-title{font-size:13px;font-weight:800;margin:2px 0 8px}#designColorPalette .theme-base-row,#designColorPalette .theme-shade-grid{display:grid;grid-template-columns:repeat(10,minmax(22px,1fr));gap:4px}#designColorPalette .theme-base-row{margin-bottom:5px}#designColorPalette .theme-shade-grid{grid-auto-flow:column;grid-template-rows:repeat(5,28px);margin-bottom:12px}#designColorPalette .standard-colors{display:grid;grid-template-columns:repeat(10,minmax(22px,1fr));gap:4px;margin-bottom:12px}#designColorPalette .design-color-swatches{display:flex;flex-wrap:wrap;gap:5px}.palette-color{width:100%;height:30px;min-width:0;padding:0;border:1px solid rgba(255,255,255,.28);border-radius:3px;cursor:pointer}.theme-base-row .palette-color{height:34px}.design-color-swatches .palette-color{width:28px;height:28px;border-radius:5px}.palette-color.selected{outline:2px solid #fff;outline-offset:2px}';document.head.appendChild(st);
+    input.insertAdjacentElement('afterend',box);
+    const base=['#70ad47','#4472c4','#ffc000','#a5a5a5','#ed7d31','#5b9bd5','#44546a','#e7e6e6','#000000','#ffffff'];
+    const standard=['#7030a0','#002060','#0070c0','#00b0f0','#00b050','#92d050','#ffff00','#ffc000','#ff0000','#c00000'];
+    base.forEach(c=>addSwatch(box.querySelector('.theme-base-row'),c));
+    standard.forEach(c=>addSwatch(box.querySelector('.standard-colors'),c));
+    renderDesignColors();
   }
-  function load(){const role=roleFromValue(document.getElementById('elementSelect')?.value||''),target=roleTargets(role)[0];if(!target)return;const s=getComputedStyle(target),family=(s.fontFamily.split(',')[0]||'').replace(/["']/g,'').trim(),fs=document.getElementById('fontFamily');if(fs){let o=Array.from(fs.options).find(x=>x.value===family);if(!o&&family){o=new Option(family,family);fs.add(o);}if(family)fs.value=family;}const size=document.getElementById('fontSize');if(size)size.value=Math.round(parseFloat(s.fontSize)||40);const weight=document.getElementById('fontWeight');if(weight){const w=String(Math.round((parseInt(s.fontWeight)||400)/100)*100);if(Array.from(weight.options).some(o=>o.value===w))weight.value=w;}const color=document.getElementById('fontColor');if(color){color.value=rgbToHex(s.color);markSelected(color.value);}const align=document.getElementById('textAlign');if(align&&['right','center','left'].includes(s.textAlign))align.value=s.textAlign;}
-  function bind(){const select=document.getElementById('elementSelect');if(!select||select.dataset.universalFontBound==='1')return;select.dataset.universalFontBound='1';select.addEventListener('change',()=>setTimeout(load,0));CONTROL_IDS.forEach(id=>{const el=document.getElementById(id);if(!el)return;el.addEventListener(id==='fontSize'?'input':'change',()=>applyControl(id));});document.addEventListener('click',e=>{if(e.target.closest('.design-carousel-btn,.design-carousel-dot,.ornate-carousel-btn,.ornate-carousel-dot'))setTimeout(load,180);});window.addEventListener('prayerDesignChanged',()=>setTimeout(load,120));buildColorPalette();}
-  function futureProof(){const ob=new MutationObserver(()=>bind());ob.observe(document.body,{childList:true,subtree:true});}
-  window.PrayerUniversalFonts={activeDesign,roleTargets,load};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{bind();futureProof();},{once:true});else{bind();futureProof();}
+  function init(){
+    buildColorPalette();
+    window.addEventListener('prayerDesignChanged',()=>setTimeout(()=>{load();renderDesignColors();},100));
+    document.getElementById('elementSelect')?.addEventListener('change',()=>setTimeout(load,0));
+  }
+  window.PrayerUniversalFonts={activeDesign,roleTargets,load,renderDesignColors};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
