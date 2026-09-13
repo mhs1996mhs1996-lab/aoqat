@@ -11,20 +11,13 @@ const prayerTimes = [];
             s.src=src;
             s.setAttribute(`data-${dataName}`,"true");
             s.onload=()=>resolve();
-            // لا نوقف بقية البرنامج إذا تعذر تحميل إضافة ثانوية.
             s.onerror=()=>{console.error("تعذر تحميل",src);resolve();};
             parent.appendChild(s);
         });
     }
-
-    // إصلاح بدء التشغيل يعمل أولاً لمنع ظهور واجهة قديمة/جزئية أثناء تحميل باقي الوحدات.
     loadScript("js/startup-stabilizer.js?v=1","startup-stabilizer",document.head);
     loadScript("js/modal-panels.js?v=4","modal-panels",document.head);
-
-    loadScript("js/tomorrow-alarm.js?v=1","tomorrow-alarm",document.head).then(()=>
-        loadScript("js/push-notifications.js?v=1","push-notifications",document.head)
-    );
-
+    loadScript("js/tomorrow-alarm.js?v=1","tomorrow-alarm",document.head).then(()=>loadScript("js/push-notifications.js?v=1","push-notifications",document.head));
     window.addEventListener("load",async()=>{
         await loadScript("js/hide-legacy-design.js?v=1","hide-legacy-design");
         await loadScript("js/second-design.js?v=5","second-design");
@@ -32,7 +25,7 @@ const prayerTimes = [];
         await loadScript("js/design-order.js?v=2","design-order");
         await loadScript("js/night-design.js?v=3","night-design");
         await loadScript("js/five-new-designs.js?v=6","five-new-designs");
-        await loadScript("js/reference-date-order-fix.js?v=2","reference-date-order-fix");
+        await loadScript("js/reference-date-order-fix.js?v=3","reference-date-order-fix");
         await loadScript("js/footer-placement-guard.js?v=1","footer-placement-guard");
         await loadScript("js/manual-edit-toggle.js?v=5","manual-edit-toggle");
         await loadScript("js/background-tools-organizer.js?v=2","background-tools-organizer");
