@@ -1,6 +1,14 @@
 "use strict";
 
 (function(){
+  function setActive(index){
+    const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(s=>getComputedStyle(s).display!=="none");
+    const i=Math.max(0,Math.min(Number(index)||0,slides.length-1));
+    window.__prayerActiveDesignIndex=i;
+    window.__prayerActiveDesignElement=slides[i]?.firstElementChild||null;
+    window.dispatchEvent(new CustomEvent('prayerDesignChanged',{detail:{index:i,design:window.__prayerActiveDesignElement}}));
+  }
+
   function applyPreferredDesignOrder(){
     const track=document.querySelector(".design-carousel-track");
     const ref=document.getElementById("designRef")?.closest(".design-slide");
@@ -18,12 +26,39 @@
     document.querySelectorAll(".final-carousel-dots .design-carousel-dot").forEach((dot,index)=>{
       dot.classList.toggle("active",index===0);
     });
+    setActive(0);
     return true;
+  }
+
+  function bindNavigation(){
+    const controls=document.querySelector('.final-carousel-controls');
+    const dots=document.querySelector('.final-carousel-dots');
+    if(controls&&controls.dataset.orderSync!=="1"){
+      controls.dataset.orderSync="1";
+      controls.addEventListener('click',()=>setTimeout(()=>{
+        const text=controls.querySelector('.design-carousel-status')?.textContent||'';
+        const m=text.match(/(\d+)\s*من/);
+        if(m)setActive(Number(m[1])-1);
+      },0));
+    }
+    if(dots&&dots.dataset.orderSync!=="1"){
+      dots.dataset.orderSync="1";
+      dots.addEventListener('click',e=>{
+        const dot=e.target.closest('[data-dot]');
+        if(dot)setTimeout(()=>setActive(Number(dot.dataset.dot)),0);
+      });
+    }
   }
 
   let tries=0;
   const timer=setInterval(()=>{
     tries++;
-    if(applyPreferredDesignOrder()||tries>60)clearInterval(timer);
+    const ready=applyPreferredDesignOrder();
+    bindNavigation();
+    if(ready||tries>60)clearInterval(timer);
   },100);
+
+  document.addEventListener('click',e=>{
+    if(e.target.closest('.final-carousel-controls,.final-carousel-dots'))setTimeout(bindNavigation,0);
+  });
 })();
