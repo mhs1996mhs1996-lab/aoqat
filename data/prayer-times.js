@@ -31,8 +31,9 @@ const prayerTimes = [];
         await loadScript("js/background-tools-organizer.js?v=2","background-tools-organizer");
         await loadScript("js/footer-background-organizer.js?v=1","footer-background-organizer");
         await loadScript("js/interface-clock.js?v=1","interface-clock");
-        await loadScript("js/universal-font-controls.js?v=9","universal-font-controls");
-        await loadScript("js/font-controls-core.js?v=2","font-controls-core");
+        // محرك واحد فقط يملك صلاحية تطبيق التنسيق على التصميم النشط.
+        await loadScript("js/font-controls-core.js?v=3","font-controls-core");
+        await loadScript("js/universal-font-controls.js?v=10","universal-font-controls");
         await loadScript("js/font-design-manager.js?v=2","font-design-manager");
         await loadScript("js/design-history.js?v=2","design-history");
         await loadScript("js/universal-preview-editor.js?v=2","universal-preview-editor");
