@@ -42,6 +42,7 @@ const prayerTimes = [];
         await loadScript("js/design-history.js?v=2","design-history");
         await loadScript("js/universal-preview-editor.js?v=2","universal-preview-editor");
         await loadScript("js/export-toolbar.js?v=4","export-toolbar");
+        await loadScript("js/compact-design-menu.js?v=1","compact-design-menu");
         await loadScript("js/exact-export.js?v=19","exact-export");
         window.dispatchEvent(new CustomEvent("aoqatModulesReady"));
     },{once:true});
