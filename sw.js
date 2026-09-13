@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v8";
+const CACHE_NAME = "aoqat-pwa-v9";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -91,18 +91,13 @@ self.addEventListener("notificationclick", event => {
   }
 
   if (event.action === "snooze") {
-    event.waitUntil(Promise.all([
-      sendPushAction("snooze"),
-      self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients => {
-        clients.forEach(client => client.postMessage({type:"PRAYER_ALARM_SNOOZE"}));
-      })
-    ]));
+    event.waitUntil(sendPushAction("snooze"));
     return;
   }
 
   event.waitUntil(
-    self.clients.matchAll({type:"window",includeUncontrolled:true}).then(async clients => {
-      const client = clients[0];
+    self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients => {
+      const client=clients.find(item=>"focus" in item);
       if (client?.focus) return client.focus();
       if (self.clients.openWindow) return self.clients.openWindow(data.url || "/");
     })
