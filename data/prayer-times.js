@@ -29,6 +29,7 @@ const prayerTimes = [];
         await loadScript("js/hide-legacy-design.js?v=1","hide-legacy-design");
         await loadScript("js/second-design.js?v=5","second-design");
         await loadScript("js/additional-designs.js?v=6","additional-designs");
+        await loadScript("js/design-order.js?v=1","design-order");
         await loadScript("js/night-design.js?v=3","night-design");
         await loadScript("js/five-new-designs.js?v=6","five-new-designs");
         await loadScript("js/reference-date-order-fix.js?v=1","reference-date-order-fix");
