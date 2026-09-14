@@ -41,6 +41,7 @@ const prayerTimes = [];
         await loadScript("js/compact-design-menu.js?v=1","compact-design-menu");
         await loadScript("js/exact-export.js?v=19","exact-export");
         await loadScript("js/prayer-countdown.js?v=3","prayer-countdown");
+        await loadScript("js/prayer-countdown-mobile-fix.js?v=1","prayer-countdown-mobile-fix");
         window.dispatchEvent(new CustomEvent("aoqatModulesReady"));
     },{once:true});
 })();
