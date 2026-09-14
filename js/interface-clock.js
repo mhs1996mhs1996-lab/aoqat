@@ -1,40 +1,33 @@
 "use strict";
 (function(){
-  const STYLE_KEY="prayerDesignerInterfaceClockStylesV1";
-  function pad(value){return String(value).padStart(2,"0");}
-  function injectStyles(){
-    if(document.getElementById("interfaceClockStyles"))return;
-    const style=document.createElement("style");style.id="interfaceClockStyles";
-    style.textContent=`
-      .topbar.web-interface-header{direction:ltr!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:18px!important;padding:8px 12px!important;min-height:48px!important}
-      .topbar.web-interface-header .interface-clock-card,.topbar.web-interface-header .interface-date-card{min-width:0;display:flex!important;align-items:center!important;gap:7px!important;padding:7px 11px!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:11px!important;background:linear-gradient(145deg,rgba(20,39,51,.94),rgba(8,24,35,.94))!important;box-shadow:0 4px 14px rgba(0,0,0,.14)!important}
-      .topbar.web-interface-header #saveToPhoneBtn{margin:0!important;flex:0 0 auto!important}
-      .interface-clock-icon,.interface-date-icon{font-size:14px!important;line-height:1!important;opacity:.92}
-      #liveClockTime{display:flex!important;align-items:baseline!important;gap:5px!important;direction:ltr!important;color:#f8fbfd;font-size:17px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
-      #liveClockDate{display:flex!important;flex-direction:row!important;align-items:center!important;gap:4px!important;direction:ltr!important;color:#dfe8ed;font-size:14px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
-      #liveClockDate .interface-date-sep{opacity:.52;font-weight:500}
-      @media(max-width:600px){.topbar.web-interface-header{gap:8px!important;padding:6px 5px!important}.topbar.web-interface-header .interface-clock-card,.topbar.web-interface-header .interface-date-card{padding:6px 7px!important;gap:4px!important}.interface-clock-icon,.interface-date-icon{display:none!important}#liveClockTime{font-size:12.5px}#liveClockDate{font-size:11px}}
-    `;document.head.appendChild(style);
-  }
-  function makeClock(){const d=document.createElement("div");d.className="interface-clock-card";d.setAttribute("aria-label","الساعة الحالية");d.innerHTML='<div class="interface-clock-icon" aria-hidden="true">◷</div><div id="liveClockTime"><div id="liveClockDigits">12:00:00</div><div id="liveClockPeriod">ص</div></div>';return d;}
-  function makeDate(){const d=document.createElement("div");d.className="interface-date-card";d.setAttribute("aria-label","تاريخ اليوم");d.innerHTML='<div class="interface-date-icon" aria-hidden="true">▣</div><div id="liveClockDate"><div id="liveDateDay">01</div><div class="interface-date-sep">/</div><div id="liveDateMonth">01</div><div class="interface-date-sep">/</div><div id="liveDateYear">2026</div></div>';return d;}
-  function buildHeader(){
-    const header=document.querySelector(".topbar");if(!header)return false;
-    header.classList.add("web-interface-header");
-    header.querySelectorAll(".brand,.interface-clock-card,.interface-date-card").forEach(x=>x.remove());
-    const save=header.querySelector("#saveToPhoneBtn,#exportBtn");
-    const clock=makeClock(),date=makeDate();
-    header.insertBefore(clock,header.firstChild);
-    if(save)header.insertBefore(date,save.nextSibling);else{header.appendChild(date);}
-    return true;
-  }
-  function ensureOrder(){
-    const header=document.querySelector(".topbar.web-interface-header");if(!header)return;
-    const clock=header.querySelector(".interface-clock-card"),save=header.querySelector("#saveToPhoneBtn,#exportBtn"),date=header.querySelector(".interface-date-card");
-    if(clock&&save&&date){header.append(clock,save,date);}
-  }
-  function updateClock(){const now=new Date();let hour=now.getHours();const period=hour<12?"ص":"م";hour=((hour+11)%12)+1;const digits=document.getElementById("liveClockDigits"),periodEl=document.getElementById("liveClockPeriod"),day=document.getElementById("liveDateDay"),month=document.getElementById("liveDateMonth"),year=document.getElementById("liveDateYear");if(digits)digits.textContent=`${pad(hour)}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;if(periodEl)periodEl.textContent=period;if(day)day.textContent=pad(now.getDate());if(month)month.textContent=pad(now.getMonth()+1);if(year)year.textContent=String(now.getFullYear());}
-  function addFontOptions(){const select=document.getElementById("elementSelect");if(!select)return;[["#liveClockTime","الساعة — للتحكم بخط الساعة"],["#liveClockDate","التاريخ — للتحكم بخط التاريخ"]].forEach(([value,label])=>{if(!Array.from(select.options).some(o=>o.value===value))select.add(new Option(label,value));});}
-  function init(){injectStyles();if(!buildHeader())return;addFontOptions();updateClock();setTimeout(ensureOrder,100);setTimeout(ensureOrder,700);setInterval(updateClock,1000);document.addEventListener("visibilitychange",()=>{if(!document.hidden)updateClock();});window.addEventListener("aoqatModulesReady",ensureOrder);}
+  const STYLE_KEY="prayerDesignerInterfaceClockStylesV2",POS_KEY="prayerDesignerInterfaceHeaderPositionsV1";
+  function pad(v){return String(v).padStart(2,"0");}
+  function injectStyles(){if(document.getElementById("interfaceClockStyles"))return;const s=document.createElement("style");s.id="interfaceClockStyles";s.textContent=`
+    .topbar.web-interface-header{direction:ltr!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important;padding:8px 12px!important;min-height:48px!important;position:relative!important;overflow:visible!important}
+    .interface-clock-card,.interface-date-card{min-width:0;display:flex!important;align-items:center!important;gap:5px!important;padding:6px 9px!important;border:1px solid rgba(255,255,255,.14)!important;border-radius:10px!important;background:linear-gradient(145deg,rgba(20,39,51,.94),rgba(8,24,35,.94))!important;box-shadow:0 4px 14px rgba(0,0,0,.14)!important;cursor:grab!important;touch-action:none!important;user-select:none!important;position:relative;z-index:3}
+    .interface-clock-card:active,.interface-date-card:active{cursor:grabbing!important}
+    .topbar.web-interface-header #saveToPhoneBtn{margin:0!important;flex:0 0 auto!important;padding:6px 8px!important;min-height:30px!important;position:relative;z-index:2}
+    .interface-clock-icon,.interface-date-icon{font-size:13px!important;line-height:1!important;opacity:.9;pointer-events:none}
+    #liveClockTime{display:flex!important;align-items:baseline!important;gap:4px!important;direction:ltr!important;color:#f8fbfd;font-size:17px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+    #liveClockDate{display:flex!important;align-items:center!important;gap:4px!important;direction:ltr!important;color:#dfe8ed;font-size:14px;font-weight:700;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+    #liveClockDate .interface-date-sep{opacity:.52}
+    @media(max-width:600px){.topbar.web-interface-header{gap:5px!important;padding:6px 4px!important}.interface-clock-card,.interface-date-card{padding:5px 6px!important;gap:3px!important}.interface-clock-icon,.interface-date-icon{display:none!important}#liveClockTime{font-size:12.5px}#liveClockDate{font-size:11px}.topbar.web-interface-header #saveToPhoneBtn{padding:5px 6px!important;font-size:10.5px!important}}
+  `;document.head.appendChild(s);}
+  function clockEl(){const d=document.createElement("div");d.className="interface-clock-card header-draggable";d.dataset.headerItem="clock";d.innerHTML='<div class="interface-clock-icon">◷</div><div id="liveClockTime"><div id="liveClockDigits">12:00:00</div><div id="liveClockPeriod">ص</div></div>';return d;}
+  function dateEl(){const d=document.createElement("div");d.className="interface-date-card header-draggable";d.dataset.headerItem="date";d.innerHTML='<div class="interface-date-icon">▣</div><div id="liveClockDate"><div id="liveDateDay">01</div><div class="interface-date-sep">/</div><div id="liveDateMonth">01</div><div class="interface-date-sep">/</div><div id="liveDateYear">2026</div></div>';return d;}
+  function build(){const h=document.querySelector(".topbar");if(!h)return false;h.classList.add("web-interface-header");h.querySelectorAll(".brand,.interface-clock-card,.interface-date-card").forEach(x=>x.remove());const save=h.querySelector("#saveToPhoneBtn,#exportBtn");const date=dateEl(),clock=clockEl();h.append(date);if(save)h.append(save);h.append(clock);return true;}
+  function renameSave(){const b=document.querySelector("#saveToPhoneBtn");if(!b)return;b.title="حفظ الصورة";const span=b.querySelector("span");if(span)span.textContent="حفظ الصورة";else b.textContent="حفظ الصورة";}
+  function update(){const n=new Date();let h=n.getHours(),p=h<12?"ص":"م";h=((h+11)%12)+1;const q=id=>document.getElementById(id);if(q("liveClockDigits"))q("liveClockDigits").textContent=`${pad(h)}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;if(q("liveClockPeriod"))q("liveClockPeriod").textContent=p;if(q("liveDateDay"))q("liveDateDay").textContent=pad(n.getDate());if(q("liveDateMonth"))q("liveDateMonth").textContent=pad(n.getMonth()+1);if(q("liveDateYear"))q("liveDateYear").textContent=n.getFullYear();}
+  function addOptions(){const sel=document.getElementById("elementSelect");if(!sel)return;[["#liveClockTime","الساعة"],["#liveClockDate","التاريخ"]].forEach(([v,t])=>{let o=Array.from(sel.options).find(x=>x.value===v);if(o)o.textContent=t;else sel.add(new Option(t,v));});}
+  function savedStyles(){try{return JSON.parse(localStorage.getItem(STYLE_KEY)||"{}")||{};}catch(_){return {};}}
+  function restoreStyles(){const all=savedStyles();["#liveClockTime","#liveClockDate"].forEach(sel=>{const el=document.querySelector(sel),st=all[sel];if(el&&st)Object.entries(st).forEach(([k,v])=>{if(v!==undefined)el.style[k]=v;});});}
+  function applyControl(){const sel=document.getElementById("elementSelect")?.value;if(sel!=="#liveClockTime"&&sel!=="#liveClockDate")return;const el=document.querySelector(sel);if(!el)return;const family=document.getElementById("fontFamily")?.value,size=document.getElementById("fontSize")?.value,weight=document.getElementById("fontWeight")?.value,color=document.getElementById("fontColor")?.value,align=document.getElementById("textAlign")?.value,shadow=document.getElementById("textShadow")?.value;if(family)el.style.setProperty("font-family",family,"important");if(size)el.style.setProperty("font-size",size+"px","important");if(weight)el.style.setProperty("font-weight",weight,"important");if(color)el.style.setProperty("color",color,"important");if(align)el.style.setProperty("text-align",align,"important");const shadows={none:"none",black:"0 2px 4px rgba(0,0,0,.85)",gold:"0 2px 5px #b98a28",green:"0 2px 5px #1f8a55"};if(shadow)el.style.setProperty("text-shadow",shadows[shadow]||"none","important");const all=savedStyles();all[sel]={fontFamily:el.style.fontFamily,fontSize:el.style.fontSize,fontWeight:el.style.fontWeight,color:el.style.color,textAlign:el.style.textAlign,textShadow:el.style.textShadow};try{localStorage.setItem(STYLE_KEY,JSON.stringify(all));}catch(_){}}
+  function bindFormatting(){if(document.documentElement.dataset.headerFormatBound)return;document.documentElement.dataset.headerFormatBound="1";["fontFamily","fontSize","fontWeight","fontColor","textAlign","textShadow"].forEach(id=>{document.addEventListener("input",e=>{if(e.target?.id===id)applyControl();},true);document.addEventListener("change",e=>{if(e.target?.id===id)applyControl();},true);});}
+  function readPos(){try{return JSON.parse(localStorage.getItem(POS_KEY)||"{}")||{};}catch(_){return {};}}
+  function savePos(el){const p=readPos();p[el.dataset.headerItem]={x:Number(el.dataset.x||0),y:Number(el.dataset.y||0)};try{localStorage.setItem(POS_KEY,JSON.stringify(p));}catch(_){}}
+  function setPos(el,x,y){el.dataset.x=x;el.dataset.y=y;el.style.transform=`translate(${x}px,${y}px)`;}
+  function bindDrag(el){if(el.dataset.dragBound)return;el.dataset.dragBound="1";const old=readPos()[el.dataset.headerItem];if(old)setPos(el,old.x||0,old.y||0);let active=false,sx=0,sy=0,bx=0,by=0;el.addEventListener("pointerdown",e=>{if(e.button!==undefined&&e.button!==0)return;active=true;sx=e.clientX;sy=e.clientY;bx=Number(el.dataset.x||0);by=Number(el.dataset.y||0);el.setPointerCapture?.(e.pointerId);e.preventDefault();});el.addEventListener("pointermove",e=>{if(!active)return;setPos(el,bx+e.clientX-sx,by+e.clientY-sy);});const end=()=>{if(!active)return;active=false;savePos(el);};el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);}
+  function ensure(){renameSave();document.querySelectorAll(".header-draggable").forEach(bindDrag);}
+  function init(){injectStyles();if(!build())return;addOptions();restoreStyles();bindFormatting();update();ensure();setTimeout(ensure,150);setTimeout(ensure,800);setInterval(update,1000);window.addEventListener("aoqatModulesReady",ensure);document.addEventListener("visibilitychange",()=>{if(!document.hidden)update();});}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
