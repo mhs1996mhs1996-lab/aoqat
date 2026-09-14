@@ -17,10 +17,10 @@
   const style=document.createElement("style");
   style.id="prayerCountdownMobileFixStyles";
   style.textContent=`
-    #nextPrayerLabel,#iqamaLabel{display:block!important;color:#fff!important;font-size:14px!important;font-weight:700!important;line-height:1.4!important;direction:rtl!important;white-space:nowrap!important}
+    #nextPrayerLabel,#iqamaLabel{display:block!important;line-height:1.4!important;direction:rtl!important;white-space:nowrap!important}
     #iqamaStatus[hidden]{display:none!important}
     #iqamaStatus:not([hidden]){display:flex!important}
-    @media(max-width:600px){#nextPrayerLabel,#iqamaLabel{font-size:11px!important}.next-prayer{max-width:100%!important;flex-wrap:nowrap!important}}
+    @media(max-width:600px){.next-prayer{max-width:100%!important;flex-wrap:nowrap!important}}
   `;
   document.head.appendChild(style);
   fix();
