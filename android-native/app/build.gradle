@@ -19,10 +19,9 @@ android {
     defaultConfig {
         applicationId 'com.aoqat.calendar'
         minSdk 26
-        // Keep the app content inside the normal system-bar-safe area.
         targetSdk 34
-        versionCode 19
-        versionName '1.17'
+        versionCode 21
+        versionName '1.18'
     }
 
     compileOptions {
@@ -45,8 +44,6 @@ android {
     }
 }
 
-// Android-only packaging: copy the original web project unchanged into the APK,
-// then add a small APK-only compatibility layer. The source web files are never edited.
 def webSourceRoot = rootProject.projectDir.parentFile
 def webAssetDir = file("$projectDir/src/main/assets/www")
 def apkOverrideRoot = file("$rootProject.projectDir/apk-overrides")
