@@ -3,6 +3,71 @@
   const W=1024,H=1448;
   let active=0, busy=false;
 
+  function addCompactStyles(){
+    if(document.getElementById('compactCarouselNavStyles'))return;
+    const s=document.createElement('style');
+    s.id='compactCarouselNavStyles';
+    s.textContent=`
+      .previewBox .unified-preview-controls{
+        width:min(100%,430px)!important;
+        min-height:46px!important;
+        margin:8px auto 2px!important;
+        padding:0 6px!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        gap:14px!important;
+      }
+      .previewBox .unified-preview-controls .design-carousel-btn{
+        width:44px!important;
+        height:44px!important;
+        min-width:44px!important;
+        min-height:44px!important;
+        margin:0!important;
+        padding:0!important;
+        border-radius:12px!important;
+        font-size:29px!important;
+        line-height:1!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+      }
+      .previewBox .unified-preview-controls .design-carousel-status{
+        min-width:145px!important;
+        margin:0!important;
+        font-size:17px!important;
+        line-height:1.2!important;
+        text-align:center!important;
+        white-space:nowrap!important;
+      }
+      .previewBox .unified-preview-dots{
+        min-height:18px!important;
+        margin:2px auto 7px!important;
+        padding:0!important;
+        display:flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        gap:7px!important;
+      }
+      .previewBox .unified-preview-dots .design-carousel-dot{
+        width:12px!important;
+        height:12px!important;
+        min-width:12px!important;
+        min-height:12px!important;
+        margin:0!important;
+        padding:0!important;
+      }
+      @media(max-width:800px){
+        .previewBox .unified-preview-controls{width:100%!important;min-height:40px!important;margin:5px auto 1px!important;gap:10px!important;padding:0 4px!important}
+        .previewBox .unified-preview-controls .design-carousel-btn{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;border-radius:10px!important;font-size:25px!important}
+        .previewBox .unified-preview-controls .design-carousel-status{min-width:126px!important;font-size:15px!important}
+        .previewBox .unified-preview-dots{min-height:15px!important;margin:1px auto 5px!important;gap:6px!important}
+        .previewBox .unified-preview-dots .design-carousel-dot{width:10px!important;height:10px!important;min-width:10px!important;min-height:10px!important}
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
   function visibleSlides(track){
     return Array.from(track.querySelectorAll(':scope > .design-slide')).filter(slide=>{
       if(slide.dataset.legacySlide==='true'||slide.querySelector('#design')) return false;
@@ -28,12 +93,12 @@
   function install(){
     if(busy)return false;busy=true;
     try{
+      addCompactStyles();
       const track=document.querySelector('.design-carousel-track');
       const car=document.querySelector('.design-carousel');
       if(!track||!car)return false;
       const slides=visibleSlides(track);if(!slides.length)return false;
 
-      // إزالة/إخفاء جميع أنظمة التنقل القديمة لمنع تكرار الأسهم والعدادات.
       const parent=car.parentElement;
       parent.querySelectorAll('.design-carousel-controls,.design-carousel-dots,.night-carousel-controls,.night-carousel-dots,.ornate-carousel-controls,.ornate-carousel-dots,.final-carousel-controls,.final-carousel-dots').forEach(el=>{
         if(!el.classList.contains('unified-preview-controls')&&!el.classList.contains('unified-preview-dots')) el.remove();
@@ -61,7 +126,6 @@
         const current=visibleSlides(track);
         if(!current.length)return;
         active=((active%current.length)+current.length)%current.length;
-        // index داخل جميع شرائح DOM لاستخدام التصدير القديم بدقة.
         const all=Array.from(track.querySelectorAll(':scope > .design-slide'));
         const domIndex=all.indexOf(current[active]);
         window.__prayerActiveDesignIndex=domIndex>=0?domIndex:active;
