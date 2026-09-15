@@ -13,33 +13,18 @@
     footer:['[data-field="footer"]','#footerP','.footer','.sd2-footer','.sd3-footer-card','.sd4-footer','.nd-footer','.nf-footer','.ref-footer','.or-footer']
   };
   const PRAYERS=['fajr','sunrise','dhuhr','asr','maghrib','isha'];
-  const ARABIC={fajr:'الفجر',sunrise:'الشروق',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
   const ROW_SELECTOR='.prayer-row,.sd2-prayer-row,.sd3-prayer-row,.sd4-prayer-row,.nd-prayer-row,.nf-row,.ref-prayer-row,.or-row,[data-prayer-row]';
   function slides(){const t=document.querySelector('.design-carousel-track');return t?Array.from(t.children).filter(s=>s.classList.contains('design-slide')&&getComputedStyle(s).display!=='none'):[];}
   function statusIndex(){const s=document.querySelector('.final-carousel-controls .design-carousel-status')?.textContent||'';const m=s.match(/(\d+)\s*من\s*(\d+)/);return m?Number(m[1])-1:null;}
   function activeRoot(){const list=slides();if(!list.length)return document.getElementById('design');let i=statusIndex();if(i===null){const car=document.querySelector('.design-carousel'),cr=car?.getBoundingClientRect();if(cr?.width){const cx=cr.left+cr.width/2;let best=0,dist=Infinity;list.forEach((s,n)=>{const r=s.getBoundingClientRect(),d=Math.abs(r.left+r.width/2-cx);if(r.width&&d<dist){dist=d;best=n;}});i=best;}else i=0;}i=Math.max(0,Math.min(i,list.length-1));return list[i]?.firstElementChild||null;}
   function role(){const v=document.getElementById('elementSelect')?.value||'';if(ROLE_BY_VALUE[v])return ROLE_BY_VALUE[v];const m=v.match(/data-(?:field|f)=["']?([^"'\]]+)/i);return m?m[1]:null;}
   const unique=a=>Array.from(new Set(a.filter(Boolean)));
-  function addCountdownTargets(root,r,out){
-    const name=ARABIC[r];if(!name)return;
-    const phrases=[`أذان ${name} بعد`,`اذان ${name} بعد`];
-    root.querySelectorAll('*').forEach(el=>{
-      const txt=(el.textContent||'').replace(/\s+/g,' ').trim();
-      if(!txt||!phrases.some(p=>txt.includes(p)))return;
-      out.push(el);
-      el.querySelectorAll('*').forEach(child=>{if((child.textContent||'').trim())out.push(child);});
-      const parent=el.parentElement;
-      if(parent&&root.contains(parent))parent.querySelectorAll('span,b,strong,em,time,[class*="count" i],[class*="timer" i]').forEach(child=>{if((child.textContent||'').trim())out.push(child);});
-    });
-  }
   function targetsFor(r){
     const root=activeRoot();if(!root||!r)return [];
     if(PRAYERS.includes(r)){
       let rows=[];root.querySelectorAll(`[data-field="${r}"],[data-f="${r}"]`).forEach(el=>{rows.push(el.closest(ROW_SELECTOR)||el);});
       if(!rows.length){const all=Array.from(root.querySelectorAll(ROW_SELECTOR)),p=PRAYERS.indexOf(r);if(all[p])rows=[all[p]];}
-      const out=[];rows.forEach(row=>{out.push(row);row.querySelectorAll('*').forEach(el=>{if(el.matches('.ref-prayer-icon,[data-icon]'))return;if(el.children.length===0&&(el.textContent||'').trim())out.push(el);});});
-      addCountdownTargets(root,r,out);
-      return unique(out);
+      const out=[];rows.forEach(row=>{out.push(row);row.querySelectorAll('*').forEach(el=>{if(el.matches('.ref-prayer-icon,[data-icon]'))return;if(el.children.length===0&&(el.textContent||'').trim())out.push(el);});});return unique(out);
     }
     const out=[];[`[data-field="${r}"]`,`[data-f="${r}"]`,...(ALIASES[r]||[])].forEach(sel=>{try{root.querySelectorAll(sel).forEach(el=>out.push(el));}catch(_){}});return unique(out);
   }
