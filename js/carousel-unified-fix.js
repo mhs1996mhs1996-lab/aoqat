@@ -7,21 +7,24 @@
     if(document.getElementById('compactCarouselNavStyles'))return;
     const s=document.createElement('style');s.id='compactCarouselNavStyles';
     s.textContent=`
-      .previewBox{min-height:0!important;height:auto!important;padding-bottom:4px!important}
+      .previewBox{min-height:0!important;height:auto!important;padding-bottom:0!important}
       .previewBox .design-carousel{margin-bottom:0!important}
-      .previewBox .unified-preview-controls{width:min(100%,430px)!important;min-height:36px!important;height:36px!important;margin:2px auto 0!important;padding:0 4px!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:8px!important}
-      .previewBox .unified-preview-controls .design-carousel-btn{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;margin:0!important;padding:0!important;border-radius:9px!important;font-size:23px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important}
-      .previewBox .unified-preview-controls .design-carousel-status{min-width:120px!important;margin:0!important;font-size:14px!important;line-height:1!important;text-align:center!important;white-space:nowrap!important}
-      .previewBox .unified-preview-dots{height:12px!important;min-height:12px!important;margin:0 auto!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:5px!important}
-      .previewBox .unified-preview-dots .design-carousel-dot{width:9px!important;height:9px!important;min-width:9px!important;min-height:9px!important;margin:0!important;padding:0!important}
+      .previewBox .unified-preview-controls{width:min(100%,360px)!important;min-height:28px!important;height:28px!important;margin:0 auto!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important}
+      .previewBox .unified-preview-controls .design-carousel-btn{width:28px!important;height:28px!important;min-width:28px!important;min-height:28px!important;margin:0!important;padding:0!important;border-radius:7px!important;font-size:20px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important}
+      .previewBox .unified-preview-controls .design-carousel-status{min-width:108px!important;margin:0!important;font-size:13px!important;line-height:1!important;text-align:center!important;white-space:nowrap!important}
+      .previewBox .unified-preview-dots{height:8px!important;min-height:8px!important;margin:0 auto!important;padding:0!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:4px!important}
+      .previewBox .unified-preview-dots .design-carousel-dot{width:7px!important;height:7px!important;min-width:7px!important;min-height:7px!important;margin:0!important;padding:0!important}
       @media(max-width:800px){
-        .previewBox{min-height:0!important;height:auto!important;padding-top:6px!important;padding-bottom:2px!important}
+        .app{gap:5px!important;padding-top:5px!important}
+        .workspace{margin-bottom:0!important;padding-bottom:0!important}
+        .sidebar{margin-top:0!important;padding-top:0!important}
+        .previewBox{min-height:0!important;height:auto!important;padding-top:4px!important;padding-bottom:0!important;margin-bottom:0!important}
         .previewBox .design-carousel{margin-bottom:0!important}
-        .previewBox .unified-preview-controls{min-height:32px!important;height:32px!important;margin:0 auto!important;gap:7px!important}
-        .previewBox .unified-preview-controls .design-carousel-btn{width:30px!important;height:30px!important;min-width:30px!important;min-height:30px!important;font-size:21px!important}
-        .previewBox .unified-preview-controls .design-carousel-status{min-width:112px!important;font-size:13px!important}
-        .previewBox .unified-preview-dots{height:10px!important;min-height:10px!important;margin:0 auto!important}
-        .previewBox .unified-preview-dots .design-carousel-dot{width:8px!important;height:8px!important;min-width:8px!important;min-height:8px!important}
+        .previewBox .unified-preview-controls{min-height:25px!important;height:25px!important;margin:0 auto!important;gap:5px!important;padding:0!important}
+        .previewBox .unified-preview-controls .design-carousel-btn{width:25px!important;height:25px!important;min-width:25px!important;min-height:25px!important;border-radius:6px!important;font-size:18px!important}
+        .previewBox .unified-preview-controls .design-carousel-status{min-width:104px!important;font-size:12px!important}
+        .previewBox .unified-preview-dots{height:7px!important;min-height:7px!important;margin:0 auto!important;padding:0!important}
+        .previewBox .unified-preview-dots .design-carousel-dot{width:6px!important;height:6px!important;min-width:6px!important;min-height:6px!important}
       }
     `;document.head.appendChild(s);
   }
@@ -32,12 +35,12 @@
 
   function compactParent(car){
     const parent=car.parentElement;if(!parent)return;
-    parent.style.setProperty('padding-bottom','3px','important');
-    parent.style.setProperty('margin-bottom','4px','important');
+    parent.style.setProperty('padding-bottom','0','important');
+    parent.style.setProperty('margin-bottom','0','important');
     parent.style.setProperty('min-height','0','important');
     parent.style.setProperty('height','auto','important');
     const next=parent.nextElementSibling;
-    if(next)next.style.setProperty('margin-top','4px','important');
+    if(next)next.style.setProperty('margin-top','0','important');
   }
 
   function install(){
