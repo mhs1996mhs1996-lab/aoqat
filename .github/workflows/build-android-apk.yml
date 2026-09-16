@@ -41,13 +41,18 @@ jobs:
           mkdir -p android-native/signing
           base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
+      - name: Prepare permanent launcher icon
+        run: |
+          mkdir -p android-native/app/src/main/res/drawable
+          base64 --decode android-native/app/src/main/app_icon.b64 > android-native/app/src/main/res/drawable/app_icon.jpg
+
       - name: Build debug APK
         run: gradle -p android-native --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.19
+          name: aoqat-android-v1.20
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
