@@ -13,7 +13,8 @@
 
     <application
         android:allowBackup="true"
-        android:label="تقاويم الصلاة Android"
+        android:icon="@drawable/app_icon"
+        android:label="اوقات الصلاة في الحويجة"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
