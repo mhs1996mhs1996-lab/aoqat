@@ -43,7 +43,7 @@ const prayerTimes = [];
         await loadScript("js/prayer-countdown.js?v=6","prayer-countdown");
         await loadScript("js/prayer-countdown-mobile-fix.js?v=2","prayer-countdown-mobile-fix");
         await loadScript("js/prayer-countdown-edit-bridge.js?v=2","prayer-countdown-edit-bridge");
-        await loadScript("js/carousel-unified-fix.js?v=7","carousel-unified-fix");
+        await loadScript("js/carousel-unified-fix.js?v=8","carousel-unified-fix");
         window.dispatchEvent(new CustomEvent("aoqatModulesReady"));
     },{once:true});
 })();
