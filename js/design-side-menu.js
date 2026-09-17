@@ -17,7 +17,8 @@
       .sidebar .main-panel{margin-top:0!important}
       @media(max-width:800px){
         .topbar.web-interface-header{margin-top:50px!important;margin-bottom:5px!important}
-        .topbar.web-interface-header #saveToPhoneBtn,.topbar.web-interface-header #exportBtn{position:fixed!important;top:11px!important;left:50%!important;transform:translateX(-50%)!important;z-index:10019!important;margin:0!important}
+        .topbar.web-interface-header #saveToPhoneBtn,.topbar.web-interface-header #exportBtn{position:fixed!important;top:11px!important;left:12px!important;right:auto!important;transform:none!important;z-index:9990!important;margin:0!important}
+        body.design-menu-open .topbar.web-interface-header #saveToPhoneBtn,body.design-menu-open .topbar.web-interface-header #exportBtn{z-index:9990!important}
         .workspace{padding-top:0!important}
       }
       @media(min-width:801px){#designSideMenuBtn{top:12px;right:12px}}
