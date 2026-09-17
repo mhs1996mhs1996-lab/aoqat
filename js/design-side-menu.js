@@ -12,16 +12,17 @@
       body.design-menu-open #designSideMenuBtn{top:5px;right:7px;width:24px;height:24px;border-radius:6px;font-size:14px;box-shadow:0 2px 5px #0003}
       #designSideMenuBackdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .22s ease}
       body.design-menu-open #designSideMenuBackdrop{opacity:1;pointer-events:auto}
-      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(86vw,362px)!important;max-width:362px!important;height:auto!important;max-height:calc(100dvh - 4px)!important;overflow-y:auto!important;overscroll-behavior:contain;background:#f5f6f7!important;padding:62px 6px 18px!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:-8px 0 24px #0003!important}
-      body.design-menu-open .sidebar{transform:translateX(0)!important;padding:3px 5px!important}
+      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(86vw,362px)!important;max-width:362px!important;height:auto!important;min-height:0!important;max-height:calc(100dvh - 4px)!important;overflow-y:auto!important;overscroll-behavior:contain;background:transparent!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:none!important}
+      body.design-menu-open .sidebar{transform:translateX(0)!important;padding:0!important}
       body.design-menu-open{overflow:hidden!important}
-      body.design-menu-open .sidebar .main-panel{margin-top:24px!important;margin-bottom:0!important;padding:3px!important}
+      body.design-menu-open .sidebar .main-panel{margin:28px 5px 0!important;padding:3px!important;height:auto!important;min-height:0!important}
       body.design-menu-open .sidebar .main-panel>h2{margin:0 0 2px!important;font-size:14px!important;line-height:1!important}
       body.design-menu-open .sidebar .main-panel>.main-action,body.design-menu-open .sidebar .main-panel>#topExportJpg,body.design-menu-open #datePrayerGroup>.main-action,body.design-menu-open #backgroundFontGroup>.main-action{min-height:25px!important;height:25px!important;margin:0 0 1px!important;padding:2px 6px!important;font-size:11.5px!important;line-height:1!important;border-radius:6px!important}
       body.design-menu-open #datePrayerGroup,body.design-menu-open #backgroundFontGroup{margin:0 0 1px!important}
       body.design-menu-open .sidebar .main-panel>.inline-control-panel{margin:0 0 1px!important;padding:3px!important}
       body.design-menu-open #datePrayerSubmenu,body.design-menu-open #backgroundFontSubmenu{margin:1px 0 0!important;padding:2px!important}
       body.design-menu-open #datePrayerSubmenu>.main-action,body.design-menu-open #backgroundFontSubmenu>.main-action{min-height:24px!important;height:24px!important;margin:0 0 1px!important;padding:2px 5px!important;font-size:11px!important}
+      body.design-menu-open .sidebar>.panel,body.design-menu-open .sidebar>.card,body.design-menu-open .sidebar>section:not(.main-panel){display:none!important}
       @media(max-width:800px){
         .topbar.web-interface-header{margin-top:50px!important;margin-bottom:5px!important}
         .topbar.web-interface-header #saveToPhoneBtn,.topbar.web-interface-header #exportBtn{position:fixed!important;top:11px!important;left:12px!important;right:auto!important;transform:none!important;z-index:9990!important;margin:0!important}
