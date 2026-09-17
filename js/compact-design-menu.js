@@ -34,8 +34,12 @@
 
   function installExclusivePopupBehavior(){
     if(document.documentElement.dataset.exclusiveDesignPopups)return;document.documentElement.dataset.exclusiveDesignPopups='1';
-    document.addEventListener('click',e=>{const btn=e.target.closest('[data-open-panel]');if(!btn)return;const id=btn.dataset.openPanel,panel=document.getElementById(id);if(!panel)return;closeGroups();setTimeout(()=>{if(panel.classList.contains('inline-open')){closePanels(panel);addClose(panel);}},0);},false);
-    document.addEventListener('click',e=>{if(e.target.closest('#datePrayerSubmenu [data-open-panel],#backgroundFontSubmenu [data-open-panel]'))closeGroups();},false);
+    /* capture is intentional: modal-panels stops propagation on the child buttons */
+    document.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-open-panel]');if(!btn)return;
+      const panel=document.getElementById(btn.dataset.openPanel);if(!panel)return;
+      closeGroups();closePanels(panel);addClose(panel);
+    },true);
   }
   function init(){let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{arrange();installExclusivePopupBehavior();},50));}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
