@@ -12,8 +12,8 @@
       body.design-menu-open #designSideMenuBtn{top:5px;right:7px;width:24px;height:24px;border-radius:6px;font-size:14px;box-shadow:0 2px 5px #0003}
       #designSideMenuBackdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .22s ease}
       body.design-menu-open #designSideMenuBackdrop{opacity:1;pointer-events:auto}
-      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(74vw,312px)!important;max-width:312px!important;height:auto!important;min-height:0!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:#f5f6f7!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:-8px 0 24px #0003!important}
-      body.design-menu-open .sidebar{transform:translateX(0)!important;padding:0 5px 6px!important}
+      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(74vw,312px)!important;max-width:312px!important;height:auto!important;min-height:0!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:transparent!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:none!important}
+      body.design-menu-open .sidebar{transform:translateX(0)!important;padding:0!important}
       body.design-menu-open{overflow:hidden!important}
       body.design-menu-open .sidebar .main-panel{width:max-content!important;max-width:calc(100% - 6px)!important;margin:28px 3px 0 auto!important;padding:3px!important;height:auto!important;min-height:0!important}
       body.design-menu-open .sidebar .main-panel>h2{margin:0 0 2px!important;font-size:14px!important;line-height:1!important}
@@ -41,12 +41,7 @@
     function syncActionWidth(){
       const main=sidebar.querySelector('.main-panel');
       if(!main)return;
-      const items=[
-        document.getElementById('backgroundFontMainBtn'),
-        document.getElementById('datePrayerMainBtn'),
-        main.querySelector('[data-open-panel="switchPanel"]'),
-        document.getElementById('topExportJpg')
-      ].filter(Boolean);
+      const items=[document.getElementById('backgroundFontMainBtn'),document.getElementById('datePrayerMainBtn'),main.querySelector('[data-open-panel="switchPanel"]'),document.getElementById('topExportJpg')].filter(Boolean);
       if(items.length<4)return;
       main.style.removeProperty('--design-action-width');
       items.forEach(el=>{el.style.removeProperty('width');el.style.removeProperty('min-width');});
