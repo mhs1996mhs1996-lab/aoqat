@@ -15,13 +15,14 @@
       #datePrayerMainBtn .group-arrow,#backgroundFontMainBtn .group-arrow{margin-right:4px!important;font-size:10px;opacity:.8;transition:transform .18s ease}#datePrayerGroup.group-open #datePrayerMainBtn .group-arrow,#backgroundFontGroup.group-open #backgroundFontMainBtn .group-arrow{transform:rotate(180deg)}
       body.design-menu-open .sidebar .inline-control-panel.inline-open{display:block!important;position:fixed!important;z-index:10050!important;top:50%!important;left:50%!important;right:auto!important;transform:translate(-50%,-50%)!important;width:min(90vw,360px)!important;max-width:calc(100vw - 24px)!important;max-height:78vh!important;overflow-y:auto!important;margin:0!important;padding:38px 12px 12px!important;border-radius:12px!important;box-shadow:0 16px 42px rgba(0,0,0,.48)!important}
       .design-popup-close{position:absolute!important;top:7px!important;left:7px!important;z-index:2!important;width:27px!important;height:27px!important;min-width:27px!important;min-height:27px!important;margin:0!important;padding:0!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:7px!important;background:#16594f!important;color:#fff!important;font-size:18px!important;font-weight:800!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important}
+      body.design-detail-open .sidebar .main-panel>h2,body.design-detail-open .sidebar .main-panel>#backgroundFontGroup,body.design-detail-open .sidebar .main-panel>#datePrayerGroup,body.design-detail-open .sidebar .main-panel>[data-open-panel="switchPanel"],body.design-detail-open .sidebar .main-panel>#topExportJpg{visibility:hidden!important;pointer-events:none!important}
       @media(max-width:800px){.sidebar .main-panel{padding:7px!important}.sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:max-content!important;max-width:100%!important;min-width:0!important;min-height:32px!important;height:32px!important;margin:0 0 3px auto!important;padding:4px 8px!important;font-size:12px!important;border-radius:7px!important}#datePrayerSubmenu,#backgroundFontSubmenu{width:max-content!important;min-width:205px!important;max-width:calc(100vw - 24px)!important;margin:0!important}#datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;max-width:100%!important;min-width:0!important;min-height:32px!important;height:32px!important;font-size:11px!important}}
     `;document.head.appendChild(s);
   }
 
   function closeGroups(except=null){['datePrayerGroup','backgroundFontGroup'].forEach(id=>{const g=document.getElementById(id);if(g&&g!==except)g.classList.remove('group-open');});}
-  function closePanels(except=null){document.querySelectorAll('.inline-control-panel.inline-open').forEach(p=>{if(p===except)return;p.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${p.id}"]`)?.classList.remove('inline-active');});}
-  function addClose(panel){if(!panel||panel.querySelector(':scope > .design-popup-close'))return;const x=document.createElement('button');x.type='button';x.className='design-popup-close';x.setAttribute('aria-label','إغلاق');x.textContent='×';x.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();panel.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${panel.id}"]`)?.classList.remove('inline-active');});panel.prepend(x);}
+  function closePanels(except=null){document.querySelectorAll('.inline-control-panel.inline-open').forEach(p=>{if(p===except)return;p.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${p.id}"]`)?.classList.remove('inline-active');});if(!except)document.body.classList.remove('design-detail-open');}
+  function addClose(panel){if(!panel||panel.querySelector(':scope > .design-popup-close'))return;const x=document.createElement('button');x.type='button';x.className='design-popup-close';x.setAttribute('aria-label','إغلاق');x.textContent='×';x.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();panel.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${panel.id}"]`)?.classList.remove('inline-active');document.body.classList.remove('design-detail-open');});panel.prepend(x);}
 
   function createGroup(id,buttonId,submenuId,label,icon){
     const main=document.querySelector('.sidebar .main-panel');let group=document.getElementById(id);if(group)return group;
@@ -34,11 +35,10 @@
 
   function installExclusivePopupBehavior(){
     if(document.documentElement.dataset.exclusiveDesignPopups)return;document.documentElement.dataset.exclusiveDesignPopups='1';
-    /* capture is intentional: modal-panels stops propagation on the child buttons */
     document.addEventListener('click',e=>{
       const btn=e.target.closest('[data-open-panel]');if(!btn)return;
       const panel=document.getElementById(btn.dataset.openPanel);if(!panel)return;
-      closeGroups();closePanels(panel);addClose(panel);
+      closeGroups();closePanels(panel);addClose(panel);document.body.classList.add('design-detail-open');
     },true);
   }
   function init(){let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{arrange();installExclusivePopupBehavior();},50));}
