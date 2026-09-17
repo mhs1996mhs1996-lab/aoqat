@@ -12,7 +12,7 @@
       body.design-menu-open #designSideMenuBtn{top:8px;right:12px;width:28px;height:28px;border-radius:7px;font-size:16px;box-shadow:0 2px 6px #0003}
       #designSideMenuBackdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .22s ease}
       body.design-menu-open #designSideMenuBackdrop{opacity:1;pointer-events:auto}
-      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:0!important;z-index:10010!important;width:min(88vw,380px)!important;max-width:380px!important;height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:#f5f6f7!important;padding:62px 10px 18px!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:-8px 0 24px #0003!important}
+      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(88vw,380px)!important;max-width:380px!important;height:auto!important;max-height:calc(100dvh - 8px)!important;overflow-y:auto!important;overscroll-behavior:contain;background:#f5f6f7!important;padding:62px 10px 18px!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:-8px 0 24px #0003!important}
       body.design-menu-open .sidebar{transform:translateX(0)!important;padding:6px 10px!important}
       body.design-menu-open{overflow:hidden!important}
       body.design-menu-open .sidebar .main-panel{margin-top:34px!important;margin-bottom:2px!important;padding-top:5px!important;padding-bottom:5px!important}
