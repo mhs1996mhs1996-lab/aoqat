@@ -20,6 +20,7 @@
       body.design-menu-open .sidebar .main-panel>.main-action,body.design-menu-open .sidebar .main-panel>#topExportJpg,body.design-menu-open #datePrayerGroup>.main-action,body.design-menu-open #backgroundFontGroup>.main-action{width:var(--design-action-width,auto)!important;min-width:var(--design-action-width,0)!important;max-width:100%!important;min-height:25px!important;height:25px!important;margin:0 0 1px auto!important;padding:2px 5px!important;font-size:11.5px!important;line-height:1!important;border-radius:6px!important;white-space:nowrap!important}
       body.design-menu-open #datePrayerGroup,body.design-menu-open #backgroundFontGroup{width:var(--design-action-width,auto)!important;max-width:100%!important;margin:0 0 1px auto!important}
       body.design-menu-open .sidebar .main-panel>.inline-control-panel{margin:0 0 1px!important;padding:3px!important}
+      body.design-menu-open .sidebar .main-panel>.inline-control-panel:empty{display:none!important}
       body.design-menu-open #datePrayerSubmenu,body.design-menu-open #backgroundFontSubmenu{width:100%!important;margin:1px 0 0!important;padding:2px!important}
       body.design-menu-open #datePrayerSubmenu>.main-action,body.design-menu-open #backgroundFontSubmenu>.main-action{width:100%!important;min-height:24px!important;height:24px!important;margin:0 0 1px!important;padding:2px 5px!important;font-size:11px!important}
       @media(max-width:800px){
@@ -49,12 +50,22 @@
       main.style.setProperty('--design-action-width',Math.min(max,sidebar.clientWidth-16)+'px');
     }
 
-    function setOpen(open){document.body.classList.toggle('design-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.innerHTML=open?'×':'☰';if(open)setTimeout(syncActionWidth,30);}
+    function hideEmptyStrips(){
+      const main=sidebar.querySelector('.main-panel');
+      if(!main)return;
+      Array.from(main.children).forEach(el=>{
+        if(!el.classList.contains('inline-control-panel'))return;
+        const hasVisibleContent=Array.from(el.children).some(child=>!child.hidden&&getComputedStyle(child).display!=='none');
+        if(!hasVisibleContent)el.style.setProperty('display','none','important');
+      });
+    }
+
+    function setOpen(open){document.body.classList.toggle('design-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.innerHTML=open?'×':'☰';if(open)setTimeout(()=>{syncActionWidth();hideEmptyStrips();},30);}
     btn.addEventListener('click',()=>setOpen(!document.body.classList.contains('design-menu-open')));
     backdrop.addEventListener('click',()=>setOpen(false));
     document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
-    window.addEventListener('aoqatModulesReady',()=>setTimeout(syncActionWidth,80));
-    setTimeout(syncActionWidth,1200);
+    window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{syncActionWidth();hideEmptyStrips();},80));
+    setTimeout(()=>{syncActionWidth();hideEmptyStrips();},1200);
     return true;
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{let n=0,t=setInterval(()=>{if(install()||++n>40)clearInterval(t)},100)},{once:true});else install();
