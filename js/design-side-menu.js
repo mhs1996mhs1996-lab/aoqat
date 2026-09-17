@@ -15,7 +15,7 @@
       .preview-header{display:none!important}
       .drag-info{display:none!important}
       .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(74vw,312px)!important;max-width:312px!important;height:auto!important;min-height:0!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:transparent!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:none!important}
-      body.design-menu-open .sidebar{transform:translateX(0)!important;padding:0!important}
+      body.design-menu-open .sidebar{transform:none!important;overflow:visible!important;max-height:none!important;padding:0!important}
       body.design-menu-open{overflow:hidden!important}
       body.design-menu-open .sidebar>.panel:not(.main-panel){display:none!important}
       body.design-menu-open .sidebar .main-panel{width:max-content!important;max-width:calc(100% - 6px)!important;margin:28px 3px 0 auto!important;padding:3px!important;height:auto!important;min-height:0!important}
@@ -24,7 +24,7 @@
       body.design-menu-open #datePrayerGroup,body.design-menu-open #backgroundFontGroup{width:var(--design-action-width,auto)!important;max-width:100%!important;margin:0 0 1px auto!important}
       body.design-menu-open .sidebar .main-panel>.inline-control-panel{margin:0 0 1px!important;padding:3px!important}
       body.design-menu-open .sidebar .main-panel>.inline-control-panel:empty{display:none!important}
-      body.design-menu-open #datePrayerSubmenu,body.design-menu-open #backgroundFontSubmenu{width:100%!important;margin:1px 0 0!important;padding:2px!important}
+      body.design-menu-open #datePrayerSubmenu,body.design-menu-open #backgroundFontSubmenu{margin:0!important}
       body.design-menu-open #datePrayerSubmenu>.main-action,body.design-menu-open #backgroundFontSubmenu>.main-action{width:100%!important;min-height:24px!important;height:24px!important;margin:0 0 1px!important;padding:2px 5px!important;font-size:11px!important}
       @media(max-width:800px){
         .topbar.web-interface-header{margin-top:50px!important;margin-bottom:5px!important}
