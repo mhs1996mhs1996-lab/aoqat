@@ -1,7 +1,7 @@
 "use strict";
 (function(){
   const W=1024,H=1448;
-  let active=0,busy=false;
+  let active=0,busy=false,firstInstall=true;
 
   function styles(){
     if(document.getElementById('compactCarouselNavStyles'))return;
@@ -34,7 +34,7 @@
       let controls=parent.querySelector('.unified-preview-controls'),dots=parent.querySelector('.unified-preview-dots');
       if(!controls){controls=document.createElement('div');controls.className='design-carousel-controls unified-preview-controls';controls.innerHTML='<button class="design-carousel-btn" type="button" data-unified-prev>‹</button><span class="design-carousel-status"></span><button class="design-carousel-btn" type="button" data-unified-next>›</button>';dots=document.createElement('div');dots.className='design-carousel-dots unified-preview-dots';parent.append(controls,dots);}
       dots.innerHTML=slides.map((_,i)=>`<button class="design-carousel-dot" type="button" data-unified-dot="${i}"></button>`).join('');
-      const oldElement=window.__prayerActiveDesignElement,byElement=oldElement?slides.findIndex(s=>s.firstElementChild===oldElement):-1;if(byElement>=0)active=byElement;else active=Math.max(0,Math.min(active,slides.length-1));
+      if(firstInstall){active=0;firstInstall=false;}else{const oldElement=window.__prayerActiveDesignElement,byElement=oldElement?slides.findIndex(s=>s.firstElementChild===oldElement):-1;if(byElement>=0)active=byElement;else active=Math.max(0,Math.min(active,slides.length-1));}
       function render(){const current=allSlides(track);if(!current.length)return;active=((active%current.length)+current.length)%current.length;current.forEach((slide,i)=>{slide.style.setProperty('display',i===active?'flex':'none','important');slide.hidden=i!==active;slide.setAttribute('aria-hidden',i===active?'false':'true');});track.style.setProperty('transform','none','important');window.__prayerActiveDesignIndex=active;window.__prayerActiveVisibleIndex=active;window.__prayerActiveDesignElement=current[active]?.firstElementChild||null;controls.querySelector('.design-carousel-status').textContent=`التصميم ${active+1} من ${current.length}`;dots.querySelectorAll('[data-unified-dot]').forEach((b,i)=>b.classList.toggle('active',i===active));resize(car);compactParent(car);window.dispatchEvent(new CustomEvent('prayerDesignChanged',{detail:{index:active,domIndex:active,design:window.__prayerActiveDesignElement}}));}
       controls.querySelector('[data-unified-prev]').onclick=e=>{e.preventDefault();e.stopPropagation();active--;render();};controls.querySelector('[data-unified-next]').onclick=e=>{e.preventDefault();e.stopPropagation();active++;render();};dots.querySelectorAll('[data-unified-dot]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();active=Number(b.dataset.unifiedDot)||0;render();});render();return true;
     }finally{busy=false;}
