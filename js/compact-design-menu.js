@@ -14,20 +14,20 @@
     s.textContent=`
       .sidebar .main-panel{padding:8px!important}
       .sidebar .main-panel>h2{margin:0 0 6px!important;font-size:15px!important;line-height:1.2!important}
-      .sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:100%!important;min-height:34px!important;height:34px!important;margin:0 0 4px!important;padding:5px 9px!important;border-radius:8px!important;font-size:12.5px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;box-shadow:none!important}
+      .sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:86%!important;min-height:34px!important;height:34px!important;margin:0 auto 4px!important;padding:5px 9px!important;border-radius:8px!important;font-size:12.5px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;box-shadow:none!important}
       .sidebar .main-panel>.main-action span,.sidebar .main-panel>#topExportJpg span,#datePrayerGroup>.main-action span,#backgroundFontGroup>.main-action span{line-height:1!important}
       .sidebar .main-panel>.inline-control-panel{margin:0 0 4px!important;padding:9px!important}
       .sidebar .main-panel>#topExportJpg{background:#176f9f!important}
       #datePrayerGroup,#backgroundFontGroup{width:100%;margin:0 0 4px!important;padding:0!important}
-      #datePrayerGroup>#datePrayerMainBtn{margin:0!important;background:linear-gradient(135deg,#167f76,#176f9f)!important}
-      #backgroundFontGroup>#backgroundFontMainBtn{margin:0!important;background:linear-gradient(135deg,#0f8b8d,#6d568f)!important}
-      #datePrayerSubmenu,#backgroundFontSubmenu{display:none;width:100%;padding:5px;margin:4px 0 0;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(5,20,30,.72)}
+      #datePrayerGroup>#datePrayerMainBtn{margin:0 auto!important;background:linear-gradient(135deg,#167f76,#176f9f)!important}
+      #backgroundFontGroup>#backgroundFontMainBtn{margin:0 auto!important;background:linear-gradient(135deg,#0f8b8d,#6d568f)!important}
+      #datePrayerSubmenu,#backgroundFontSubmenu{display:none;width:86%;padding:5px;margin:4px auto 0;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(5,20,30,.72)}
       #datePrayerGroup.group-open>#datePrayerSubmenu,#backgroundFontGroup.group-open>#backgroundFontSubmenu{display:block}
       #datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;min-height:31px!important;height:31px!important;margin:0 0 4px!important;padding:4px 8px!important;border-radius:7px!important;font-size:11.5px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;box-shadow:none!important}
       #datePrayerSubmenu>.main-action:last-child,#backgroundFontSubmenu>.main-action:last-child{margin-bottom:0!important}
       #datePrayerMainBtn .group-arrow,#backgroundFontMainBtn .group-arrow{margin-right:auto;font-size:10px;opacity:.8;transition:transform .18s ease}
       #datePrayerGroup.group-open #datePrayerMainBtn .group-arrow,#backgroundFontGroup.group-open #backgroundFontMainBtn .group-arrow{transform:rotate(180deg)}
-      @media(max-width:800px){.sidebar .main-panel{padding:7px!important}.sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{min-height:32px!important;height:32px!important;margin-bottom:3px!important;padding:4px 8px!important;font-size:12px!important;border-radius:7px!important}#datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{min-height:30px!important;height:30px!important;font-size:11px!important}}
+      @media(max-width:800px){.sidebar .main-panel{padding:7px!important}.sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:84%!important;min-height:32px!important;height:32px!important;margin:0 auto 3px!important;padding:4px 8px!important;font-size:12px!important;border-radius:7px!important}#datePrayerSubmenu,#backgroundFontSubmenu{width:84%!important}#datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;min-height:30px!important;height:30px!important;font-size:11px!important}}
     `;
     document.head.appendChild(s);
   }
