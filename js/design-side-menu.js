@@ -13,7 +13,7 @@
       #designSideMenuBackdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .22s ease}
       body.design-menu-open #designSideMenuBackdrop{opacity:1;pointer-events:auto}
       .preview-header{display:none!important}
-      .drag-info{display:none!important}
+      .drag-info{display:none!important}body.design-menu-open .previewBox::before,body.design-menu-open .previewBox::after,body.design-menu-open .workspace::before,body.design-menu-open .workspace::after{display:none!important;content:none!important}
       .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(74vw,312px)!important;max-width:312px!important;height:auto!important;min-height:0!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:transparent!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:none!important}
       body.design-menu-open .sidebar{transform:none!important;overflow:visible!important;max-height:none!important;padding:0!important}
       body.design-menu-open{overflow:hidden!important}
