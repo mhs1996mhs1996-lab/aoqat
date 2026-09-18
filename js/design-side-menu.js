@@ -8,8 +8,8 @@
     const style=document.createElement('style');
     style.id='designSideMenuStyles';
     style.textContent=`
-      #designSideMenuBtn{position:fixed;top:11px;right:12px;z-index:10020;width:40px;height:36px;border:1px solid rgba(255,255,255,.20);border-radius:10px;background:linear-gradient(145deg,#1b5147,#123c35);color:transparent;font-size:0;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px #0003;cursor:pointer;padding:0}#designSideMenuBtn::before,#designSideMenuBtn::after,#designSideMenuBtn{--menu-line:#fff}#designSideMenuBtn::before{content:"";width:18px;height:2px;border-radius:4px;background:var(--menu-line);box-shadow:0 5px 0 var(--menu-line),0 -5px 0 var(--menu-line);transition:transform .2s ease,box-shadow .2s ease}
-      body.design-menu-open #designSideMenuBtn{top:5px;right:7px;width:28px;height:28px;border-radius:7px;font-size:0;box-shadow:0 2px 5px #0003}body.design-menu-open #designSideMenuBtn::before{width:16px;box-shadow:none;transform:rotate(45deg)}body.design-menu-open #designSideMenuBtn::after{content:"";position:absolute;width:16px;height:2px;border-radius:4px;background:var(--menu-line);transform:rotate(-45deg)}
+      #designSideMenuBtn{position:fixed;top:11px;right:12px;z-index:10020;width:36px;height:36px;border:1px solid rgba(255,255,255,.16);border-radius:10px;background:linear-gradient(145deg,#1b5147,#123c35);color:transparent;font-size:0;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:0 3px 10px #0003;cursor:pointer;padding:0}#designSideMenuBtn .menu-bar{display:block;width:15px;height:1.5px;border-radius:999px;background:#fff;box-shadow:0 0 2px rgba(255,255,255,.2);transition:transform .2s ease,opacity .2s ease}
+      body.design-menu-open #designSideMenuBtn{top:5px;right:7px;width:28px;height:28px;border-radius:7px;font-size:0;box-shadow:0 2px 5px #0003}body.design-menu-open #designSideMenuBtn .menu-bar:nth-child(1){transform:translateY(4.5px) rotate(45deg)}body.design-menu-open #designSideMenuBtn .menu-bar:nth-child(2){opacity:0}body.design-menu-open #designSideMenuBtn .menu-bar:nth-child(3){transform:translateY(-4.5px) rotate(-45deg)}
       #designSideMenuBackdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .22s ease}
       body.design-menu-open #designSideMenuBackdrop{opacity:1;pointer-events:auto}
       .preview-header{display:none!important}
@@ -38,7 +38,7 @@
     document.head.appendChild(style);
 
     const btn=document.createElement('button');
-    btn.id='designSideMenuBtn';btn.type='button';btn.setAttribute('aria-label','بيانات التصميم');btn.setAttribute('aria-expanded','false');btn.innerHTML='';
+    btn.id='designSideMenuBtn';btn.type='button';btn.setAttribute('aria-label','بيانات التصميم');btn.setAttribute('aria-expanded','false');btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';
     const backdrop=document.createElement('div');backdrop.id='designSideMenuBackdrop';
     document.body.append(backdrop,btn);
 
@@ -63,7 +63,7 @@
       });
     }
 
-    function setOpen(open){document.body.classList.toggle('design-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.innerHTML='';if(open)setTimeout(()=>{syncActionWidth();hideEmptyStrips();},30);}
+    function setOpen(open){document.body.classList.toggle('design-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';if(open)setTimeout(()=>{syncActionWidth();hideEmptyStrips();},30);}
     btn.addEventListener('click',()=>setOpen(!document.body.classList.contains('design-menu-open')));
     backdrop.addEventListener('click',()=>setOpen(false));
     document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
