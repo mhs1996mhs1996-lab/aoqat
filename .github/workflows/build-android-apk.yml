@@ -1,4 +1,5 @@
 name: Build Android APK
+# Rebuild Friday-morning safe snapshot
 
 on:
   workflow_dispatch:
