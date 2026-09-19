@@ -1,4 +1,5 @@
 name: Build Android APK
+# rebuild after restoring v1.20 wrapper identity
 # Rebuild Friday-morning safe snapshot
 
 on:
