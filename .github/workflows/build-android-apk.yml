@@ -43,8 +43,17 @@ jobs:
           mkdir -p android-native/signing
           base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
-      - name: Build debug APK
-        run: gradle -p android-native --no-daemon assembleDebug
+      - name: Build and verify debug APK
+        run: |
+          gradle -p android-native --no-daemon assembleDebug
+          APK="android-native/app/build/outputs/apk/debug/app-debug.apk"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          APKSIGNER=$(find "$SDK_ROOT/build-tools" -name apksigner -type f | sort -V | tail -1)
+          AAPT=$(find "$SDK_ROOT/build-tools" -name aapt -type f | sort -V | tail -1)
+          echo "Verifying APK signature..."
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          echo "Inspecting APK package..."
+          "$AAPT" dump badging "$APK" | head -20
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
