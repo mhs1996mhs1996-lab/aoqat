@@ -43,14 +43,24 @@ jobs:
           mkdir -p android-native/signing
           base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
-      - name: Restore original v1.20 launcher icon
+      - name: Restore original v1.20 adaptive launcher icon
         run: |
           python3 - <<'PY'
           import base64, pathlib
+          root = pathlib.Path("android-native/app/src/main/res")
           data = pathlib.Path("android-native/app_icon.b64").read_text().strip()
-          out = pathlib.Path("android-native/app/src/main/res/drawable/app_icon.jpg")
-          out.parent.mkdir(parents=True, exist_ok=True)
-          out.write_bytes(base64.b64decode(data))
+          (root/"drawable").mkdir(parents=True, exist_ok=True)
+          (root/"mipmap-anydpi-v26").mkdir(parents=True, exist_ok=True)
+          (root/"mipmap-anydpi").mkdir(parents=True, exist_ok=True)
+          (root/"drawable"/"app_icon.jpg").write_bytes(base64.b64decode(data))
+          (root/"drawable"/"app_icon_foreground.xml").write_text("""<inset xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/app_icon" android:inset="18%" />""")
+          adaptive = """<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android"><background android:drawable="@drawable/app_icon_background"/><foreground android:drawable="@drawable/app_icon_foreground"/></adaptive-icon>"""
+          (root/"drawable"/"app_icon_background.xml").write_text("""<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle"><solid android:color="#0B3D2E"/></shape>""")
+          (root/"mipmap-anydpi-v26"/"ic_launcher.xml").write_text(adaptive)
+          (root/"mipmap-anydpi-v26"/"ic_launcher_round.xml").write_text(adaptive)
+          legacy = """<inset xmlns:android="http://schemas.android.com/apk/res/android" android:drawable="@drawable/app_icon" android:inset="8%" />"""
+          (root/"mipmap-anydpi"/"ic_launcher.xml").write_text(legacy)
+          (root/"mipmap-anydpi"/"ic_launcher_round.xml").write_text(legacy)
           PY
 
       - name: Build and verify debug APK
