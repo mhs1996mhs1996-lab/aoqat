@@ -15,7 +15,7 @@
         android:allowBackup="true"
         android:label="اوقات الصلاة في الحويجة"
         android:supportsRtl="true"
-        android:icon="@drawable/app_icon"\n        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
         android:usesCleartextTraffic="false">
 
         <activity
