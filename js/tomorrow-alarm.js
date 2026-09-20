@@ -32,8 +32,10 @@
       #tomorrowAlarmOverlay .alarm-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
       #tomorrowAlarmOverlay button{border:0;border-radius:12px;padding:13px 12px;font-family:inherit;font-size:14px;font-weight:800;cursor:pointer;color:#fff}
       #tomorrowAlarmStop{background:#b33b3b}#tomorrowAlarmSnooze{background:#b17a19}
-      #tomorrowAlarmEnable{width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.15);border-radius:9px;padding:10px 12px;background:#176f9f;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer}
+      #tomorrowAlarmEnable{width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:8px 10px;background:#263746;color:#fff;font-family:inherit;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:none;transition:.2s}
       #tomorrowAlarmEnable.enabled{background:#168b52}
+      #tomorrowAlarmEnable .alarm-enable-label{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+      #tomorrowAlarmEnable .alarm-enable-state{display:inline-flex;align-items:center;justify-content:center;min-width:48px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.14);font-size:11px;font-weight:900}
       .tomorrow-alarm-note{font-size:11px;opacity:.78;line-height:1.6;margin-top:6px}
     `;document.head.appendChild(s);
   }
@@ -114,7 +116,7 @@
     const status=document.getElementById("tomorrowSwitchStatus");panel.insertBefore(b,status||null);
     const note=document.createElement("div");note.className="tomorrow-alarm-note";note.textContent="التنبيه يظهر عند تبديل المواقيت بعد العشاء بـ35 دقيقة، مع إيقاف وغفوة.";b.insertAdjacentElement("afterend",note);refreshButton();return true;
   }
-  function refreshButton(){const b=document.getElementById("tomorrowAlarmEnable");if(!b)return;const on=enabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";b.classList.toggle("enabled",on);b.textContent=on?"⏰ تنبيه النشر: تشغيل":"⏰ تفعيل تنبيه النشر على الهاتف";}
+  function refreshButton(){const b=document.getElementById("tomorrowAlarmEnable");if(!b)return;const on=enabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";b.classList.toggle("enabled",on);b.setAttribute("aria-pressed",String(on));b.innerHTML=`<span class="alarm-enable-label">🔔 تفعيل تنبيه النشر على الهاتف</span><span class="alarm-enable-state">${on?"تشغيل":"إيقاف"}</span>`;}
 
   function handlePreviewChange(event){
     const p=event?.detail?.date;if(!p||!sameDate(p,tomorrowParts()))return;
