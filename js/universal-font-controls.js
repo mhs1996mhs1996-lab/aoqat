@@ -29,7 +29,9 @@
   }
   function applyColor(c){
     const input=document.getElementById('fontColor');if(!input)return;
-    input.value=c;markSelected(c);core()?.apply?.('fontColor');
+    input.value=c;markSelected(c);
+    input.dispatchEvent(new Event('input',{bubbles:true}));
+    input.dispatchEvent(new Event('change',{bubbles:true}));
   }
   function addSwatch(parent,color,cls=''){
     const b=document.createElement('button');b.type='button';b.className=`palette-color ${cls}`.trim();b.dataset.color=color;b.style.background=color;b.title=color;b.addEventListener('click',()=>applyColor(color));parent.appendChild(b);
