@@ -3,6 +3,8 @@ package com.aoqat.calendar
 import android.Manifest
 import android.app.Activity
 import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,6 +23,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import java.io.File
 import java.io.FileOutputStream
 
@@ -247,6 +250,39 @@ class MainActivity : Activity() {
                     Toast.LENGTH_LONG
                 ).show()
                 webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 100L)
+            }
+        }
+
+        @JavascriptInterface
+        fun showIqamaNotification(text: String) {
+            runOnUiThread {
+                val manager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                val channelId = "iqama_countdown_v1"
+                if (Build.VERSION.SDK_INT >= 26) {
+                    manager.createNotificationChannel(NotificationChannel(channelId, "إشعار الإقامة", NotificationManager.IMPORTANCE_LOW).apply {
+                        description = "عداد باقي ومضى على الإقامة"
+                        setSound(null, null)
+                        enableVibration(false)
+                    })
+                }
+                val notification = NotificationCompat.Builder(this@MainActivity, channelId)
+                    .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                    .setContentTitle("⏳ الإقامة")
+                    .setContentText(text)
+                    .setOngoing(true)
+                    .setAutoCancel(false)
+                    .setOnlyAlertOnce(true)
+                    .setSilent(true)
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .build()
+                manager.notify(45120, notification)
+            }
+        }
+
+        @JavascriptInterface
+        fun hideIqamaNotification() {
+            runOnUiThread {
+                (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).cancel(45120)
             }
         }
 
