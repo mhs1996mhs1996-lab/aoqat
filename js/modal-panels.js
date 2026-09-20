@@ -213,7 +213,6 @@
       panel.innerHTML=`
         <div class="switch-help">يتم تجهيز صورة اليوم التالي تلقائيًا بعد وقت صلاة العشاء المخزن في قاعدة البيانات بـ 35 دقيقة.</div>
         <button type="button" id="autoTomorrowToggle" class="switch-control-btn"></button>
-        <button type="button" id="tomorrowNotifyToggle" class="switch-control-btn"></button>
         <button type="button" id="showTomorrowNowBtn" class="switch-control-btn manual">➡ عرض اليوم التالي الآن</button>
         <button type="button" id="showTodayNowBtn" class="switch-control-btn manual secondary">↩ الرجوع إلى اليوم</button>
         <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">جاري قراءة وقت العشاء من قاعدة البيانات...</div>`;
