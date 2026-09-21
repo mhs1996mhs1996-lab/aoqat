@@ -60,6 +60,15 @@
       body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-toggle]:not(.active),
       body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"],
       body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
+      /* Global design-menu ON/OFF appearance.  Uses the visible Arabic state so legacy controls
+         get the same palette as the four interface visibility controls without changing their logic. */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button.unified-toggle-on{
+        background:linear-gradient(135deg,#078b46,#10a95b)!important;
+        border-color:#08753e!important;color:#fff!important;
+      }
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button.unified-toggle-off{
+        background:#70817f!important;border-color:#859593!important;color:#fff!important;
+      }
       /* Readability + unified ON/OFF states inside cream design panels */
       body.design-menu-open .sidebar .inline-control-panel.inline-open,body.design-menu-open .sidebar .inline-control-panel.inline-open p,body.design-menu-open .sidebar .inline-control-panel.inline-open small,body.design-menu-open .sidebar .inline-control-panel.inline-open div:not(.color-swatch){color:#173743!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open [style*="color"]{color:#173743!important}
@@ -82,6 +91,19 @@
     group=document.createElement('div');group.id=id;const mainBtn=document.createElement('button');mainBtn.type='button';mainBtn.id=buttonId;mainBtn.className='main-action';mainBtn.innerHTML=`${icon} <span>${label}</span><span class="group-arrow">▼</span>`;const submenu=document.createElement('div');submenu.id=submenuId;group.append(mainBtn,submenu);
     mainBtn.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const open=!group.classList.contains('group-open');closePanels();closeGroups(group);group.classList.toggle('group-open',open);});main.appendChild(group);return group;
   }
+  function syncLegacyToggleColors(){
+    document.querySelectorAll('body.design-menu-open .sidebar .inline-control-panel.inline-open button').forEach(btn=>{
+      const t=(btn.textContent||'').replace(/\s+/g,' ').trim();
+      const on=/(?:^|[\s:：])تشغيل(?:$|[\s:：])/.test(t);
+      const off=/(?:^|[\s:：])إيقاف(?:$|[\s:：])/.test(t);
+      if(on||off){btn.classList.toggle('unified-toggle-on',on&&!off);btn.classList.toggle('unified-toggle-off',off);}
+    });
+  }
+  const toggleColorObserver=new MutationObserver(()=>syncLegacyToggleColors());
+  toggleColorObserver.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','aria-pressed']});
+  document.addEventListener('click',()=>setTimeout(syncLegacyToggleColors,0),true);
+  setTimeout(syncLegacyToggleColors,0);
+
   function consolidateDataPrayer(){const a=document.querySelector('[data-open-panel="datePanel"]'),b=document.querySelector('[data-open-panel="prayerPanel"]'),c=document.querySelector('[data-open-panel="iqamaPanel"]');if(!a||!b||!c)return false;createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');const s=document.getElementById('datePrayerSubmenu');[a,b,c].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function addInterfaceVisibilityControls(){
     const panel=document.getElementById('backgroundPanel');if(!panel||document.getElementById('interfaceVisibilityControls'))return false;
