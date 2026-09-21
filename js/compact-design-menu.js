@@ -46,6 +46,20 @@
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on span,body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on strong{color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on strong{background:rgba(255,255,255,.20)!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open hr{border-color:#d5c6aa!important}
+      /* Unified toggle palette: visual only; keeps every button's existing behavior */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .compact-toggle.is-on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .toggle-btn.is-on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .toggle-btn.on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button.active[data-toggle],
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="true"],
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .compact-toggle:not(.is-on),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .toggle-btn:not(.is-on):not(.on),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-toggle]:not(.active),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"],
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
       /* Readability + unified ON/OFF states inside cream design panels */
       body.design-menu-open .sidebar .inline-control-panel.inline-open,body.design-menu-open .sidebar .inline-control-panel.inline-open p,body.design-menu-open .sidebar .inline-control-panel.inline-open small,body.design-menu-open .sidebar .inline-control-panel.inline-open div:not(.color-swatch){color:#173743!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open [style*="color"]{color:#173743!important}
