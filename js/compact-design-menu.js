@@ -92,11 +92,25 @@
     mainBtn.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const open=!group.classList.contains('group-open');closePanels();closeGroups(group);group.classList.toggle('group-open',open);});main.appendChild(group);return group;
   }
   function syncLegacyToggleColors(){
-    document.querySelectorAll('body.design-menu-open .sidebar .inline-control-panel.inline-open button').forEach(btn=>{
-      const t=(btn.textContent||'').replace(/\s+/g,' ').trim();
-      const on=/(?:^|[\s:：])تشغيل(?:$|[\s:：])/.test(t);
-      const off=/(?:^|[\s:：])إيقاف(?:$|[\s:：])/.test(t);
-      if(on||off){btn.classList.toggle('unified-toggle-on',on&&!off);btn.classList.toggle('unified-toggle-off',off);}
+    document.querySelectorAll('body.design-menu-open .sidebar .inline-control-panel.inline-open').forEach(panel=>{
+      const walker=document.createTreeWalker(panel,NodeFilter.SHOW_TEXT);
+      const rows=new Map();let node;
+      while((node=walker.nextNode())){
+        const word=(node.nodeValue||'').trim();
+        if(word!=='تشغيل'&&word!=='إيقاف')continue;
+        let el=node.parentElement;
+        const row=el?.closest('button,[role="button"],.main-action,.compact-toggle,.toggle-btn')||el?.parentElement;
+        if(row&&row!==panel)rows.set(row,word);
+      }
+      rows.forEach((word,row)=>{
+        const on=word==='تشغيل';
+        row.classList.toggle('unified-toggle-on',on);
+        row.classList.toggle('unified-toggle-off',!on);
+        row.style.setProperty('background',on?'linear-gradient(135deg,#078b46,#10a95b)':'#70817f','important');
+        row.style.setProperty('border-color',on?'#08753e':'#859593','important');
+        row.style.setProperty('color','#fff','important');
+        row.querySelectorAll('*').forEach(ch=>ch.style.setProperty('color','#fff','important'));
+      });
     });
   }
   const toggleColorObserver=new MutationObserver(()=>syncLegacyToggleColors());
