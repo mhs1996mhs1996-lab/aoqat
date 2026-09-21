@@ -96,8 +96,11 @@
       const walker=document.createTreeWalker(panel,NodeFilter.SHOW_TEXT);
       const rows=new Map();let node;
       while((node=walker.nextNode())){
-        const word=(node.nodeValue||'').trim();
-        if(word!=='تشغيل'&&word!=='إيقاف')continue;
+        const text=(node.nodeValue||'').trim();
+        let word='';
+        if(text==='تشغيل'||/(?:^|[:：\\s])تشغيل$/.test(text))word='تشغيل';
+        else if(text==='إيقاف'||/(?:^|[:：\\s])إيقاف$/.test(text))word='إيقاف';
+        if(!word)continue;
         let el=node.parentElement;
         const row=el?.closest('button,[role="button"],.main-action,.compact-toggle,.toggle-btn')||el?.parentElement;
         if(row&&row!==panel)rows.set(row,word);
