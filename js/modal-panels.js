@@ -125,11 +125,17 @@
       const on=autoEnabled();
       autoBtn.textContent=on?"🟢 التبديل التلقائي: تشغيل":"⚪ التبديل التلقائي: إيقاف";
       autoBtn.classList.toggle("enabled",on);
+      autoBtn.classList.toggle("is-on",on);
+      autoBtn.setAttribute("aria-pressed",String(on));
+      autoBtn.dataset.enabled=String(on);
     }
     if(notifyBtn){
       const on=notifyEnabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";
       notifyBtn.textContent=on?"🔔 التنبيه: تشغيل":"🔕 التنبيه: إيقاف";
       notifyBtn.classList.toggle("enabled",on);
+      notifyBtn.classList.toggle("is-on",on);
+      notifyBtn.setAttribute("aria-pressed",String(on));
+      notifyBtn.dataset.enabled=String(on);
     }
   }
 
@@ -288,7 +294,7 @@
     const dragInfo=document.querySelector(".workspace .drag-info");if(dragInfo) sidebar.appendChild(dragInfo);
 
     document.getElementById("autoTomorrowToggle")?.addEventListener("click",()=>{
-      localStorage.setItem(AUTO_KEY,autoEnabled()?"0":"1");manualOverrideUntil=0;refreshToggleButtons();if(autoEnabled()) evaluateAutoSwitch(true);else setSwitchStatus("التبديل التلقائي متوقف");
+      localStorage.setItem(AUTO_KEY,autoEnabled()?"0":"1");manualOverrideUntil=0;refreshToggleButtons();if(autoEnabled()){setSwitchStatus("جاري تحديث حالة التبديل التلقائي...","success");evaluateAutoSwitch(true);}else setSwitchStatus("التبديل التلقائي متوقف");
     });
     document.getElementById("tomorrowNotifyToggle")?.addEventListener("click",async()=>{
       if(notifyEnabled()){localStorage.setItem(NOTIFY_KEY,"0");refreshToggleButtons();return;}
