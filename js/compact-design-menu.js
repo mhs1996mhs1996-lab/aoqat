@@ -200,7 +200,7 @@
   function addInterfaceVisibilityControls(){
     const panel=document.getElementById('backgroundPanel');if(!panel||document.getElementById('interfaceVisibilityControls'))return false;
     const box=document.createElement('div');box.id='interfaceVisibilityControls';box.className='visibility-section';box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>👁️ إظهار عناصر واجهة البرنامج</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid"></div></div>';
-    const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
+    const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{addDesignVisibilityControls();const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
     const grid=box.querySelector('.interface-visibility-grid'),KEY='aoqatInterfaceVisibilityV1';
     let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
     const items=[['clock','الساعة','.interface-clock-card'],['date','التاريخ','.interface-date-card'],['adhan','باقي على صلاة...','.next-prayer'],['iqama','باقي على الإقامة','.iqama-status']];
@@ -219,7 +219,23 @@
       panel.appendChild(box);
     }
     const grid=box.querySelector('.design-visibility-grid'),KEY='aoqatDesignVisibilityV1';
-    if(!slides.length){grid.innerHTML='<div class="design-visibility-loading" style="padding:8px;text-align:center;font-weight:700;color:#6b5a3b">جاري تحميل التصاميم...</div>';return false;}
+    if(!slides.length){
+      grid.innerHTML='<div class="design-visibility-loading" style="padding:8px;text-align:center;font-weight:700;color:#6b5a3b">جاري تحميل التصاميم...</div>';
+      if(!box.dataset.retryScheduled){
+        box.dataset.retryScheduled='1';
+        let retryCount=0;
+        const retry=setInterval(()=>{
+          retryCount++;
+          const ready=document.querySelectorAll('.design-carousel-track > .design-slide').length>0;
+          if(ready||retryCount>=120){
+            clearInterval(retry);delete box.dataset.retryScheduled;
+            if(ready)addDesignVisibilityControls();
+            else grid.innerHTML='<div style="padding:8px;text-align:center;font-weight:700;color:#8a5b35">تعذر العثور على التصاميم. أغلق القائمة وافتحها لإعادة المحاولة.</div>';
+          }
+        },250);
+      }
+      return false;
+    }
     let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
     slides.forEach((slide,i)=>{if(!slide.dataset.visibilityKey)slide.dataset.visibilityKey='design-'+(i+1);});
     const enabledSlides=()=>slides.filter(slide=>state[slide.dataset.visibilityKey]!==false);
@@ -247,6 +263,6 @@
       closeGroups();closePanels(panel);addClose(panel);document.body.classList.add('design-detail-open');
     },true);
   }
-  function init(){let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{arrange();installExclusivePopupBehavior();},50));}
+  function init(){let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{arrange();addDesignVisibilityControls();installExclusivePopupBehavior();},50));new MutationObserver(()=>{if(document.querySelector('.design-carousel-track > .design-slide'))addDesignVisibilityControls();}).observe(document.body,{childList:true,subtree:true});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
