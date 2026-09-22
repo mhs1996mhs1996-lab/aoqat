@@ -132,7 +132,34 @@
     items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=!(state[k]!==false);localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
     panel.appendChild(box);apply();setInterval(apply,1000);return true;
   }
-  function consolidateBackgroundFont(){addInterfaceVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function addDesignVisibilityControls(){
+    const panel=document.getElementById('backgroundPanel');if(!panel)return false;
+    let box=document.getElementById('designVisibilityControls');
+    if(!box){
+      box=document.createElement('div');box.id='designVisibilityControls';
+      box.innerHTML='<div style="font-weight:800;margin:14px 0 6px">🖼️ إظهار / إخفاء التصاميم</div><div class="interface-visibility-grid design-visibility-grid"></div>';
+      panel.appendChild(box);
+    }
+    const grid=box.querySelector('.design-visibility-grid'),KEY='aoqatDesignVisibilityV1';
+    let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
+    const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(slide=>!slide.dataset.legacySlide&&!slide.querySelector('#design')&&!slide.classList.contains('removed-design-storage')&&!slide.closest('.removed-design-storage'));
+    if(!slides.length)return false;
+    slides.forEach((slide,i)=>{if(!slide.dataset.visibilityKey)slide.dataset.visibilityKey='design-'+(i+1);});
+    const enabledSlides=()=>slides.filter(slide=>state[slide.dataset.visibilityKey]!==false);
+    const apply=()=>{
+      if(!enabledSlides().length){state[slides[0].dataset.visibilityKey]=true;localStorage.setItem(KEY,JSON.stringify(state));}
+      slides.forEach(slide=>slide.dataset.designDisabled=state[slide.dataset.visibilityKey]===false?'true':'false');
+      window.dispatchEvent(new CustomEvent('prayerDesignVisibilityChanged',{detail:{state}}));
+    };
+    grid.innerHTML='';
+    slides.forEach((slide,i)=>{
+      const key=slide.dataset.visibilityKey,b=document.createElement('button');b.type='button';b.className='interface-visibility-btn design-visibility-btn';
+      const draw=()=>{const on=state[key]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>التصميم '+(i+1)+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};
+      b.onclick=()=>{const on=state[key]!==false;if(on&&enabledSlides().length===1)return;state[key]=!on;localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);
+    });
+    apply();return true;
+  }
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
 
   function installExclusivePopupBehavior(){
