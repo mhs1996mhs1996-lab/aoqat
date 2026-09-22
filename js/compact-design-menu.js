@@ -129,7 +129,7 @@
   document.addEventListener('click',()=>setTimeout(syncLegacyToggleColors,0),true);
   setTimeout(syncLegacyToggleColors,0);
 
-  function consolidateDataPrayer(){const a=document.querySelector('[data-open-panel="datePanel"]'),b=document.querySelector('[data-open-panel="prayerPanel"]'),c=document.querySelector('[data-open-panel="iqamaPanel"]');if(!a||!b||!c)return false;createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');const s=document.getElementById('datePrayerSubmenu');[a,b,c].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function consolidateDataPrayer(){const a=document.querySelector('[data-open-panel="datePanel"]'),b=document.querySelector('[data-open-panel="prayerPanel"]'),c=document.querySelector('[data-open-panel="iqamaPanel"]'),t=document.querySelector('[data-open-panel="switchPanel"]');if(!a||!b||!c)return false;createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');const s=document.getElementById('datePrayerSubmenu');[a,b,c,t].filter(Boolean).forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function addInterfaceVisibilityControls(){
     const panel=document.getElementById('backgroundPanel');if(!panel||document.getElementById('interfaceVisibilityControls'))return false;
     const box=document.createElement('div');box.id='interfaceVisibilityControls';box.className='visibility-section';box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>👁️ إظهار عناصر واجهة البرنامج</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid"></div></div>';
@@ -169,7 +169,7 @@
     });
     apply();return true;
   }
-  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]'),t=document.querySelector('[data-open-panel="switchPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a,t].filter(Boolean).forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
 
   function installExclusivePopupBehavior(){
