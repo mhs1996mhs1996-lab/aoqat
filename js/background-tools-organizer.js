@@ -73,6 +73,9 @@
     const timer=setInterval(()=>{tries++;const done=moveTools();if(done||tries>80)clearInterval(timer);},150);
     moveTools();
     window.addEventListener("aoqatModulesReady",()=>setTimeout(moveTools,80));
+    /* Keep footer control inside Design Edit Tools even if another module reorders menu items later. */
+    const observer=new MutationObserver(()=>{const footer=document.querySelector('[data-open-panel="footerPanel"]');const grid=document.querySelector("#backgroundDesignTools .bg-tools-grid");if(footer&&grid&&footer.parentElement!==grid)grid.appendChild(footer);});
+    observer.observe(document.querySelector(".sidebar .main-panel")||document.body,{childList:true,subtree:true});
   }
 
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
