@@ -2,6 +2,14 @@
 (function(){
   const MIGRATION_KEY="aoqatStartupCleanupV3";
   const REQUIRED_DESIGNS=["design2","design3","design4","designRef"];
+  const MODULES=["second-design.js","additional-designs.js","design-order.js","prayer-countdown.js","compact-design-menu.js"];
+
+  function ensureModules(){
+    const loaded=new Set(Array.from(document.scripts).map(s=>(s.getAttribute("src")||"").split("/").pop()?.split("?")[0]).filter(Boolean));
+    let chain=Promise.resolve();
+    MODULES.forEach(name=>{if(loaded.has(name))return;loaded.add(name);chain=chain.then(()=>new Promise(resolve=>{const s=document.createElement("script");s.src="js/"+name+"?apk=12129";s.onload=resolve;s.onerror=resolve;document.body.appendChild(s);}));});
+    return chain;
+  }
 
   function addStyle(){
     if(document.getElementById("startupStabilizerStyle"))return;
@@ -110,6 +118,7 @@
 
   function init(){
     addStyle();
+    ensureModules();
     clearObsoleteSavedStateOnce();
     document.body.classList.add('aoqat-booting');
     cleanLegacyExportUi();
