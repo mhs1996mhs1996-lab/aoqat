@@ -169,26 +169,7 @@
     });
     apply();return true;
   }
-  function addDesignEditTools(){
-    const panel=document.getElementById('backgroundPanel');if(!panel)return false;
-    let box=document.getElementById('designEditTools');
-    if(!box){
-      box=document.createElement('div');box.id='designEditTools';box.className='visibility-section';
-      box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>🛠️ أدوات تعديل التصميم</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="design-edit-tools-body"></div></div>';
-      const sectionToggle=box.querySelector('.visibility-section-toggle');
-      sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
-      panel.appendChild(box);
-    }
-    const body=box.querySelector('.design-edit-tools-body');
-    const footerBtn=document.querySelector('[data-open-panel="footerPanel"]');
-    const backgroundBtn=document.getElementById('changeBackgroundBtn');
-    const resetBtn=document.getElementById('resetPositions');
-    const resetWrap=resetBtn?.closest('.drag-info');
-    const candidates=Array.from(document.querySelectorAll('button')).filter(btn=>/حفظ التعديلات/.test((btn.textContent||'').trim()));
-    [backgroundBtn,...candidates,resetWrap||resetBtn,footerBtn].forEach(el=>{if(el&&el!==box.querySelector('.visibility-section-toggle')&&el.parentElement!==body)body.appendChild(el);});
-    return !!(backgroundBtn&&footerBtn);
-  }
-  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();addDesignEditTools();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
 
   function installExclusivePopupBehavior(){
