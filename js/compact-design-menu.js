@@ -1,6 +1,6 @@
 "use strict";
 (function(){
-  const ORDER=['#backgroundFontGroup','#prayerIqamaGroup','#datePrayerGroup'];
+  const ORDER=['#backgroundFontGroup','#datePrayerGroup'];
 
   function addStyles(){
     if(document.getElementById('compactDesignMenuStyles'))return;
@@ -23,7 +23,7 @@
       #backgroundFontSubmenu>.main-action:nth-child(1){background:linear-gradient(135deg,#7b3fa1,#a55bc1)!important;border:1px solid #bd78d1!important;color:#fff!important}
       #backgroundFontSubmenu>.main-action:nth-child(2){background:linear-gradient(135deg,#176f9f,#2489bb)!important;border:1px solid #46a1c8!important;color:#fff!important}
       #backgroundFontSubmenu>.main-action:nth-child(3){background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border:1px solid #dda14f!important;color:#fff!important}
-      #datePrayerSubmenu>.main-action:nth-child(1){background:linear-gradient(135deg,#0d7890,#13a2a0)!important;border:1px solid #39b8b0!important;color:#fff!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{width:100%!important;max-width:100%!important;min-height:34px!important;height:34px!important;margin:0 0 5px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11.5px!important;background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border:1px solid #56b395!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important}\n      #datePrayerSubmenu>.main-action:nth-of-type(1){background:linear-gradient(135deg,#0d7890,#13a2a0)!important;border:1px solid #39b8b0!important;color:#fff!important}
       #datePrayerSubmenu>.main-action:nth-child(2){background:linear-gradient(135deg,#2e7d4f,#43a565)!important;border:1px solid #62ba7b!important;color:#fff!important}
       #datePrayerSubmenu>.main-action:nth-child(3){background:linear-gradient(135deg,#9b6a16,#c58b24)!important;border:1px solid #d6a144!important;color:#fff!important}
       #datePrayerSubmenu>.main-action:nth-child(4){background:linear-gradient(135deg,#a74468,#c75b7f)!important;border:1px solid #d77a98!important;color:#fff!important}
@@ -138,7 +138,7 @@
     `;document.head.appendChild(s);
   }
 
-  function closeGroups(except=null){['datePrayerGroup','prayerIqamaGroup','backgroundFontGroup'].forEach(id=>{const g=document.getElementById(id);if(g&&g!==except)g.classList.remove('group-open');});}
+  function closeGroups(except=null){['datePrayerGroup','prayerIqamaGroup','backgroundFontGroup'].forEach(id=>{const g=document.getElementById(id);if(g&&g!==except&&!(except&&g.contains(except)))g.classList.remove('group-open');});}
   function closePanels(except=null){document.querySelectorAll('.inline-control-panel.inline-open').forEach(p=>{if(p===except)return;p.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${p.id}"]`)?.classList.remove('inline-active');});if(!except)document.body.classList.remove('design-detail-open');}
   function addClose(panel){if(!panel||panel.querySelector(':scope > .design-popup-close'))return;const x=document.createElement('button');x.type='button';x.className='design-popup-close';x.setAttribute('aria-label','رجوع');x.setAttribute('title','رجوع');x.textContent='‹';x.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();panel.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${panel.id}"]`)?.classList.remove('inline-active');document.body.classList.remove('design-detail-open');});panel.prepend(x);}
 
@@ -180,12 +180,13 @@
   function consolidateDataPrayer(){
     const date=document.querySelector('[data-open-panel="datePanel"]'),prayer=document.querySelector('[data-open-panel="prayerPanel"]'),iqama=document.querySelector('[data-open-panel="iqamaPanel"]'),switchBtn=document.querySelector('[data-open-panel="switchPanel"]');
     if(!date||!prayer||!iqama)return false;
-    createGroup('prayerIqamaGroup','prayerIqamaMainBtn','prayerIqamaSubmenu','بيانات الصلاة و الإقامة','🕌');
-    const prayerMenu=document.getElementById('prayerIqamaSubmenu');
-    [prayer,iqama,switchBtn].filter(Boolean).forEach(x=>{if(x.parentElement!==prayerMenu)prayerMenu.appendChild(x)});
-    createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ','📅');
+    createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');
     const dateMenu=document.getElementById('datePrayerSubmenu');
-    if(date.parentElement!==dateMenu)dateMenu.appendChild(date);
+    createGroup('prayerIqamaGroup','prayerIqamaMainBtn','prayerIqamaSubmenu','بيانات الصلاة و الإقامة','🕌');
+    const prayerGroup=document.getElementById('prayerIqamaGroup');
+    const prayerMenu=document.getElementById('prayerIqamaSubmenu');
+    [prayer,iqama].forEach(x=>{if(x.parentElement!==prayerMenu)prayerMenu.appendChild(x)});
+    [prayerGroup,date,switchBtn].filter(Boolean).forEach(x=>{if(x.parentElement!==dateMenu)dateMenu.appendChild(x)});
     return true;
   }
   function addInterfaceVisibilityControls(){
