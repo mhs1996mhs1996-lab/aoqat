@@ -12,11 +12,16 @@
       #backgroundDesignTools.tools-open .bg-tools-arrow{transform:rotate(180deg)}
       #backgroundDesignTools .bg-tools-grid{display:none;grid-template-columns:1fr;gap:7px;padding-top:8px}
       #backgroundDesignTools.tools-open .bg-tools-grid{display:grid}
-      #backgroundDesignTools .bg-tools-grid>button,#backgroundDesignTools .bg-tools-grid>.main-action{width:100%!important;min-width:0!important;margin:0!important;min-height:42px!important;border-radius:9px!important;padding:8px 12px!important;font-size:14px!important;font-weight:700!important;box-shadow:none!important}
+      #backgroundDesignTools .bg-tools-grid>button,#backgroundDesignTools .bg-tools-grid>.main-action{width:100%!important;min-width:0!important;margin:0!important;min-height:34px!important;height:34px!important;border-radius:7px!important;padding:4px 10px!important;font-size:12.5px!important;font-weight:750!important;box-shadow:0 1px 3px rgba(20,45,55,.12)!important;display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important}
       #backgroundDesignTools .manual-edit-toggle-wrap{margin:0!important;width:100%!important}
-      #backgroundDesignTools #manualEditToggle{width:100%!important}
-      #backgroundDesignTools #saveDesignAdjustments,#backgroundDesignTools #resetPositions{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;background:#263746!important;color:#fff!important;border:1px solid rgba(255,255,255,.16)!important}
-      #backgroundDesignTools #saveDesignAdjustments:hover,#backgroundDesignTools #resetPositions:hover{filter:brightness(1.08)}
+      #backgroundDesignTools #changeBackgroundBtn{background:linear-gradient(135deg,#176f9f,#2489bb)!important;border:1px solid #2d91bd!important;color:#fff!important}
+      #backgroundDesignTools #manualEditToggle{width:100%!important;min-height:34px!important;height:34px!important;padding:4px 10px!important;border-radius:7px!important;font-size:12.5px!important;background:#70817f!important;border:1px solid #859593!important;color:#fff!important;box-shadow:0 1px 3px rgba(20,45,55,.12)!important}
+      #backgroundDesignTools #manualEditToggle.is-on,#backgroundDesignTools #manualEditToggle[aria-pressed="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
+      #backgroundDesignTools #saveDesignAdjustments{background:linear-gradient(135deg,#6b3fa0,#8c55b4)!important;border:1px solid #9a68bc!important;color:#fff!important}
+      #backgroundDesignTools #resetPositions{background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border:1px solid #d89843!important;color:#fff!important}
+      #backgroundDesignTools [data-open-panel="footerPanel"]{background:linear-gradient(135deg,#a74468,#c75b7f)!important;border:1px solid #d06d8d!important;color:#fff!important}
+      #backgroundDesignTools #changeBackgroundBtn *,#backgroundDesignTools #manualEditToggle *,#backgroundDesignTools #saveDesignAdjustments *,#backgroundDesignTools #resetPositions *,#backgroundDesignTools [data-open-panel="footerPanel"] *{color:#fff!important}
+      #backgroundDesignTools #changeBackgroundBtn:hover,#backgroundDesignTools #manualEditToggle:hover,#backgroundDesignTools #saveDesignAdjustments:hover,#backgroundDesignTools #resetPositions:hover,#backgroundDesignTools [data-open-panel="footerPanel"]:hover{filter:brightness(1.07)}
     `;
     document.head.appendChild(s);
   }
