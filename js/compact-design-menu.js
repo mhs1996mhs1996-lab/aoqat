@@ -76,7 +76,11 @@
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="true"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="true"] *{color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on),body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"],body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on) *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"] *{color:#fff!important}
-      #interfaceVisibilityControls,#designVisibilityControls{margin:10px 0 0!important}
+      #interfaceVisibilityControls,#designVisibilityControls,#designEditTools{margin:10px 0 0!important}
+      #designEditTools .design-edit-tools-body{display:flex!important;flex-direction:column!important;gap:7px!important}
+      #designEditTools .design-edit-tools-body>.main-action,#designEditTools .design-edit-tools-body>button,#designEditTools .design-edit-tools-body>.drag-info,#designEditTools .design-edit-tools-body>.drag-info>button{width:100%!important;max-width:100%!important;margin:0!important;min-height:42px!important}
+      #designEditTools .design-edit-tools-body>.drag-info{padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
+      #designEditTools .design-edit-tools-body>.drag-info>span{display:none!important}
       .visibility-section-toggle{width:100%!important;min-height:46px!important;margin:0!important;padding:9px 12px!important;border:1px solid #2f7680!important;border-radius:10px!important;background:linear-gradient(135deg,#174b55,#226572)!important;color:#fff!important;font-weight:800!important;font-size:15px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;cursor:pointer!important}
       .visibility-section-toggle span{color:#fff!important}.visibility-section-toggle .visibility-arrow{font-size:12px!important;transition:transform .18s ease}.visibility-section-toggle[aria-expanded="true"] .visibility-arrow{transform:rotate(180deg)}
       .visibility-section-body{display:none!important;padding-top:7px!important}.visibility-section-open>.visibility-section-body{display:block!important}
@@ -165,7 +169,26 @@
     });
     apply();return true;
   }
-  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function addDesignEditTools(){
+    const panel=document.getElementById('backgroundPanel');if(!panel)return false;
+    let box=document.getElementById('designEditTools');
+    if(!box){
+      box=document.createElement('div');box.id='designEditTools';box.className='visibility-section';
+      box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>🛠️ أدوات تعديل التصميم</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="design-edit-tools-body"></div></div>';
+      const sectionToggle=box.querySelector('.visibility-section-toggle');
+      sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
+      panel.appendChild(box);
+    }
+    const body=box.querySelector('.design-edit-tools-body');
+    const footerBtn=document.querySelector('[data-open-panel="footerPanel"]');
+    const backgroundBtn=document.getElementById('changeBackgroundBtn');
+    const resetBtn=document.getElementById('resetPositions');
+    const resetWrap=resetBtn?.closest('.drag-info');
+    const candidates=Array.from(document.querySelectorAll('button')).filter(btn=>/حفظ التعديلات/.test((btn.textContent||'').trim()));
+    [backgroundBtn,...candidates,resetWrap||resetBtn,footerBtn].forEach(el=>{if(el&&el!==box.querySelector('.visibility-section-toggle')&&el.parentElement!==body)body.appendChild(el);});
+    return !!(backgroundBtn&&footerBtn);
+  }
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();addDesignEditTools();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
 
   function installExclusivePopupBehavior(){
