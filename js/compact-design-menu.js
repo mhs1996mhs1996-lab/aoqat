@@ -1,6 +1,6 @@
 "use strict";
 (function(){
-  const ORDER=['#backgroundFontGroup','#datePrayerGroup','[data-open-panel="switchPanel"]','#topExportJpg'];
+  const ORDER=['#backgroundFontGroup','#datePrayerGroup','#topExportJpg'];
 
   function addStyles(){
     if(document.getElementById('compactDesignMenuStyles'))return;
