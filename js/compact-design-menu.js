@@ -210,6 +210,8 @@
   }
   function addDesignVisibilityControls(){
     const panel=document.getElementById('backgroundPanel');if(!panel)return false;
+    const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(slide=>!slide.dataset.legacySlide&&!slide.querySelector('#design')&&!slide.classList.contains('removed-design-storage')&&!slide.closest('.removed-design-storage'));
+    if(!slides.length)return false;
     let box=document.getElementById('designVisibilityControls');
     if(!box){
       box=document.createElement('div');box.id='designVisibilityControls';box.className='visibility-section';
@@ -219,8 +221,6 @@
     }
     const grid=box.querySelector('.design-visibility-grid'),KEY='aoqatDesignVisibilityV1';
     let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
-    const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(slide=>!slide.dataset.legacySlide&&!slide.querySelector('#design')&&!slide.classList.contains('removed-design-storage')&&!slide.closest('.removed-design-storage'));
-    if(!slides.length)return false;
     slides.forEach((slide,i)=>{if(!slide.dataset.visibilityKey)slide.dataset.visibilityKey='design-'+(i+1);});
     const enabledSlides=()=>slides.filter(slide=>state[slide.dataset.visibilityKey]!==false);
     const apply=()=>{
