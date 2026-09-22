@@ -77,6 +77,23 @@
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on),body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"],body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on) *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"] *{color:#fff!important}
       #interfaceVisibilityControls,#designVisibilityControls,#designEditTools{margin:8px 0 0!important}
+      /* Separate each tool group visually so an opened section never blends into the next icon. */
+      body.design-menu-open #backgroundPanel #backgroundDesignTools,
+      body.design-menu-open #backgroundPanel #interfaceVisibilityControls,
+      body.design-menu-open #backgroundPanel #designVisibilityControls{
+        margin:10px 0!important;padding:8px!important;border:1px solid #d8c49d!important;border-radius:12px!important;
+        background:rgba(255,255,255,.42)!important;box-shadow:0 3px 10px rgba(74,55,28,.08)!important;
+      }
+      body.design-menu-open #backgroundPanel #backgroundDesignTools + #interfaceVisibilityControls,
+      body.design-menu-open #backgroundPanel #interfaceVisibilityControls + #designVisibilityControls{
+        margin-top:12px!important;
+      }
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid,
+      body.design-menu-open #backgroundPanel .visibility-section-body{
+        margin-top:7px!important;padding:8px!important;border-radius:9px!important;
+        background:rgba(246,237,219,.72)!important;border:1px solid rgba(196,169,119,.45)!important;
+      }
+      body.design-menu-open #backgroundPanel .visibility-section:not(.visibility-section-open) .visibility-section-body{margin-top:0!important;padding:0!important;border:0!important}
       #designEditTools .design-edit-tools-body{display:flex!important;flex-direction:column!important;gap:6px!important}
       #designEditTools .design-edit-tools-body>.main-action,#designEditTools .design-edit-tools-body>button,#designEditTools .design-edit-tools-body>.drag-info,#designEditTools .design-edit-tools-body>.drag-info>button{width:100%!important;max-width:100%!important;margin:0!important;min-height:36px!important}
       #designEditTools .design-edit-tools-body>.drag-info{padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
