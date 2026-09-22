@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v9";
+const CACHE_NAME = "aoqat-pwa-v10-menu-recovery";
 const APP_SHELL = [
   "/",
   "/index.html",
