@@ -20,9 +20,12 @@
       #backgroundFontSubmenu>.main-action,#datePrayerSubmenu>.main-action,#prayerIqamaSubmenu>.main-action,#datePrayerSubmenu>#prayerIqamaGroup{margin:0!important}
       #datePrayerSubmenu>#prayerIqamaGroup{width:100%!important;padding:6px!important;border:1px solid rgba(86,179,149,.38)!important;border-radius:10px!important;background:rgba(23,107,92,.12)!important}
       #datePrayerSubmenu>#prayerIqamaGroup.group-open{padding:7px!important;background:rgba(23,107,92,.20)!important;box-shadow:0 3px 10px rgba(0,0,0,.12)!important}
-      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{margin:0!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;justify-content:flex-start!important;overflow:hidden!important}
-      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn>span:not(.group-arrow){min-width:0!important;max-width:calc(100% - 42px)!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{margin:0!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;justify-content:flex-start!important;overflow:visible!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn>span:not(.group-arrow){min-width:0!important;max-width:none!important;overflow:visible!important;text-overflow:clip!important;white-space:nowrap!important;flex:1 1 auto!important}
       #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn .group-arrow{flex:0 0 auto!important;margin-right:auto!important}
+      /* Keep the nested menu icons aligned to one width and preserve the full longest label. */
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaSubmenu>.main-action{width:100%!important;max-width:100%!important;box-sizing:border-box!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{min-height:38px!important;height:38px!important;padding-inline:10px!important;font-size:11.5px!important}
       /* Main design-data icons: distinct identity + tidy framed contents when expanded. Visual only. */
       #backgroundFontGroup>#backgroundFontMainBtn{background:linear-gradient(135deg,#9a6424,#c58a35)!important;border:1px solid #e0ad62!important;box-shadow:0 3px 10px rgba(154,100,36,.24)!important}
       #datePrayerGroup>#datePrayerMainBtn{background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border:1px solid #56b395!important;box-shadow:0 3px 10px rgba(23,107,92,.24)!important}
