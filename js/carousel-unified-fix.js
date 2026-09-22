@@ -21,7 +21,7 @@
     `;document.head.appendChild(s);
   }
 
-  function allSlides(track){return Array.from(track.querySelectorAll(':scope > .design-slide')).filter(slide=>{if(slide.dataset.legacySlide==='true'||slide.querySelector('#design'))return false;if(slide.classList.contains('removed-design-storage')||slide.closest('.removed-design-storage'))return false;return true;});}
+  function allSlides(track){return Array.from(track.querySelectorAll(':scope > .design-slide')).filter(slide=>{if(slide.dataset.legacySlide==='true'||slide.querySelector('#design'))return false;if(slide.classList.contains('removed-design-storage')||slide.closest('.removed-design-storage'))return false;if(slide.dataset.designDisabled==='true')return false;return true;});}
   function resize(car){const p=document.querySelector('.previewBox');let scale=1;if(innerWidth<=800&&p){const cs=getComputedStyle(p);const avail=Math.max(220,p.clientWidth-parseFloat(cs.paddingLeft||0)-parseFloat(cs.paddingRight||0)-2);scale=Math.min(1,avail/W);}car.style.height=Math.ceil(H*scale)+'px';}
   function compactParent(car){const parent=car.parentElement;if(!parent)return;parent.style.setProperty('padding-bottom','0','important');parent.style.setProperty('margin-bottom','0','important');parent.style.setProperty('min-height','0','important');parent.style.setProperty('height','auto','important');const next=parent.nextElementSibling;if(next)next.style.setProperty('margin-top','0','important');}
 
@@ -39,6 +39,6 @@
       controls.querySelector('[data-unified-prev]').onclick=e=>{e.preventDefault();e.stopPropagation();active--;render();};controls.querySelector('[data-unified-next]').onclick=e=>{e.preventDefault();e.stopPropagation();active++;render();};dots.querySelectorAll('[data-unified-dot]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();active=Number(b.dataset.unifiedDot)||0;render();});render();return true;
     }finally{busy=false;}
   }
-  function init(){let tries=0;const t=setInterval(()=>{tries++;if(install()||tries>100)clearInterval(t);},120);setTimeout(install,700);setTimeout(install,1600);window.addEventListener('resize',()=>install(),{passive:true});}
+  function init(){let tries=0;const t=setInterval(()=>{tries++;if(install()||tries>100)clearInterval(t);},120);setTimeout(install,700);setTimeout(install,1600);window.addEventListener('resize',()=>install(),{passive:true});window.addEventListener('prayerDesignVisibilityChanged',()=>{setTimeout(install,0);});}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
