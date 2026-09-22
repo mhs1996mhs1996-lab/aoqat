@@ -3,6 +3,9 @@ package com.aoqat.calendar
 import android.Manifest
 import android.app.Activity
 import android.app.AlarmManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -21,8 +24,101 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.core.app.NotificationCompat
 import java.io.File
 import java.io.FileOutputStream
+
+
+object IqamaPersistentNotification {
+    private const val CHANNEL_ID = "iqama_persistent_v121"
+    private const val NOTIFICATION_ID = 45221
+    private const val REQUEST_SWITCH = 45222
+    private const val REQUEST_HIDE = 45223
+
+    fun ensureChannel(context: android.content.Context) {
+        if (Build.VERSION.SDK_INT < 26) return
+        val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel = NotificationChannel(CHANNEL_ID, "إشعار الإقامة", NotificationManager.IMPORTANCE_LOW).apply {
+            description = "إشعار ثابت للوقت المتبقي أو المنقضي على الإقامة"
+            setSound(null, null)
+            enableVibration(false)
+            lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+        }
+        manager.createNotificationChannel(channel)
+    }
+
+    private fun secondsFrom(text: String): Long {
+        val m = Regex("(\\d{1,2}):(\\d{2})").find(text) ?: return 0L
+        return (m.groupValues[1].toLongOrNull() ?: 0L) * 60L + (m.groupValues[2].toLongOrNull() ?: 0L)
+    }
+
+    fun show(context: android.content.Context, text: String) {
+        ensureChannel(context)
+        val elapsed = text.contains("مضى على الإقامة")
+        val seconds = secondsFrom(text).coerceAtLeast(0L)
+        val now = System.currentTimeMillis()
+        val whenMillis = if (elapsed) now - seconds * 1000L else now + seconds * 1000L
+
+        val openIntent = Intent(context, MainActivity::class.java)
+        val openPending = PendingIntent.getActivity(context, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(if (elapsed) "مضى على الإقامة" else "باقي على الإقامة")
+            .setContentText(text)
+            .setContentIntent(openPending)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setWhen(whenMillis)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+
+        if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
+        val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.notify(NOTIFICATION_ID, builder.build())
+
+        if (elapsed) {
+            schedule(context, "HIDE", (10L * 60L - seconds).coerceAtLeast(1L), REQUEST_HIDE)
+        } else {
+            schedule(context, "SWITCH", seconds.coerceAtLeast(1L), REQUEST_SWITCH)
+        }
+    }
+
+    private fun schedule(context: android.content.Context, action: String, seconds: Long, request: Int) {
+        val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction(action)
+        val pi = PendingIntent.getBroadcast(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val at = System.currentTimeMillis() + seconds * 1000L
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+        } else {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+        }
+    }
+
+    fun hide(context: android.content.Context) {
+        val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(NOTIFICATION_ID)
+        val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
+        listOf("SWITCH" to REQUEST_SWITCH, "HIDE" to REQUEST_HIDE).forEach { (action, request) ->
+            val pi = PendingIntent.getBroadcast(context, request, Intent(context, IqamaNotificationReceiver::class.java).setAction(action), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+            if (pi != null) am.cancel(pi)
+        }
+    }
+}
+
+class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: android.content.Context, intent: Intent?) {
+        when (intent?.action) {
+            "SWITCH" -> IqamaPersistentNotification.show(context, "مضى على الإقامة 00:00")
+            "HIDE" -> IqamaPersistentNotification.hide(context)
+        }
+    }
+}
 
 class MainActivity : Activity() {
 
@@ -247,6 +343,21 @@ class MainActivity : Activity() {
                     Toast.LENGTH_LONG
                 ).show()
                 webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 100L)
+            }
+        }
+
+        @JavascriptInterface
+        fun showIqamaNotification(text: String) {
+            runOnUiThread {
+                requestNotificationPermissionIfNeeded()
+                IqamaPersistentNotification.show(this@MainActivity, text)
+            }
+        }
+
+        @JavascriptInterface
+        fun hideIqamaNotification() {
+            runOnUiThread {
+                IqamaPersistentNotification.hide(this@MainActivity)
             }
         }
 
