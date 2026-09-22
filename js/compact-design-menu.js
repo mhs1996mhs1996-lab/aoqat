@@ -1,6 +1,6 @@
 "use strict";
 (function(){
-  const ORDER=['#backgroundFontGroup','#datePrayerGroup','#topExportJpg'];
+  const ORDER=['#backgroundFontGroup','#datePrayerGroup'];
 
   function addStyles(){
     if(document.getElementById('compactDesignMenuStyles'))return;
@@ -169,7 +169,7 @@
     });
     apply();return true;
   }
-  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]'),e=document.getElementById('topExportJpg');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a,e].filter(Boolean).forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
 
   function installExclusivePopupBehavior(){
