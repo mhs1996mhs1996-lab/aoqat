@@ -81,6 +81,18 @@
       #designEditTools .design-edit-tools-body>.main-action,#designEditTools .design-edit-tools-body>button,#designEditTools .design-edit-tools-body>.drag-info,#designEditTools .design-edit-tools-body>.drag-info>button{width:100%!important;max-width:100%!important;margin:0!important;min-height:36px!important}
       #designEditTools .design-edit-tools-body>.drag-info{padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
       #designEditTools .design-edit-tools-body>.drag-info>span{display:none!important}
+      /* Design edit tools: slim, distinct colors. Visual-only; no behavior changes. */
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid{gap:5px!important;padding-top:6px!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid>button,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid>.main-action,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle{min-height:30px!important;height:30px!important;padding:3px 10px!important;border-radius:7px!important;font-size:12px!important;font-weight:800!important;box-shadow:0 1px 3px rgba(20,45,55,.10)!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #changeBackgroundBtn{background:linear-gradient(135deg,#176f9f,#2489bb)!important;border-color:#2d91bd!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #saveDesignAdjustments{background:linear-gradient(135deg,#6b3fa0,#8c55b4)!important;border-color:#9a68bc!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #resetPositions{background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border-color:#d89843!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools [data-open-panel="footerPanel"]{background:linear-gradient(135deg,#a74468,#c75b7f)!important;border-color:#d06d8d!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle:not(.is-on)[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle.is-on,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle[aria-pressed="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
       .visibility-section-toggle{width:100%!important;min-height:32px!important;height:32px!important;margin:0!important;padding:3px 10px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:8px!important;color:#fff!important;font-weight:800!important;font-size:12.5px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;cursor:pointer!important;box-shadow:0 1px 4px rgba(20,45,55,.13)!important;transition:transform .16s ease,filter .16s ease!important}
       .visibility-section-toggle:active{transform:scale(.992)!important}
       #designEditTools .visibility-section-toggle{background:linear-gradient(135deg,#087f78,#0aa59a)!important;border-color:#0fb5a8!important}
