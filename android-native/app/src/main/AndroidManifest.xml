@@ -40,6 +40,10 @@
             android:foregroundServiceType="mediaPlayback" />
 
         <receiver
+            android:name=".IqamaNotificationReceiver"
+            android:exported="false" />
+
+        <receiver
             android:name=".AlarmReceiver"
             android:exported="false" />
 
