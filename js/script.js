@@ -399,13 +399,6 @@ function updateBackground() {
 function setupBackground() {
 
 
-    $("changeBackgroundBtn")
-        ?.addEventListener(
-            "click",
-            () => $("bgFile")?.click()
-        );
-
-
     $("bgType")
         ?.addEventListener(
             "change",
