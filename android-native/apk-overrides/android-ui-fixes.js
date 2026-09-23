@@ -220,9 +220,26 @@
     window.addEventListener('prayerDesignChanged',()=>setTimeout(()=>syncDataToRoot(activeDesign()),30));
   }
 
+  function refreshAndroidDesignVisibility(){
+    window.dispatchEvent(new CustomEvent('aoqatModulesReady'));
+  }
+
+  function watchAndroidDesignSlides(){
+    const root=document.querySelector('.design-carousel-track')||document.body;
+    let lastCount=-1;
+    const refresh=()=>{
+      const count=document.querySelectorAll('.design-carousel-track > .design-slide').length;
+      if(count!==lastCount){lastCount=count;setTimeout(refreshAndroidDesignVisibility,40);}
+    };
+    refresh();
+    new MutationObserver(refresh).observe(root,{childList:true,subtree:true});
+    [350,800,1400,2400].forEach(ms=>setTimeout(refreshAndroidDesignVisibility,ms));
+  }
+
   function init(){
     injectAndroidStyles();
     bindUniversalEvents();
+    watchAndroidDesignSlides();
     setTimeout(syncAllData,350);
     setTimeout(syncAllData,1100);
     setTimeout(syncAllData,2200);
