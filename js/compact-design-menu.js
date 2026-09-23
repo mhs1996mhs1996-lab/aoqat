@@ -1,18 +1,41 @@
 "use strict";
 (function(){
-  const ORDER=['#backgroundFontGroup','#datePrayerGroup','[data-open-panel="switchPanel"]','#topExportJpg'];
+  const ORDER=['#backgroundFontGroup','#datePrayerGroup'];
 
   function addStyles(){
     if(document.getElementById('compactDesignMenuStyles'))return;
     const s=document.createElement('style');s.id='compactDesignMenuStyles';
     s.textContent=`
       .sidebar .main-panel{padding:8px!important;text-align:right!important}.sidebar .main-panel>h2{margin:0 0 6px!important;font-size:15px!important;line-height:1.2!important}
-      .sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:max-content!important;max-width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;margin:0 0 4px auto!important;padding:5px 10px!important;border-radius:8px!important;font-size:12.5px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;box-shadow:none!important;white-space:nowrap!important}
-      .sidebar .main-panel>.main-action span,.sidebar .main-panel>#topExportJpg span,#datePrayerGroup>.main-action span,#backgroundFontGroup>.main-action span{line-height:1!important;white-space:nowrap!important}.sidebar .main-panel>.inline-control-panel{margin:0 0 4px!important;padding:9px!important}.sidebar .main-panel>#topExportJpg{background:#176f9f!important}
-      #datePrayerGroup,#backgroundFontGroup{width:100%;margin:0 0 4px!important;padding:0!important}#datePrayerGroup>#datePrayerMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#167f76,#176f9f)!important}#backgroundFontGroup>#backgroundFontMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#0f8b8d,#6d568f)!important}
-      #datePrayerSubmenu,#backgroundFontSubmenu{display:none!important;position:static!important;z-index:auto!important;top:auto!important;left:auto!important;right:auto!important;transform:none!important;width:100%!important;min-width:0!important;max-width:100%!important;padding:3px 0 0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
-      #datePrayerGroup.group-open>#datePrayerSubmenu,#backgroundFontGroup.group-open>#backgroundFontSubmenu{display:block!important}#datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;max-width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;margin:0 0 5px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11.5px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;box-shadow:none!important;white-space:nowrap!important}#datePrayerSubmenu>.main-action:last-child,#backgroundFontSubmenu>.main-action:last-child{margin-bottom:0!important}
-      #datePrayerMainBtn .group-arrow,#backgroundFontMainBtn .group-arrow{margin-right:4px!important;font-size:10px;opacity:.8;transition:transform .18s ease}#datePrayerGroup.group-open #datePrayerMainBtn .group-arrow,#backgroundFontGroup.group-open #backgroundFontMainBtn .group-arrow{transform:rotate(180deg)}
+      .sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#prayerIqamaGroup>.main-action,#backgroundFontGroup>.main-action{width:max-content!important;max-width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;margin:0 0 4px auto!important;padding:5px 10px!important;border-radius:8px!important;font-size:12.5px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;box-shadow:none!important;white-space:nowrap!important}
+      .sidebar .main-panel>.main-action span,.sidebar .main-panel>#topExportJpg span,#datePrayerGroup>.main-action span,#prayerIqamaGroup>.main-action span,#backgroundFontGroup>.main-action span{line-height:1!important;white-space:nowrap!important}.sidebar .main-panel>.inline-control-panel{margin:0 0 4px!important;padding:9px!important}.sidebar .main-panel>#topExportJpg{background:#176f9f!important;width:max-content!important;min-width:0!important;max-width:100%!important;min-height:26px!important;height:26px!important;padding:2px 7px!important;font-size:10.5px!important;border-radius:6px!important}
+      #datePrayerGroup,#prayerIqamaGroup,#backgroundFontGroup{width:100%;margin:0 0 4px!important;padding:0!important}#datePrayerGroup>#datePrayerMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#0d7890,#13a2a0)!important;border-color:#39b8b0!important}#prayerIqamaGroup>#prayerIqamaMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border-color:#56b395!important}#backgroundFontGroup>#backgroundFontMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#9a6424,#c58a35)!important;border-color:#e0ad62!important}
+      #datePrayerSubmenu,#prayerIqamaSubmenu,#backgroundFontSubmenu{display:none!important;position:static!important;z-index:auto!important;top:auto!important;left:auto!important;right:auto!important;transform:none!important;width:100%!important;min-width:0!important;max-width:100%!important;padding:3px 0 0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+      #datePrayerGroup.group-open>#datePrayerSubmenu,#prayerIqamaGroup.group-open>#prayerIqamaSubmenu,#backgroundFontGroup.group-open>#backgroundFontSubmenu{display:block!important}#datePrayerSubmenu>.main-action,#prayerIqamaSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;max-width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;margin:0 0 5px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11.5px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;box-shadow:none!important;white-space:nowrap!important}#datePrayerSubmenu>.main-action:last-child,#prayerIqamaSubmenu>.main-action:last-child,#backgroundFontSubmenu>.main-action:last-child{margin-bottom:0!important}
+      #datePrayerMainBtn .group-arrow,#prayerIqamaMainBtn .group-arrow,#backgroundFontMainBtn .group-arrow{margin-right:4px!important;font-size:10px;opacity:.8;transition:transform .18s ease}#datePrayerGroup.group-open #datePrayerMainBtn .group-arrow,#prayerIqamaGroup.group-open #prayerIqamaMainBtn .group-arrow,#backgroundFontGroup.group-open #backgroundFontMainBtn .group-arrow{transform:rotate(180deg)}
+      /* Clear visual separation between every icon and the controls that belong to it. */
+      #backgroundFontGroup,#datePrayerGroup{border:1px solid rgba(122,170,181,.22)!important;border-radius:12px!important;padding:6px!important;margin-bottom:8px!important;background:rgba(8,25,35,.38)!important}
+      #backgroundFontSubmenu,#datePrayerSubmenu,#prayerIqamaSubmenu{gap:7px!important}
+      #backgroundFontGroup.group-open>#backgroundFontSubmenu,#datePrayerGroup.group-open>#datePrayerSubmenu,#prayerIqamaGroup.group-open>#prayerIqamaSubmenu{display:flex!important;flex-direction:column!important;gap:7px!important;margin-top:6px!important;padding:8px!important;border:1px solid rgba(126,180,191,.32)!important;border-radius:10px!important;background:rgba(10,30,41,.72)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important}
+      #backgroundFontSubmenu>.main-action,#datePrayerSubmenu>.main-action,#prayerIqamaSubmenu>.main-action,#datePrayerSubmenu>#prayerIqamaGroup{margin:0!important}
+      #datePrayerSubmenu>#prayerIqamaGroup{width:100%!important;padding:6px!important;border:1px solid rgba(86,179,149,.38)!important;border-radius:10px!important;background:rgba(23,107,92,.12)!important}
+      #datePrayerSubmenu>#prayerIqamaGroup.group-open{padding:7px!important;background:rgba(23,107,92,.20)!important;box-shadow:0 3px 10px rgba(0,0,0,.12)!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{margin:0!important}
+      /* Main design-data icons: distinct identity + tidy framed contents when expanded. Visual only. */
+      #backgroundFontGroup>#backgroundFontMainBtn{background:linear-gradient(135deg,#9a6424,#c58a35)!important;border:1px solid #e0ad62!important;box-shadow:0 3px 10px rgba(154,100,36,.24)!important}
+      #datePrayerGroup>#datePrayerMainBtn{background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border:1px solid #56b395!important;box-shadow:0 3px 10px rgba(23,107,92,.24)!important}
+      #backgroundFontGroup.group-open,#datePrayerGroup.group-open{padding:6px!important;border-radius:11px!important;background:rgba(7,24,34,.72)!important;border:1px solid rgba(143,196,204,.28)!important;box-shadow:0 7px 18px rgba(0,0,0,.24)!important}
+      #backgroundFontGroup.group-open>#backgroundFontMainBtn,#datePrayerGroup.group-open>#datePrayerMainBtn{margin-bottom:6px!important}
+      #backgroundFontGroup.group-open>#backgroundFontSubmenu,#datePrayerGroup.group-open>#datePrayerSubmenu{padding:7px!important;border-radius:9px!important;background:linear-gradient(160deg,rgba(22,43,55,.96),rgba(13,31,43,.96))!important;border:1px solid rgba(120,177,191,.30)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+      /* Distinct colors for every submenu icon/button. Visual only; no click behavior changes. */
+      #backgroundFontSubmenu>.main-action:nth-child(1){background:linear-gradient(135deg,#7b3fa1,#a55bc1)!important;border:1px solid #bd78d1!important;color:#fff!important}
+      #backgroundFontSubmenu>.main-action:nth-child(2){background:linear-gradient(135deg,#176f9f,#2489bb)!important;border:1px solid #46a1c8!important;color:#fff!important}
+      #backgroundFontSubmenu>.main-action:nth-child(3){background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border:1px solid #dda14f!important;color:#fff!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{width:100%!important;max-width:100%!important;min-height:34px!important;height:34px!important;margin:0 0 5px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11.5px!important;background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border:1px solid #56b395!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important}\n      #datePrayerSubmenu>.main-action:nth-of-type(1){background:linear-gradient(135deg,#0d7890,#13a2a0)!important;border:1px solid #39b8b0!important;color:#fff!important}
+      #datePrayerSubmenu>.main-action:nth-child(2){background:linear-gradient(135deg,#2e7d4f,#43a565)!important;border:1px solid #62ba7b!important;color:#fff!important}
+      #datePrayerSubmenu>.main-action:nth-child(3){background:linear-gradient(135deg,#9b6a16,#c58b24)!important;border:1px solid #d6a144!important;color:#fff!important}
+      #datePrayerSubmenu>.main-action:nth-child(4){background:linear-gradient(135deg,#a74468,#c75b7f)!important;border:1px solid #d77a98!important;color:#fff!important}
+      #backgroundFontSubmenu>.main-action *,#datePrayerSubmenu>.main-action *{color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open{display:block!important;position:fixed!important;z-index:10050!important;top:50%!important;left:50%!important;right:auto!important;transform:translate(-50%,-50%)!important;width:min(90vw,360px)!important;max-width:calc(100vw - 24px)!important;max-height:78vh!important;overflow-y:auto!important;margin:0!important;padding:38px 12px 12px!important;border-radius:12px!important;background:rgba(3,18,27,.96)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;border:1px solid rgba(255,255,255,.20)!important;box-shadow:0 18px 46px rgba(0,0,0,.68)!important}body.design-detail-open::after{content:"";position:fixed;inset:0;z-index:10005;background:rgba(0,8,14,.52);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none}
       body.design-menu-open .sidebar .inline-control-panel.inline-open{background:linear-gradient(160deg,rgba(10,42,55,.985),rgba(8,31,44,.985))!important;border-color:rgba(104,190,205,.38)!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open label{color:#eaf6f8!important}
@@ -76,13 +99,54 @@
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="true"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="true"] *{color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on),body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"],body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
       body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on) *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"] *{color:#fff!important}
+      #interfaceVisibilityControls,#designVisibilityControls,#designEditTools{margin:8px 0 0!important}
+      /* Separate each tool group visually so an opened section never blends into the next icon. */
+      body.design-menu-open #backgroundPanel #backgroundDesignTools,
+      body.design-menu-open #backgroundPanel #interfaceVisibilityControls,
+      body.design-menu-open #backgroundPanel #designVisibilityControls{
+        margin:10px 0!important;padding:8px!important;border:1px solid #d8c49d!important;border-radius:12px!important;
+        background:rgba(255,255,255,.42)!important;box-shadow:0 3px 10px rgba(74,55,28,.08)!important;
+      }
+      body.design-menu-open #backgroundPanel #backgroundDesignTools + #interfaceVisibilityControls,
+      body.design-menu-open #backgroundPanel #interfaceVisibilityControls + #designVisibilityControls{
+        margin-top:12px!important;
+      }
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid,
+      body.design-menu-open #backgroundPanel .visibility-section-body{
+        margin-top:7px!important;padding:8px!important;border-radius:9px!important;
+        background:rgba(246,237,219,.72)!important;border:1px solid rgba(196,169,119,.45)!important;
+      }
+      body.design-menu-open #backgroundPanel .visibility-section:not(.visibility-section-open) .visibility-section-body{margin-top:0!important;padding:0!important;border:0!important}
+      #designEditTools .design-edit-tools-body{display:flex!important;flex-direction:column!important;gap:6px!important}
+      #designEditTools .design-edit-tools-body>.main-action,#designEditTools .design-edit-tools-body>button,#designEditTools .design-edit-tools-body>.drag-info,#designEditTools .design-edit-tools-body>.drag-info>button{width:100%!important;max-width:100%!important;margin:0!important;min-height:36px!important}
+      #designEditTools .design-edit-tools-body>.drag-info{padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
+      #designEditTools .design-edit-tools-body>.drag-info>span{display:none!important}
+      /* Design edit tools: slim, distinct colors. Visual-only; no behavior changes. */
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid{gap:5px!important;padding-top:6px!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid>button,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid>.main-action,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle{min-height:30px!important;height:30px!important;padding:3px 10px!important;border-radius:7px!important;font-size:12px!important;font-weight:800!important;box-shadow:0 1px 3px rgba(20,45,55,.10)!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #changeBackgroundBtn{background:linear-gradient(135deg,#176f9f,#2489bb)!important;border-color:#2d91bd!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #saveDesignAdjustments{background:linear-gradient(135deg,#6b3fa0,#8c55b4)!important;border-color:#9a68bc!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #resetPositions{background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border-color:#d89843!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools [data-open-panel="footerPanel"]{background:linear-gradient(135deg,#a74468,#c75b7f)!important;border-color:#d06d8d!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle:not(.is-on)[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle.is-on,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle[aria-pressed="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
+      .visibility-section-toggle{width:100%!important;min-height:32px!important;height:32px!important;margin:0!important;padding:3px 10px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:8px!important;color:#fff!important;font-weight:800!important;font-size:12.5px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;cursor:pointer!important;box-shadow:0 1px 4px rgba(20,45,55,.13)!important;transition:transform .16s ease,filter .16s ease!important}
+      .visibility-section-toggle:active{transform:scale(.992)!important}
+      #designEditTools .visibility-section-toggle{background:linear-gradient(135deg,#087f78,#0aa59a)!important;border-color:#0fb5a8!important}
+      #interfaceVisibilityControls .visibility-section-toggle{background:linear-gradient(135deg,#1d5f9e,#2f86c6)!important;border-color:#4397d2!important}
+      #designVisibilityControls .visibility-section-toggle{background:linear-gradient(135deg,#6b3fa0,#9657bd)!important;border-color:#a36bc5!important}
+      .visibility-section-toggle span{color:#fff!important}.visibility-section-toggle .visibility-arrow{font-size:9px!important;opacity:.9;transition:transform .18s ease}.visibility-section-toggle[aria-expanded="true"] .visibility-arrow{transform:rotate(180deg)}
+      .visibility-section-body{display:none!important;padding-top:6px!important}.visibility-section-open>.visibility-section-body{display:block!important}
       .design-popup-close{position:absolute!important;top:7px!important;left:7px!important;z-index:2!important;width:27px!important;height:27px!important;min-width:27px!important;min-height:27px!important;margin:0!important;padding:0!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:7px!important;background:#16594f!important;color:#fff!important;font-size:18px!important;font-weight:800!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important}
       body.design-detail-open .sidebar .main-panel>h2,body.design-detail-open .sidebar .main-panel>#backgroundFontGroup,body.design-detail-open .sidebar .main-panel>#datePrayerGroup,body.design-detail-open .sidebar .main-panel>[data-open-panel="switchPanel"],body.design-detail-open .sidebar .main-panel>#topExportJpg{visibility:hidden!important;pointer-events:none!important}
       @media(max-width:800px){.sidebar .main-panel{padding:7px!important}.sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:max-content!important;max-width:100%!important;min-width:0!important;min-height:32px!important;height:32px!important;margin:0 0 3px auto!important;padding:4px 8px!important;font-size:12px!important;border-radius:7px!important}#datePrayerSubmenu,#backgroundFontSubmenu{width:100%!important;min-width:0!important;max-width:100%!important;margin:0!important}#datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;max-width:100%!important;min-width:0!important;min-height:32px!important;height:32px!important;font-size:11px!important}}
     `;document.head.appendChild(s);
   }
 
-  function closeGroups(except=null){['datePrayerGroup','backgroundFontGroup'].forEach(id=>{const g=document.getElementById(id);if(g&&g!==except)g.classList.remove('group-open');});}
+  function closeGroups(except=null){['datePrayerGroup','prayerIqamaGroup','backgroundFontGroup'].forEach(id=>{const g=document.getElementById(id);if(g&&g!==except&&!(except&&g.contains(except)))g.classList.remove('group-open');});}
   function closePanels(except=null){document.querySelectorAll('.inline-control-panel.inline-open').forEach(p=>{if(p===except)return;p.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${p.id}"]`)?.classList.remove('inline-active');});if(!except)document.body.classList.remove('design-detail-open');}
   function addClose(panel){if(!panel||panel.querySelector(':scope > .design-popup-close'))return;const x=document.createElement('button');x.type='button';x.className='design-popup-close';x.setAttribute('aria-label','رجوع');x.setAttribute('title','رجوع');x.textContent='‹';x.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();panel.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${panel.id}"]`)?.classList.remove('inline-active');document.body.classList.remove('design-detail-open');});panel.prepend(x);}
 
@@ -121,10 +185,22 @@
   document.addEventListener('click',()=>setTimeout(syncLegacyToggleColors,0),true);
   setTimeout(syncLegacyToggleColors,0);
 
-  function consolidateDataPrayer(){const a=document.querySelector('[data-open-panel="datePanel"]'),b=document.querySelector('[data-open-panel="prayerPanel"]'),c=document.querySelector('[data-open-panel="iqamaPanel"]');if(!a||!b||!c)return false;createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');const s=document.getElementById('datePrayerSubmenu');[a,b,c].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function consolidateDataPrayer(){
+    const date=document.querySelector('[data-open-panel="datePanel"]'),prayer=document.querySelector('[data-open-panel="prayerPanel"]'),iqama=document.querySelector('[data-open-panel="iqamaPanel"]'),switchBtn=document.querySelector('[data-open-panel="switchPanel"]');
+    if(!date||!prayer||!iqama)return false;
+    createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');
+    const dateMenu=document.getElementById('datePrayerSubmenu');
+    createGroup('prayerIqamaGroup','prayerIqamaMainBtn','prayerIqamaSubmenu','بيانات الصلاة و الإقامة','🕌');
+    const prayerGroup=document.getElementById('prayerIqamaGroup');
+    const prayerMenu=document.getElementById('prayerIqamaSubmenu');
+    [prayer,iqama].forEach(x=>{if(x.parentElement!==prayerMenu)prayerMenu.appendChild(x)});
+    [prayerGroup,date,switchBtn].filter(Boolean).forEach(x=>{if(x.parentElement!==dateMenu)dateMenu.appendChild(x)});
+    return true;
+  }
   function addInterfaceVisibilityControls(){
     const panel=document.getElementById('backgroundPanel');if(!panel||document.getElementById('interfaceVisibilityControls'))return false;
-    const box=document.createElement('div');box.id='interfaceVisibilityControls';box.innerHTML='<div style="font-weight:800;margin:10px 0 6px">إظهار عناصر واجهة البرنامج</div><div class="interface-visibility-grid"></div>';
+    const box=document.createElement('div');box.id='interfaceVisibilityControls';box.className='visibility-section';box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>👁️ إظهار عناصر واجهة البرنامج</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid"></div></div>';
+    const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
     const grid=box.querySelector('.interface-visibility-grid'),KEY='aoqatInterfaceVisibilityV1';
     let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
     const items=[['clock','الساعة','.interface-clock-card'],['date','التاريخ','.interface-date-card'],['adhan','باقي على صلاة...','.next-prayer'],['iqama','باقي على الإقامة','.iqama-status']];
@@ -132,7 +208,35 @@
     items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=!(state[k]!==false);localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
     panel.appendChild(box);apply();setInterval(apply,1000);return true;
   }
-  function consolidateBackgroundFont(){addInterfaceVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a].forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function addDesignVisibilityControls(){
+    const panel=document.getElementById('backgroundPanel');if(!panel)return false;
+    let box=document.getElementById('designVisibilityControls');
+    if(!box){
+      box=document.createElement('div');box.id='designVisibilityControls';box.className='visibility-section';
+      box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>🖼️ إظهار / إخفاء التصاميم</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid design-visibility-grid"></div></div>';
+      const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
+      panel.appendChild(box);
+    }
+    const grid=box.querySelector('.design-visibility-grid'),KEY='aoqatDesignVisibilityV1';
+    let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
+    const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(slide=>!slide.dataset.legacySlide&&!slide.querySelector('#design')&&!slide.classList.contains('removed-design-storage')&&!slide.closest('.removed-design-storage'));
+    if(!slides.length)return false;
+    slides.forEach((slide,i)=>{if(!slide.dataset.visibilityKey)slide.dataset.visibilityKey='design-'+(i+1);});
+    const enabledSlides=()=>slides.filter(slide=>state[slide.dataset.visibilityKey]!==false);
+    const apply=()=>{
+      if(!enabledSlides().length){state[slides[0].dataset.visibilityKey]=true;localStorage.setItem(KEY,JSON.stringify(state));}
+      slides.forEach(slide=>slide.dataset.designDisabled=state[slide.dataset.visibilityKey]===false?'true':'false');
+      window.dispatchEvent(new CustomEvent('prayerDesignVisibilityChanged',{detail:{state}}));
+    };
+    grid.innerHTML='';
+    slides.forEach((slide,i)=>{
+      const key=slide.dataset.visibilityKey,b=document.createElement('button');b.type='button';b.className='interface-visibility-btn design-visibility-btn';
+      const draw=()=>{const on=state[key]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>التصميم '+(i+1)+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};
+      b.onclick=()=>{const on=state[key]!==false;if(on&&enabledSlides().length===1)return;state[key]=!on;localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);
+    });
+    apply();return true;
+  }
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]'),e=document.getElementById('topExportJpg');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a,e].filter(Boolean).forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
   function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
 
   function installExclusivePopupBehavior(){
