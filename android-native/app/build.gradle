@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 29
+        versionCode 30
         versionName '1.21'
     }
 
@@ -68,7 +68,7 @@ tasks.register('syncWebAssets', Sync) {
         def indexFile = file("$webAssetDir/index.html")
         if (indexFile.exists()) {
             def html = indexFile.getText('UTF-8')
-            def tag = '<script src="js/startup-stabilizer.js"></script>\n<script src="js/android-ui-fixes.js"></script>'
+            def tag = '<script src="js/android-ui-fixes.js"></script>'
             if (!html.contains(tag)) {
                 html = html.replace('</body>', "${tag}\n</body>")
                 indexFile.write(html, 'UTF-8')
