@@ -236,7 +236,17 @@
     [350,800,1400,2400].forEach(ms=>setTimeout(refreshAndroidDesignVisibility,ms));
   }
 
+  function enableNativeNotificationBridge(){
+    if(window.AndroidNative && typeof window.Notification==="undefined"){
+      window.Notification={
+        permission:"granted",
+        requestPermission:async function(){return "granted";}
+      };
+    }
+  }
+
   function init(){
+    enableNativeNotificationBridge();
     injectAndroidStyles();
     bindUniversalEvents();
     watchAndroidDesignSlides();
