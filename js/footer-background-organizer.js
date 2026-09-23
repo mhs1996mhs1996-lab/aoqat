@@ -17,28 +17,38 @@
   }
 
   function organize(){
+    const mainPanel=document.querySelector('.sidebar .main-panel');
     const backgroundPanel=document.getElementById('backgroundPanel');
     const footerPanel=document.getElementById('footerPanel');
-    const footerButton=document.querySelector('[data-open-panel="footerPanel"]');
-    const toolsGrid=document.querySelector('#backgroundDesignTools .bg-tools-grid');
-    if(!backgroundPanel||!footerPanel||!toolsGrid) return false;
+    if(!mainPanel||!backgroundPanel||!footerPanel) return false;
 
     addStyles();
 
-    /* النص السفلي يبقى كزر أصلي داخل مجموعة أدوات تعديل التصميم فقط. */
-    const oldWrap=document.getElementById('backgroundFooterControl');
-    if(oldWrap){
-      const generatedToggle=oldWrap.querySelector('#backgroundFooterToggle');
-      if(generatedToggle) generatedToggle.remove();
-      if(footerPanel.parentElement===oldWrap) backgroundPanel.appendChild(footerPanel);
-      oldWrap.remove();
+    const oldButton=mainPanel.querySelector('[data-open-panel="footerPanel"]');
+    if(oldButton) oldButton.remove();
+
+    let wrap=document.getElementById('backgroundFooterControl');
+    if(!wrap){
+      wrap=document.createElement('div');
+      wrap.id='backgroundFooterControl';
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.id='backgroundFooterToggle';
+      btn.innerHTML='✍ <span>النص السفلي</span>';
+      wrap.appendChild(btn);
+      backgroundPanel.appendChild(wrap);
+      btn.addEventListener('click',event=>{
+        event.preventDefault();
+        event.stopPropagation();
+        const open=!footerPanel.classList.contains('footer-inside-open');
+        footerPanel.classList.toggle('footer-inside-open',open);
+        btn.classList.toggle('is-open',open);
+      });
     }
 
-    if(footerButton&&footerButton.parentElement!==toolsGrid) toolsGrid.appendChild(footerButton);
-    if(footerButton) footerButton.innerHTML='✍️ <span>النص السفلي</span>';
-
-    footerPanel.classList.remove('footer-inside-open');
-    return !!footerButton;
+    footerPanel.classList.remove('inline-open','active-panel','collapsed');
+    if(footerPanel.parentElement!==wrap) wrap.appendChild(footerPanel);
+    return true;
   }
 
   function init(){
