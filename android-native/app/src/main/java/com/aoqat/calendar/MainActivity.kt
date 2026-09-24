@@ -63,7 +63,7 @@ object IqamaPersistentNotification {
             .setAction("SHOW")
             .putExtra("elapsed", elapsed)
             .putExtra("base", base)
-        if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+        startSafely(context, intent)
 
         if (elapsed) {
             schedule(context, "HIDE", (10L * 60L - seconds).coerceAtLeast(1L), REQUEST_HIDE)
@@ -78,8 +78,18 @@ object IqamaPersistentNotification {
             .setAction("SHOW")
             .putExtra("elapsed", true)
             .putExtra("base", System.currentTimeMillis())
-        if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+        startSafely(context, intent)
         schedule(context, "HIDE", 10L * 60L, REQUEST_HIDE)
+    }
+
+    private fun startSafely(context: android.content.Context, intent: Intent) {
+        try {
+            if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+        } catch (_: Exception) {
+            // Never let a foreground-service restriction close the app.
+            val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.cancel(NOTIFICATION_ID)
+        }
     }
 
     private fun schedule(context: android.content.Context, action: String, seconds: Long, request: Int) {
