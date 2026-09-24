@@ -117,15 +117,39 @@ object IqamaPersistentNotification {
 }
 
 class IqamaNotificationService : android.app.Service() {
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var elapsed = false
+    private var base = 0L
+
+    private val ticker = object : Runnable {
+        override fun run() {
+            val manager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(elapsed, base))
+            handler.postDelayed(this, 1000L)
+        }
+    }
+
     override fun onBind(intent: Intent?) = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "SHOW") {
-            val elapsed = intent.getBooleanExtra("elapsed", false)
-            val base = intent.getLongExtra("base", System.currentTimeMillis())
+            elapsed = intent.getBooleanExtra("elapsed", false)
+            base = intent.getLongExtra("base", System.currentTimeMillis())
             startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(elapsed, base))
+            handler.removeCallbacks(ticker)
+            handler.post(ticker)
         }
         return START_STICKY
+    }
+
+    private fun clockText(): String {
+        val now = System.currentTimeMillis()
+        val total = if (elapsed) ((now - base) / 1000L).coerceAtLeast(0L) else ((base - now + 999L) / 1000L).coerceAtLeast(0L)
+        val hours = total / 3600L
+        val minutes = (total % 3600L) / 60L
+        val seconds = total % 60L
+        return if (hours > 0) String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+        else String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
     }
 
     private fun buildNotification(elapsed: Boolean, base: Long): android.app.Notification {
@@ -135,7 +159,7 @@ class IqamaNotificationService : android.app.Service() {
         val builder = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
-            .setContentText(title)
+            .setContentText(clockText())
             .setContentIntent(openPending)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -144,14 +168,15 @@ class IqamaNotificationService : android.app.Service() {
             .setAutoCancel(false)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setWhen(base)
-            .setShowWhen(true)
-            .setUsesChronometer(true)
-        if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
-        return builder.build()
+            .setShowWhen(false)
+            .setUsesChronometer(false)
+        val notification = builder.build()
+        notification.flags = notification.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR
+        return notification
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(ticker)
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
