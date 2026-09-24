@@ -30,8 +30,8 @@ import java.io.FileOutputStream
 
 
 object IqamaPersistentNotification {
-    private const val CHANNEL_ID = "iqama_persistent_v121"
-    private const val NOTIFICATION_ID = 45221
+    const val CHANNEL_ID = "iqama_persistent_v122"
+    const val NOTIFICATION_ID = 45221
     private const val REQUEST_SWITCH = 45222
     private const val REQUEST_HIDE = 45223
 
@@ -42,6 +42,7 @@ object IqamaPersistentNotification {
             description = "إشعار ثابت للوقت المتبقي أو المنقضي على الإقامة"
             setSound(null, null)
             enableVibration(false)
+            setShowBadge(false)
             lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannel(channel)
@@ -57,35 +58,28 @@ object IqamaPersistentNotification {
         val elapsed = text.contains("مضى على الإقامة")
         val seconds = secondsFrom(text).coerceAtLeast(0L)
         val now = System.currentTimeMillis()
-        val whenMillis = if (elapsed) now - seconds * 1000L else now + seconds * 1000L
-
-        val openIntent = Intent(context, MainActivity::class.java)
-        val openPending = PendingIntent.getActivity(context, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle(if (elapsed) "مضى على الإقامة" else "باقي على الإقامة")
-            .setContentText(text)
-            .setContentIntent(openPending)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_STATUS)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setOnlyAlertOnce(true)
-            .setSilent(true)
-            .setWhen(whenMillis)
-            .setShowWhen(true)
-            .setUsesChronometer(true)
-
-        if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
-        val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
-        manager.notify(NOTIFICATION_ID, builder.build())
+        val base = if (elapsed) now - seconds * 1000L else now + seconds * 1000L
+        val intent = Intent(context, IqamaNotificationService::class.java)
+            .setAction("SHOW")
+            .putExtra("elapsed", elapsed)
+            .putExtra("base", base)
+        if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
 
         if (elapsed) {
             schedule(context, "HIDE", (10L * 60L - seconds).coerceAtLeast(1L), REQUEST_HIDE)
         } else {
             schedule(context, "SWITCH", seconds.coerceAtLeast(1L), REQUEST_SWITCH)
         }
+    }
+
+    fun showElapsed(context: android.content.Context) {
+        ensureChannel(context)
+        val intent = Intent(context, IqamaNotificationService::class.java)
+            .setAction("SHOW")
+            .putExtra("elapsed", true)
+            .putExtra("base", System.currentTimeMillis())
+        if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
+        schedule(context, "HIDE", 10L * 60L, REQUEST_HIDE)
     }
 
     private fun schedule(context: android.content.Context, action: String, seconds: Long, request: Int) {
@@ -101,6 +95,7 @@ object IqamaPersistentNotification {
     }
 
     fun hide(context: android.content.Context) {
+        context.stopService(Intent(context, IqamaNotificationService::class.java))
         val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
         val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
@@ -111,10 +106,51 @@ object IqamaPersistentNotification {
     }
 }
 
+class IqamaNotificationService : android.app.Service() {
+    override fun onBind(intent: Intent?) = null
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == "SHOW") {
+            val elapsed = intent.getBooleanExtra("elapsed", false)
+            val base = intent.getLongExtra("base", System.currentTimeMillis())
+            startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(elapsed, base))
+        }
+        return START_STICKY
+    }
+
+    private fun buildNotification(elapsed: Boolean, base: Long): android.app.Notification {
+        val openIntent = Intent(this, MainActivity::class.java)
+        val openPending = PendingIntent.getActivity(this, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val title = if (elapsed) "مضى على الإقامة" else "باقي على الإقامة"
+        val builder = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(title)
+            .setContentText(title)
+            .setContentIntent(openPending)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true)
+            .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setWhen(base)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+        if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
+        return builder.build()
+    }
+
+    override fun onDestroy() {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        super.onDestroy()
+    }
+}
+
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
         when (intent?.action) {
-            "SWITCH" -> IqamaPersistentNotification.show(context, "مضى على الإقامة 00:00")
+            "SWITCH" -> IqamaPersistentNotification.showElapsed(context)
             "HIDE" -> IqamaPersistentNotification.hide(context)
         }
     }
