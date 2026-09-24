@@ -327,21 +327,41 @@ class MainActivity : Activity() {
                 function wireNativeAlarm() {
                     document.querySelectorAll('button').forEach(function (button) {
                         var text = (button.innerText || '').trim();
-                        if (text.indexOf('تفعيل تنبيه النشر على الهاتف') === -1) return;
+                        if (text.indexOf('تنبيه النشر على الهاتف') === -1) return;
                         if (button.dataset.androidNativeAlarm === '1') return;
 
                         var clean = button.cloneNode(true);
                         clean.dataset.androidNativeAlarm = '1';
                         button.parentNode.replaceChild(clean, button);
+
+                        function draw(enabled) {
+                            clean.dataset.androidAlarmEnabled = enabled ? '1' : '0';
+                            clean.style.setProperty('background', enabled ? '#12a957' : '#7f9191', 'important');
+                            clean.style.setProperty('border-color', enabled ? '#0b8f48' : '#708181', 'important');
+                            clean.style.setProperty('color', '#fff', 'important');
+                            clean.innerHTML = enabled
+                                ? '🔔 تنبيه النشر على الهاتف <span style="margin-inline-start:12px;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,.16)">تشغيل</span>'
+                                : '🔔 تنبيه النشر على الهاتف <span style="margin-inline-start:12px;padding:4px 14px;border-radius:999px;background:rgba(255,255,255,.16)">إيقاف</span>';
+                        }
+
+                        var enabled = localStorage.getItem('aoqatAndroidPublishAlarmEnabled') === '1';
+                        draw(enabled);
+
                         clean.addEventListener('click', function (event) {
                             event.preventDefault();
                             event.stopPropagation();
                             event.stopImmediatePropagation();
-                            if (window.AndroidNative && AndroidNative.enableAlarm) {
-                                AndroidNative.enableAlarm();
-                                setTimeout(nativeStatus, 50);
-                                setTimeout(nativeStatus, 1000);
+                            var next = clean.dataset.androidAlarmEnabled !== '1';
+                            if (next) {
+                                if (window.AndroidNative && AndroidNative.enableAlarm) AndroidNative.enableAlarm();
+                                localStorage.setItem('aoqatAndroidPublishAlarmEnabled', '1');
+                            } else {
+                                if (window.AndroidNative && AndroidNative.disableAlarm) AndroidNative.disableAlarm();
+                                localStorage.setItem('aoqatAndroidPublishAlarmEnabled', '0');
                             }
+                            draw(next);
+                            setTimeout(nativeStatus, 50);
+                            setTimeout(nativeStatus, 1000);
                         }, true);
                     });
                 }
@@ -414,6 +434,14 @@ class MainActivity : Activity() {
                     Toast.LENGTH_LONG
                 ).show()
                 webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 100L)
+            }
+        }
+
+        @JavascriptInterface
+        fun disableAlarm() {
+            runOnUiThread {
+                AlarmScheduler.cancel(this@MainActivity)
+                Toast.makeText(this@MainActivity, "تم إيقاف منبّه النشر على الهاتف", Toast.LENGTH_SHORT).show()
             }
         }
 
