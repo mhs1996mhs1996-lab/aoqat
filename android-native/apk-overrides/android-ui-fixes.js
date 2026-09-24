@@ -236,6 +236,32 @@
     [350,800,1400,2400].forEach(ms=>setTimeout(refreshAndroidDesignVisibility,ms));
   }
 
+  function fixAndroidColorSwatches(){
+    if(document.getElementById("androidColorSwatchFix")) return;
+    const s=document.createElement("style");
+    s.id="androidColorSwatchFix";
+    s.textContent=`
+      #designColorPalette .palette-color{
+        background-color:var(--aoqat-swatch-color)!important;
+        background-image:none!important;
+      }
+    `;
+    document.head.appendChild(s);
+    const paint=()=>{
+      document.querySelectorAll("#designColorPalette .palette-color").forEach(b=>{
+        const color=b.dataset.color;
+        if(!color) return;
+        b.style.setProperty("--aoqat-swatch-color",color);
+        b.style.setProperty("background-color",color,"important");
+        b.style.setProperty("background-image","none","important");
+      });
+    };
+    paint();
+    const host=document.getElementById("designColorPalette")||document.body;
+    new MutationObserver(paint).observe(host,{childList:true,subtree:true});
+    window.addEventListener("prayerDesignChanged",()=>setTimeout(paint,120));
+  }
+
   function enableNativeNotificationBridge(){
     if(window.AndroidNative && typeof window.Notification==="undefined"){
       window.Notification={
@@ -248,6 +274,7 @@
   function init(){
     enableNativeNotificationBridge();
     injectAndroidStyles();
+    fixAndroidColorSwatches();
     bindUniversalEvents();
     watchAndroidDesignSlides();
     setTimeout(syncAllData,350);
