@@ -48,6 +48,17 @@ object AlarmScheduler {
         }.start()
     }
 
+    fun cancel(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val intent = Intent(context, AlarmReceiver::class.java)
+        val pending = PendingIntent.getBroadcast(context, REQUEST_CODE, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+        if (pending != null) {
+            alarmManager.cancel(pending)
+            pending.cancel()
+        }
+        AlarmSoundService.stop(context)
+    }
+
     fun scheduleSnooze(context: Context, minutes: Long = 10L) {
         scheduleExactMillis(context, System.currentTimeMillis() + minutes * 60_000L)
     }
