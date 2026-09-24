@@ -105,6 +105,7 @@ object IqamaPersistentNotification {
     }
 
     fun hide(context: android.content.Context) {
+        context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE).edit().putBoolean("active", false).apply()
         context.stopService(Intent(context, IqamaNotificationService::class.java))
         val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
@@ -117,17 +118,9 @@ object IqamaPersistentNotification {
 }
 
 class IqamaNotificationService : android.app.Service() {
-    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private var elapsed = false
     private var base = 0L
-
-    private val ticker = object : Runnable {
-        override fun run() {
-            val manager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(elapsed, base))
-            handler.postDelayed(this, 1000L)
-        }
-    }
+    private val prefs by lazy { getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE) }
 
     override fun onBind(intent: Intent?) = null
 
@@ -135,31 +128,23 @@ class IqamaNotificationService : android.app.Service() {
         if (intent?.action == "SHOW") {
             elapsed = intent.getBooleanExtra("elapsed", false)
             base = intent.getLongExtra("base", System.currentTimeMillis())
-            startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(elapsed, base))
-            handler.removeCallbacks(ticker)
-            handler.post(ticker)
+            prefs.edit().putBoolean("active", true).putBoolean("elapsed", elapsed).putLong("base", base).apply()
+        } else {
+            elapsed = prefs.getBoolean("elapsed", false)
+            base = prefs.getLong("base", System.currentTimeMillis())
         }
+        startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification())
         return START_STICKY
     }
 
-    private fun clockText(): String {
-        val now = System.currentTimeMillis()
-        val total = if (elapsed) ((now - base) / 1000L).coerceAtLeast(0L) else ((base - now + 999L) / 1000L).coerceAtLeast(0L)
-        val hours = total / 3600L
-        val minutes = (total % 3600L) / 60L
-        val seconds = total % 60L
-        return if (hours > 0) String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-        else String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
-    }
-
-    private fun buildNotification(elapsed: Boolean, base: Long): android.app.Notification {
+    private fun buildNotification(): android.app.Notification {
         val openIntent = Intent(this, MainActivity::class.java)
         val openPending = PendingIntent.getActivity(this, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val title = if (elapsed) "مضى على الإقامة" else "باقي على الإقامة"
         val builder = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
-            .setContentText(clockText())
+            .setContentText(title)
             .setContentIntent(openPending)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -168,16 +153,24 @@ class IqamaNotificationService : android.app.Service() {
             .setAutoCancel(false)
             .setOnlyAlertOnce(true)
             .setSilent(true)
-            .setShowWhen(false)
-            .setUsesChronometer(false)
+            .setWhen(base)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+        if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
         val notification = builder.build()
         notification.flags = notification.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR
         return notification
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Keep the foreground countdown alive when the app task is closed.
+        super.onTaskRemoved(rootIntent)
+    }
+
     override fun onDestroy() {
-        handler.removeCallbacks(ticker)
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        if (!prefs.getBoolean("active", false)) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        }
         super.onDestroy()
     }
 }
