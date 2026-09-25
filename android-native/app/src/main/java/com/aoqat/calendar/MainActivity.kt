@@ -118,65 +118,52 @@ object IqamaPersistentNotification {
 }
 
 class IqamaNotificationService : android.app.Service() {
-    private var elapsed = false
-    private var base = 0L
+    private var elapsed=false
+    private var base=0L
+    private val handler=android.os.Handler(android.os.Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE) }
-
-    override fun onBind(intent: Intent?) = null
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == "SHOW") {
-            elapsed = intent.getBooleanExtra("elapsed", false)
-            base = intent.getLongExtra("base", System.currentTimeMillis())
-            prefs.edit().putBoolean("active", true).putBoolean("elapsed", elapsed).putLong("base", base).apply()
-        } else {
-            elapsed = prefs.getBoolean("elapsed", false)
-            base = prefs.getLong("base", System.currentTimeMillis())
+    private val ticker=object:Runnable{
+        override fun run(){
+            val now=System.currentTimeMillis()
+            if(!elapsed && now>=base){
+                elapsed=true
+                prefs.edit().putBoolean("elapsed",true).putLong("base",base).apply()
+            }
+            if(elapsed && now-base>=10L*60L*1000L){ stopSelf(); return }
+            val n=buildNotification(now)
+            (getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager).notify(IqamaPersistentNotification.NOTIFICATION_ID,n)
+            handler.postDelayed(this,1000L-(System.currentTimeMillis()%1000L))
         }
-        startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification())
+    }
+    override fun onBind(intent:Intent?)=null
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
+        if(intent?.action=="SHOW"){
+            elapsed=intent.getBooleanExtra("elapsed",false);base=intent.getLongExtra("base",System.currentTimeMillis())
+            prefs.edit().putBoolean("active",true).putBoolean("elapsed",elapsed).putLong("base",base).apply()
+        }else{elapsed=prefs.getBoolean("elapsed",false);base=prefs.getLong("base",System.currentTimeMillis())}
+        startForeground(IqamaPersistentNotification.NOTIFICATION_ID,buildNotification(System.currentTimeMillis()))
+        handler.removeCallbacks(ticker);handler.post(ticker)
         return START_STICKY
     }
-
-    private fun buildNotification(): android.app.Notification {
-        val openIntent = Intent(this, MainActivity::class.java)
-        val openPending = PendingIntent.getActivity(this, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val title = if (elapsed) "مضى على الإقامة" else "باقي على الإقامة"
-        val builder = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle(title)
-            // Android's native chronometer below is the single source of truth.
-            // Do not add a second JavaScript/snapshot clock in the notification body.
-            .setContentText(title)
-            .setContentIntent(openPending)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(true)
-            .setAutoCancel(false)
-            .setOnlyAlertOnce(true)
-            .setSilent(true)
-            .setWhen(base)
-            .setShowWhen(true)
-            .setUsesChronometer(true)
-        if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
-        val notification = builder.build()
-        notification.flags = notification.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
-        return notification
+    private fun clock(now:Long):String{
+        val s=(if(elapsed)(now-base)/1000L else (base-now+999L)/1000L).coerceAtLeast(0L)
+        val h=s/3600;val m=(s%3600)/60;val sec=s%60
+        return if(h>0) String.format(java.util.Locale.US,"%02d:%02d:%02d",h,m,sec) else String.format(java.util.Locale.US,"%02d:%02d",m,sec)
     }
-
-    override fun onTaskRemoved(rootIntent: Intent?) {
-        // Keep the foreground countdown alive when the app task is closed.
-        super.onTaskRemoved(rootIntent)
+    private fun buildNotification(now:Long):android.app.Notification{
+        val title=if(elapsed)"مضى على الإقامة" else "باقي على الإقامة";val value=clock(now)
+        val openPending=PendingIntent.getActivity(this,45220,Intent(this,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val n=NotificationCompat.Builder(this,IqamaPersistentNotification.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(title).setContentText(value)
+            .setContentIntent(openPending).setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true)
+            .setShowWhen(false).build()
+        n.flags=n.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
+        return n
     }
-
-    override fun onDestroy() {
-        if (!prefs.getBoolean("active", false)) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        }
-        super.onDestroy()
-    }
+    override fun onTaskRemoved(rootIntent:Intent?){super.onTaskRemoved(rootIntent)}
+    override fun onDestroy(){handler.removeCallbacks(ticker);prefs.edit().putBoolean("active",false).apply();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
-
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
         when (intent?.action) {
