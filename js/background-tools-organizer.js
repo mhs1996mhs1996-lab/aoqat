@@ -6,8 +6,11 @@
     s.id="backgroundToolsStyles";
     s.textContent=`
       #backgroundDesignTools{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.10)}
-      #backgroundDesignTools .bg-tools-title{font-size:13px;font-weight:800;margin:0 0 7px;color:#e7eef3}
-      #backgroundDesignTools .bg-tools-grid{display:grid;grid-template-columns:1fr;gap:5px}
+      #backgroundDesignTools .bg-tools-toggle{width:100%!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:42px!important;background:#176f9f!important;color:#fff!important;border:1px solid rgba(255,255,255,.16)!important;border-radius:9px!important;padding:9px 12px!important;font-size:14px!important;font-weight:800!important}
+      #backgroundDesignTools .bg-tools-arrow{transition:transform .18s ease}
+      #backgroundDesignTools.is-open .bg-tools-arrow{transform:rotate(180deg)}
+      #backgroundDesignTools .bg-tools-grid{display:none;grid-template-columns:1fr;gap:5px;margin-top:7px}
+      #backgroundDesignTools.is-open .bg-tools-grid{display:grid}
       #backgroundDesignTools button{width:100%!important;min-width:0!important;margin:0!important;min-height:34px!important;border-radius:8px!important;padding:7px 10px!important;font-size:13px!important;font-weight:700!important;box-shadow:none!important}
       #backgroundDesignTools .manual-edit-toggle-wrap{margin:0!important;width:100%!important}
       #backgroundDesignTools #manualEditToggle{width:100%!important}
@@ -30,8 +33,14 @@
     if(!box){
       box=document.createElement("div");
       box.id="backgroundDesignTools";
-      box.innerHTML='<div class="bg-tools-title">🛠 أدوات تعديل التصميم</div><div class="bg-tools-grid"></div>';
+      box.innerHTML='<button type="button" class="bg-tools-toggle" aria-expanded="false"><span>🛠 أدوات تعديل التصميم</span><span class="bg-tools-arrow">▼</span></button><div class="bg-tools-grid"></div>';
       panel.appendChild(box);
+      const toggle=box.querySelector(".bg-tools-toggle");
+      toggle.addEventListener("click",()=>{
+        const open=!box.classList.contains("is-open");
+        box.classList.toggle("is-open",open);
+        toggle.setAttribute("aria-expanded",String(open));
+      });
     }
     const grid=box.querySelector(".bg-tools-grid");
     const manualWrap=document.querySelector(".manual-edit-toggle-wrap");
@@ -39,7 +48,23 @@
     const reset=document.getElementById("resetPositions");
     const bgType=document.getElementById("bgType");
     const bgFile=document.getElementById("bgFile");
-    const footer=document.getElementById("backgroundFooterControl");
+    let footer=document.getElementById("backgroundFooterControl");
+    if(!footer){
+      const footerPanel=document.getElementById("footerPanel");
+      if(footerPanel){
+        footer=document.createElement("div");
+        footer.id="backgroundFooterControl";
+        const btn=document.createElement("button");
+        btn.type="button";btn.id="backgroundFooterToggle";btn.innerHTML="✍ <span>النص السفلي</span>";
+        footer.appendChild(btn);footer.appendChild(footerPanel);
+        btn.addEventListener("click",event=>{
+          event.preventDefault();event.stopPropagation();
+          const open=!footerPanel.classList.contains("footer-inside-open");
+          footerPanel.classList.toggle("footer-inside-open",open);
+          btn.classList.toggle("is-open",open);
+        });
+      }
+    }
 
     let changeBtn=document.getElementById("webChangeBackgroundBtn");
     if(!changeBtn){
@@ -63,7 +88,7 @@
     if(save) save.textContent="💾 حفظ التعديلات";
     if(reset) reset.textContent="↻ إعادة التموضع";
 
-    return !!(manualWrap&&save&&reset&&bgFile);
+    return !!(manualWrap&&save&&reset&&bgFile&&footer);
   }
 
   function init(){
