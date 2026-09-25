@@ -207,6 +207,7 @@ class MainActivity : Activity() {
 
         configureWebView()
         requestNotificationPermissionIfNeeded()
+        requestExactAlarmAccessIfNeeded()
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
         restoreIqamaServiceIfActive()
@@ -229,6 +230,17 @@ class MainActivity : Activity() {
         IqamaNativeScheduler.schedule(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
+        }
+    }
+
+    private fun requestExactAlarmAccessIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val am = getSystemService(ALARM_SERVICE) as AlarmManager
+            if (!am.canScheduleExactAlarms()) {
+                try {
+                    startActivity(Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, android.net.Uri.parse("package:$packageName")))
+                } catch (_: Exception) {}
+            }
         }
     }
 
