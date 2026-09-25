@@ -262,6 +262,68 @@
     window.addEventListener("prayerDesignChanged",()=>setTimeout(paint,120));
   }
 
+  function organizeAndroidBackgroundTools(){
+    const panel=document.getElementById('backgroundPanel');
+    const tools=document.getElementById('backgroundDesignTools');
+    if(!panel||!tools) return false;
+    const grid=tools.querySelector('.bg-tools-grid');
+    if(!grid) return false;
+
+    const bgType=document.getElementById('bgType');
+    const gradientBox=document.getElementById('gradientBox');
+    const imageBox=document.getElementById('imageBox');
+    if(bgType) bgType.closest('label')?.style.setProperty('display','none','important');
+    if(gradientBox) gradientBox.style.setProperty('display','none','important');
+    if(imageBox) imageBox.style.setProperty('display','none','important');
+
+    let changeBtn=document.getElementById('androidChangeBackgroundBtn');
+    if(!changeBtn){
+      changeBtn=document.createElement('button');
+      changeBtn.type='button';
+      changeBtn.id='androidChangeBackgroundBtn';
+      changeBtn.textContent='🖼️ تغيير الخلفية';
+      changeBtn.addEventListener('click',event=>{
+        event.preventDefault();
+        const input=document.getElementById('bgFile');
+        if(input){
+          if(bgType) bgType.value='image';
+          input.click();
+        }
+      });
+    }
+    if(changeBtn.parentElement!==grid) grid.appendChild(changeBtn);
+
+    const manual=document.querySelector('.manual-edit-toggle-wrap');
+    const save=document.getElementById('saveDesignAdjustments');
+    const footer=document.getElementById('backgroundFooterControl');
+    const reset=document.getElementById('resetPositions');
+    [manual,save,footer,reset].forEach(el=>{if(el&&el.parentElement!==grid) grid.appendChild(el);});
+
+    let s=document.getElementById('androidBackgroundToolsLayout');
+    if(!s){
+      s=document.createElement('style');s.id='androidBackgroundToolsLayout';
+      s.textContent=`
+        #backgroundDesignTools{margin-top:0!important;padding-top:0!important;border-top:0!important}
+        #backgroundDesignTools .bg-tools-grid{gap:7px!important}
+        #androidChangeBackgroundBtn{background:#176f9f!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important}
+        #backgroundDesignTools #backgroundFooterControl{margin:0!important;padding:0!important;border:0!important;width:100%!important}
+        #backgroundDesignTools #backgroundFooterToggle{margin:0!important;width:100%!important}
+      `;
+      document.head.appendChild(s);
+    }
+    return true;
+  }
+
+  function watchAndroidBackgroundTools(){
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      if(organizeAndroidBackgroundTools()||tries>100) clearInterval(timer);
+    },120);
+    organizeAndroidBackgroundTools();
+    window.addEventListener('aoqatModulesReady',()=>setTimeout(organizeAndroidBackgroundTools,80));
+  }
+
   function enableNativeNotificationBridge(){
     if(window.AndroidNative && typeof window.Notification==="undefined"){
       window.Notification={
@@ -277,6 +339,7 @@
     fixAndroidColorSwatches();
     bindUniversalEvents();
     watchAndroidDesignSlides();
+    watchAndroidBackgroundTools();
     setTimeout(syncAllData,350);
     setTimeout(syncAllData,1100);
     setTimeout(syncAllData,2200);
