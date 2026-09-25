@@ -180,6 +180,16 @@ class IqamaNotificationService : android.app.Service() {
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
         when (intent?.action) {
+            "NATIVE_START" -> {
+                val base = intent.getLongExtra("base", System.currentTimeMillis())
+                val nativeIntent = Intent(context, IqamaNotificationService::class.java).setAction("SHOW").putExtra("elapsed", false).putExtra("base", base)
+                try { if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(nativeIntent) else context.startService(nativeIntent) } catch (_: Exception) {}
+                val seconds = ((base - System.currentTimeMillis()) / 1000L).coerceAtLeast(1L)
+                val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
+                val sw = Intent(context, IqamaNotificationReceiver::class.java).setAction("SWITCH")
+                val pi = PendingIntent.getBroadcast(context, 45222, sw, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + seconds * 1000L, pi)
+            }
             "SWITCH" -> IqamaPersistentNotification.showElapsed(context)
             "HIDE" -> IqamaPersistentNotification.hide(context)
         }
@@ -208,6 +218,7 @@ class MainActivity : Activity() {
         configureWebView()
         requestNotificationPermissionIfNeeded()
         AlarmScheduler.scheduleFromDatabase(this)
+        IqamaNativeScheduler.schedule(this)
         restoreIqamaServiceIfActive()
 
         webView.loadUrl("file:///android_asset/www/index.html")
@@ -225,6 +236,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         AlarmScheduler.scheduleFromDatabase(this)
+        IqamaNativeScheduler.schedule(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
         }
