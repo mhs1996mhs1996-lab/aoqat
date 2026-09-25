@@ -106,6 +106,32 @@ object AlarmScheduler {
     }
 }
 
+object IqamaNativeScheduler {
+    private const val BASE_REQUEST=46000
+    private val prayers=listOf("fajr" to 20L,"dhuhr" to 10L,"asr" to 10L,"maghrib" to 10L,"isha" to 10L)
+    fun schedule(context:Context){ Thread{try{val d=LocalDate.now();scheduleDate(context,d);scheduleDate(context,d.plusDays(1))}catch(_:Exception){}}.start() }
+    private fun scheduleDate(context:Context,date:LocalDate){
+        val row=fetchRow(date)?:return
+        prayers.forEachIndexed{index,pair->
+            val p=row.optString(pair.first).split(":");if(p.size<2)return@forEachIndexed
+            var h=p[0].toIntOrNull()?:return@forEachIndexed;val m=p[1].take(2).toIntOrNull()?:return@forEachIndexed
+            if(pair.first!="fajr"&&h<12)h+=12;if(pair.first=="fajr"&&h==12)h=0
+            val prayerAt=date.atTime(h,m).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();val iqamaAt=prayerAt+pair.second*60000L
+            if(iqamaAt<=System.currentTimeMillis())return@forEachIndexed
+            val i=Intent(context,IqamaNotificationReceiver::class.java).setAction("NATIVE_START").putExtra("base",iqamaAt)
+            val pi=PendingIntent.getBroadcast(context,BASE_REQUEST+date.dayOfYear*10+index,i,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            val am=context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||am.canScheduleExactAlarms())am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,prayerAt,pi) else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,prayerAt,pi)
+        }
+    }
+    private fun fetchRow(date:LocalDate):org.json.JSONObject?{
+        val loc=URLEncoder.encode("الحويجة وضواحيها","UTF-8");val fields=prayers.joinToString(","){it.first}
+        val u="https://ytdvhiijxxaqofduorwm.supabase.co/rest/v1/annual_prayer_times?select="+fields+"&location_name=eq."+loc+"&gregorian_month=eq."+date.monthValue+"&gregorian_day=eq."+date.dayOfMonth+"&limit=1"
+        val conn=(URL(u).openConnection() as HttpURLConnection).apply{connectTimeout=8000;readTimeout=8000;requestMethod="GET";setRequestProperty("apikey","sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1");setRequestProperty("Authorization","Bearer sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1")}
+        return try{if(conn.responseCode !in 200..299)null else{val a=JSONArray(conn.inputStream.bufferedReader().use{it.readText()});if(a.length()==0)null else a.getJSONObject(0)}}finally{conn.disconnect()}
+    }
+}
+
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         AlarmSoundService.start(context)
@@ -122,6 +148,7 @@ class AlarmReceiver : BroadcastReceiver() {
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         AlarmScheduler.scheduleFromDatabase(context)
+        IqamaNativeScheduler.schedule(context)
     }
 }
 
