@@ -268,6 +268,19 @@
     if(!panel||!tools) return false;
     const grid=tools.querySelector('.bg-tools-grid');
     if(!grid) return false;
+    let toggle=tools.querySelector('.bg-tools-toggle');
+    if(!toggle){
+      const oldTitle=tools.querySelector('.bg-tools-title');
+      toggle=document.createElement('button');
+      toggle.type='button';toggle.className='bg-tools-toggle';toggle.setAttribute('aria-expanded','false');
+      toggle.innerHTML='<span>🛠 أدوات تعديل التصميم</span><span class="bg-tools-arrow">▼</span>';
+      if(oldTitle) oldTitle.replaceWith(toggle); else tools.insertBefore(toggle,grid);
+      toggle.addEventListener('click',()=>{
+        const open=!tools.classList.contains('is-open');
+        tools.classList.toggle('is-open',open);
+        toggle.setAttribute('aria-expanded',String(open));
+      });
+    }
 
     const bgType=document.getElementById('bgType');
     const gradientBox=document.getElementById('gradientBox');
@@ -295,7 +308,20 @@
 
     const manual=document.querySelector('.manual-edit-toggle-wrap');
     const save=document.getElementById('saveDesignAdjustments');
-    const footer=document.getElementById('backgroundFooterControl');
+    let footer=document.getElementById('backgroundFooterControl');
+    if(!footer){
+      const footerPanel=document.getElementById('footerPanel');
+      if(footerPanel){
+        footer=document.createElement('div');footer.id='backgroundFooterControl';
+        const btn=document.createElement('button');btn.type='button';btn.id='backgroundFooterToggle';btn.innerHTML='✍ <span>النص السفلي</span>';
+        footer.appendChild(btn);footer.appendChild(footerPanel);
+        btn.addEventListener('click',event=>{
+          event.preventDefault();event.stopPropagation();
+          const open=!footerPanel.classList.contains('footer-inside-open');
+          footerPanel.classList.toggle('footer-inside-open',open);btn.classList.toggle('is-open',open);
+        });
+      }
+    }
     const reset=document.getElementById('resetPositions');
     [manual,save,footer,reset].forEach(el=>{if(el&&el.parentElement!==grid) grid.appendChild(el);});
 
@@ -304,7 +330,11 @@
       s=document.createElement('style');s.id='androidBackgroundToolsLayout';
       s.textContent=`
         #backgroundDesignTools{margin-top:0!important;padding-top:0!important;border-top:0!important}
-        #backgroundDesignTools .bg-tools-grid{gap:7px!important}
+        #backgroundDesignTools .bg-tools-toggle{width:100%!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:42px!important;background:#176f9f!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important;border-radius:9px!important;padding:9px 12px!important;font-weight:800!important}
+        #backgroundDesignTools .bg-tools-grid{display:none!important;gap:7px!important;margin-top:7px!important}
+        #backgroundDesignTools.is-open .bg-tools-grid{display:grid!important}
+        #backgroundDesignTools .bg-tools-arrow{transition:transform .18s ease}
+        #backgroundDesignTools.is-open .bg-tools-arrow{transform:rotate(180deg)}
         #androidChangeBackgroundBtn{background:#176f9f!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important}
         #backgroundDesignTools #backgroundFooterControl{margin:0!important;padding:0!important;border:0!important;width:100%!important}
         #backgroundDesignTools #backgroundFooterToggle{margin:0!important;width:100%!important}
