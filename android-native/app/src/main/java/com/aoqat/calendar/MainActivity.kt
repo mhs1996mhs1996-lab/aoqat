@@ -120,6 +120,7 @@ object IqamaPersistentNotification {
 class IqamaNotificationService : android.app.Service() {
     private var elapsed=false
     private var base=0L
+    private var wakeLock: android.os.PowerManager.WakeLock? = null
     private val handler=android.os.Handler(android.os.Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE) }
     private val ticker=object:Runnable{
@@ -142,6 +143,8 @@ class IqamaNotificationService : android.app.Service() {
             prefs.edit().putBoolean("active",true).putBoolean("elapsed",elapsed).putLong("base",base).apply()
         }else{elapsed=prefs.getBoolean("elapsed",false);base=prefs.getLong("base",System.currentTimeMillis())}
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID,buildNotification(System.currentTimeMillis()))
+        val pm=getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        if(wakeLock?.isHeld!=true) wakeLock=pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK,"aoqat:iqamaCountdown").apply{setReferenceCounted(false);acquire(25L*60L*1000L)}
         handler.removeCallbacks(ticker);handler.post(ticker)
         return START_STICKY
     }
@@ -162,7 +165,7 @@ class IqamaNotificationService : android.app.Service() {
         return n
     }
     override fun onTaskRemoved(rootIntent:Intent?){super.onTaskRemoved(rootIntent)}
-    override fun onDestroy(){handler.removeCallbacks(ticker);prefs.edit().putBoolean("active",false).apply();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){handler.removeCallbacks(ticker);if(wakeLock?.isHeld==true)wakeLock?.release();wakeLock=null;prefs.edit().putBoolean("active",false).apply();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
