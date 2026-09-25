@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 44
+        versionCode 45
         versionName '1.21'
     }
 
