@@ -13,6 +13,10 @@
       #backgroundDesignTools #manualEditToggle{width:100%!important}
       #backgroundDesignTools #saveDesignAdjustments,#backgroundDesignTools #resetPositions{display:flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;background:#263746!important;color:#fff!important;border:1px solid rgba(255,255,255,.16)!important}
       #backgroundDesignTools #saveDesignAdjustments:hover,#backgroundDesignTools #resetPositions:hover{filter:brightness(1.08)}
+      #backgroundDesignTools #webChangeBackgroundBtn{background:#176f9f!important;color:#fff!important;border:1px solid rgba(255,255,255,.16)!important}
+      #backgroundPanel>label:has(#bgType),#backgroundPanel>#gradientBox,#backgroundPanel>#imageBox{display:none!important}
+      #backgroundDesignTools #backgroundFooterControl{margin:0!important;padding:0!important;border:0!important;width:100%!important}
+      #backgroundDesignTools #backgroundFooterToggle{margin:0!important;width:100%!important}
     `;
     document.head.appendChild(s);
   }
@@ -33,15 +37,33 @@
     const manualWrap=document.querySelector(".manual-edit-toggle-wrap");
     const save=document.getElementById("saveDesignAdjustments");
     const reset=document.getElementById("resetPositions");
+    const bgType=document.getElementById("bgType");
+    const bgFile=document.getElementById("bgFile");
+    const footer=document.getElementById("backgroundFooterControl");
 
+    let changeBtn=document.getElementById("webChangeBackgroundBtn");
+    if(!changeBtn){
+      changeBtn=document.createElement("button");
+      changeBtn.type="button";
+      changeBtn.id="webChangeBackgroundBtn";
+      changeBtn.textContent="🖼️ تغيير الخلفية";
+      changeBtn.addEventListener("click",event=>{
+        event.preventDefault();
+        if(bgType) bgType.value="image";
+        if(bgFile) bgFile.click();
+      });
+    }
+
+    if(changeBtn.parentElement!==grid)grid.appendChild(changeBtn);
     if(manualWrap&&manualWrap.parentElement!==grid)grid.appendChild(manualWrap);
     if(save&&save.parentElement!==grid)grid.appendChild(save);
+    if(footer&&footer.parentElement!==grid)grid.appendChild(footer);
     if(reset&&reset.parentElement!==grid)grid.appendChild(reset);
 
     if(save) save.textContent="💾 حفظ التعديلات";
     if(reset) reset.textContent="↻ إعادة التموضع";
 
-    return !!(manualWrap&&save&&reset);
+    return !!(manualWrap&&save&&reset&&bgFile);
   }
 
   function init(){
