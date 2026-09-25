@@ -141,10 +141,18 @@ class IqamaNotificationService : android.app.Service() {
         val openIntent = Intent(this, MainActivity::class.java)
         val openPending = PendingIntent.getActivity(this, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val title = if (elapsed) "مضى على الإقامة" else "باقي على الإقامة"
+        val now = System.currentTimeMillis()
+        val totalSeconds = if (elapsed) ((now - base) / 1000L).coerceAtLeast(0L) else ((base - now + 999L) / 1000L).coerceAtLeast(0L)
+        val hours = totalSeconds / 3600L
+        val minutes = (totalSeconds % 3600L) / 60L
+        val seconds = totalSeconds % 60L
+        val initialClock = if (hours > 0) String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+                           else String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
         val builder = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
-            .setContentText(title)
+            .setContentText(initialClock)
+            .setStyle(NotificationCompat.BigTextStyle().bigText("$title  •  $initialClock"))
             .setContentIntent(openPending)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -158,7 +166,7 @@ class IqamaNotificationService : android.app.Service() {
             .setUsesChronometer(true)
         if (Build.VERSION.SDK_INT >= 24) builder.setChronometerCountDown(!elapsed)
         val notification = builder.build()
-        notification.flags = notification.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR
+        notification.flags = notification.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
         return notification
     }
 
