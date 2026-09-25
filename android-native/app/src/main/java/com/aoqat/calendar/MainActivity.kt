@@ -141,18 +141,12 @@ class IqamaNotificationService : android.app.Service() {
         val openIntent = Intent(this, MainActivity::class.java)
         val openPending = PendingIntent.getActivity(this, 45220, openIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val title = if (elapsed) "مضى على الإقامة" else "باقي على الإقامة"
-        val now = System.currentTimeMillis()
-        val totalSeconds = if (elapsed) ((now - base) / 1000L).coerceAtLeast(0L) else ((base - now + 999L) / 1000L).coerceAtLeast(0L)
-        val hours = totalSeconds / 3600L
-        val minutes = (totalSeconds % 3600L) / 60L
-        val seconds = totalSeconds % 60L
-        val initialClock = if (hours > 0) String.format(java.util.Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
-                           else String.format(java.util.Locale.US, "%02d:%02d", minutes, seconds)
         val builder = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
-            .setContentText(initialClock)
-            .setStyle(NotificationCompat.BigTextStyle().bigText("$title  •  $initialClock"))
+            // Android's native chronometer below is the single source of truth.
+            // Do not add a second JavaScript/snapshot clock in the notification body.
+            .setContentText(title)
             .setContentIntent(openPending)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -214,6 +208,7 @@ class MainActivity : Activity() {
         configureWebView()
         requestNotificationPermissionIfNeeded()
         AlarmScheduler.scheduleFromDatabase(this)
+        restoreIqamaServiceIfActive()
 
         webView.loadUrl("file:///android_asset/www/index.html")
 
@@ -233,6 +228,27 @@ class MainActivity : Activity() {
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
         }
+    }
+
+    private fun restoreIqamaServiceIfActive() {
+        val prefs = getSharedPreferences("iqama_service_state", MODE_PRIVATE)
+        if (!prefs.getBoolean("active", false)) return
+        val elapsed = prefs.getBoolean("elapsed", false)
+        val base = prefs.getLong("base", 0L)
+        if (base <= 0L) return
+        val now = System.currentTimeMillis()
+        val stillValid = if (elapsed) now - base < 10L * 60L * 1000L else base > now
+        if (!stillValid) {
+            IqamaPersistentNotification.hide(this)
+            return
+        }
+        val intent = Intent(this, IqamaNotificationService::class.java)
+            .setAction("SHOW")
+            .putExtra("elapsed", elapsed)
+            .putExtra("base", base)
+        try {
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(intent) else startService(intent)
+        } catch (_: Exception) {}
     }
 
     private fun configureWebView() {
