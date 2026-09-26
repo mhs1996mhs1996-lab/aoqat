@@ -168,13 +168,24 @@ class IqamaNotificationService : android.app.Service() {
         return if(h>0) String.format(java.util.Locale.US,"%02d:%02d:%02d",h,m,sec) else String.format(java.util.Locale.US,"%02d:%02d",m,sec)
     }
     private fun buildNotification(now:Long):android.app.Notification{
-        val title=if(elapsed)"مضى على الإقامة" else "باقي على الإقامة";val value=clock(now)
+        val title=if(elapsed)"مضى على الإقامة" else "باقي على الإقامة"
         val openPending=PendingIntent.getActivity(this,45220,Intent(this,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val n=NotificationCompat.Builder(this,IqamaPersistentNotification.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(title).setContentText(value)
-            .setContentIntent(openPending).setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC).setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true)
-            .setShowWhen(false).build()
+        val elapsedRealtimeBase = android.os.SystemClock.elapsedRealtime() + (base - System.currentTimeMillis())
+        val builder=NotificationCompat.Builder(this,IqamaPersistentNotification.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(title)
+            .setContentIntent(openPending)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true)
+            .setWhen(elapsedRealtimeBase)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.N){
+            builder.setChronometerCountDown(!elapsed)
+        }
+        val n=builder.build()
         n.flags=n.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
         return n
     }
