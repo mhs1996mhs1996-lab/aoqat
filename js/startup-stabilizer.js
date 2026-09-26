@@ -1,7 +1,7 @@
 "use strict";
 (function(){
   const MIGRATION_KEY="aoqatStartupCleanupV3";
-  const REQUIRED_DESIGNS=["design2","design3","design4","designRef"];
+  const REQUIRED_DESIGNS=["design2","design3","design4","designRef","designModernCoral","designModernEmerald","designModernViolet"];
 
   function addStyle(){
     if(document.getElementById("startupStabilizerStyle"))return;
@@ -80,7 +80,7 @@
     });
     const controls=document.querySelector('.final-carousel-controls');
     const dots=document.querySelector('.final-carousel-dots');
-    if(controls){controls.style.display='flex';const status=controls.querySelector('.design-carousel-status');if(status)status.textContent='التصميم 1 من 4';}
+    if(controls){controls.style.display='flex';const status=controls.querySelector('.design-carousel-status');if(status)status.textContent='التصميم 1 من '+slides.length;}
     if(dots){dots.style.display='flex';dots.querySelectorAll('.design-carousel-dot').forEach((d,i)=>d.classList.toggle('active',i===0));}
 
     const preview=document.querySelector('.previewBox');
