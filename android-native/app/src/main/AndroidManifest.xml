@@ -19,6 +19,7 @@
         android:roundIcon="@mipmap/app_icon"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:forceDarkAllowed="false"
         android:usesCleartextTraffic="false">
 
         <activity
