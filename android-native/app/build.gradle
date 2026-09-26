@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 47
+        versionCode 47 // Build 47: lock-screen chronometer correction
         versionName '1.21'
     }
 
