@@ -122,19 +122,33 @@ class IqamaNotificationService : android.app.Service() {
     private var base=0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private val handler=android.os.Handler(android.os.Looper.getMainLooper())
+    private var tickerThread: Thread? = null
+    @Volatile private var ticking=false
     private val prefs by lazy { getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE) }
-    private val ticker=object:Runnable{
-        override fun run(){
-            val now=System.currentTimeMillis()
-            if(!elapsed && now>=base){
-                elapsed=true
-                prefs.edit().putBoolean("elapsed",true).putLong("base",base).apply()
+    private fun startTicker(){
+        ticking=false
+        tickerThread?.interrupt()
+        ticking=true
+        tickerThread=Thread{
+            while(ticking){
+                try{
+                    val now=System.currentTimeMillis()
+                    if(!elapsed && now>=base){
+                        elapsed=true
+                        prefs.edit().putBoolean("elapsed",true).putLong("base",base).apply()
+                    }
+                    if(elapsed && now-base>=10L*60L*1000L){
+                        handler.post{stopSelf()}
+                        break
+                    }
+                    val n=buildNotification(now)
+                    (getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager)
+                        .notify(IqamaPersistentNotification.NOTIFICATION_ID,n)
+                    val sleep=1000L-(System.currentTimeMillis()%1000L)
+                    Thread.sleep(if(sleep<80L)1000L else sleep)
+                }catch(_:InterruptedException){break}catch(_:Exception){try{Thread.sleep(1000L)}catch(_:Exception){break}}
             }
-            if(elapsed && now-base>=10L*60L*1000L){ stopSelf(); return }
-            val n=buildNotification(now)
-            (getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager).notify(IqamaPersistentNotification.NOTIFICATION_ID,n)
-            handler.postDelayed(this,1000L-(System.currentTimeMillis()%1000L))
-        }
+        }.apply{name="IqamaNativeTicker";isDaemon=false;start()}
     }
     override fun onBind(intent:Intent?)=null
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int{
@@ -145,7 +159,7 @@ class IqamaNotificationService : android.app.Service() {
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID,buildNotification(System.currentTimeMillis()))
         val pm=getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
         if(wakeLock?.isHeld!=true) wakeLock=pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK,"aoqat:iqamaCountdown").apply{setReferenceCounted(false);acquire(25L*60L*1000L)}
-        handler.removeCallbacks(ticker);handler.post(ticker)
+        startTicker()
         return START_STICKY
     }
     private fun clock(now:Long):String{
@@ -165,7 +179,7 @@ class IqamaNotificationService : android.app.Service() {
         return n
     }
     override fun onTaskRemoved(rootIntent:Intent?){super.onTaskRemoved(rootIntent)}
-    override fun onDestroy(){handler.removeCallbacks(ticker);if(wakeLock?.isHeld==true)wakeLock?.release();wakeLock=null;prefs.edit().putBoolean("active",false).apply();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){ticking=false;tickerThread?.interrupt();tickerThread=null;if(wakeLock?.isHeld==true)wakeLock?.release();wakeLock=null;prefs.edit().putBoolean("active",false).apply();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
