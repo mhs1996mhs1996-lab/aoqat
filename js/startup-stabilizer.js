@@ -1,7 +1,7 @@
 "use strict";
 (function(){
   const MIGRATION_KEY="aoqatStartupCleanupV3";
-  const REQUIRED_DESIGNS=["design2","design3","design4","designRef","designModernCoral","designModernEmerald","designModernViolet"];
+  const REQUIRED_DESIGNS=["design2","design3","design4","designRef"];
 
   function addStyle(){
     if(document.getElementById("startupStabilizerStyle"))return;
