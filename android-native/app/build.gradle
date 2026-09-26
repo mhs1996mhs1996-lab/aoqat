@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 48 // Build 48: modular modern prayer designs
+        versionCode 49 // Build 49: remove rejected modern design pack safely
         versionName '1.21'
     }
 
