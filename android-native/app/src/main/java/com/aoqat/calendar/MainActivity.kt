@@ -170,7 +170,9 @@ class IqamaNotificationService : android.app.Service() {
     private fun buildNotification(now:Long):android.app.Notification{
         val title=if(elapsed)"مضى على الإقامة" else "باقي على الإقامة"
         val openPending=PendingIntent.getActivity(this,45220,Intent(this,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val elapsedRealtimeBase = android.os.SystemClock.elapsedRealtime() + (base - System.currentTimeMillis())
+        // NotificationCompat chronometer expects a wall-clock timestamp in setWhen().
+        // Android converts it internally to elapsed realtime and keeps rendering it on the lock screen.
+        val chronometerWallClockBase = base
         val builder=NotificationCompat.Builder(this,IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(title)
@@ -179,7 +181,7 @@ class IqamaNotificationService : android.app.Service() {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true)
-            .setWhen(elapsedRealtimeBase)
+            .setWhen(chronometerWallClockBase)
             .setShowWhen(true)
             .setUsesChronometer(true)
         if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.N){
