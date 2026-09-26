@@ -311,6 +311,13 @@ class MainActivity : Activity() {
             useWideViewPort = true
             loadWithOverviewMode = false
             mediaPlaybackRequiresUserGesture = false
+            // Keep the prayer designs in their authored colors even when the phone uses dark mode.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                isAlgorithmicDarkeningAllowed = false
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                @Suppress("DEPRECATION")
+                forceDark = WebSettings.FORCE_DARK_OFF
+            }
         }
 
         webView.addJavascriptInterface(AndroidBridge(), "AndroidNative")
