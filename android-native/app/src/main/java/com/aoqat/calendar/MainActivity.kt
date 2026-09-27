@@ -175,9 +175,9 @@ class IqamaNotificationService : android.app.Service() {
         val chronometerWallClockBase = base
         val builder=NotificationCompat.Builder(this,IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            // Keep the app name in the notification header; put the iqama state on the content row
-            // so Android renders its system chronometer beside "باقي/مضى على الإقامة".
-            .setContentText(title)
+            // Put the iqama state in the notification title. Android renders the system
+            // chronometer on the same title row on the lock screen instead of beside the app name.
+            .setContentTitle(title)
             .setContentIntent(openPending)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
