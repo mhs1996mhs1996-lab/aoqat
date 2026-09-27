@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 48 // Build 48: iqama chronometer aligned with iqama state
+        versionCode 49 // Build 49: custom iqama notification row with native chronometer
         versionName '1.21'
     }
 

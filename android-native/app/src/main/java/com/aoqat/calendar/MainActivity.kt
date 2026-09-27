@@ -173,22 +173,21 @@ class IqamaNotificationService : android.app.Service() {
         // NotificationCompat chronometer expects a wall-clock timestamp in setWhen().
         // Android converts it internally to elapsed realtime and keeps rendering it on the lock screen.
         val chronometerWallClockBase = base
+        val contentView = android.widget.RemoteViews(packageName, R.layout.notification_iqama)
+        contentView.setTextViewText(R.id.iqama_state, title)
+        contentView.setChronometer(R.id.iqama_chronometer, android.os.SystemClock.elapsedRealtime() + (base - System.currentTimeMillis()), null, true)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) contentView.setChronometerCountDown(R.id.iqama_chronometer, !elapsed)
         val builder=NotificationCompat.Builder(this,IqamaPersistentNotification.CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            // Put the iqama state in the notification title. Android renders the system
-            // chronometer on the same title row on the lock screen instead of beside the app name.
-            .setContentTitle(title)
+            .setCustomContentView(contentView)
+            .setCustomBigContentView(contentView)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setContentIntent(openPending)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true)
-            .setWhen(chronometerWallClockBase)
-            .setShowWhen(true)
-            .setUsesChronometer(true)
-        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.N){
-            builder.setChronometerCountDown(!elapsed)
-        }
+            .setShowWhen(false)
         val n=builder.build()
         n.flags=n.flags or android.app.Notification.FLAG_ONGOING_EVENT or android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
         return n
