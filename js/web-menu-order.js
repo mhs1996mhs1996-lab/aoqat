@@ -22,8 +22,27 @@
     `;document.head.appendChild(s);
   }
   function openOriginal(id){
-    const g=document.getElementById(id);if(!g)return;
-    const b=g.querySelector(":scope > button");if(b)b.click();
+    const g=document.getElementById(id);if(!g)return false;
+    const b=g.querySelector(":scope > button");if(!b)return false;
+    b.click();return true;
+  }
+  function clickOriginal(selector){
+    const el=document.querySelector(selector);
+    if(!el)return false;
+    el.click();return true;
+  }
+  function openFirst(selectors){
+    for(const selector of selectors){
+      const el=document.querySelector(selector);
+      if(!el)continue;
+      if(el.matches("button,[role='button']"))el.click();
+      else{
+        const btn=el.querySelector(":scope > button,button");
+        if(btn)btn.click(); else continue;
+      }
+      return true;
+    }
+    return false;
   }
   function install(){
     const main=document.querySelector(".sidebar .main-panel");if(!main)return false;style();
@@ -38,8 +57,18 @@
     drawer.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;
       const id=b.dataset.drawer;
-      if(id==="location"){openOriginal("datePrayerGroup");return;}
-      if(id==="settings"){openOriginal("backgroundFontGroup");return;}
+      if(id==="location"){
+        openFirst(["#datePrayerGroup","[data-open-panel='datePanel']","[data-open-panel='prayerPanel']"]);return;
+      }
+      if(id==="language"){
+        openFirst(["#languageGroup","#languageBtn","[data-action='language']","[data-open-panel='languagePanel']"]);return;
+      }
+      if(id==="sound"){
+        openFirst(["#soundGroup","#soundBtn","[data-action='sound']","[data-open-panel='soundPanel']"]);return;
+      }
+      if(id==="settings"){
+        openFirst(["#backgroundFontGroup","[data-open-panel='backgroundPanel']","[data-open-panel='fontPanel']","[data-open-panel='switchPanel']"]);return;
+      }
       if(id==="savePhone"){
         const save=document.getElementById("topExportJpg")||document.getElementById("exportBtn")||document.querySelector('[data-export-format="jpg"]')||document.querySelector('[data-export-format="png"]');
         if(save)save.click();
