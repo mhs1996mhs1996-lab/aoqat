@@ -31,9 +31,6 @@
       const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;
       b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';drawer.appendChild(b);
     });
-    const sep=document.createElement("div");sep.className="web-drawer-sep";drawer.appendChild(sep);
-    const t=document.createElement("div");t.className="web-drawer-title";t.textContent="تواصل معنا";drawer.appendChild(t);
-    [["✉️","راسلنا عبر البريد الإلكتروني"],["⚠️","بلغ عن خطأ"],["💡","اقترح ميزة جديدة"]].forEach(([i,l])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row web-drawer-contact";b.innerHTML='<span class="ico">'+i+'</span><span class="txt">'+l+'</span>';drawer.appendChild(b);});
     const themeHost=document.createElement("div");themeHost.id="webDrawerThemeHost";drawer.appendChild(themeHost);
     main.appendChild(drawer);
     drawer.addEventListener("click",e=>{
