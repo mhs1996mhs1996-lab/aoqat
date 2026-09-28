@@ -55,9 +55,33 @@ object IqamaPersistentNotification {
 
     fun show(context: android.content.Context, text: String) {
         ensureChannel(context)
+        val prefs = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        val savedActive = prefs.getBoolean("active", false)
+        val savedBase = prefs.getLong("base", 0L)
+
+        // Once a native iqama cycle starts, its target timestamp is authoritative.
+        // WebView timers can pause/reset while the screen is locked or while the app
+        // resumes; they must never move the native target or restart elapsed time.
+        if (savedActive && savedBase > 0L && now - savedBase < 10L * 60L * 1000L) {
+            val nativeElapsed = now >= savedBase
+            val intent = Intent(context, IqamaNotificationService::class.java)
+                .setAction("SHOW")
+                .putExtra("elapsed", nativeElapsed)
+                .putExtra("base", savedBase)
+            startSafely(context, intent)
+            if (nativeElapsed) {
+                val elapsedSeconds = ((now - savedBase) / 1000L).coerceAtLeast(0L)
+                schedule(context, "HIDE", (10L * 60L - elapsedSeconds).coerceAtLeast(1L), REQUEST_HIDE)
+            } else {
+                val remainingSeconds = ((savedBase - now + 999L) / 1000L).coerceAtLeast(1L)
+                schedule(context, "SWITCH", remainingSeconds, REQUEST_SWITCH)
+            }
+            return
+        }
+
         val elapsed = text.contains("مضى على الإقامة")
         val seconds = secondsFrom(text).coerceAtLeast(0L)
-        val now = System.currentTimeMillis()
         val base = if (elapsed) now - seconds * 1000L else now + seconds * 1000L
         val intent = Intent(context, IqamaNotificationService::class.java)
             .setAction("SHOW")
