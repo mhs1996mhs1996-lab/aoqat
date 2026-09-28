@@ -3,7 +3,7 @@
   const ROWS=[
     ["location","📍","الحويجة"],["language","🌐","اللغة"],["sound","🔊","الصوت"],
     ["settings","⚙️","الإعدادات"],["appearance","🎨","شكل التطبيق"],["night","🌙","الوضع الليلي"],
-    ["calendar","📅","حفظ على تقويم جوجل"]
+    ["savePhone","📱","حفظ على الهاتف"]
   ];
   function style(){
     if(document.getElementById("webDrawerExactStyles"))return;
@@ -38,6 +38,11 @@
       const id=b.dataset.drawer;
       if(id==="location"){openOriginal("datePrayerGroup");return;}
       if(id==="settings"){openOriginal("backgroundFontGroup");return;}
+      if(id==="savePhone"){
+        const save=document.getElementById("topExportJpg")||document.getElementById("exportBtn")||document.querySelector('[data-export-format="jpg"]')||document.querySelector('[data-export-format="png"]');
+        if(save)save.click();
+        return;
+      }
       if(id==="appearance"){
         const p=document.getElementById("webThemePanel");if(p){themeHost.appendChild(p);p.hidden=false;themeHost.classList.toggle("open");}
         return;
