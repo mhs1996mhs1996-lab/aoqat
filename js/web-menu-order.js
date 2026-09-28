@@ -1,60 +1,58 @@
 "use strict";
 (function(){
-  function apply(){
-    const main=document.querySelector(".sidebar .main-panel");
-    if(!main)return false;
-    const appearance=document.getElementById("webAppearanceBtn");
-    const appearancePanel=document.getElementById("webThemePanel");
-    const interfaceGroup=document.getElementById("backgroundFontGroup");
-    const dataGroup=document.getElementById("datePrayerGroup");
-    const interfaceBtn=document.getElementById("backgroundFontMainBtn");
-    const dataBtn=document.getElementById("datePrayerMainBtn");
-
-    // Reorder only the existing top-level nodes. Nothing is cloned/replaced,
-    // therefore all original click handlers and IDs stay untouched.
-    // Reference order: location, language, sound, settings, appearance, night mode,
-    // social, calendar, contact. Existing controls keep their original handlers.
-    [dataGroup,interfaceGroup,appearance,appearancePanel].filter(Boolean).forEach(el=>main.appendChild(el));
-
-    if(appearance){
-      appearance.innerHTML='<span aria-hidden="true">🎨</span><span>شكل التطبيق</span>';
-      appearance.classList.add("web-reference-menu-item");
-    }
-    if(interfaceGroup){
-      const b=interfaceBtn;
-      if(b){b.innerHTML='⚙️ <span>الإعدادات</span><span class="group-arrow">▼</span>';b.classList.add("web-reference-menu-item");}
-    }
-    if(dataGroup){
-      const b=dataBtn;
-      if(b){b.innerHTML='📍 <span>الحويجة</span><span class="group-arrow">▼</span>';b.classList.add("web-reference-menu-item");}
-    }
-
-    if(!document.getElementById("webReferenceMenuStyles")){
-      const s=document.createElement("style");s.id="webReferenceMenuStyles";s.textContent=`
-        body.design-menu-open .sidebar .main-panel{width:min(86vw,330px)!important;max-width:min(86vw,330px)!important;padding:9px!important;border-radius:14px!important}
-        body.design-menu-open .sidebar .main-panel>h2{font-size:18px!important;text-align:center!important;margin:0 0 8px!important}
-        body.design-menu-open .sidebar .main-panel>.web-reference-menu-item,
-        body.design-menu-open #backgroundFontGroup>#backgroundFontMainBtn,
-        body.design-menu-open #datePrayerGroup>#datePrayerMainBtn{
-          width:100%!important;max-width:100%!important;height:42px!important;min-height:42px!important;
-          margin:0 0 7px!important;padding:7px 11px!important;border-radius:10px!important;
-          font-size:15px!important;font-weight:800!important;display:flex!important;align-items:center!important;
-          justify-content:flex-start!important;gap:8px!important;box-sizing:border-box!important
-        }
-        body.design-menu-open #backgroundFontGroup,body.design-menu-open #datePrayerGroup{
-          width:100%!important;max-width:100%!important;margin:0 0 7px!important;padding:0!important;border:0!important;background:transparent!important
-        }
-        body.design-menu-open #webThemePanel{width:100%!important;max-width:100%!important;margin:0 0 8px!important}
-        body.design-menu-open #backgroundFontGroup>#backgroundFontMainBtn{background:transparent!important;color:var(--wt-text,#173743)!important;border:0!important;border-bottom:1px solid rgba(120,120,120,.18)!important;border-radius:0!important}
-        body.design-menu-open #datePrayerGroup>#datePrayerMainBtn{background:transparent!important;color:var(--wt-text,#173743)!important;border:0!important;border-bottom:1px solid rgba(120,120,120,.18)!important;border-radius:0!important}
-        body.design-menu-open #webAppearanceBtn{background:transparent!important;color:var(--wt-text,#173743)!important;border:0!important;border-bottom:1px solid rgba(120,120,120,.18)!important;border-radius:0!important}
-      `;document.head.appendChild(s);
-    }
-    return !!(appearance&&interfaceGroup&&dataGroup);
+  const ROWS=[
+    ["location","📍","الحويجة"],["language","🌐","اللغة"],["sound","🔊","الصوت"],
+    ["settings","⚙️","الإعدادات"],["appearance","🎨","شكل التطبيق"],["night","🌙","الوضع الليلي"],
+    ["social","👥","المواقع الاجتماعية"],["calendar","📅","حفظ على تقويم جوجل"]
+  ];
+  function style(){
+    if(document.getElementById("webDrawerExactStyles"))return;
+    const s=document.createElement("style");s.id="webDrawerExactStyles";s.textContent=`
+    body.design-menu-open .sidebar .main-panel{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;width:min(78vw,355px)!important;max-width:355px!important;height:100dvh!important;overflow-y:auto!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:#fff!important;color:#111!important;box-shadow:-12px 0 28px #0004!important;z-index:10020!important}
+    body.design-menu-open .sidebar .main-panel>h2{height:78px!important;margin:0!important;padding:25px 20px 12px!important;text-align:right!important;font-size:23px!important;color:#42add0!important;border-bottom:1px solid #ddd!important;background:#fff!important}
+    #webExactDrawer{display:none} body.design-menu-open #webExactDrawer{display:block!important;background:#fff!important}
+    body.design-menu-open .sidebar .main-panel>#datePrayerGroup,body.design-menu-open .sidebar .main-panel>#backgroundFontGroup,body.design-menu-open .sidebar .main-panel>#webAppearanceBtn,body.design-menu-open .sidebar .main-panel>#webThemePanel,body.design-menu-open .sidebar .main-panel>#topExportJpg{display:none!important}
+    .web-drawer-row{width:100%!important;height:64px!important;margin:0!important;padding:0 24px!important;border:0!important;border-bottom:1px solid #e2e2e2!important;border-radius:0!important;background:#fff!important;color:#111!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:18px!important;font-size:18px!important;font-weight:500!important;text-align:right!important;box-shadow:none!important}
+    .web-drawer-row .ico{width:30px!important;font-size:24px!important;text-align:center!important;filter:grayscale(1);opacity:.65}.web-drawer-row .txt{flex:1!important}.web-drawer-sep{height:12px;background:#fafafa;border-bottom:1px solid #ddd}.web-drawer-title{padding:14px 24px 7px;color:#888;font-size:14px;background:#fff}.web-drawer-contact .web-drawer-row{height:58px!important;font-size:16px!important}
+    #webDrawerThemeHost{display:none;padding:10px;background:#fff;border-bottom:1px solid #ddd}#webDrawerThemeHost.open{display:block}
+    body.design-menu-open #webDrawerThemeHost #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;background:#fff!important;color:#111!important;border:0!important}
+    body.design-menu-open #webDrawerThemeHost #webThemePanel[hidden]{display:block!important}
+    `;document.head.appendChild(s);
   }
-  function start(){
-    let n=0;const t=setInterval(()=>{n++;if(apply()||n>80)clearInterval(t)},150);apply();
-    window.addEventListener("aoqatModulesReady",()=>setTimeout(apply,80));
+  function openOriginal(id){
+    const g=document.getElementById(id);if(!g)return;
+    const b=g.querySelector(":scope > button");if(b)b.click();
   }
+  function install(){
+    const main=document.querySelector(".sidebar .main-panel");if(!main)return false;style();
+    if(document.getElementById("webExactDrawer"))return true;
+    const drawer=document.createElement("div");drawer.id="webExactDrawer";
+    ROWS.forEach(([id,icon,label])=>{
+      const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;
+      b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';drawer.appendChild(b);
+    });
+    const sep=document.createElement("div");sep.className="web-drawer-sep";drawer.appendChild(sep);
+    const t=document.createElement("div");t.className="web-drawer-title";t.textContent="تواصل معنا";drawer.appendChild(t);
+    [["✉️","راسلنا عبر البريد الإلكتروني"],["⚠️","بلغ عن خطأ"],["💡","اقترح ميزة جديدة"]].forEach(([i,l])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row web-drawer-contact";b.innerHTML='<span class="ico">'+i+'</span><span class="txt">'+l+'</span>';drawer.appendChild(b);});
+    const themeHost=document.createElement("div");themeHost.id="webDrawerThemeHost";drawer.appendChild(themeHost);
+    main.appendChild(drawer);
+    drawer.addEventListener("click",e=>{
+      const b=e.target.closest("[data-drawer]");if(!b)return;
+      const id=b.dataset.drawer;
+      if(id==="location"){openOriginal("datePrayerGroup");return;}
+      if(id==="settings"){openOriginal("backgroundFontGroup");return;}
+      if(id==="appearance"){
+        const p=document.getElementById("webThemePanel");if(p){themeHost.appendChild(p);p.hidden=false;themeHost.classList.toggle("open");}
+        return;
+      }
+      if(id==="night"){
+        const current=document.body.dataset.webTheme==="dark-night";
+        const cards=document.querySelectorAll("#webThemePanel .wt-card");
+        const target=[...cards].find(x=>x.dataset.theme===(current?"cream-blue":"dark-night"));if(target)target.click();
+      }
+    });
+    return true;
+  }
+  function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
