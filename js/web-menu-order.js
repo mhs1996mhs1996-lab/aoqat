@@ -3,7 +3,7 @@
   const ROWS=[
     ["location","📍","الحويجة"],["language","🌐","اللغة"],["sound","🔊","الصوت"],
     ["settings","⚙️","الإعدادات"],["appearance","🎨","شكل التطبيق"],["night","🌙","الوضع الليلي"],
-    ["social","👥","المواقع الاجتماعية"],["calendar","📅","حفظ على تقويم جوجل"]
+    ["calendar","📅","حفظ على تقويم جوجل"]
   ];
   function style(){
     if(document.getElementById("webDrawerExactStyles"))return;
