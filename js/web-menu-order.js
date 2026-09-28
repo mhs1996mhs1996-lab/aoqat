@@ -1,73 +1,56 @@
 "use strict";
 (function(){
-  // Web-only visual reordering. Existing elements are moved, never cloned/replaced,
-  // so their original IDs, event listeners and behavior remain intact.
-  const labels=[
-    {keys:["الحويجة","الموقع"],icon:"📍"},
-    {keys:["اللغة"],icon:"🌐"},
-    {keys:["الصوت"],icon:"🔊"},
-    {keys:["الإعدادات"],icon:"⚙️"},
-    {keys:["شكل التطبيق"],icon:"🎨"},
-    {keys:["الوضع الليلي"],icon:"🌙"},
-    {keys:["المواقع الاجتماعية"],icon:"👥"},
-    {keys:["تقويم جوجل","حفظ على تقويم"],icon:"🗓️"},
-    {keys:["البريد الإلكتروني","راسلنا"],icon:"✉️"},
-    {keys:["بلغ عن خطأ"],icon:"⚠️"},
-    {keys:["اقترح ميزة"],icon:"💡"}
-  ];
-  function txt(el){return (el.textContent||"").replace(/\s+/g," ").trim();}
-  function iconFor(el){
-    const t=txt(el);const hit=labels.find(x=>x.keys.some(k=>t.includes(k)));
-    return hit?hit.icon:null;
-  }
-  function decorate(root){
-    const candidates=[...root.querySelectorAll("button,a,.main-action,[role='button']")];
-    candidates.forEach(el=>{
-      const icon=iconFor(el);if(!icon||el.dataset.webMenuDecorated)return;
-      el.dataset.webMenuDecorated="1";
-      const current=txt(el);
-      // Preserve controls and handlers; only add a semantic visual icon when missing.
-      if(!/^[📍🌐🔊⚙️🎨🌙👥🗓️✉️⚠️💡]/u.test(current)){
-        const span=document.createElement("span");span.className="web-menu-semantic-icon";span.textContent=icon;
-        el.prepend(span);
-      }
-    });
-  }
-  function rank(el){
-    const t=txt(el);
-    const order=["الحويجة","الموقع","اللغة","الصوت","الإعدادات","شكل التطبيق","الوضع الليلي","المواقع الاجتماعية","تقويم جوجل","حفظ على تقويم","البريد الإلكتروني","راسلنا","بلغ عن خطأ","اقترح ميزة"];
-    for(let i=0;i<order.length;i++)if(t.includes(order[i]))return i;
-    return 999;
-  }
-  function reorderContainer(container){
-    const kids=[...container.children];
-    const matched=kids.filter(el=>rank(el)<999);
-    if(matched.length<3)return false;
-    const first=matched[0];
-    matched.sort((a,b)=>rank(a)-rank(b)).forEach(el=>container.insertBefore(el,first));
-    return true;
-  }
   function apply(){
-    const roots=[document.querySelector(".sidebar .main-panel"),document.querySelector(".sidebar")].filter(Boolean);
-    roots.forEach(decorate);
-    // Only reorder siblings inside the same existing container; never move controls across panels.
-    roots.forEach(root=>{
-      reorderContainer(root);
-      [...root.querySelectorAll(":scope > div,:scope > section")].forEach(reorderContainer);
-    });
-    const styleId="webMenuOrderStyles";
-    if(!document.getElementById(styleId)){
-      const s=document.createElement("style");s.id=styleId;s.textContent=`
-        .web-menu-semantic-icon{display:inline-flex;min-width:22px;align-items:center;justify-content:center;font-size:1.05em;line-height:1}
-        body.design-menu-open .sidebar .main-action{justify-content:flex-start!important;gap:8px!important}
-        body.design-menu-open #webAppearanceBtn{order:0}
+    const main=document.querySelector(".sidebar .main-panel");
+    if(!main)return false;
+    const appearance=document.getElementById("webAppearanceBtn");
+    const appearancePanel=document.getElementById("webThemePanel");
+    const interfaceGroup=document.getElementById("backgroundFontGroup");
+    const dataGroup=document.getElementById("datePrayerGroup");
+
+    // Reorder only the existing top-level nodes. Nothing is cloned/replaced,
+    // therefore all original click handlers and IDs stay untouched.
+    [appearance,appearancePanel,interfaceGroup,dataGroup].filter(Boolean).forEach(el=>main.appendChild(el));
+
+    if(appearance){
+      appearance.innerHTML='<span aria-hidden="true">🎨</span><span>شكل التطبيق</span>';
+      appearance.classList.add("web-reference-menu-item");
+    }
+    if(interfaceGroup){
+      const b=document.getElementById("backgroundFontMainBtn");
+      if(b){b.innerHTML='🎨 <span>واجهة البرنامج الرئيسية</span><span class="group-arrow">▼</span>';b.classList.add("web-reference-menu-item");}
+    }
+    if(dataGroup){
+      const b=document.getElementById("datePrayerMainBtn");
+      if(b){b.innerHTML='🕌 <span>بيانات التاريخ والصلاة</span><span class="group-arrow">▼</span>';b.classList.add("web-reference-menu-item");}
+    }
+
+    if(!document.getElementById("webReferenceMenuStyles")){
+      const s=document.createElement("style");s.id="webReferenceMenuStyles";s.textContent=`
+        body.design-menu-open .sidebar .main-panel{width:min(86vw,330px)!important;max-width:min(86vw,330px)!important;padding:9px!important;border-radius:14px!important}
+        body.design-menu-open .sidebar .main-panel>h2{font-size:18px!important;text-align:center!important;margin:0 0 8px!important}
+        body.design-menu-open .sidebar .main-panel>.web-reference-menu-item,
+        body.design-menu-open #backgroundFontGroup>#backgroundFontMainBtn,
+        body.design-menu-open #datePrayerGroup>#datePrayerMainBtn{
+          width:100%!important;max-width:100%!important;height:42px!important;min-height:42px!important;
+          margin:0 0 7px!important;padding:7px 11px!important;border-radius:10px!important;
+          font-size:15px!important;font-weight:800!important;display:flex!important;align-items:center!important;
+          justify-content:flex-start!important;gap:8px!important;box-sizing:border-box!important
+        }
+        body.design-menu-open #backgroundFontGroup,body.design-menu-open #datePrayerGroup{
+          width:100%!important;max-width:100%!important;margin:0 0 7px!important;padding:0!important;border:0!important;background:transparent!important
+        }
+        body.design-menu-open #webThemePanel{width:100%!important;max-width:100%!important;margin:0 0 8px!important}
+        body.design-menu-open #backgroundFontGroup>#backgroundFontMainBtn{background:linear-gradient(135deg,#9a6424,#c58a35)!important}
+        body.design-menu-open #datePrayerGroup>#datePrayerMainBtn{background:linear-gradient(135deg,#16866f,#22a98b)!important}
+        body.design-menu-open #webAppearanceBtn{background:linear-gradient(135deg,#b56d37,#d0874e)!important;color:#fff!important}
       `;document.head.appendChild(s);
     }
+    return !!(appearance&&interfaceGroup&&dataGroup);
   }
   function start(){
-    apply();
-    let n=0;const t=setInterval(()=>{apply();if(++n>30)clearInterval(t)},200);
-    window.addEventListener("aoqatModulesReady",()=>setTimeout(apply,60));
+    let n=0;const t=setInterval(()=>{n++;if(apply()||n>80)clearInterval(t)},150);apply();
+    window.addEventListener("aoqatModulesReady",()=>setTimeout(apply,80));
   }
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
