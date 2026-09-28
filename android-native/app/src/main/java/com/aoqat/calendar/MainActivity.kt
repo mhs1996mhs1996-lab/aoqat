@@ -74,12 +74,23 @@ object IqamaPersistentNotification {
 
     fun showElapsed(context: android.content.Context) {
         ensureChannel(context)
+        val prefs = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
+        // Keep the original iqama target as the single time base. If Android delivers
+        // the phase-switch alarm late while the phone is locked, elapsed time must
+        // include that delay instead of restarting from zero.
+        val originalBase = prefs.getLong("base", System.currentTimeMillis())
+        val now = System.currentTimeMillis()
+        val elapsedSeconds = ((now - originalBase) / 1000L).coerceAtLeast(0L)
+        if (elapsedSeconds >= 10L * 60L) {
+            hide(context)
+            return
+        }
         val intent = Intent(context, IqamaNotificationService::class.java)
             .setAction("SHOW")
             .putExtra("elapsed", true)
-            .putExtra("base", System.currentTimeMillis())
+            .putExtra("base", originalBase)
         startSafely(context, intent)
-        schedule(context, "HIDE", 10L * 60L, REQUEST_HIDE)
+        schedule(context, "HIDE", (10L * 60L - elapsedSeconds).coerceAtLeast(1L), REQUEST_HIDE)
     }
 
     private fun startSafely(context: android.content.Context, intent: Intent) {
@@ -522,7 +533,16 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun hideIqamaNotification() {
             runOnUiThread {
-                IqamaPersistentNotification.hide(this@MainActivity)
+                // The WebView can briefly report 00:00 when it resumes from the
+                // background. Do not let that stale UI state kill a valid native
+                // elapsed notification. Native Android owns the 10-minute lifecycle.
+                val prefs = getSharedPreferences("iqama_service_state", MODE_PRIVATE)
+                val active = prefs.getBoolean("active", false)
+                val base = prefs.getLong("base", 0L)
+                val now = System.currentTimeMillis()
+                if (!active || base <= 0L || now - base >= 10L * 60L * 1000L) {
+                    IqamaPersistentNotification.hide(this@MainActivity)
+                }
             }
         }
 
