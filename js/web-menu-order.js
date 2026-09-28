@@ -27,6 +27,10 @@
       .web-settings-list{display:grid;gap:7px}.web-settings-list .main-action{width:100%!important;min-height:48px!important;height:auto!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important;background:#137985!important;color:#fff!important}
       body.design-menu-open #webDrawerSub #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;padding:8px!important}
       #saveToPhoneBtn{display:none!important}
+      /* واجهة البرنامج: هذه الأدوات حُذفت نهائياً من العرض حسب التصميم الحالي. */
+      body.design-menu-open #webDrawerSub #backgroundPanel>label:has(#bgType),
+      body.design-menu-open #webDrawerSub #backgroundPanel>#gradientBox,
+      body.design-menu-open #webDrawerSub #backgroundPanel>#imageBox{display:none!important}
     `;document.head.appendChild(s);
   }
 
