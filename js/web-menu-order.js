@@ -31,6 +31,7 @@
       body.design-menu-open #webDrawerSub #backgroundPanel>label:has(#bgType),
       body.design-menu-open #webDrawerSub #backgroundPanel>#gradientBox,
       body.design-menu-open #webDrawerSub #backgroundPanel>#imageBox{display:none!important}
+      body.design-menu-open #webDrawerSub #backgroundPanel>.inline-back-btn{display:none!important}
     `;document.head.appendChild(s);
   }
 
