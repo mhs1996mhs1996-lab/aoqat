@@ -60,28 +60,27 @@ object IqamaPersistentNotification {
         val savedActive = prefs.getBoolean("active", false)
         val savedBase = prefs.getLong("base", 0L)
 
-        // Once a native iqama cycle starts, its target timestamp is authoritative.
-        // WebView timers can pause/reset while the screen is locked or while the app
-        // resumes; they must never move the native target or restart elapsed time.
-        if (savedActive && savedBase > 0L && now - savedBase < 10L * 60L * 1000L) {
-            val nativeElapsed = now >= savedBase
+        val incomingElapsed = text.contains("مضى على الإقامة")
+        val incomingSeconds = secondsFrom(text).coerceAtLeast(0L)
+
+        // Use one iqama target for the whole cycle.
+        // While we are still BEFORE iqama, the live program countdown may correct the
+        // target (for example when the daily data finishes loading). Keep Android in
+        // sync with that target. Once the target is reached, freeze it permanently so
+        // lock-screen/resume WebView updates can never restart or shift elapsed time.
+        if (savedActive && savedBase > 0L && now >= savedBase && now - savedBase < 10L * 60L * 1000L) {
+            val elapsedSeconds = ((now - savedBase) / 1000L).coerceAtLeast(0L)
             val intent = Intent(context, IqamaNotificationService::class.java)
                 .setAction("SHOW")
-                .putExtra("elapsed", nativeElapsed)
+                .putExtra("elapsed", true)
                 .putExtra("base", savedBase)
             startSafely(context, intent)
-            if (nativeElapsed) {
-                val elapsedSeconds = ((now - savedBase) / 1000L).coerceAtLeast(0L)
-                schedule(context, "HIDE", (10L * 60L - elapsedSeconds).coerceAtLeast(1L), REQUEST_HIDE)
-            } else {
-                val remainingSeconds = ((savedBase - now + 999L) / 1000L).coerceAtLeast(1L)
-                schedule(context, "SWITCH", remainingSeconds, REQUEST_SWITCH)
-            }
+            schedule(context, "HIDE", (10L * 60L - elapsedSeconds).coerceAtLeast(1L), REQUEST_HIDE)
             return
         }
 
-        val elapsed = text.contains("مضى على الإقامة")
-        val seconds = secondsFrom(text).coerceAtLeast(0L)
+        val elapsed = incomingElapsed
+        val seconds = incomingSeconds
         val base = if (elapsed) now - seconds * 1000L else now + seconds * 1000L
         val intent = Intent(context, IqamaNotificationService::class.java)
             .setAction("SHOW")
@@ -173,6 +172,7 @@ class IqamaNotificationService : android.app.Service() {
                         prefs.edit().putBoolean("elapsed",true).putLong("base",base).apply()
                     }
                     if(elapsed && now-base>=10L*60L*1000L){
+                        prefs.edit().putBoolean("active",false).apply()
                         handler.post{stopSelf()}
                         break
                     }
@@ -228,7 +228,7 @@ class IqamaNotificationService : android.app.Service() {
         return n
     }
     override fun onTaskRemoved(rootIntent:Intent?){super.onTaskRemoved(rootIntent)}
-    override fun onDestroy(){ticking=false;tickerThread?.interrupt();tickerThread=null;if(wakeLock?.isHeld==true)wakeLock?.release();wakeLock=null;prefs.edit().putBoolean("active",false).apply();stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){ticking=false;tickerThread?.interrupt();tickerThread=null;if(wakeLock?.isHeld==true)wakeLock?.release();wakeLock=null;stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
