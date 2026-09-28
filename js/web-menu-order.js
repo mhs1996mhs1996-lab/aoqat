@@ -1,97 +1,81 @@
 "use strict";
 (function(){
   const ROWS=[
-    ["location","📍","الحويجة"],
-    ["language","🌐","اللغة"],
-    ["sound","🔊","الصوت"],
-    ["settings","⚙️","الإعدادات"],
-    ["appearance","🎨","شكل التطبيق"],
-    ["night","🌙","الوضع الليلي"],
-    ["savePhone","📱","حفظ على الهاتف"]
+    ["location","📍","الحويجة"],["language","🌐","اللغة"],["sound","🔊","الصوت"],
+    ["settings","⚙️","الإعدادات"],["appearance","🎨","شكل التطبيق"],
+    ["night","🌙","الوضع الليلي"],["savePhone","📱","حفظ على الهاتف"]
   ];
+  const SETTINGS=[
+    ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
+    ["switch","⏰","التبديل والتنبيه","switchPanel"],["footer","✍","النص السفلي","footerPanel"],
+    ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"]
+  ];
+  let returnMode="main";
 
   function addStyles(){
     if(document.getElementById("webDrawerExactStyles"))return;
     const s=document.createElement("style");s.id="webDrawerExactStyles";s.textContent=`
-      body.design-menu-open .sidebar .main-panel{position:fixed!important;top:0!important;right:0!important;bottom:0!important;left:auto!important;width:min(78vw,355px)!important;max-width:355px!important;height:100dvh!important;overflow-y:auto!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:#fff!important;color:#111!important;box-shadow:-12px 0 28px #0004!important;z-index:10020!important}
+      body.design-menu-open .sidebar .main-panel{position:fixed!important;inset:0 0 0 auto!important;width:min(78vw,355px)!important;max-width:355px!important;height:100dvh!important;overflow:hidden!important;padding:0!important;margin:0!important;border:0!important;border-radius:0!important;background:#fff!important;color:#111!important;box-shadow:-12px 0 28px #0004!important;z-index:10020!important}
       body.design-menu-open .sidebar .main-panel>h2{height:78px!important;margin:0!important;padding:25px 20px 12px!important;text-align:right!important;font-size:23px!important;color:#42add0!important;border-bottom:1px solid #ddd!important;background:#fff!important}
-      #webExactDrawer{display:none}body.design-menu-open #webExactDrawer{display:block!important;background:#fff!important}
+      #webExactDrawer{display:none}body.design-menu-open #webExactDrawer{display:block!important;height:calc(100dvh - 78px)!important;overflow:hidden!important;background:#fff!important}
       body.design-menu-open .sidebar .main-panel>#datePrayerGroup,body.design-menu-open .sidebar .main-panel>#backgroundFontGroup,body.design-menu-open .sidebar .main-panel>#webAppearanceBtn,body.design-menu-open .sidebar .main-panel>#webThemePanel,body.design-menu-open .sidebar .main-panel>#topExportJpg{display:none!important}
-      .web-drawer-row{width:100%!important;height:64px!important;margin:0!important;padding:0 24px!important;border:0!important;border-bottom:1px solid color-mix(in srgb,var(--wt-border,#d9c8a8) 70%,#fff)!important;border-radius:0!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#3f3425)!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:18px!important;font-size:18px!important;font-weight:600!important;text-align:right!important;box-shadow:none!important}
-      .web-drawer-row:nth-child(odd){background:linear-gradient(90deg,var(--wt-surface2,#f8efd9),var(--wt-surface,#fffaf0))!important}
-      .web-drawer-row .ico{width:30px!important;font-size:24px!important;text-align:center!important}.web-drawer-row .txt{flex:1!important}
-      #webDrawerPanelHost{display:none!important;background:#fff!important;padding:8px!important;border-bottom:1px solid #ddd!important}
-      #webDrawerPanelHost.open{display:block!important}
-      body.design-menu-open #webDrawerPanelHost .inline-control-panel{display:block!important;position:static!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:10px!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#222)!important;border:1px solid var(--wt-border,#ddd)!important;border-radius:8px!important}
-      body.design-menu-open #webDrawerPanelHost .inline-control-panel>.design-popup-close{display:none!important}
-      #webDrawerThemeHost{display:none!important;padding:10px;background:#fff;border-bottom:1px solid #ddd}#webDrawerThemeHost.open{display:block!important}
-      body.design-menu-open #webDrawerThemeHost #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#111)!important;border:0!important}
+      .web-drawer-main{height:100%;overflow-y:auto;background:#fff}.web-drawer-row{width:100%!important;height:64px!important;margin:0!important;padding:0 24px!important;border:0!important;border-bottom:1px solid color-mix(in srgb,var(--wt-border,#d9c8a8) 70%,#fff)!important;border-radius:0!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#3f3425)!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:18px!important;font-size:18px!important;font-weight:600!important;text-align:right!important;box-shadow:none!important}.web-drawer-row:nth-child(odd){background:linear-gradient(90deg,var(--wt-surface2,#f8efd9),var(--wt-surface,#fffaf0))!important}.web-drawer-row .ico{width:30px;font-size:24px;text-align:center}.web-drawer-row .txt{flex:1}
+      #webDrawerSub{display:none;height:100%;overflow:hidden;background:#fff}#webDrawerSub.open{display:flex!important;flex-direction:column!important}.web-sub-head{flex:0 0 58px;display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #ddd;background:#fff}.web-back{width:42px;height:42px;border:0;border-radius:9px;background:#39afd2;color:#fff;font-size:25px;font-weight:900}.web-sub-title{flex:1;text-align:right;font-size:20px;font-weight:800;color:#2b5265}.web-sub-body{flex:1;min-height:0;overflow-y:auto;padding:10px;background:#fff}
+      body.design-menu-open #webDrawerSub .inline-control-panel,body.design-menu-open #webDrawerSub .panel,body.design-menu-open #webDrawerSub .font-panel{display:block!important;position:static!important;transform:none!important;inset:auto!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:12px!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#222)!important;border:1px solid var(--wt-border,#ddd)!important;border-radius:9px!important;box-shadow:none!important}
+      body.design-menu-open #webDrawerSub .panel-title,body.design-menu-open #webDrawerSub .font-title{display:none!important}
+      .web-settings-list{display:grid;gap:7px}.web-settings-list .main-action{width:100%!important;min-height:48px!important;height:auto!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important;background:#137985!important;color:#fff!important}
+      body.design-menu-open #webDrawerSub #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;padding:8px!important}
       #saveToPhoneBtn{display:none!important}
     `;document.head.appendChild(s);
   }
 
-  function closeHosts(){
-    const ph=document.getElementById("webDrawerPanelHost"),th=document.getElementById("webDrawerThemeHost");
-    if(ph){ph.classList.remove("open");const p=ph.querySelector(".inline-control-panel");if(p){p.classList.remove("inline-open","active-panel");const home=document.querySelector(".sidebar .main-panel");if(home)home.appendChild(p);}}
-    if(th)th.classList.remove("open");
+  function restoreMoved(){
+    const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
+    if(!body||!home)return;
+    [...body.children].forEach(el=>{if(el.matches(".panel,.font-panel,.inline-control-panel")&&el.id!=="webSettingsTemp"){el.classList.remove("inline-open","active-panel");home.appendChild(el);}});
   }
-
-  function showOriginalPanel(panelId){
-    const panel=document.getElementById(panelId),host=document.getElementById("webDrawerPanelHost");
-    if(!panel||!host)return false;
-    closeHosts();
-    host.appendChild(panel);
-    panel.classList.add("inline-control-panel","inline-open","active-panel");
-    host.classList.add("open");
-    return true;
+  function mainView(){
+    restoreMoved();document.getElementById("webDrawerSub")?.classList.remove("open");
+    const m=document.getElementById("webDrawerMain");if(m)m.style.display="block";returnMode="main";
   }
-
-  function showSettings(){
-    const host=document.getElementById("webDrawerPanelHost");
-    if(!host)return;
-    closeHosts();host.innerHTML="";
-    const wrap=document.createElement("div");wrap.className="inline-control-panel inline-open active-panel";
-    wrap.innerHTML='<div style="display:grid;gap:7px"><button type="button" class="main-action" data-old="background">🎨 <span>واجهة البرنامج</span></button><button type="button" class="main-action" data-old="font">🔤 <span>تنسيق الخط</span></button><button type="button" class="main-action" data-old="switch">⏰ <span>التبديل والتنبيه</span></button><button type="button" class="main-action" data-old="footer">✍ <span>النص السفلي</span></button><button type="button" class="main-action" data-old="date">📅 <span>بيانات التاريخ</span></button><button type="button" class="main-action" data-old="prayer">🕌 <span>أوقات الصلاة</span></button></div>';
-    host.appendChild(wrap);host.classList.add("open");
-    wrap.addEventListener("click",e=>{const b=e.target.closest("[data-old]");if(!b)return;const map={background:"backgroundPanel",font:"fontPanel",switch:"switchPanel",footer:"footerPanel",date:"datePanel",prayer:"prayerPanel"};showOriginalPanel(map[b.dataset.old]);});
+  function openSub(title,node,backTo="main"){
+    restoreMoved();const m=document.getElementById("webDrawerMain"),sub=document.getElementById("webDrawerSub"),body=document.getElementById("webSubBody");
+    if(!sub||!body)return;if(m)m.style.display="none";body.innerHTML="";document.getElementById("webSubTitle").textContent=title;
+    if(node)body.appendChild(node);sub.classList.add("open");returnMode=backTo;
   }
-
-  function savePhone(){
-    const exportBtn=document.getElementById("topExportJpg")||document.querySelector('[data-export-format="jpg"]');
-    if(exportBtn){exportBtn.click();return;}
-    const old=document.getElementById("saveToPhoneBtn");if(old)old.click();
+  function openPanel(title,id,backTo="main"){
+    const p=document.getElementById(id);if(!p)return;p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
+  function settingsView(){
+    const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
+    SETTINGS.forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
+    wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
+    openSub("الإعدادات",wrap,"main");
+  }
+  function themeView(){const p=document.getElementById("webThemePanel");if(p){p.hidden=false;openSub("شكل التطبيق",p,"main");}}
+  function savePhone(){const b=document.getElementById("topExportJpg")||document.querySelector('[data-export-format="jpg"]');if(b)b.click();}
 
   function install(){
     const main=document.querySelector(".sidebar .main-panel");if(!main)return false;addStyles();
-    let drawer=document.getElementById("webExactDrawer");
-    if(!drawer){
-      drawer=document.createElement("div");drawer.id="webExactDrawer";
-      ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';drawer.appendChild(b);});
-      const panelHost=document.createElement("div");panelHost.id="webDrawerPanelHost";drawer.appendChild(panelHost);
-      const themeHost=document.createElement("div");themeHost.id="webDrawerThemeHost";drawer.appendChild(themeHost);
-      main.appendChild(drawer);
-      drawer.addEventListener("click",e=>{
-        const b=e.target.closest("[data-drawer]");if(!b)return;
-        const id=b.dataset.drawer;
-        if(id==="location"){showOriginalPanel("datePanel");return;}
-        if(id==="language"){showSettings();return;}
-        if(id==="sound"){showOriginalPanel("switchPanel");return;}
-        if(id==="settings"){showSettings();return;}
-        if(id==="appearance"){
-          closeHosts();const p=document.getElementById("webThemePanel"),h=document.getElementById("webDrawerThemeHost");
-          if(p&&h){h.appendChild(p);p.hidden=false;h.classList.add("open");}return;
-        }
-        if(id==="night"){
-          const cards=[...document.querySelectorAll("#webThemePanel .wt-card")],current=document.body.dataset.webTheme==="dark-night";
-          const target=cards.find(x=>x.dataset.theme===(current?"cream-blue":"dark-night"));if(target)target.click();return;
-        }
-        if(id==="savePhone"){savePhone();}
-      });
-    }
+    if(document.getElementById("webExactDrawer"))return true;
+    const drawer=document.createElement("div");drawer.id="webExactDrawer";
+    const mainList=document.createElement("div");mainList.id="webDrawerMain";mainList.className="web-drawer-main";
+    ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
+    const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
+    drawer.append(mainList,sub);main.appendChild(drawer);
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode==="settings")settingsView();else mainView();});
+    mainList.addEventListener("click",e=>{
+      const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
+      if(id==="location"){openPanel("الحويجة","datePanel");return;}
+      if(id==="language"){settingsView();return;}
+      if(id==="sound"){openPanel("الصوت","switchPanel");return;}
+      if(id==="settings"){settingsView();return;}
+      if(id==="appearance"){themeView();return;}
+      if(id==="night"){const cards=[...document.querySelectorAll("#webThemePanel .wt-card")],dark=document.body.dataset.webTheme==="dark-night",t=cards.find(x=>x.dataset.theme===(dark?"cream-blue":"dark-night"));if(t)t.click();return;}
+      if(id==="savePhone")savePhone();
+    });
     return true;
   }
-
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
