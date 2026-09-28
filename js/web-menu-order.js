@@ -1,7 +1,8 @@
 "use strict";
 (function(){
+  // القائمة الرئيسية تحتوي فقط على عناصر لها وظيفة حقيقية في المشروع.
+  // أزيلت عناصر (الحويجة/اللغة/الصوت) لأنها كانت مجرد اختصارات شكلية مرتبطة بلوحات غير صحيحة.
   const ROWS=[
-    ["location","📍","الحويجة"],["language","🌐","اللغة"],["sound","🔊","الصوت"],
     ["settings","⚙️","الإعدادات"],["appearance","🎨","شكل التطبيق"],
     ["night","🌙","الوضع الليلي"],["savePhone","📱","حفظ على الهاتف"]
   ];
@@ -66,9 +67,6 @@
     sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode==="settings")settingsView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
-      if(id==="location"){openPanel("الحويجة","datePanel");return;}
-      if(id==="language"){settingsView();return;}
-      if(id==="sound"){openPanel("الصوت","switchPanel");return;}
       if(id==="settings"){settingsView();return;}
       if(id==="appearance"){themeView();return;}
       if(id==="night"){const cards=[...document.querySelectorAll("#webThemePanel .wt-card")],dark=document.body.dataset.webTheme==="dark-night",t=cards.find(x=>x.dataset.theme===(dark?"cream-blue":"dark-night"));if(t)t.click();return;}
