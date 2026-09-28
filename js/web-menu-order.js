@@ -32,6 +32,11 @@
       body.design-menu-open #webDrawerSub #backgroundPanel>#gradientBox,
       body.design-menu-open #webDrawerSub #backgroundPanel>#imageBox{display:none!important}
       body.design-menu-open #webDrawerSub #backgroundPanel>.inline-back-btn{display:none!important}
+      /* إصلاح لوحة ألوان تنسيق الخط داخل القائمة الجديدة: لا نغيّر منطق الألوان، فقط نعيد إظهار لون كل swatch. */
+      body.design-menu-open #webDrawerSub #fontPanel input[type="color"]{display:block!important;width:100%!important;min-height:46px!important;padding:3px!important;opacity:1!important;visibility:visible!important}
+      body.design-menu-open #webDrawerSub #fontPanel [style*="background-color"],
+      body.design-menu-open #webDrawerSub #fontPanel [style*="background:"]{opacity:1!important;visibility:visible!important}
+
     `;document.head.appendChild(s);
   }
 
