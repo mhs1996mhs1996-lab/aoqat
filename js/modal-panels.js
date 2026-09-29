@@ -115,7 +115,7 @@
     el.className="tomorrow-switch-status"+(type?` ${type}`:"");
   }
 
-  function autoEnabled(){return localStorage.getItem(AUTO_KEY)!=="0";}
+  function autoEnabled(){return localStorage.getItem(AUTO_KEY)==="1";}
   function notifyEnabled(){return localStorage.getItem(NOTIFY_KEY)==="1";}
 
   function refreshToggleButtons(){
