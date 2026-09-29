@@ -221,7 +221,10 @@
         <button type="button" id="autoTomorrowToggle" class="switch-control-btn"></button>
         <button type="button" id="showTomorrowNowBtn" class="switch-control-btn manual">➡ عرض اليوم التالي الآن</button>
         <button type="button" id="showTodayNowBtn" class="switch-control-btn manual secondary">↩ الرجوع إلى اليوم</button>
-        <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">جاري قراءة وقت العشاء من قاعدة البيانات...</div>`;
+        <button type="button" id="tomorrowAlarmEnable" class="switch-control-btn"><span class="alarm-enable-label">🔔 تفعيل تنبيه النشر على الهاتف</span><span class="alarm-enable-state">إيقاف</span></button>
+        <div class="switch-help">إشعارات الخلفية مفعلة حتى عند إغلاق البرنامج.<br>التنبيه يظهر عند تبديل المواقيت بعد العشاء بـ35 دقيقة، مع إيقاف وغفوة.</div>
+        <button type="button" id="iqamaNotificationToggle" class="switch-control-btn"><span>🔔 ظهور إشعار الإقامة</span><span>إيقاف</span></button>
+        <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">التبديل التلقائي متوقف</div>`;
       button.insertAdjacentElement("afterend",panel);
     }
     return {button,panel};
