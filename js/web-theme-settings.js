@@ -32,13 +32,19 @@
   `;
   document.head.appendChild(css);
 
+  function getSavedTheme(){
+    try{return localStorage.getItem(STORAGE_KEY)||"cream-blue";}catch(_){return "cream-blue";}
+  }
+  function saveTheme(id){
+    try{localStorage.setItem(STORAGE_KEY,id);}catch(_){}
+  }
   function applyTheme(id){
     const theme=themes.find(t=>t.id===id)||themes[0];
     const r=document.documentElement;
     Object.entries(theme.vars).forEach(([k,v])=>r.style.setProperty("--wt-"+k,v));
     document.body.classList.add("aoqat-web-theme");
     document.body.dataset.webTheme=theme.id;
-    localStorage.setItem(STORAGE_KEY,theme.id);
+    saveTheme(theme.id);
     document.querySelectorAll("#webThemePanel .wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===theme.id));
   }
 
@@ -64,11 +70,13 @@
       const card=e.target.closest(".wt-card"); if(!card)return;
       applyTheme(card.dataset.theme);
     });
-    applyTheme(localStorage.getItem(STORAGE_KEY)||"cream-blue");
+    applyTheme(getSavedTheme());
     return true;
   }
   window.ensureWebThemePanel=function(){install();return document.getElementById("webThemePanel");};
   window.applyWebTheme=applyTheme;
+  window.addEventListener("pageshow",()=>applyTheme(getSavedTheme()));
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)applyTheme(getSavedTheme());});
   function start(){
     let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>80)clearInterval(timer)},150);install();
   }
