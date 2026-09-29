@@ -129,7 +129,8 @@
       body.design-menu-open #backgroundPanel #backgroundDesignTools #changeBackgroundBtn{background:linear-gradient(135deg,#176f9f,#2489bb)!important;border-color:#2d91bd!important;color:#fff!important}
       body.design-menu-open #backgroundPanel #backgroundDesignTools #saveDesignAdjustments{background:linear-gradient(135deg,#6b3fa0,#8c55b4)!important;border-color:#9a68bc!important;color:#fff!important}
       body.design-menu-open #backgroundPanel #backgroundDesignTools #resetPositions{background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border-color:#d89843!important;color:#fff!important}
-      body.design-menu-open #backgroundPanel #backgroundDesignTools [data-open-panel="footerPanel"]{background:linear-gradient(135deg,#a74468,#c75b7f)!important;border-color:#d06d8d!important;color:#fff!important}
+      /* النص السفلي له مدخل واحد فقط داخل الإعدادات؛ أخفِ النسخة القديمة داخل واجهة البرنامج. */
+      body.design-menu-open #backgroundPanel [data-open-panel="footerPanel"]{display:none!important}
       body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle:not(.is-on)[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
       body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle.is-on,
       body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle[aria-pressed="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
