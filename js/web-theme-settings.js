@@ -44,7 +44,9 @@
 
   function install(){
     const main=document.querySelector(".sidebar .main-panel");
-    if(!main||document.getElementById("webAppearanceBtn"))return false;
+    if(!main)return false;
+    const existing=document.getElementById("webThemePanel");
+    if(existing)return true;
     const btn=document.createElement("button");
     btn.type="button";btn.id="webAppearanceBtn";btn.className="main-action";
     btn.innerHTML='<span aria-hidden="true">🎨</span><span>شكل التطبيق</span>';
@@ -65,6 +67,8 @@
     applyTheme(localStorage.getItem(STORAGE_KEY)||"cream-blue");
     return true;
   }
+  window.ensureWebThemePanel=function(){install();return document.getElementById("webThemePanel");};
+  window.applyWebTheme=applyTheme;
   function start(){
     let tries=0;const timer=setInterval(()=>{tries++;if(install()||tries>80)clearInterval(timer)},150);install();
   }
