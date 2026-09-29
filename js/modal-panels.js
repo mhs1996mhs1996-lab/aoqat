@@ -307,10 +307,10 @@
     document.getElementById("showTodayNowBtn")?.addEventListener("click",showTodayManual);
 
     refreshToggleButtons();
-    setTimeout(()=>evaluateAutoSwitch(true),1400);
-    setInterval(()=>evaluateAutoSwitch(false),60000);
-    window.addEventListener("focus",()=>evaluateAutoSwitch(false));
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden) evaluateAutoSwitch(false)});
+    if(autoEnabled()) setTimeout(()=>evaluateAutoSwitch(true),1400);
+    setInterval(()=>{if(autoEnabled()) evaluateAutoSwitch(false);},60000);
+    window.addEventListener("focus",()=>{if(autoEnabled()) evaluateAutoSwitch(false);});
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden&&autoEnabled()) evaluateAutoSwitch(false)});
   }
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",initInlinePanels,{once:true});
