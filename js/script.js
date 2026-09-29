@@ -1336,7 +1336,7 @@ function setupReset() {
    التصدير
 ===================================================== */
 
-async function exportImage(format) {
+async function exportImage(format, action = "download") {
 
 
     const design =
@@ -1511,35 +1511,36 @@ async function exportImage(format) {
             }
 
 
-            const url =
-                URL.createObjectURL(
-                    blob
-                );
+            const fileName = `prayer-preview.${format}`;
 
+            if (action === "share" && navigator.share) {
+                const file = new File([blob], fileName, { type: mime });
+                const shareData = { files: [file], title: "أوقات الصلاة في الحويجة" };
+                if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+                    navigator.share(shareData).catch(err => {
+                        if (err && err.name !== "AbortError") {
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement("a");
+                            link.href = url;
+                            link.download = fileName;
+                            document.body.appendChild(link);
+                            link.click();
+                            link.remove();
+                            setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        }
+                    });
+                    return;
+                }
+            }
 
-            const link =
-                document.createElement(
-                    "a"
-                );
-
-
-            link.href =
-                url;
-
-
-            link.download =
-                `noor-prayer-calendar.${format}`;
-
-
-            document.body.appendChild(
-                link
-            );
-
-
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = fileName;
+            document.body.appendChild(link);
             link.click();
-
-
             link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
 
 
             setTimeout(
@@ -2105,3 +2106,4 @@ else {
     init();
 
 }
+window.sharePrayerPreview = function(format = "jpg"){ return exportImage(format, "share"); };
