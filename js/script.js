@@ -1498,18 +1498,10 @@ async function exportImage(format) {
 
     canvas.toBlob(
         blob => {
-
-
             if (!blob) {
-
-                alert(
-                    "تعذر إنشاء الصورة."
-                );
-
+                alert("تعذر إنشاء الصورة.");
                 return;
-
             }
-
 
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
@@ -1518,40 +1510,10 @@ async function exportImage(format) {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-                        }
-                    });
-                    return;
-                }
-            }
-
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = fileName;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-
-
-            setTimeout(
-                () => {
-
-                    URL.revokeObjectURL(
-                        url
-                    );
-
-                },
-                2000
-            );
-
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
         },
-
         mime,
-
         quality
-
     );
 
 }
