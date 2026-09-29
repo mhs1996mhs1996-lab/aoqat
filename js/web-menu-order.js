@@ -83,7 +83,7 @@
       if(id==="settings"){settingsView();return;}
       if(id==="notifications"){openPanel("الإشعارات","switchPanel");return;}
       if(id==="appearance"){themeView();return;}
-      if(id==="night"){const cards=[...document.querySelectorAll("#webThemePanel .wt-card")],dark=document.body.dataset.webTheme==="dark-night",t=cards.find(x=>x.dataset.theme===(dark?"cream-blue":"dark-night"));if(t)t.click();return;}
+      if(id==="night"){if(typeof window.applyWebTheme==="function"){const dark=document.body.dataset.webTheme==="dark-night";window.applyWebTheme(dark?"cream-blue":"dark-night");}return;}
       if(id==="savePhone")savePhone();
     });
     return true;
