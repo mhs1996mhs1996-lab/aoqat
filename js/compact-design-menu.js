@@ -205,7 +205,7 @@
     let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
     const items=[['clock','الساعة','.interface-clock-card'],['date','التاريخ','.interface-date-card'],['adhan','باقي على صلاة...','.next-prayer'],['iqama','باقي على الإقامة','.iqama-status']];
     const apply=()=>{items.forEach(([k,,sel])=>{document.querySelectorAll(sel).forEach(el=>el.style.setProperty('display',state[k]===false?'none':'inline-flex','important'));});const sep=document.getElementById('countdownSeparator');if(sep)sep.style.setProperty('display',(state.adhan===false||state.iqama===false)?'none':'block','important');};
-    items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=!(state[k]!==false);localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
+    items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]===true;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=!(state[k]===true);localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
     panel.appendChild(box);apply();setInterval(apply,1000);return true;
   }
   function addDesignVisibilityControls(){
