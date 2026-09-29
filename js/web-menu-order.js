@@ -66,7 +66,7 @@
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     openSub("الإعدادات",wrap,"main");
   }
-  function themeView(){let p=document.getElementById("webThemePanel");if(!p&&typeof window.ensureWebThemePanel==="function")p=window.ensureWebThemePanel();if(!p){setTimeout(themeView,120);return;}p.hidden=false;openSub("شكل التطبيق",p,"main");}
+  function themeView(){let p=document.getElementById("webThemePanel");if(!p&&typeof window.ensureWebThemePanel==="function")p=window.ensureWebThemePanel();if(!p)return;p.hidden=false;restoreMoved();const m=document.getElementById("webDrawerMain"),sub=document.getElementById("webDrawerSub"),body=document.getElementById("webSubBody");if(!sub||!body)return;if(m)m.style.display="none";body.innerHTML="";document.getElementById("webSubTitle").textContent="شكل التطبيق";body.appendChild(p);p.hidden=false;sub.classList.add("open");returnMode="main";}
   function savePhone(){const b=document.getElementById("topExportJpg")||document.querySelector('[data-export-format="jpg"]');if(b)b.click();}
 
   function install(){
