@@ -38,6 +38,10 @@
       body.design-menu-open #webDrawerSub #backgroundPanel>#gradientBox,
       body.design-menu-open #webDrawerSub #backgroundPanel>#imageBox{display:none!important}
       body.design-menu-open #webDrawerSub #backgroundPanel>.inline-back-btn{display:none!important}
+      /* واجهة البرنامج لا تحتوي زر النص السفلي؛ يبقى فقط داخل الإعدادات. */
+      body.design-menu-open #webDrawerSub #backgroundPanel #footerBtn,
+      body.design-menu-open #webDrawerSub #backgroundPanel [data-panel="footerPanel"],
+      body.design-menu-open #webDrawerSub #backgroundPanel [data-target="footerPanel"]{display:none!important}
       /* The drawer already has one back button; hide legacy inline back controls inside subpages. */
       body.design-menu-open #webDrawerSub .design-popup-close{display:none!important}
       /* إصلاح لوحة ألوان تنسيق الخط داخل القائمة الجديدة: لا نغيّر منطق الألوان، فقط نعيد إظهار لون كل swatch. */
