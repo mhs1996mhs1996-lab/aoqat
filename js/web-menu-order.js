@@ -38,6 +38,10 @@
       body.design-menu-open #webDrawerSub #backgroundPanel>#gradientBox,
       body.design-menu-open #webDrawerSub #backgroundPanel>#imageBox{display:none!important}
       body.design-menu-open #webDrawerSub #backgroundPanel>.inline-back-btn{display:none!important}
+      /* النص السفلي يبقى فقط داخل الإعدادات، ولا يظهر مكرراً داخل واجهة البرنامج. */
+      body.design-menu-open #webDrawerSub #backgroundPanel #footerBtn,
+      body.design-menu-open #webDrawerSub #backgroundPanel [data-panel="footerPanel"],
+      body.design-menu-open #webDrawerSub #backgroundPanel [data-target="footerPanel"]{display:none!important}
       /* واجهة البرنامج لا تحتوي زر النص السفلي؛ يبقى فقط داخل الإعدادات. */
       body.design-menu-open #webDrawerSub #backgroundPanel #footerBtn,
       body.design-menu-open #webDrawerSub #backgroundPanel [data-panel="footerPanel"],
