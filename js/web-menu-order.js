@@ -9,7 +9,8 @@
   const SETTINGS=[
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
     ["switch","⏰","التبديل والتنبيه","switchPanel"],["footer","✍","النص السفلي","footerPanel"],
-    ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"]
+    ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"],
+    ["iqama","⏳","أوقات الإقامة","iqamaPanel"]
   ];
   let returnMode="main";
 
