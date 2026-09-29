@@ -3,12 +3,12 @@
   // القائمة الرئيسية تحتوي فقط على عناصر لها وظيفة حقيقية في المشروع.
   // أزيلت عناصر (الحويجة/اللغة/الصوت) لأنها كانت مجرد اختصارات شكلية مرتبطة بلوحات غير صحيحة.
   const ROWS=[
-    ["settings","⚙️","الإعدادات"],["appearance","🎨","شكل التطبيق"],
+    ["settings","⚙️","الإعدادات"],["notifications","🔔","الإشعارات"],["appearance","🎨","شكل التطبيق"],
     ["night","🌙","الوضع الليلي"],["savePhone","📱","حفظ على الهاتف"]
   ];
   const SETTINGS=[
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
-    ["switch","⏰","التبديل والتنبيه","switchPanel"],["footer","✍","النص السفلي","footerPanel"],
+    ["footer","✍","النص السفلي","footerPanel"],
     ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"],
     ["iqama","⏳","أوقات الإقامة","iqamaPanel"]
   ];
@@ -79,6 +79,7 @@
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(id==="settings"){settingsView();return;}
+      if(id==="notifications"){openPanel("الإشعارات","switchPanel");return;}
       if(id==="appearance"){themeView();return;}
       if(id==="night"){const cards=[...document.querySelectorAll("#webThemePanel .wt-card")],dark=document.body.dataset.webTheme==="dark-night",t=cards.find(x=>x.dataset.theme===(dark?"cream-blue":"dark-night"));if(t)t.click();return;}
       if(id==="savePhone")savePhone();
