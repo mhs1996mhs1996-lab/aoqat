@@ -1,11 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap');
 
 /* =====================================================
    إعدادات عامة
 ===================================================== */
 
 * {
-    font-family: 'Cairo', sans-serif;
+    font-family: 'Times New Roman', Times, serif;
     box-sizing: border-box;
 }
 
@@ -1409,8 +1408,8 @@ input[type="color"] {
 #loadPrayerDbBtn{background:#e8f3ff;color:#164b72}#savePrayerDbBtn{background:#dff7e8;color:#175b35}.database-status{padding:8px;border-radius:8px;background:rgba(0,0,0,.06);font-size:12px;text-align:center}.database-status.error{color:#a32222;background:#ffe8e8}.database-status.success{color:#17643a;background:#e7f8ee}
 
 
-/* Cairo font */
-html, body, button, input, select, textarea, option { font-family: 'Cairo', sans-serif; }
+/* Default program font */
+html, body, button, input, select, textarea, option { font-family: 'Times New Roman', Times, serif; }
 
 /* Main interface visibility controls */
 .interface-visibility-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:6px 0 10px}
