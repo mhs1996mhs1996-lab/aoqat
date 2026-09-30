@@ -11,7 +11,8 @@
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
     ["footer","✍","النص السفلي","footerPanel"],
     ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"],
-    ["iqama","⏳","أوقات الإقامة","iqamaPanel"]
+    ["iqama","⏳","أوقات الإقامة","iqamaPanel"],
+    ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
   ];
   let returnMode="main";
 
@@ -78,13 +79,13 @@
   }
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
-    SETTINGS.filter(([key])=>!["date","prayer","iqama"].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
+    SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama"].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     openSub("إعدادت التصميم",wrap,"main");
   }
   function datePrayerView(){
     const wrap=document.createElement("div");wrap.id="webDatePrayerTemp";wrap.className="web-settings-list";
-    SETTINGS.filter(([key])=>["date","prayer","iqama"].includes(key)).forEach(([key,icon,label,panel])=>{
+    SETTINGS.filter(([key])=>["date","prayer","iqama","afterIqama"].includes(key)).forEach(([key,icon,label,panel])=>{
       const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);
     });
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"datePrayer");});

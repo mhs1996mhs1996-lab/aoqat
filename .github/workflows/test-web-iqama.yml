@@ -1,0 +1,24 @@
+name: Validate web iqama settings
+on:
+  push:
+    branches: ['test/web-after-iqama']
+permissions:
+  contents: read
+jobs:
+  web-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test tools
+        run: npm install --prefix /tmp/iqama-browser --no-save playwright@1.58.2
+      - name: Test mobile menu and iqama lifecycle
+        env:
+          NODE_PATH: /tmp/iqama-browser/node_modules
+          CHROME_PATH: /usr/bin/google-chrome
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 > /tmp/iqama-http.log 2>&1 &
+          node tests/web-iqama.cjs

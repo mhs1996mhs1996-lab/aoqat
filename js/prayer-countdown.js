@@ -1,12 +1,20 @@
 "use strict";
 (function(){
   const KEY="aoqatIqamaMinutesV1";
+  const AFTER_KEY="aoqatAfterIqamaMinutesV1";
+  const TIMING=window.AoqatIqamaTiming;
+  const AFTER_DEFAULTS={fajr:10,dhuhr:10,asr:10,maghrib:10,isha:10};
   const IQAMA_NOTIFY_KEY="aoqatIqamaNotificationEnabledV1"; let lastIqamaNotifyText=""; let iqamaNotificationActive=false;
   const DEFAULTS={fajr:20,dhuhr:10,asr:10,maghrib:10,isha:10,friday:15};
   const NAMES={fajr:"الفجر",dhuhr:"الظهر",asr:"العصر",maghrib:"المغرب",isha:"العشاء"};
   const IDS=["fajr","dhuhr","asr","maghrib","isha"];
   let todayRow=null,todayKey="",busy=false,tomorrowFajr=null,tomorrowKey="";
-  function settings(){try{return Object.assign({},DEFAULTS,JSON.parse(localStorage.getItem(KEY)||"{}"));}catch(_){return {...DEFAULTS};}}
+  function readMinutes(key,defaults){
+    let saved={};try{saved=JSON.parse(localStorage.getItem(key)||"{}");}catch(_){}
+    return TIMING.normalize(saved,defaults);
+  }
+  function settings(){return readMinutes(KEY,DEFAULTS);}
+  function afterSettings(){return readMinutes(AFTER_KEY,AFTER_DEFAULTS);}
   function save(s){localStorage.setItem(KEY,JSON.stringify(s));}
   function iqamaNotifyEnabled(){return localStorage.getItem(IQAMA_NOTIFY_KEY)==="1";}
   async function setIqamaNotify(on){localStorage.setItem(IQAMA_NOTIFY_KEY,on?"1":"0");if(on&&typeof Notification!=="undefined"&&Notification.permission!=="granted"){const p=await Notification.requestPermission();if(p!=="granted")localStorage.setItem(IQAMA_NOTIFY_KEY,"0");}refreshIqamaNotifyButton();if(!iqamaNotifyEnabled())clearIqamaNotification();}
@@ -21,12 +29,39 @@
   async function loadToday(){if(busy||typeof SUPABASE_URL==="undefined"||typeof dbHeaders!=="function")return;busy=true;try{const n=new Date(),key=`${n.getFullYear()}-${n.getMonth()+1}-${n.getDate()}`;if(key!==todayKey||!todayRow){todayRow=await fetchRow(n.getMonth()+1,n.getDate());todayKey=key;}const t=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,12);const tk=`${t.getFullYear()}-${t.getMonth()+1}-${t.getDate()}`;if(tk!==tomorrowKey){const row=await fetchRow(t.getMonth()+1,t.getDate());tomorrowFajr=row?parse(row.fajr,"fajr"):null;tomorrowKey=tk;}}catch(e){console.error("prayer countdown",e)}finally{busy=false;}}
   function createDisplay(){let host=document.querySelector(".workspace")||document.querySelector(".main-content")||document.body;let old=document.getElementById("mainPrayerCountdownHost");if(!old){old=document.createElement("div");old.id="mainPrayerCountdownHost";old.className="preview-header prayer-countdown-host";const preview=host.querySelector(".previewBox")||host.firstElementChild;if(preview)host.insertBefore(old,preview);else host.prepend(old);}old.innerHTML=`<div class="live-prayer-status"><div class="next-prayer"><span id="nextPrayerLabel">الأذان القادم بعد</span><b id="nextPrayerCountdown">--:--:--</b></div><div class="countdown-separator" id="countdownSeparator" aria-hidden="true"></div><div class="iqama-status" id="iqamaStatus"><span id="iqamaLabel">باقي على الإقامة</span><b id="iqamaCountdown">00:00</b></div></div>`;}
   function createPanel(){const main=document.querySelector(".sidebar .main-panel");if(!main||document.getElementById("iqamaPanel"))return;const prayerBtn=main.querySelector('[data-open-panel="prayerPanel"]');const btn=document.createElement("button");btn.type="button";btn.className="main-action iqama-action";btn.dataset.openPanel="iqamaPanel";btn.innerHTML="⏳ <span>أوقات الإقامة</span>";prayerBtn?.insertAdjacentElement("afterend",btn);const p=document.createElement("section");p.id="iqamaPanel";p.className="panel inline-control-panel";const opts=[5,10,15,20,25,30].map(v=>`<option value="${v}">${v} دقيقة</option>`).join("");p.innerHTML=`<div class="iqama-help">حدد المدة من وقت الأذان حتى الإقامة.</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-iqama="${id}">${opts}</select></label>`).join("")}<label>الجمعة الأولى<select data-iqama="friday">${opts}</select></label><div class="iqama-friday-help">الجمعة الأولى تكون قبل أذان الظهر بالمدة المحددة.</div>`;btn.insertAdjacentElement("afterend",p);const s=settings();p.querySelectorAll("[data-iqama]").forEach(el=>{el.value=String(s[el.dataset.iqama]||DEFAULTS[el.dataset.iqama]);el.addEventListener("change",()=>{const q=settings();q[el.dataset.iqama]=+el.value;save(q);tick();});});btn.addEventListener("click",()=>{const open=p.classList.toggle("inline-open");document.querySelectorAll(".inline-control-panel.inline-open").forEach(x=>{if(x!==p)x.classList.remove("inline-open")});btn.classList.toggle("inline-active",open);});}
-  function css(){if(document.getElementById("prayerCountdownStyles"))return;const s=document.createElement("style");s.id="prayerCountdownStyles";s.textContent=`#mainPrayerCountdownHost{display:block!important;width:100%;min-height:36px;margin:0 auto 8px;padding:0;position:relative;z-index:20}.live-prayer-status{width:max-content;max-width:100%;margin:auto;display:flex;justify-content:center;align-items:center;gap:6px;direction:rtl;white-space:nowrap}.next-prayer,.iqama-status{display:inline-flex;width:auto;align-items:center;justify-content:center;gap:4px;padding:4px 7px;border-radius:9px;background:rgba(5,28,39,.88);border:1px solid rgba(255,255,255,.12);white-space:nowrap}.next-prayer span,.iqama-status span{font-size:12px;font-weight:700}.next-prayer b,.iqama-status b{font-size:15px;direction:ltr;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0}.iqama-status{background:rgba(126,84,14,.9)}.countdown-separator{display:block;width:1px;height:28px;flex:0 0 1px;margin:0 2px;background:linear-gradient(to bottom,transparent,rgba(218,178,82,.95),transparent);box-shadow:0 0 5px rgba(218,178,82,.25)}.main-action.iqama-action{background:#8a6518}.iqama-help,.iqama-friday-help{font-size:12px;opacity:.85;margin-bottom:8px}#iqamaPanel label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}#iqamaPanel select{max-width:125px}@media(max-width:600px){.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}.next-prayer,.iqama-status{padding:3px 5px!important;gap:3px!important}.next-prayer span,.iqama-status span{font-size:9px}.next-prayer b,.iqama-status b{font-size:12px}.countdown-separator{height:23px;margin:0 1px}}`;document.head.appendChild(s);}
+  function createAfterPanel(){
+    const main=document.querySelector(".sidebar .main-panel");
+    if(!main||document.getElementById("afterIqamaPanel"))return;
+    const panel=document.createElement("section");
+    panel.id="afterIqamaPanel";panel.className="panel inline-control-panel";
+    const options=TIMING.OPTIONS.map(value=>`<option value="${value}">${value} دقيقة</option>`).join("");
+    panel.innerHTML=`<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يتوقف العدّاد ويختفي.</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-after-iqama="${id}">${options}</select></label>`).join("")}`;
+    const values=afterSettings();
+    panel.querySelectorAll("[data-after-iqama]").forEach(select=>{
+      select.value=String(values[select.dataset.afterIqama]);
+      select.addEventListener("change",()=>{
+        const updated=afterSettings();updated[select.dataset.afterIqama]=Number(select.value);
+        localStorage.setItem(AFTER_KEY,JSON.stringify(updated));tick();
+      });
+    });
+    main.appendChild(panel);
+  }
+  function css(){if(document.getElementById("prayerCountdownStyles"))return;const s=document.createElement("style");s.id="prayerCountdownStyles";s.textContent=`#mainPrayerCountdownHost{display:block!important;width:100%;min-height:36px;margin:0 auto 8px;padding:0;position:relative;z-index:20}.live-prayer-status{width:max-content;max-width:100%;margin:auto;display:flex;justify-content:center;align-items:center;gap:6px;direction:rtl;white-space:nowrap}.next-prayer,.iqama-status{display:inline-flex;width:auto;align-items:center;justify-content:center;gap:4px;padding:4px 7px;border-radius:9px;background:rgba(5,28,39,.88);border:1px solid rgba(255,255,255,.12);white-space:nowrap}.next-prayer span,.iqama-status span{font-size:12px;font-weight:700}.next-prayer b,.iqama-status b{font-size:15px;direction:ltr;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0}#iqamaStatus[hidden],#countdownSeparator[hidden]{display:none!important}.iqama-status{background:rgba(126,84,14,.9)}.countdown-separator{display:block;width:1px;height:28px;flex:0 0 1px;margin:0 2px;background:linear-gradient(to bottom,transparent,rgba(218,178,82,.95),transparent);box-shadow:0 0 5px rgba(218,178,82,.25)}.main-action.iqama-action{background:#8a6518}.iqama-help,.iqama-friday-help{font-size:12px;opacity:.85;margin-bottom:8px}#iqamaPanel label,#afterIqamaPanel label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}#iqamaPanel select,#afterIqamaPanel select{max-width:125px}@media(max-width:600px){.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}.next-prayer,.iqama-status{padding:3px 5px!important;gap:3px!important}.next-prayer span,.iqama-status span{font-size:9px}.next-prayer b,.iqama-status b{font-size:12px}.countdown-separator{height:23px;margin:0 1px}}`;document.head.appendChild(s);}
   function tick(){if(!todayRow){loadToday();return;}const n=new Date(),now=n.getHours()*3600+n.getMinutes()*60+n.getSeconds(),s=settings();const times=IDS.map(id=>({id,min:parse(todayRow[id],id)})).filter(x=>x.min!=null);let next=times.find(x=>x.min*60>now),left=null;if(next){left=next.min*60-now;}else{next={id:"fajr"};if(tomorrowFajr!=null)left=(24*3600-now)+tomorrowFajr*60;}
     const label=document.getElementById("nextPrayerLabel"),counter=document.getElementById("nextPrayerCountdown");if(label)label.textContent=`أذان ${NAMES[next.id]} بعد`;if(counter)counter.textContent=left==null?"--:--:--":fmt(left);
-    const iq=document.getElementById("iqamaStatus"),sep=document.getElementById("countdownSeparator"),iqLabel=document.getElementById("iqamaLabel"),iqCounter=document.getElementById("iqamaCountdown");let active=null,elapsed=null;for(const x of times){const start=x.min*60,end=start+(s[x.id]||10)*60,elapsedEnd=end+10*60;if(now>=start&&now<end){active={...x,left:end-now};break;}if(now>=end&&now<elapsedEnd){elapsed={...x,passed:now-end};break;}}
-    if(iq)iq.hidden=false;if(sep)sep.hidden=false;if(elapsed){const t="مضى على الإقامة "+fmtIqama(elapsed.passed);if(iqLabel)iqLabel.textContent="مضى على الإقامة";if(iqCounter)iqCounter.textContent=fmtIqama(elapsed.passed);showIqamaNotification(t);}else{if(iqLabel)iqLabel.textContent="باقي على الإقامة";if(iqCounter)iqCounter.textContent=active?fmtIqama(active.left):"00:00";if(active)showIqamaNotification("باقي على الإقامة "+fmtIqama(active.left));else clearIqamaNotification();}
+    const iq=document.getElementById("iqamaStatus"),sep=document.getElementById("countdownSeparator"),iqLabel=document.getElementById("iqamaLabel"),iqCounter=document.getElementById("iqamaCountdown");
+    const phase=TIMING.state(now,times.map(x=>({id:x.id,startSeconds:x.min*60})),s,afterSettings());
+    if(iq)iq.hidden=!phase;if(sep)sep.hidden=!phase;
+    if(!phase){
+      if(iqCounter)iqCounter.textContent="00:00";
+      clearIqamaNotification();return;
+    }
+    const text=phase.phase==="elapsed"?"مضى على الإقامة":"باقي على الإقامة";
+    const clock=fmtIqama(phase.seconds);
+    if(iqLabel)iqLabel.textContent=text;if(iqCounter)iqCounter.textContent=clock;
+    showIqamaNotification(text+" "+clock);
   }
-  function init(){css();createDisplay();createPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(loadToday,60000);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
+
+  function init(){css();createDisplay();createPanel();createAfterPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(loadToday,60000);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
