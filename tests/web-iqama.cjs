@@ -57,7 +57,7 @@ console.log('PASS: five prayers, countdown/elapsed boundaries, saved settings, s
   await page.locator('[data-drawer="settings"]').click();
   assert.equal(await page.locator('#webSettingsTemp [data-panel="afterIqamaPanel"]').count(),0);
   assert.equal(await page.locator('#webSettingsTemp .main-action').count(),3);
-  await page.reload();await page.waitForSelector('#afterIqamaPanel',{state:'attached'});
+  await page.reload();await page.waitForSelector('#afterIqamaPanel',{state:'attached'});await page.waitForFunction(()=>document.getElementById('iqamaCountdown')?.textContent==='05:00');
   assert.equal(await page.locator('[data-after-iqama="maghrib"]').inputValue(),'15');
   await page.evaluate(()=>document.body.classList.remove('design-menu-open'));
   async function time(value){await page.evaluate(value=>window.__setTestTime(value),value);await page.waitForTimeout(1100);}
