@@ -51,8 +51,9 @@
     const label=document.getElementById("nextPrayerLabel"),counter=document.getElementById("nextPrayerCountdown");if(label)label.textContent=`أذان ${NAMES[next.id]} بعد`;if(counter)counter.textContent=left==null?"--:--:--":fmt(left);
     const iq=document.getElementById("iqamaStatus"),sep=document.getElementById("countdownSeparator"),iqLabel=document.getElementById("iqamaLabel"),iqCounter=document.getElementById("iqamaCountdown");
     const phase=TIMING.state(now,times.map(x=>({id:x.id,startSeconds:x.min*60})),s,afterSettings());
-    if(iq)iq.hidden=!phase;if(sep)sep.hidden=!phase;
+    if(iq)iq.hidden=false;if(sep)sep.hidden=false;
     if(!phase){
+      if(iqLabel)iqLabel.textContent="باقي على الإقامة";
       if(iqCounter)iqCounter.textContent="00:00";
       clearIqamaNotification();return;
     }
