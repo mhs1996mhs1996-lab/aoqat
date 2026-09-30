@@ -61,6 +61,7 @@ class IqamaNotificationTest {
         val lock = timer(notification.publicVersion.contentView)
         assertEquals(original.base, lock.base)
         assertEquals(71_000L, lock.base - SystemClock.elapsedRealtime())
+        assertEquals("01:11", lock.text.toString())
         assertEquals("01:11", IqamaCycle.frame(SystemClock.elapsedRealtime() - start).clock())
     }
 
