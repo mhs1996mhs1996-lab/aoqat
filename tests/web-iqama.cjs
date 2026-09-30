@@ -72,4 +72,4 @@ console.log('PASS: five prayers, countdown/elapsed boundaries, saved settings, s
   assert.deepEqual(errors,[]);
   console.log('PASS: mobile drawer grouping/back navigation, independent saved durations, reload, live timing, expiry hides even with interface toggle on');
   await browser.close();
-})().catch(e=>{console.error(e);process.exitCode=1});
+})().catch(e=>{console.error(e);process.exit(1)});
