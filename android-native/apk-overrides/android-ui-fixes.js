@@ -355,10 +355,11 @@
   }
 
   function syncNativeIqamaSettings(){
-    if(!window.AndroidNative?.configureIqamaNotifications)return;
-    AndroidNative.configureIqamaNotifications(
+    if(!window.AndroidNative?.configureIqamaTiming)return;
+    AndroidNative.configureIqamaTiming(
       localStorage.getItem('aoqatIqamaNotificationEnabledV1')==='1',
-      localStorage.getItem('aoqatIqamaMinutesV1')||'{}'
+      localStorage.getItem('aoqatIqamaMinutesV1')||'{}',
+      localStorage.getItem('aoqatAfterIqamaMinutesV1')||'{}'
     );
   }
 
@@ -378,7 +379,7 @@
     const originalSetItem=Storage.prototype.setItem;
     Storage.prototype.setItem=function(key,value){
       originalSetItem.call(this,key,value);
-      if(this===window.localStorage && (key==='aoqatIqamaNotificationEnabledV1'||key==='aoqatIqamaMinutesV1')) syncNativeIqamaSettings();
+      if(this===window.localStorage && (key==='aoqatIqamaNotificationEnabledV1'||key==='aoqatIqamaMinutesV1'||key==='aoqatAfterIqamaMinutesV1')) syncNativeIqamaSettings();
     };
     injectAndroidStyles();
     fixAndroidColorSwatches();

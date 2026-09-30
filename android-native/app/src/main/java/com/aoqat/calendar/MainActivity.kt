@@ -49,12 +49,17 @@ object IqamaPersistentNotification {
     }
 
     // Only native prayer alarms may start a cycle. WebView text is never a clock source.
-    fun startCycle(context: android.content.Context, prayerAt: Long) {
+    fun startCycle(context: android.content.Context, prayerAt: Long, prayerId: String) {
         val age = System.currentTimeMillis() - prayerAt
-        if (!IqamaNativeScheduler.enabled(context) || age < 0 || age >= IqamaCycle.TOTAL_MS) return
+        if (!IqamaNativeScheduler.enabled(context) || prayerId.isBlank() || age < 0) return
+        if (age >= IqamaNativeScheduler.durations(context, prayerId).totalMs) {
+            val state = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
+            if (state.getLong("prayerAt", 0L) == prayerAt) hide(context)
+            return
+        }
         ensureChannel(context)
         val intent = Intent(context, IqamaNotificationService::class.java)
-            .setAction("START_CYCLE").putExtra("prayerAt", prayerAt)
+            .setAction("START_CYCLE").putExtra("prayerAt", prayerAt).putExtra("prayerId", prayerId)
         try { context.startForegroundService(intent) }
         catch (e: Exception) { android.util.Log.e("IqamaCycle", "Cannot start notification service", e) }
     }
@@ -86,6 +91,7 @@ object IqamaPersistentNotification {
 
 class IqamaNotificationService : android.app.Service() {
     private var prayerAt = 0L
+    private var prayerId = ""
     private var startRealtime = 0L
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -111,7 +117,7 @@ class IqamaNotificationService : android.app.Service() {
     // or reattaches a surface, avoiding per-second notify() throttling/cached text.
     private fun reconcile(force: Boolean = false) {
         if (prayerAt <= 0L) return
-        val display = IqamaCycle.display(startRealtime, android.os.SystemClock.elapsedRealtime())
+        val display = IqamaCycle.display(startRealtime, android.os.SystemClock.elapsedRealtime(), IqamaNativeScheduler.durations(this, prayerId))
         if (!IqamaNativeScheduler.enabled(this) || display == null) {
             finishCycle(); return
         }
@@ -130,6 +136,8 @@ class IqamaNotificationService : android.app.Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val incoming = if (intent?.action == "START_CYCLE") intent.getLongExtra("prayerAt", 0L)
             else prefs.getLong("prayerAt", 0L)
+        prayerId = if (intent?.action == "START_CYCLE") intent.getStringExtra("prayerId") ?: ""
+            else prefs.getString("prayerId", "") ?: ""
         val boot = Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1)
         // Preserve the monotonic anchor across duplicate alarms and process restarts.
         if (incoming != prayerAt || startRealtime == 0L) {
@@ -141,24 +149,27 @@ class IqamaNotificationService : android.app.Service() {
                 android.os.SystemClock.elapsedRealtime() - (System.currentTimeMillis() - prayerAt)
         }
         val nowRealtime = android.os.SystemClock.elapsedRealtime()
-        val display = IqamaCycle.display(startRealtime, nowRealtime)
-        if (prayerAt <= 0L || !IqamaNativeScheduler.enabled(this) ||
+        val durations = IqamaNativeScheduler.durations(this, prayerId)
+        val display = IqamaCycle.display(startRealtime, nowRealtime, durations)
+        if (prayerAt <= 0L || prayerId.isBlank() || !IqamaNativeScheduler.enabled(this) ||
             display == null) {
             finishCycle(); return START_NOT_STICKY
         }
         prefs.edit().putBoolean("active", true).putLong("prayerAt", prayerAt)
+            .putString("prayerId", prayerId)
             .putLong("startRealtime", startRealtime).putInt("boot", boot).commit()
         IqamaPersistentNotification.ensureChannel(this)
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
         publishedPhase = display.phase
-        val remaining = (IqamaCycle.TOTAL_MS - (nowRealtime - startRealtime)).coerceAtLeast(1L)
-        if (wakeLock?.isHeld != true) {
+        val remaining = (durations.totalMs - (nowRealtime - startRealtime)).coerceAtLeast(1L)
+        if (wakeLock?.isHeld == true) wakeLock?.release()
+        run {
             val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
             wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aoqat:iqamaCycle")
                 .apply { setReferenceCounted(false); acquire(remaining + 5000L) }
         }
-        if (display.countDown) IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + IqamaCycle.PHASE_MS, finish = false)
-        IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + IqamaCycle.TOTAL_MS, finish = true)
+        if (display.countDown) IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + durations.beforeMs, finish = false)
+        IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + durations.totalMs, finish = true)
         reconcile()
         return START_STICKY
     }
@@ -216,7 +227,8 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
                 Thread { try { IqamaNativeScheduler.refresh(context) } finally { pending.finish() } }.start()
             }
             "NATIVE_START" -> {
-                IqamaPersistentNotification.startCycle(context, intent.getLongExtra("prayerAt", 0L))
+                val id = intent.getStringExtra("prayerId") ?: ""
+                if (id.isNotBlank()) IqamaPersistentNotification.startCycle(context, intent.getLongExtra("prayerAt", 0L), id)
                 IqamaNativeScheduler.scheduleCached(context, recoverActive = false)
             }
             "PHASE_BOUNDARY", "EXPIRE" -> {
@@ -301,7 +313,9 @@ class MainActivity : Activity() {
         if (!prefs.getBoolean("active", false)) return
         val prayerAt = prefs.getLong("prayerAt", 0L)
         if (prayerAt <= 0L) { IqamaPersistentNotification.hide(this); return }
-        IqamaPersistentNotification.startCycle(this, prayerAt)
+        val id = prefs.getString("prayerId", "") ?: ""
+        if (id.isBlank()) IqamaPersistentNotification.hide(this)
+        else IqamaPersistentNotification.startCycle(this, prayerAt, id)
     }
 
     private fun configureWebView() {
@@ -524,16 +538,21 @@ class MainActivity : Activity() {
 
         @JavascriptInterface
         fun configureIqamaNotifications(enabled: Boolean, minutes: String) {
+            configureIqamaTiming(enabled, minutes, "{}")
+        }
+
+        @JavascriptInterface
+        fun configureIqamaTiming(enabled: Boolean, minutes: String, afterMinutes: String) {
             runOnUiThread {
                 if (enabled) {
                     requestNotificationPermissionIfNeeded()
                     requestExactAlarmAccessIfNeeded()
                 }
-                IqamaNativeScheduler.configure(this@MainActivity, enabled, minutes)
+                IqamaNativeScheduler.configure(this@MainActivity, enabled, minutes, afterMinutes)
             }
         }
 
-        // Compatibility bridge only. UI ticks cannot alter the native 10 + 10 cycle.
+        // Compatibility bridge only. UI text never owns the native clock lifecycle.
         @JavascriptInterface
         fun showIqamaNotification(text: String) = Unit
 

@@ -71,7 +71,7 @@ class IqamaNotificationTest {
             .edit().putBoolean("enabled", true).commit()
         val prayer = System.currentTimeMillis() - 599_000L
         val controller = Robolectric.buildService(IqamaNotificationService::class.java,
-            Intent().setAction("START_CYCLE").putExtra("prayerAt", prayer)).create()
+            Intent().setAction("START_CYCLE").putExtra("prayerAt", prayer).putExtra("prayerId", "isha")).create()
         controller.startCommand(0, 1)
         val saved = context.getSharedPreferences("iqama_service_state", Context.MODE_PRIVATE)
         val anchor = saved.getLong("startRealtime", 0L)
@@ -90,5 +90,39 @@ class IqamaNotificationTest {
         assertFalse(saved.getBoolean("active", true))
         assertNull(manager.getNotification(IqamaPersistentNotification.NOTIFICATION_ID))
         restarted.destroy()
+    }
+
+    @Test fun configuredFifteenMinutesBeforeAndFiveAfterDriveEverySurface() {
+        context.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit()
+            .putBoolean("enabled", true).putString("minutes", "{\"isha\":15}")
+            .putString("afterMinutes", "{\"isha\":5}").commit()
+        val prayer = System.currentTimeMillis() - 85_000L
+        val controller = Robolectric.buildService(IqamaNotificationService::class.java,
+            Intent().setAction("START_CYCLE").putExtra("prayerAt", prayer).putExtra("prayerId", "isha")).create()
+        controller.startCommand(0, 1)
+        val saved = context.getSharedPreferences("iqama_service_state", Context.MODE_PRIVATE)
+        val anchor = saved.getLong("startRealtime", 0L)
+        val manager = shadowOf(context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+        assertSurfaces(manager.getNotification(IqamaPersistentNotification.NOTIFICATION_ID),
+            anchor + 900_000L, true, "باقي على الإقامة")
+        assertEquals("13:35", IqamaCycle.frame(SystemClock.elapsedRealtime() - anchor,
+            IqamaNativeScheduler.durations(context, "isha")).clock())
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofSeconds(815))
+        assertSurfaces(manager.getNotification(IqamaPersistentNotification.NOTIFICATION_ID),
+            anchor + 900_000L, false, "مضى على الإقامة")
+        shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMinutes(5))
+        assertFalse(saved.getBoolean("active", true))
+        assertNull(manager.getNotification(IqamaPersistentNotification.NOTIFICATION_ID))
+        controller.destroy()
+    }
+
+    @Test fun eachPrayerReadsItsOwnSavedBeforeAndAfterDurations() {
+        context.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit()
+            .putString("minutes", "{\"fajr\":30,\"maghrib\":5,\"isha\":15}")
+            .putString("afterMinutes", "{\"fajr\":25,\"maghrib\":15,\"isha\":5}").commit()
+        assertEquals(IqamaCycle.Durations(30,25), IqamaNativeScheduler.durations(context,"fajr"))
+        assertEquals(IqamaCycle.Durations(5,15), IqamaNativeScheduler.durations(context,"maghrib"))
+        assertEquals(IqamaCycle.Durations(15,5), IqamaNativeScheduler.durations(context,"isha"))
+        assertEquals(IqamaCycle.Durations(10,10), IqamaNativeScheduler.durations(context,"asr"))
     }
 }

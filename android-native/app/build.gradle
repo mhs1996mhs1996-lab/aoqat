@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 54 // Build 54: one SystemUI clock on shade and lock screen
-        versionName '1.21'
+        versionCode 55 // Per-prayer iqama and elapsed settings
+        versionName '1.22'
     }
 
     compileOptions {

@@ -4,6 +4,24 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IqamaCycleTest {
+    @Test fun allConfiguredDurationsUseOneIqamaBoundaryWithoutNegativeValues() {
+        for (before in listOf(5,10,15,20,25,30)) for (after in listOf(5,10,15,20,25,30)) {
+            val durations = IqamaCycle.Durations(before,after)
+            val anchor = 4_000_000L
+            assertEquals("%02d:00".format(before), IqamaCycle.frame(0,durations).clock())
+            assertEquals("00:01", IqamaCycle.frame(durations.beforeMs-1,durations).clock())
+            assertEquals("00:00", IqamaCycle.frame(durations.beforeMs,durations).clock())
+            assertEquals(IqamaCycle.Phase.ELAPSED, IqamaCycle.frame(durations.beforeMs,durations).phase)
+            assertEquals(anchor+durations.beforeMs,IqamaCycle.display(anchor,anchor,durations)!!.baseRealtime)
+            assertEquals(anchor+durations.beforeMs,IqamaCycle.display(anchor,anchor+durations.beforeMs,durations)!!.baseRealtime)
+            assertNull(IqamaCycle.display(anchor,anchor+durations.totalMs,durations))
+            for (age in 0L..durations.totalMs step 1000L) {
+                val frame=IqamaCycle.frame(age,durations)
+                assertTrue(frame.seconds>=0)
+                assertFalse(frame.clock().contains("-"))
+            }
+        }
+    }
     @Test fun displayHasOneZeroPointAndAbsoluteBoundaries() {
         val anchor = 4_000_000L
         val remaining = IqamaCycle.display(anchor, anchor + 91_000L)!!

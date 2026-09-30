@@ -112,14 +112,31 @@ object IqamaNativeScheduler {
     private val prayers = listOf("fajr" to 20L, "dhuhr" to 10L, "asr" to 10L, "maghrib" to 10L, "isha" to 10L)
     private fun prefs(context: Context) = context.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE)
     fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
+    fun durations(context: Context, prayerId: String): IqamaCycle.Durations {
+        fun read(key: String, fallback: Int): Int {
+            val values = try { org.json.JSONObject(prefs(context).getString(key, "{}")) } catch (_: Exception) { org.json.JSONObject() }
+            return IqamaCycle.minutes(values.optInt(prayerId, fallback), fallback)
+        }
+        return IqamaCycle.Durations(read("minutes", if (prayerId == "fajr") 20 else 10), read("afterMinutes", 10))
+    }
 
-    fun configure(context: Context, enabled: Boolean, minutes: String) {
+    fun configure(context: Context, enabled: Boolean, minutes: String, afterMinutes: String = "{}") {
         val settings = try { org.json.JSONObject(minutes) } catch (_: Exception) { org.json.JSONObject() }
-        prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString()).commit()
+        val after = try { org.json.JSONObject(afterMinutes) } catch (_: Exception) { org.json.JSONObject() }
+        prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString())
+            .putString("afterMinutes", after.toString()).commit()
         if (!enabled) {
             cancel(context)
             IqamaPersistentNotification.hide(context)
-        } else schedule(context)
+        } else {
+            val state = context.getSharedPreferences("iqama_service_state", Context.MODE_PRIVATE)
+            val prayerId = state.getString("prayerId", "") ?: ""
+            if (state.getBoolean("active", false)) {
+                if (prayerId.isBlank()) IqamaPersistentNotification.hide(context)
+                else IqamaPersistentNotification.startCycle(context, state.getLong("prayerAt", 0L), prayerId)
+            }
+            schedule(context)
+        }
     }
 
     // Cached alarms are restored synchronously, including from boot receivers.
@@ -169,9 +186,10 @@ object IqamaNativeScheduler {
                 if (prayer.first == "fajr" && hour == 12) hour = 0
                 if (hour !in 0..23 || minute !in 0..59) return@forEachIndexed
                 val prayerAt = date.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val endAt = prayerAt + IqamaCycle.TOTAL_MS
+                val endAt = prayerAt + durations(context, prayer.first).totalMs
                 val request = BASE_REQUEST + date.dayOfYear * 10 + index
-                val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START").putExtra("prayerAt", prayerAt)
+                val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START")
+                    .putExtra("prayerAt", prayerAt).putExtra("prayerId", prayer.first)
                 if (prayerAt > now || (recoverActive && endAt > now)) {
                     // Recover an ongoing cycle after reboot, upgrade or a permission grant.
                     setAlarm(context, request, intent, maxOf(prayerAt, now + 1000L))
