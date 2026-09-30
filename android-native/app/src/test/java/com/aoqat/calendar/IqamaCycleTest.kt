@@ -4,6 +4,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class IqamaCycleTest {
+    @Test fun displayHasOneZeroPointAndAbsoluteBoundaries() {
+        val anchor = 4_000_000L
+        val remaining = IqamaCycle.display(anchor, anchor + 91_000L)!!
+        val later = IqamaCycle.display(anchor, anchor + 529_000L)!!
+        assertEquals(remaining.baseRealtime, later.baseRealtime)
+        assertTrue(later.countDown)
+        assertEquals(anchor + 600_000L, later.nextBoundary)
+        val elapsed = IqamaCycle.display(anchor, anchor + 947_000L)!!
+        assertEquals(remaining.baseRealtime, elapsed.baseRealtime)
+        assertFalse(elapsed.countDown)
+        assertEquals(anchor + 1_200_000L, elapsed.nextBoundary)
+        assertNull(IqamaCycle.display(anchor, anchor - 1L))
+        assertNull(IqamaCycle.display(anchor, anchor + 1_200_000L))
+        assertNull(IqamaCycle.display(anchor, anchor + 39 * 60_000L))
+    }
     @Test fun beginsAtTenMinutesAndCountsDown() {
         assertEquals(IqamaCycle.Phase.REMAINING, IqamaCycle.frame(0).phase)
         assertEquals("10:00", IqamaCycle.frame(0).clock())

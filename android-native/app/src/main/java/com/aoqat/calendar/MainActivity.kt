@@ -59,11 +59,13 @@ object IqamaPersistentNotification {
         catch (e: Exception) { android.util.Log.e("IqamaCycle", "Cannot start notification service", e) }
     }
 
-    fun scheduleExpiry(context: android.content.Context, prayerAt: Long, deadline: Long) {
+    fun scheduleBoundary(context: android.content.Context, prayerAt: Long, deadline: Long, finish: Boolean) {
         val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
+        val action = if (finish) "EXPIRE" else "PHASE_BOUNDARY"
+        val request = if (finish) REQUEST_HIDE else REQUEST_SWITCH
         val intent = Intent(context, IqamaNotificationReceiver::class.java)
-            .setAction("EXPIRE").putExtra("prayerAt", prayerAt)
-        val pi = PendingIntent.getBroadcast(context, REQUEST_HIDE, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            .setAction(action).putExtra("prayerAt", prayerAt)
+        val pi = PendingIntent.getBroadcast(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
             am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, deadline, pi)
         } else am.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, deadline, pi)
@@ -75,7 +77,7 @@ object IqamaPersistentNotification {
         val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
         val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
-        listOf("SWITCH" to REQUEST_SWITCH, "HIDE" to REQUEST_HIDE, "EXPIRE" to REQUEST_HIDE).forEach { (action, request) ->
+        listOf("SWITCH" to REQUEST_SWITCH, "HIDE" to REQUEST_HIDE, "EXPIRE" to REQUEST_HIDE, "PHASE_BOUNDARY" to REQUEST_SWITCH).forEach { (action, request) ->
             val pi = PendingIntent.getBroadcast(context, request, Intent(context, IqamaNotificationReceiver::class.java).setAction(action), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
             if (pi != null) am.cancel(pi)
         }
@@ -88,19 +90,40 @@ class IqamaNotificationService : android.app.Service() {
     private var wakeLock: android.os.PowerManager.WakeLock? = null
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("iqama_service_state", MODE_PRIVATE) }
-    private val ticker = object : Runnable {
-        override fun run() {
-            val frame = IqamaCycle.frame(android.os.SystemClock.elapsedRealtime() - startRealtime)
-            if (!IqamaNativeScheduler.enabled(this@IqamaNotificationService) ||
-                frame.phase == IqamaCycle.Phase.FINISHED || frame.phase == IqamaCycle.Phase.WAITING) {
-                finishCycle(); return
-            }
-            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
-                .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(frame))
-            val age = android.os.SystemClock.elapsedRealtime() - startRealtime
-            handler.postDelayed(this, 1000L - age % 1000L)
-        }
+    private var publishedPhase: IqamaCycle.Phase? = null
+    private val screenReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: Intent?) { reconcile(force = true) }
     }
+    private val boundary = Runnable { reconcile() }
+
+    override fun onCreate() {
+        super.onCreate()
+        val filter = android.content.IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(screenReceiver, filter, RECEIVER_NOT_EXPORTED)
+        else @Suppress("DEPRECATION") registerReceiver(screenReceiver, filter)
+    }
+
+    // SystemUI ticks its Chronometers locally. The app only publishes phase changes
+    // or reattaches a surface, avoiding per-second notify() throttling/cached text.
+    private fun reconcile(force: Boolean = false) {
+        if (prayerAt <= 0L) return
+        val display = IqamaCycle.display(startRealtime, android.os.SystemClock.elapsedRealtime())
+        if (!IqamaNativeScheduler.enabled(this) || display == null) {
+            finishCycle(); return
+        }
+        if (force || publishedPhase != display.phase) {
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
+                .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
+            publishedPhase = display.phase
+        }
+        handler.removeCallbacks(boundary)
+        handler.postDelayed(boundary, (display.nextBoundary - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(1L))
+    }
+
 
     override fun onBind(intent: Intent?) = null
 
@@ -118,60 +141,69 @@ class IqamaNotificationService : android.app.Service() {
                 android.os.SystemClock.elapsedRealtime() - (System.currentTimeMillis() - prayerAt)
         }
         val nowRealtime = android.os.SystemClock.elapsedRealtime()
-        val frame = IqamaCycle.frame(nowRealtime - startRealtime)
+        val display = IqamaCycle.display(startRealtime, nowRealtime)
         if (prayerAt <= 0L || !IqamaNativeScheduler.enabled(this) ||
-            frame.phase == IqamaCycle.Phase.FINISHED || frame.phase == IqamaCycle.Phase.WAITING) {
+            display == null) {
             finishCycle(); return START_NOT_STICKY
         }
         prefs.edit().putBoolean("active", true).putLong("prayerAt", prayerAt)
             .putLong("startRealtime", startRealtime).putInt("boot", boot).commit()
         IqamaPersistentNotification.ensureChannel(this)
-        startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(frame))
-        handler.removeCallbacks(ticker)
+        startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
+        publishedPhase = display.phase
         val remaining = (IqamaCycle.TOTAL_MS - (nowRealtime - startRealtime)).coerceAtLeast(1L)
         if (wakeLock?.isHeld != true) {
             val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
             wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aoqat:iqamaCycle")
                 .apply { setReferenceCounted(false); acquire(remaining + 5000L) }
         }
-        IqamaPersistentNotification.scheduleExpiry(this, prayerAt, startRealtime + IqamaCycle.TOTAL_MS)
-        handler.post(ticker)
+        if (display.countDown) IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + IqamaCycle.PHASE_MS, finish = false)
+        IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + IqamaCycle.TOTAL_MS, finish = true)
+        reconcile()
         return START_STICKY
     }
 
-    private fun buildNotification(frame: IqamaCycle.Frame): android.app.Notification {
-        val title = if (frame.phase == IqamaCycle.Phase.ELAPSED) "مضى على الإقامة" else "باقي على الإقامة"
-        val open = PendingIntent.getActivity(this, 45220, Intent(this, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val view = android.widget.RemoteViews(packageName, R.layout.notification_iqama)
-        view.setTextViewText(R.id.iqama_state, title)
-        // Plain bounded text: the system cannot keep a stale chronometer running below zero.
-        view.setTextViewText(R.id.iqama_chronometer, frame.clock())
-        val n = NotificationCompat.Builder(this, IqamaPersistentNotification.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setCustomContentView(view).setCustomBigContentView(view)
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-            .setContentTitle(title).setContentText(frame.clock()).setContentIntent(open)
-            .setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true).setShowWhen(false)
-            .build()
-        n.flags = n.flags or android.app.Notification.FLAG_ONGOING_EVENT or
-            android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
-        return n
-    }
+    private fun buildNotification(display: IqamaCycle.Display): android.app.Notification =
+        IqamaNotificationRenderer.build(this, display)
+
     private fun finishCycle() {
-        prefs.edit().putBoolean("active", false).commit()
-        handler.removeCallbacks(ticker)
+        handler.removeCallbacks(boundary)
+        IqamaPersistentNotification.hide(this)
         stopForeground(STOP_FOREGROUND_REMOVE)
-        (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).cancel(IqamaPersistentNotification.NOTIFICATION_ID)
         stopSelf()
     }
     override fun onDestroy() {
-        handler.removeCallbacks(ticker)
+        handler.removeCallbacks(boundary)
+        unregisterReceiver(screenReceiver)
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
+    }
+}
+
+object IqamaNotificationRenderer {
+    fun build(context: android.content.Context, display: IqamaCycle.Display): android.app.Notification {
+        val title = if (display.phase == IqamaCycle.Phase.ELAPSED) "مضى على الإقامة" else "باقي على الإقامة"
+        val open = PendingIntent.getActivity(context, 45220, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val view = android.widget.RemoteViews(context.packageName, R.layout.notification_iqama)
+        view.setTextViewText(R.id.iqama_state, title)
+        view.setChronometerCountDown(R.id.iqama_chronometer, display.countDown)
+        view.setChronometer(R.id.iqama_chronometer, display.baseRealtime, null, true)
+        fun builder() = NotificationCompat.Builder(context, IqamaPersistentNotification.CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setCustomContentView(view).setCustomBigContentView(view).setCustomHeadsUpContentView(view)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setContentTitle(title).setContentIntent(open)
+            .setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true).setShowWhen(false)
+        // Explicit public version: lock-screen hosts receive the same running clock,
+        // never a separately formatted/cached numeric fallback.
+        val n = builder().setPublicVersion(builder().build()).build()
+        n.flags = n.flags or android.app.Notification.FLAG_ONGOING_EVENT or
+            android.app.Notification.FLAG_NO_CLEAR or android.app.Notification.FLAG_FOREGROUND_SERVICE
+        return n
     }
 }
 
@@ -187,10 +219,18 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
                 IqamaPersistentNotification.startCycle(context, intent.getLongExtra("prayerAt", 0L))
                 IqamaNativeScheduler.scheduleCached(context, recoverActive = false)
             }
-            "EXPIRE" -> {
+            "PHASE_BOUNDARY", "EXPIRE" -> {
                 val prefs = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
-                if (prefs.getLong("prayerAt", 0L) == intent.getLongExtra("prayerAt", -1L))
-                    IqamaPersistentNotification.hide(context)
+                if (prefs.getBoolean("active", false) && prefs.getLong("prayerAt", 0L) == intent.getLongExtra("prayerAt", -1L)) {
+                    // Reconcile from the persisted anchor, including a late delivery.
+                    // Do not reset the zero point at the time the alarm is received.
+                    val service = Intent(context, IqamaNotificationService::class.java).setAction("RECONCILE")
+                    try { context.startForegroundService(service) }
+                    catch (e: Exception) {
+                        android.util.Log.e("IqamaCycle", "Cannot reconcile phase", e)
+                        if (intent.action == "EXPIRE") IqamaPersistentNotification.hide(context)
+                    }
+                }
             }
             // Old phase alarms must never restart or stop a new cycle after upgrading.
             "SWITCH", "HIDE" -> Unit

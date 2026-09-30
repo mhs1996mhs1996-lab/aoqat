@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 53 // Build 53: single bounded native 10 + 10 iqama cycle
+        versionCode 54 // Build 54: one SystemUI clock on shade and lock screen
         versionName '1.21'
     }
 
@@ -32,6 +32,8 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+
+    testOptions { unitTests.includeAndroidResources = true }
 
     buildTypes {
         debug {
@@ -82,4 +84,5 @@ preBuild.dependsOn(tasks.named('syncWebAssets'))
 dependencies {
     implementation 'androidx.core:core-ktx:1.15.0'
     testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
 }

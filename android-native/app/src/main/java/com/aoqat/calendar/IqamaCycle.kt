@@ -8,6 +8,16 @@ object IqamaCycle {
     data class Frame(val phase: Phase, val seconds: Long) {
         fun clock(): String = String.format(java.util.Locale.US, "%02d:%02d", seconds / 60, seconds % 60)
     }
+    data class Display(val phase: Phase, val baseRealtime: Long, val countDown: Boolean, val nextBoundary: Long)
+
+    // Every notification surface receives this same absolute, monotonic zero point.
+    // Reading a notification later never restarts a timer or uses a cached text value.
+    fun display(startRealtime: Long, nowRealtime: Long): Display? {
+        val phase = frame(nowRealtime - startRealtime).phase
+        if (phase != Phase.REMAINING && phase != Phase.ELAPSED) return null
+        return Display(phase, startRealtime + PHASE_MS, phase == Phase.REMAINING,
+            startRealtime + if (phase == Phase.REMAINING) PHASE_MS else TOTAL_MS)
+    }
     fun frame(ageMillis: Long): Frame = when {
         ageMillis < 0 -> Frame(Phase.WAITING, 600)
         ageMillis < PHASE_MS -> Frame(Phase.REMAINING, (PHASE_MS - ageMillis + 999) / 1000)
