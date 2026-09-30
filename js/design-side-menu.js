@@ -38,7 +38,7 @@
     document.head.appendChild(style);
 
     const btn=document.createElement('button');
-    btn.id='designSideMenuBtn';btn.type='button';btn.setAttribute('aria-label','بيانات التصميم');btn.setAttribute('aria-expanded','false');btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';
+    btn.id='designSideMenuBtn';btn.type='button';btn.setAttribute('aria-label','الأعدادات');btn.setAttribute('aria-expanded','false');btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';
     const backdrop=document.createElement('div');backdrop.id='designSideMenuBackdrop';
     document.body.append(backdrop,btn);
 
