@@ -153,7 +153,6 @@ object IqamaNativeScheduler {
     @Synchronized fun scheduleCached(context: Context, recoverActive: Boolean = true) {
         if (!enabled(context)) return
         val rows = try { JSONArray(prefs(context).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
-        val settings = org.json.JSONObject(prefs(context).getString("minutes", "{}") ?: "{}")
         val today = LocalDate.now()
         val now = System.currentTimeMillis()
         for (offset in 0L..6L) {
@@ -170,10 +169,10 @@ object IqamaNativeScheduler {
                 if (prayer.first == "fajr" && hour == 12) hour = 0
                 if (hour !in 0..23 || minute !in 0..59) return@forEachIndexed
                 val prayerAt = date.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val base = prayerAt + settings.optLong(prayer.first, prayer.second).coerceIn(5L, 30L) * 60000L
+                val endAt = prayerAt + IqamaCycle.TOTAL_MS
                 val request = BASE_REQUEST + date.dayOfYear * 10 + index
-                val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START").putExtra("base", base)
-                if (prayerAt > now || (recoverActive && base + 600000L > now)) {
+                val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START").putExtra("prayerAt", prayerAt)
+                if (prayerAt > now || (recoverActive && endAt > now)) {
                     // Recover an ongoing cycle after reboot, upgrade or a permission grant.
                     setAlarm(context, request, intent, maxOf(prayerAt, now + 1000L))
                 } else cancelAlarm(context, request, intent)
