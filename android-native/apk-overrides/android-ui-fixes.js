@@ -354,6 +354,14 @@
     window.addEventListener('aoqatModulesReady',()=>setTimeout(organizeAndroidBackgroundTools,80));
   }
 
+  function syncNativeIqamaSettings(){
+    if(!window.AndroidNative?.configureIqamaNotifications)return;
+    AndroidNative.configureIqamaNotifications(
+      localStorage.getItem('aoqatIqamaNotificationEnabledV1')==='1',
+      localStorage.getItem('aoqatIqamaMinutesV1')||'{}'
+    );
+  }
+
   function enableNativeNotificationBridge(){
     if(window.AndroidNative && typeof window.Notification==="undefined"){
       window.Notification={
@@ -365,6 +373,13 @@
 
   function init(){
     enableNativeNotificationBridge();
+    syncNativeIqamaSettings();
+    // Same-document storage writes do not dispatch a storage event.
+    const originalSetItem=Storage.prototype.setItem;
+    Storage.prototype.setItem=function(key,value){
+      originalSetItem.call(this,key,value);
+      if(this===window.localStorage && (key==='aoqatIqamaNotificationEnabledV1'||key==='aoqatIqamaMinutesV1')) syncNativeIqamaSettings();
+    };
     injectAndroidStyles();
     fixAndroidColorSwatches();
     bindUniversalEvents();

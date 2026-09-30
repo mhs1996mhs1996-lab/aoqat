@@ -20,7 +20,7 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 51 // Build 51: single stable iqama clock across lock screen
+        versionCode 52 // Build 52: persistent offline iqama scheduling
         versionName '1.21'
     }
 

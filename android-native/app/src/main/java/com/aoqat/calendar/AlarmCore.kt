@@ -107,28 +107,101 @@ object AlarmScheduler {
 }
 
 object IqamaNativeScheduler {
-    private const val BASE_REQUEST=46000
-    private val prayers=listOf("fajr" to 20L,"dhuhr" to 10L,"asr" to 10L,"maghrib" to 10L,"isha" to 10L)
-    fun schedule(context:Context){ Thread{try{val d=LocalDate.now();scheduleDate(context,d);scheduleDate(context,d.plusDays(1))}catch(_:Exception){}}.start() }
-    private fun scheduleDate(context:Context,date:LocalDate){
-        val row=fetchRow(date)?:return
-        prayers.forEachIndexed{index,pair->
-            val p=row.optString(pair.first).split(":");if(p.size<2)return@forEachIndexed
-            var h=p[0].toIntOrNull()?:return@forEachIndexed;val m=p[1].take(2).toIntOrNull()?:return@forEachIndexed
-            if(pair.first!="fajr"&&h<12)h+=12;if(pair.first=="fajr"&&h==12)h=0
-            val prayerAt=date.atTime(h,m).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();val iqamaAt=prayerAt+pair.second*60000L
-            if(iqamaAt<=System.currentTimeMillis())return@forEachIndexed
-            val i=Intent(context,IqamaNotificationReceiver::class.java).setAction("NATIVE_START").putExtra("base",iqamaAt)
-            val pi=PendingIntent.getBroadcast(context,BASE_REQUEST+date.dayOfYear*10+index,i,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            val am=context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||am.canScheduleExactAlarms())am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,prayerAt,pi) else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,prayerAt,pi)
-        }
+    private const val BASE_REQUEST = 46000
+    private const val REFRESH_REQUEST = 45999
+    private val prayers = listOf("fajr" to 20L, "dhuhr" to 10L, "asr" to 10L, "maghrib" to 10L, "isha" to 10L)
+    private fun prefs(context: Context) = context.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE)
+    fun enabled(context: Context) = prefs(context).getBoolean("enabled", false)
+
+    fun configure(context: Context, enabled: Boolean, minutes: String) {
+        val settings = try { org.json.JSONObject(minutes) } catch (_: Exception) { org.json.JSONObject() }
+        prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString()).commit()
+        if (!enabled) {
+            cancel(context)
+            IqamaPersistentNotification.hide(context)
+        } else schedule(context)
     }
-    private fun fetchRow(date:LocalDate):org.json.JSONObject?{
-        val loc=URLEncoder.encode("الحويجة وضواحيها","UTF-8");val fields=prayers.joinToString(","){it.first}
-        val u="https://ytdvhiijxxaqofduorwm.supabase.co/rest/v1/annual_prayer_times?select="+fields+"&location_name=eq."+loc+"&gregorian_month=eq."+date.monthValue+"&gregorian_day=eq."+date.dayOfMonth+"&limit=1"
-        val conn=(URL(u).openConnection() as HttpURLConnection).apply{connectTimeout=8000;readTimeout=8000;requestMethod="GET";setRequestProperty("apikey","sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1");setRequestProperty("Authorization","Bearer sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1")}
-        return try{if(conn.responseCode !in 200..299)null else{val a=JSONArray(conn.inputStream.bufferedReader().use{it.readText()});if(a.length()==0)null else a.getJSONObject(0)}}finally{conn.disconnect()}
+
+    // Cached alarms are restored synchronously, including from boot receivers.
+    // Network access only refreshes the cache; a prayer alarm never needs the network.
+    fun schedule(context: Context) {
+        if (!enabled(context)) return
+        scheduleCached(context)
+        Thread { refresh(context) }.start()
+    }
+
+    fun refresh(context: Context) {
+        if (!enabled(context)) return
+        try {
+            val location = URLEncoder.encode("الحويجة وضواحيها", "UTF-8")
+            val fields = "gregorian_month,gregorian_day," + prayers.joinToString(",") { it.first }
+            val url = URL("https://ytdvhiijxxaqofduorwm.supabase.co/rest/v1/annual_prayer_times?select=$fields&location_name=eq.$location&limit=400")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 3000; readTimeout = 3000
+                setRequestProperty("apikey", "sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1")
+            }
+            try {
+                if (conn.responseCode in 200..299) {
+                    val rows = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
+                    if (rows.length() > 0) prefs(context).edit().putString("rows", rows.toString()).commit()
+                }
+            } finally { conn.disconnect() }
+        } catch (e: Exception) { android.util.Log.w("IqamaScheduler", "Using cached prayer times", e) }
+        scheduleCached(context)
+    }
+
+    @Synchronized fun scheduleCached(context: Context, recoverActive: Boolean = true) {
+        if (!enabled(context)) return
+        val rows = try { JSONArray(prefs(context).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
+        val settings = org.json.JSONObject(prefs(context).getString("minutes", "{}") ?: "{}")
+        val today = LocalDate.now()
+        val now = System.currentTimeMillis()
+        for (offset in 0L..6L) {
+            val date = today.plusDays(offset)
+            val row = (0 until rows.length()).map { rows.getJSONObject(it) }.firstOrNull {
+                it.optInt("gregorian_month") == date.monthValue && it.optInt("gregorian_day") == date.dayOfMonth
+            } ?: continue
+            prayers.forEachIndexed { index, prayer ->
+                val parts = row.optString(prayer.first).split(":")
+                if (parts.size < 2) return@forEachIndexed
+                var hour = parts[0].toIntOrNull() ?: return@forEachIndexed
+                val minute = parts[1].take(2).toIntOrNull() ?: return@forEachIndexed
+                if (prayer.first != "fajr" && hour < 12) hour += 12
+                if (prayer.first == "fajr" && hour == 12) hour = 0
+                if (hour !in 0..23 || minute !in 0..59) return@forEachIndexed
+                val prayerAt = date.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                val base = prayerAt + settings.optLong(prayer.first, prayer.second).coerceIn(5L, 30L) * 60000L
+                val request = BASE_REQUEST + date.dayOfYear * 10 + index
+                val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START").putExtra("base", base)
+                if (prayerAt > now || (recoverActive && base + 600000L > now)) {
+                    // Recover an ongoing cycle after reboot, upgrade or a permission grant.
+                    setAlarm(context, request, intent, maxOf(prayerAt, now + 1000L))
+                } else cancelAlarm(context, request, intent)
+            }
+        }
+        val nextDay = today.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        setAlarm(context, REFRESH_REQUEST, Intent(context, IqamaNotificationReceiver::class.java).setAction("REFRESH"), nextDay)
+    }
+
+    private fun setAlarm(context: Context, request: Int, intent: Intent, at: Long) {
+        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pi = PendingIntent.getBroadcast(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+        } else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+    }
+
+    private fun cancelAlarm(context: Context, request: Int, intent: Intent) {
+        val pi = PendingIntent.getBroadcast(context, request, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE) ?: return
+        (context.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pi)
+        pi.cancel()
+    }
+
+    private fun cancel(context: Context) {
+        cancelAlarm(context, REFRESH_REQUEST, Intent(context, IqamaNotificationReceiver::class.java).setAction("REFRESH"))
+        for (day in 1..366) for (index in prayers.indices) {
+            cancelAlarm(context, BASE_REQUEST + day * 10 + index, Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START"))
+        }
     }
 }
 
@@ -147,8 +220,12 @@ class AlarmReceiver : BroadcastReceiver() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
-        AlarmScheduler.scheduleFromDatabase(context)
-        IqamaNativeScheduler.schedule(context)
+        if (intent?.action == Intent.ACTION_BOOT_COMPLETED || intent?.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
+            AlarmScheduler.scheduleFromDatabase(context)
+        }
+        IqamaNativeScheduler.scheduleCached(context)
+        val pending = goAsync()
+        Thread { try { IqamaNativeScheduler.refresh(context) } finally { pending.finish() } }.start()
     }
 }
 

@@ -191,6 +191,10 @@ class IqamaNotificationService : android.app.Service() {
             elapsed=intent.getBooleanExtra("elapsed",false);base=intent.getLongExtra("base",System.currentTimeMillis())
             prefs.edit().putBoolean("active",true).putBoolean("elapsed",elapsed).putLong("base",base).apply()
         }else{elapsed=prefs.getBoolean("elapsed",false);base=prefs.getLong("base",System.currentTimeMillis())}
+        IqamaPersistentNotification.ensureChannel(this)
+        if (base <= 0L || System.currentTimeMillis() - base >= 600000L || !IqamaNativeScheduler.enabled(this)) {
+            stopSelf(); return START_NOT_STICKY
+        }
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID,buildNotification(System.currentTimeMillis()))
         val pm=getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
         if(wakeLock?.isHeld!=true) wakeLock=pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK,"aoqat:iqamaCountdown").apply{setReferenceCounted(false);acquire(25L*60L*1000L)}
@@ -233,15 +237,24 @@ class IqamaNotificationService : android.app.Service() {
 class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
     override fun onReceive(context: android.content.Context, intent: Intent?) {
         when (intent?.action) {
+            "REFRESH" -> {
+                IqamaNativeScheduler.scheduleCached(context)
+                val pending = goAsync()
+                Thread { try { IqamaNativeScheduler.refresh(context) } finally { pending.finish() } }.start()
+            }
             "NATIVE_START" -> {
+                if (!IqamaNativeScheduler.enabled(context)) return
                 val base = intent.getLongExtra("base", System.currentTimeMillis())
-                val nativeIntent = Intent(context, IqamaNotificationService::class.java).setAction("SHOW").putExtra("elapsed", false).putExtra("base", base)
-                try { if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(nativeIntent) else context.startService(nativeIntent) } catch (_: Exception) {}
-                val seconds = ((base - System.currentTimeMillis()) / 1000L).coerceAtLeast(1L)
-                val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
-                val sw = Intent(context, IqamaNotificationReceiver::class.java).setAction("SWITCH")
-                val pi = PendingIntent.getBroadcast(context, 45222, sw, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + seconds * 1000L, pi)
+                val now = System.currentTimeMillis()
+                if (now - base >= 600000L) return
+                IqamaPersistentNotification.ensureChannel(context)
+                val nativeIntent = Intent(context, IqamaNotificationService::class.java)
+                    .setAction("SHOW").putExtra("elapsed", now >= base).putExtra("base", base)
+                try {
+                    context.startForegroundService(nativeIntent)
+                } catch (e: Exception) { android.util.Log.e("IqamaScheduler", "Cannot start iqama notification", e) }
+                // The service owns the switch and expiry; no inexact phase alarm is needed.
+                IqamaNativeScheduler.scheduleCached(context, recoverActive = false)
             }
             "SWITCH" -> IqamaPersistentNotification.showElapsed(context)
             "HIDE" -> IqamaPersistentNotification.hide(context)
@@ -543,6 +556,17 @@ class MainActivity : Activity() {
             runOnUiThread {
                 AlarmScheduler.cancel(this@MainActivity)
                 Toast.makeText(this@MainActivity, "تم إيقاف منبّه النشر على الهاتف", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        @JavascriptInterface
+        fun configureIqamaNotifications(enabled: Boolean, minutes: String) {
+            runOnUiThread {
+                if (enabled) {
+                    requestNotificationPermissionIfNeeded()
+                    requestExactAlarmAccessIfNeeded()
+                }
+                IqamaNativeScheduler.configure(this@MainActivity, enabled, minutes)
             }
         }
 
