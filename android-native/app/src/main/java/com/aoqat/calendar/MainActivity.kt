@@ -277,6 +277,7 @@ class MainActivity : Activity() {
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
         AdhanSchedule.schedule(this)
+        if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         restoreIqamaServiceIfActive()
@@ -298,6 +299,7 @@ class MainActivity : Activity() {
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
         AdhanSchedule.schedule(this)
+        if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         if (::webView.isInitialized) {

@@ -44,6 +44,7 @@ object AdhanSchedule {
         if (s.optInt("afterSilent") > 0 && !(c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) s.put("afterSilent", 0)
         prefs(c).edit().putString("settings", s.toString()).commit()
         if (!s.optBoolean("enabled")) c.stopService(Intent(c, AdhanPlaybackService::class.java))
+        if (!s.optBoolean("enabled") || s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
         schedule(c)
         if (s.optBoolean("persistent")) NextPrayerService.start(c) else c.stopService(Intent(c, NextPrayerService::class.java))
         PrayerWidget.update(c)
@@ -94,8 +95,17 @@ class AdhanReceiver : BroadcastReceiver() {
             }
             "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c)) {
                 val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                nm.createNotificationChannel(NotificationChannel("adhan_reminders","تذكيرات الصلاة والسحور",NotificationManager.IMPORTANCE_DEFAULT))
-                nm.notify(if(intent.action=="SUHOOR") 60402 else 60401, Notification.Builder(c,"adhan_reminders").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(intent.action=="SUHOOR")"تذكير بالسحور" else "اقترب وقت الصلاة").setContentText(PrayerTimes.names[intent.getStringExtra("prayerId")] ?: "").setVisibility(Notification.VISIBILITY_PUBLIC).setAutoCancel(true).setContentIntent(PendingIntent.getActivity(c,0,Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)).build())
+                val s=AdhanSchedule.settings(c)
+                val override=s.optBoolean("overrideSilent");val screen=s.optBoolean("screen")
+                val channel="adhan_reminders_v1_${override}_${screen}"
+                nm.createNotificationChannel(NotificationChannel(channel,"تذكيرات الصلاة والسحور",if(screen)NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_DEFAULT).apply{
+                    if(override)setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM),android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ALARM).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                })
+                val title=if(intent.action=="SUHOOR")"تذكير بالسحور" else "اقترب وقت الصلاة"
+                val prayer=PrayerTimes.names[intent.getStringExtra("prayerId")]?:""
+                val n=Notification.Builder(c,channel).setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(title).setContentText(prayer).setVisibility(Notification.VISIBILITY_PUBLIC).setAutoCancel(true).setTimeoutAfter(60000L).setContentIntent(PendingIntent.getActivity(c,0,Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
+                if(screen)n.setCategory(Notification.CATEGORY_ALARM).setFullScreenIntent(PendingIntent.getActivity(c,if(intent.action=="SUHOOR")60422 else 60421,Intent(c,AdhanScreenActivity::class.java).putExtra("reminderMessage","$title • $prayer"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),true)
+                nm.notify(if(intent.action=="SUHOOR")60402 else 60401,n.build())
             }
             "RESTORE_SOUND" -> AdhanPlaybackService.restoreRinger(c)
             "REFRESH" -> { AdhanSchedule.schedule(c); val pending=goAsync(); Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start() }

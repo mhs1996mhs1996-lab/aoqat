@@ -1,1 +1,1 @@
-<full-backup-content><exclude domain="sharedpref" path="adhan_settings.xml"/><exclude domain="sharedpref" path="adhan_ringer.xml"/><exclude domain="file" path="custom-adhan"/></full-backup-content>
+<full-backup-content><exclude domain="sharedpref" path="adhan_settings.xml"/><exclude domain="sharedpref" path="adhan_ringer.xml"/><exclude domain="sharedpref" path="adhan_audio_volume.xml"/><exclude domain="file" path="custom-adhan"/></full-backup-content>

@@ -248,6 +248,7 @@ class BootReceiver : BroadcastReceiver() {
         }
         IqamaNativeScheduler.scheduleCached(context)
         AdhanSchedule.schedule(context)
+        if (intent?.action == Intent.ACTION_BOOT_COMPLETED) AdhanPlaybackService.restoreVolume(context)
         AdhanPlaybackService.restoreRingerIfExpired(context)
         PrayerWidget.update(context)
         if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
