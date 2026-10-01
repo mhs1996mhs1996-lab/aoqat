@@ -54,7 +54,7 @@ class IqamaNotificationTest {
 
     @Test fun backgroundAccessPermissionIsDeclared() {
         val info = context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
-        assertTrue(info.requestedPermissions.contains(android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS))
+        assertTrue(info.requestedPermissions?.contains(android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == true)
     }
 
     @Test @Config(sdk = [34]) fun backgroundCountdownIsPublishedImmediately() {
