@@ -523,6 +523,17 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun readIqamaTiming():String {
+            val prefs=getSharedPreferences("iqama_schedule",MODE_PRIVATE)
+            return org.json.JSONObject().put("enabled",prefs.getBoolean("enabled",false))
+                .put("minutes",org.json.JSONObject(prefs.getString("minutes","{}")?:"{}"))
+                .put("afterMinutes",org.json.JSONObject(prefs.getString("afterMinutes","{}")?:"{}")).toString()
+        }
+        @JavascriptInterface fun iqamaNotificationPermission():Boolean {
+            val manager=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            return manager.areNotificationsEnabled() && manager.getNotificationChannel(IqamaPersistentNotification.CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
+        }
+
         @JavascriptInterface fun readAdhanSettings(): String = AdhanSchedule.settings(this@MainActivity).toString()
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
             try {
@@ -583,6 +594,15 @@ class MainActivity : Activity() {
                 if (enabled) {
                     requestNotificationPermissionIfNeeded()
                     requestExactAlarmAccessIfNeeded()
+                }
+                if(enabled){
+                    IqamaPersistentNotification.ensureChannel(this@MainActivity)
+                    val manager=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    if(manager.getNotificationChannel(IqamaPersistentNotification.CHANNEL_ID)?.importance==NotificationManager.IMPORTANCE_NONE){
+                        startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName).putExtra(Settings.EXTRA_CHANNEL_ID,IqamaPersistentNotification.CHANNEL_ID))
+                    }else if(!manager.areNotificationsEnabled()&&(Build.VERSION.SDK_INT<33||checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED)){
+                        startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+                    }
                 }
                 IqamaNativeScheduler.configure(this@MainActivity, enabled, minutes, afterMinutes)
             }

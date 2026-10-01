@@ -15,13 +15,43 @@
   }
   function settings(){return readMinutes(KEY,DEFAULTS);}
   function afterSettings(){return readMinutes(AFTER_KEY,AFTER_DEFAULTS);}
-  function save(s){localStorage.setItem(KEY,JSON.stringify(s));}
+  const nativeIqama=!!window.AndroidNative?.configureIqamaTiming;
+  let lastNativeSettings="";
+  function syncNativeIqama(){
+    if(!nativeIqama)return;
+    const payload=JSON.stringify([iqamaNotifyEnabled(),settings(),afterSettings()]);
+    if(payload===lastNativeSettings)return;
+    lastNativeSettings=payload;
+    AndroidNative.configureIqamaTiming(iqamaNotifyEnabled(),JSON.stringify(settings()),JSON.stringify(afterSettings()));
+  }
+  function hydrateNativeIqama(){
+    if(!nativeIqama||!AndroidNative.readIqamaTiming)return;
+    try{const saved=JSON.parse(AndroidNative.readIqamaTiming());
+      if(localStorage.getItem(IQAMA_NOTIFY_KEY)===null)localStorage.setItem(IQAMA_NOTIFY_KEY,saved.enabled?"1":"0");
+      if(localStorage.getItem(KEY)===null)localStorage.setItem(KEY,JSON.stringify(saved.minutes||{}));
+      if(localStorage.getItem(AFTER_KEY)===null)localStorage.setItem(AFTER_KEY,JSON.stringify(saved.afterMinutes||{}));
+    }catch(e){console.error("iqama settings",e);}
+  }
+  function save(s){localStorage.setItem(KEY,JSON.stringify(s));syncNativeIqama();}
   function iqamaNotifyEnabled(){return localStorage.getItem(IQAMA_NOTIFY_KEY)==="1";}
-  async function setIqamaNotify(on){localStorage.setItem(IQAMA_NOTIFY_KEY,on?"1":"0");if(on&&typeof Notification!=="undefined"&&Notification.permission!=="granted"){const p=await Notification.requestPermission();if(p!=="granted")localStorage.setItem(IQAMA_NOTIFY_KEY,"0");}refreshIqamaNotifyButton();if(!iqamaNotifyEnabled())clearIqamaNotification();}
-  function refreshIqamaNotifyButton(){const b=document.getElementById("iqamaNotificationToggle");if(!b)return;const on=iqamaNotifyEnabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";b.classList.toggle("enabled",on);b.setAttribute("aria-pressed",String(on));b.innerHTML=`<span>🔔 ظهور إشعار الإقامة</span><span style="padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.14);font-size:11px">${on?"تشغيل":"إيقاف"}</span>`;}
-  async function showIqamaNotification(text){if(!iqamaNotifyEnabled()||typeof Notification==="undefined"||Notification.permission!=="granted")return;if(text===lastIqamaNotifyText&&iqamaNotificationActive)return;lastIqamaNotifyText=text;iqamaNotificationActive=true;try{if(window.AndroidNative?.showIqamaNotification){AndroidNative.showIqamaNotification(text);return;}const reg=await navigator.serviceWorker?.ready;if(reg)await reg.showNotification("⏳ الإقامة",{body:text,tag:"iqama-countdown-live",renotify:false,requireInteraction:true,silent:true});}catch(_){}}
-  async function clearIqamaNotification(){lastIqamaNotifyText="";iqamaNotificationActive=false;try{if(window.AndroidNative?.hideIqamaNotification){AndroidNative.hideIqamaNotification();return;}const reg=await navigator.serviceWorker?.ready;if(reg){const ns=await reg.getNotifications({tag:"iqama-countdown-live"});ns.forEach(n=>n.close());}}catch(_){}}
-  function addIqamaNotifyButton(){const panel=document.getElementById("switchPanel");if(!panel||document.getElementById("iqamaNotificationToggle"))return false;const b=document.createElement("button");b.id="iqamaNotificationToggle";b.type="button";b.className="switch-control-btn";b.addEventListener("click",()=>setIqamaNotify(!iqamaNotifyEnabled()));const status=document.getElementById("tomorrowSwitchStatus");panel.insertBefore(b,status||null);refreshIqamaNotifyButton();return true;}
+  async function setIqamaNotify(on){
+    localStorage.setItem(IQAMA_NOTIFY_KEY,on?"1":"0");
+    if(nativeIqama){syncNativeIqama();refreshIqamaNotifyButton();return;}
+    if(on&&typeof Notification!=="undefined"&&Notification.permission!=="granted"){
+      const permission=await Notification.requestPermission();if(permission!=="granted")localStorage.setItem(IQAMA_NOTIFY_KEY,"0");
+    }
+    refreshIqamaNotifyButton();if(!iqamaNotifyEnabled())clearIqamaNotification();
+  }
+  function refreshIqamaNotifyButton(){
+    const b=document.getElementById("iqamaNotificationToggle");if(!b)return;
+    const on=iqamaNotifyEnabled()&&(nativeIqama||(typeof Notification!=="undefined"&&Notification.permission==="granted"));
+    const needsPermission=on&&nativeIqama&&AndroidNative.iqamaNotificationPermission&&!AndroidNative.iqamaNotificationPermission();
+    b.classList.toggle("enabled",on);b.setAttribute("aria-pressed",String(on));
+    b.innerHTML=`<span>🔔 ظهور إشعار الإقامة</span><span style="padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.14);font-size:11px">${needsPermission?"يحتاج إذن Android":on?"تشغيل":"إيقاف"}</span>`;
+  }
+  async function showIqamaNotification(text){if(nativeIqama)return;if(!iqamaNotifyEnabled()||typeof Notification==="undefined"||Notification.permission!=="granted")return;if(text===lastIqamaNotifyText&&iqamaNotificationActive)return;lastIqamaNotifyText=text;iqamaNotificationActive=true;try{if(window.AndroidNative?.showIqamaNotification){AndroidNative.showIqamaNotification(text);return;}const reg=await navigator.serviceWorker?.ready;if(reg)await reg.showNotification("⏳ الإقامة",{body:text,tag:"iqama-countdown-live",renotify:false,requireInteraction:true,silent:true});}catch(_){}}
+  async function clearIqamaNotification(){if(nativeIqama)return;lastIqamaNotifyText="";iqamaNotificationActive=false;try{if(window.AndroidNative?.hideIqamaNotification){AndroidNative.hideIqamaNotification();return;}const reg=await navigator.serviceWorker?.ready;if(reg){const ns=await reg.getNotifications({tag:"iqama-countdown-live"});ns.forEach(n=>n.close());}}catch(_){}}
+  function addIqamaNotifyButton(){const panel=document.getElementById("switchPanel");if(!panel||document.getElementById("iqamaNotificationToggle"))return false;const b=document.createElement("button");b.id="iqamaNotificationToggle";b.type="button";b.className="switch-control-btn";b.addEventListener("click",()=>setIqamaNotify(!iqamaNotifyEnabled()));const status=document.getElementById("tomorrowSwitchStatus");panel.insertBefore(b,status?.parentElement===panel?status:null);refreshIqamaNotifyButton();return true;}
   function parse(v,id){return window.AoqatAdhanCore.minutes(v,id);}
   function fmt(sec){sec=Math.max(0,Math.floor(sec));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;return [h,m,s].map(x=>String(x).padStart(2,"0")).join(":");}
   function fmtIqama(sec){sec=Math.max(0,Math.floor(sec));const m=Math.floor(sec/60),s=sec%60;return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;}
@@ -41,7 +71,7 @@
       select.value=String(values[select.dataset.afterIqama]);
       select.addEventListener("change",()=>{
         const updated=afterSettings();updated[select.dataset.afterIqama]=Number(select.value);
-        localStorage.setItem(AFTER_KEY,JSON.stringify(updated));tick();
+        localStorage.setItem(AFTER_KEY,JSON.stringify(updated));syncNativeIqama();tick();
       });
     });
     main.appendChild(panel);
@@ -63,6 +93,6 @@
     showIqamaNotification(text+" "+clock);
   }
 
-  function init(){css();createDisplay();createPanel();createAfterPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(loadToday,60000);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
+  function init(){hydrateNativeIqama();syncNativeIqama();css();createDisplay();createPanel();createAfterPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(loadToday,60000);window.addEventListener("focus",refreshIqamaNotifyButton);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

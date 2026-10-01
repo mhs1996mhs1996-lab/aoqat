@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 57 // Adhan, per-prayer audio settings, widgets and services
-        versionName '1.23'
+        versionCode 58 // Native iqama settings independent of browser notification permissions
+        versionName '1.23.1'
     }
 
     compileOptions {
