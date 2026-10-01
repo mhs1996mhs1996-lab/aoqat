@@ -34,6 +34,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private val handler=Handler(Looper.getMainLooper())
     private var config=JSONObject()
     private var started=0L
+    private var flipArmed=false
     private var successful=false
     private var preview=false
     override fun onBind(intent: Intent?): IBinder?=null
@@ -42,6 +43,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         if(intent?.action=="STOP"){stopSelf();return START_NOT_STICKY}
         cleanup()
         successful=false
+        flipArmed=false
         config=if(intent?.hasExtra("settings")==true)try{JSONObject(intent.getStringExtra("settings")?:"{}")}catch(_:Exception){JSONObject()} else AdhanSchedule.settings(this)
         preview=intent?.getBooleanExtra("preview",false)==true
         val prayer=intent?.getStringExtra("prayerId")?:"fajr"
@@ -80,11 +82,13 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private fun vibrate(){vibrator=getSystemService(VIBRATOR_SERVICE) as Vibrator;val p=when(config.optString("pattern")){"long"->longArrayOf(0,1000);"pulse"->longArrayOf(0,250,150,250,150,250);else->longArrayOf(0,250)};vibrator?.vibrate(VibrationEffect.createWaveform(p,-1))}
     private fun cleanup(){handler.removeCallbacksAndMessages(null);sensors.unregisterListener(this);player?.release();player=null;vibrator?.cancel();focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};focus=null;if(wake?.isHeld==true)wake?.release();wake=null}
     override fun onDestroy(){cleanup();if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(duration>0&&nm.isNotificationPolicyAccessGranted){val am=getSystemService(AUDIO_SERVICE) as AudioManager;val p=getSharedPreferences("adhan_ringer",MODE_PRIVATE);val old=if(p.getBoolean("changed",false))p.getInt("previous",2) else am.ringerMode;val end=System.currentTimeMillis()+duration*60000L;try{am.ringerMode=AudioManager.RINGER_MODE_SILENT;p.edit().putBoolean("changed",true).putInt("previous",old).putLong("end",end).commit();AdhanSchedule.alarm(this,60403,"RESTORE_SOUND",end)}catch(_:SecurityException){}}};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
-    override fun onSensorChanged(e:SensorEvent){if(e.values[2]<-7 && SystemClock.elapsedRealtime()-started>1500)stopSelf()}
+    override fun onSensorChanged(e:SensorEvent){if(e.values[2]>-5)flipArmed=true;if(flipArmed && e.values[2]<-7 && SystemClock.elapsedRealtime()-started>1500)stopSelf()}
     override fun onAccuracyChanged(s:Sensor?,a:Int){}
 }
 class AdhanScreenActivity: Activity(){
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
     override fun onCreate(b:Bundle?){super.onCreate(b);if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}else window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text="حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text="إيقاف الأذان";setOnClickListener{stopService(Intent(this@AdhanScreenActivity,AdhanPlaybackService::class.java));finish()}});setContentView(layout);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
+    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean {if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_MEDIA_STOP)){stopService(Intent(this,AdhanPlaybackService::class.java));finish();return true};return super.onKeyDown(code,event)}
+    @Deprecated("Deprecated in Java") override fun onBackPressed(){stopService(Intent(this,AdhanPlaybackService::class.java));super.onBackPressed()}
     override fun onDestroy(){unregisterReceiver(stopped);super.onDestroy()}
 }

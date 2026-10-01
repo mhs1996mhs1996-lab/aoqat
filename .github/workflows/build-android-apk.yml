@@ -57,3 +57,10 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright
           node tests/adhan-browser.cjs
+      - name: Upload web preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adhan-web-preview
+          path: /tmp/aoqat-adhan-*.png
+          if-no-files-found: ignore

@@ -11,13 +11,13 @@
       isha: "العشاء",
       friday: "الجمعة",
     },
-    native = !!window.Android?.configureAdhan;
+    native = !!window.AndroidNative?.configureAdhan;
   let state;
   try {
     state = C.normalize(
       JSON.parse(
-        native && window.Android.readAdhanSettings
-          ? window.Android.readAdhanSettings()
+        native && window.AndroidNative.readAdhanSettings
+          ? window.AndroidNative.readAdhanSettings()
           : localStorage.getItem(KEY) || "{}",
       ),
     );
@@ -52,7 +52,7 @@
   }
   function persist() {
     localStorage.setItem(KEY, JSON.stringify(state));
-    if (native) window.Android.configureAdhan(JSON.stringify(state));
+    if (native) window.AndroidNative.configureAdhan(JSON.stringify(state));
     document
       .querySelector('[data-drawer="adhanIqama"]')
       ?.classList.toggle("adhan-on", state.enabled);
@@ -99,7 +99,7 @@
     return customURL;
   }
   function stop() {
-    if (native) window.Android.stopAdhan();
+    if (native) window.AndroidNative.stopAdhan();
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
@@ -110,7 +110,7 @@
   async function play(preview = false, event) {
     stop();
     if (native) {
-      window.Android.previewAdhan(
+      window.AndroidNative.previewAdhan(
         JSON.stringify({ ...state, preview, prayerId: event?.id || "fajr" }),
       );
       playing = true;
@@ -165,7 +165,7 @@
       if (result.length) {
         rows = result;
         localStorage.setItem("aoqatAdhanRows", JSON.stringify(rows));
-        if (native) window.Android.cachePrayerRows(JSON.stringify(rows));
+        if (native) window.AndroidNative.cachePrayerRows(JSON.stringify(rows));
       }
     } catch (e) {
       try {
@@ -296,7 +296,7 @@
     $("adPreview").onclick = () => play(true);
     $("adStop").onclick = stop;
     $("adChoose").onclick = () =>
-      native ? window.Android.chooseAdhanAudio() : $("adFile").click();
+      native ? window.AndroidNative.chooseAdhanAudio() : $("adFile").click();
     $("adFile").onchange = async (e) => {
       const f = e.target.files[0];
       if (!f) return;
@@ -327,8 +327,8 @@
         }),
     );
     if (native) {
-      $("adWidget").onclick = () => window.Android.pinPrayerWidget();
-      $("adPermission").onclick = () => window.Android.adhanPermissions();
+      $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
+      $("adPermission").onclick = () => window.AndroidNative.adhanPermissions();
     }
     panel
       .querySelectorAll("[data-service]")
@@ -466,7 +466,7 @@
       if (native) {
         el.innerHTML =
           '<button type="button" id="adNativeQibla">فتح بوصلة القبلة</button>';
-        $("adNativeQibla").onclick = () => window.Android.openQibla();
+        $("adNativeQibla").onclick = () => window.AndroidNative.openQibla();
         return;
       }
       el.innerHTML =

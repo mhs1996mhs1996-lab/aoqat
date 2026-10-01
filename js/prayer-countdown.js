@@ -35,7 +35,7 @@
     const panel=document.createElement("section");
     panel.id="afterIqamaPanel";panel.className="panel inline-control-panel";
     const options=TIMING.OPTIONS.map(value=>`<option value="${value}">${value} دقيقة</option>`).join("");
-    panel.innerHTML=`<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يتوقف العدّاد ويختفي.</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-after-iqama="${id}">${options}</select></label>`).join("")}`;
+    panel.innerHTML=`<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يختفي الإشعار فقط؛ وتبقى واجهة البرنامج «باقي على الإقامة 00:00».</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-after-iqama="${id}">${options}</select></label>`).join("")}`;
     const values=afterSettings();
     panel.querySelectorAll("[data-after-iqama]").forEach(select=>{
       select.value=String(values[select.dataset.afterIqama]);
