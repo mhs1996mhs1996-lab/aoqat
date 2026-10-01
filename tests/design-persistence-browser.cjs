@@ -39,7 +39,7 @@ const assert=require('node:assert/strict');
   await page.addScriptTag({path:'assets/vendor/html2canvas.min.js'});
   await page.evaluate(()=>{
    const render=window.html2canvas;
-   window.html2canvas=async(node,opts)=>{const badge=node.querySelector('.ref-day img');if(!badge?.src.startsWith('data:image/svg+xml'))throw Error('Day badge polygon missing from export');if(badge.style.zIndex!=='0')throw Error('Day badge must remain above export background');const canvas=await render(node,opts);const ctx=canvas.getContext('2d');const c=ctx.getImageData(1024,800,1,1).data;window.__aoqatTestExportData=canvas.toDataURL('image/png');return canvas;};
+   window.html2canvas=async(node,opts)=>{const badge=node.querySelector('.ref-day img');if(!badge?.src.startsWith('data:image/svg+xml'))throw Error('Day badge polygon missing from export');if(badge.style.zIndex!=='0')throw Error('Day badge must remain above export background');const canvas=await render(node,opts);const ctx=canvas.getContext('2d');const c=ctx.getImageData(1024,700,1,1).data;if(c[0]>40||c[2]<50)throw Error('Day badge fill missing from rendered image');window.__aoqatTestExportData=canvas.toDataURL('image/png');return canvas;};
    const button=document.createElement('button');button.dataset.exportFormat='jpg';document.body.appendChild(button);button.click();
   });
   await page.waitForFunction(()=>typeof window.__aoqatTestExportData==='string',{timeout:45000});

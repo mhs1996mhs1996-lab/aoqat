@@ -15,10 +15,13 @@ const prayerTimes = [];
             parent.appendChild(s);
         });
     }
+    // Wait for the static script tags before checking for existing modules.
+    document.addEventListener("DOMContentLoaded",()=>{
     loadScript("js/startup-stabilizer.js?v=1","startup-stabilizer",document.head);
     loadScript("js/modal-panels.js?v=4","modal-panels",document.head);
     loadScript("js/design-side-menu.js?v=1","design-side-menu",document.head);
     loadScript("js/tomorrow-alarm.js?v=1","tomorrow-alarm",document.head).then(()=>loadScript("js/push-notifications.js?v=1","push-notifications",document.head));
+    },{once:true});
     window.addEventListener("load",async()=>{
         await loadScript("js/hide-legacy-design.js?v=1","hide-legacy-design");
         await loadScript("js/second-design.js?v=5","second-design");
