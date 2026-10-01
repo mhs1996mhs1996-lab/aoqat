@@ -31,7 +31,8 @@
     }
     const grid=box.querySelector(".bg-tools-grid");
     const manualWrap=document.querySelector(".manual-edit-toggle-wrap");
-    const save=document.getElementById("saveDesignAdjustments");
+    let save=document.getElementById("saveDesignAdjustments");
+    if(!save){save=document.createElement('button');save.id='saveDesignAdjustments';save.type='button';grid.appendChild(save);}
     const reset=document.getElementById("resetPositions");
 
     if(manualWrap&&manualWrap.parentElement!==grid)grid.appendChild(manualWrap);

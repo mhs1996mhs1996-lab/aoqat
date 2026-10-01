@@ -52,6 +52,14 @@ class IqamaNotificationTest {
             start + 600_000L, true, "باقي على الإقامة")
     }
 
+    @Test @Config(sdk = [34]) fun backgroundCountdownIsPublishedImmediately() {
+        val display = IqamaCycle.display(SystemClock.elapsedRealtime() - 10_000L, SystemClock.elapsedRealtime())!!
+        val notification = IqamaNotificationRenderer.build(context, display)
+        assertEquals(Notification.FOREGROUND_SERVICE_IMMEDIATE, notification.foregroundServiceBehavior)
+        assertTrue(notification.flags and Notification.FLAG_NO_CLEAR != 0)
+        assertSurfaces(notification, display.baseRealtime, true, "باقي على الإقامة")
+    }
+
     @Test fun openingAnotherSurfaceSevenMinutesLaterDoesNotUseOldText() {
         val start = SystemClock.elapsedRealtime() - 91_000L
         val notification = IqamaNotificationRenderer.build(context,

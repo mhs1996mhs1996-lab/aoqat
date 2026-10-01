@@ -42,7 +42,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.24-build59
+          name: aoqat-android-v1.25-build60
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -58,6 +58,7 @@ jobs:
           npm install --no-save --package-lock=false playwright
           node tests/adhan-browser.cjs
           node tests/iqama-native-browser.cjs
+          node tests/design-persistence-browser.cjs
       - name: Upload web preview
         if: always()
         uses: actions/upload-artifact@v4

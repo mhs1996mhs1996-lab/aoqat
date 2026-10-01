@@ -35,6 +35,12 @@ object IqamaPersistentNotification {
     const val NOTIFICATION_ID = 45221
     private const val REQUEST_SWITCH = 45222
     private const val REQUEST_HIDE = 45223
+    private var dispatchLock: android.os.PowerManager.WakeLock? = null
+
+    @Synchronized fun releaseDispatchLock() {
+        if (dispatchLock?.isHeld == true) dispatchLock?.release()
+        dispatchLock = null
+    }
 
     fun ensureChannel(context: android.content.Context) {
         if (Build.VERSION.SDK_INT < 26) return
@@ -61,8 +67,14 @@ object IqamaPersistentNotification {
         ensureChannel(context)
         val intent = Intent(context, IqamaNotificationService::class.java)
             .setAction("START_CYCLE").putExtra("prayerAt", prayerAt).putExtra("prayerId", prayerId)
+        synchronized(this) {
+            releaseDispatchLock()
+            val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+            dispatchLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aoqat:iqamaDispatch")
+                .apply { setReferenceCounted(false); acquire(15_000L) }
+        }
         try { context.startForegroundService(intent) }
-        catch (e: Exception) { android.util.Log.e("IqamaCycle", "Cannot start notification service", e) }
+        catch (e: Exception) { releaseDispatchLock();android.util.Log.e("IqamaCycle", "Cannot start notification service", e) }
     }
 
     fun scheduleBoundary(context: android.content.Context, prayerAt: Long, deadline: Long, finish: Boolean) {
@@ -169,6 +181,7 @@ class IqamaNotificationService : android.app.Service() {
             wakeLock = pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "aoqat:iqamaCycle")
                 .apply { setReferenceCounted(false); acquire(remaining + 5000L) }
         }
+        IqamaPersistentNotification.releaseDispatchLock()
         if (display.countDown) IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + durations.beforeMs, finish = false)
         IqamaPersistentNotification.scheduleBoundary(this, prayerAt, startRealtime + durations.totalMs, finish = true)
         reconcile()
@@ -179,6 +192,7 @@ class IqamaNotificationService : android.app.Service() {
         IqamaNotificationRenderer.build(this, display)
 
     private fun finishCycle() {
+        IqamaPersistentNotification.releaseDispatchLock()
         handler.removeCallbacks(boundary)
         IqamaPersistentNotification.hide(this)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -210,6 +224,7 @@ object IqamaNotificationRenderer {
             .setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true).setShowWhen(false)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         // Explicit public version: lock-screen hosts receive the same running clock,
         // never a separately formatted/cached numeric fallback.
         val n = builder().setPublicVersion(builder().build()).build()
@@ -281,6 +296,7 @@ class MainActivity : Activity() {
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         restoreIqamaServiceIfActive()
+        if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
         webView.loadUrl("file:///android_asset/www/index.html")
 
@@ -316,6 +332,18 @@ class MainActivity : Activity() {
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    private fun requestIqamaBackgroundAccessIfNeeded(force: Boolean = false) {
+        val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        val asked = getSharedPreferences("iqama_schedule", MODE_PRIVATE)
+        if (!force && asked.getBoolean("backgroundAccessRequestedV125", false)) return
+        asked.edit().putBoolean("backgroundAccessRequestedV125", true).apply()
+        try {
+            Toast.makeText(this, "اسمح بالعمل في الخلفية حتى يظهر إشعار الإقامة بدون فتح البرنامج", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
+        } catch (e: Exception) { android.util.Log.w("IqamaCycle", "Cannot open background access settings", e) }
     }
 
     private fun restoreIqamaServiceIfActive() {
@@ -533,6 +561,9 @@ class MainActivity : Activity() {
             val manager=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             return manager.areNotificationsEnabled() && manager.getNotificationChannel(IqamaPersistentNotification.CHANNEL_ID)?.importance != NotificationManager.IMPORTANCE_NONE
         }
+        @JavascriptInterface fun iqamaBackgroundPermission():Boolean =
+            (getSystemService(POWER_SERVICE) as android.os.PowerManager).isIgnoringBatteryOptimizations(packageName)
+        @JavascriptInterface fun requestIqamaBackgroundPermission() { runOnUiThread { requestIqamaBackgroundAccessIfNeeded(force = true) } }
 
         @JavascriptInterface fun readAdhanSettings(): String = AdhanSchedule.settings(this@MainActivity).toString()
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
@@ -605,6 +636,7 @@ class MainActivity : Activity() {
                     }
                 }
                 IqamaNativeScheduler.configure(this@MainActivity, enabled, minutes, afterMinutes)
+                if(enabled)requestIqamaBackgroundAccessIfNeeded()
             }
         }
 

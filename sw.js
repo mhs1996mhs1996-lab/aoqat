@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v11";
+const CACHE_NAME = "aoqat-pwa-v12";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -8,14 +8,14 @@ const APP_SHELL = [
   "/js/adhan-settings.js?v=1",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
-  "/assets/audio/adhan-1.mp3",
-  "/assets/audio/adhan-1-short.mp3",
-  "/assets/audio/adhan-2.mp3",
-  "/assets/audio/adhan-2-short.mp3",
-  "/assets/audio/adhan-3.mp3",
-  "/assets/audio/adhan-3-short.mp3",
-  "/assets/audio/adhan-4.mp3",
-  "/assets/audio/adhan-4-short.mp3",
+  "/assets/audio/adhan-v124-1.mp3",
+  "/assets/audio/adhan-v124-1-short.mp3",
+  "/assets/audio/adhan-v124-2.mp3",
+  "/assets/audio/adhan-v124-2-short.mp3",
+  "/assets/audio/adhan-v124-3.mp3",
+  "/assets/audio/adhan-v124-3-short.mp3",
+  "/assets/audio/adhan-v124-4.mp3",
+  "/assets/audio/adhan-v124-4-short.mp3",
   "/js/script.js",
   "/js/supabase-db.js",
   "/js/startup-stabilizer.js",

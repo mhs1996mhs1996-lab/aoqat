@@ -46,8 +46,12 @@
     const b=document.getElementById("iqamaNotificationToggle");if(!b)return;
     const on=iqamaNotifyEnabled()&&(nativeIqama||(typeof Notification!=="undefined"&&Notification.permission==="granted"));
     const needsPermission=on&&nativeIqama&&AndroidNative.iqamaNotificationPermission&&!AndroidNative.iqamaNotificationPermission();
+    const needsBackground=on&&nativeIqama&&AndroidNative.iqamaBackgroundPermission&&!AndroidNative.iqamaBackgroundPermission();
     b.classList.toggle("enabled",on);b.setAttribute("aria-pressed",String(on));
-    b.innerHTML=`<span>🔔 ظهور إشعار الإقامة</span><span style="padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.14);font-size:11px">${needsPermission?"يحتاج إذن Android":on?"تشغيل":"إيقاف"}</span>`;
+    let repair=document.getElementById('iqamaBackgroundAccess');
+    if(needsBackground&&!repair){repair=document.createElement('button');repair.id='iqamaBackgroundAccess';repair.type='button';repair.className='switch-control-btn';repair.textContent='السماح بإشعار الإقامة في الخلفية';repair.onclick=()=>AndroidNative.requestIqamaBackgroundPermission?.();b.insertAdjacentElement('afterend',repair);}
+    if(repair)repair.hidden=!needsBackground;
+    b.innerHTML=`<span>🔔 ظهور إشعار الإقامة</span><span style="padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.14);font-size:11px">${needsPermission?"يحتاج إذن Android":needsBackground?"يحتاج إذن الخلفية":on?"تشغيل":"إيقاف"}</span>`;
   }
   async function showIqamaNotification(text){if(nativeIqama)return;if(!iqamaNotifyEnabled()||typeof Notification==="undefined"||Notification.permission!=="granted")return;if(text===lastIqamaNotifyText&&iqamaNotificationActive)return;lastIqamaNotifyText=text;iqamaNotificationActive=true;try{if(window.AndroidNative?.showIqamaNotification){AndroidNative.showIqamaNotification(text);return;}const reg=await navigator.serviceWorker?.ready;if(reg)await reg.showNotification("⏳ الإقامة",{body:text,tag:"iqama-countdown-live",renotify:false,requireInteraction:true,silent:true});}catch(_){}}
   async function clearIqamaNotification(){if(nativeIqama)return;lastIqamaNotifyText="";iqamaNotificationActive=false;try{if(window.AndroidNative?.hideIqamaNotification){AndroidNative.hideIqamaNotification();return;}const reg=await navigator.serviceWorker?.ready;if(reg){const ns=await reg.getNotifications({tag:"iqama-countdown-live"});ns.forEach(n=>n.close());}}catch(_){}}

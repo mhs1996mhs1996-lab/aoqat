@@ -10,14 +10,14 @@
 
   function rememberBase(card){
     if(card.dataset.adaptiveBoxReady==='1')return;
-    const r=card.getBoundingClientRect(),s=getComputedStyle(card);
+    const s=getComputedStyle(card);
     card.dataset.adaptiveBoxReady='1';
-    card.dataset.adaptiveMinW=String(card.offsetWidth||parseFloat(s.width)||r.width||0);
-    card.dataset.adaptiveMinH=String(card.offsetHeight||parseFloat(s.height)||r.height||0);
+    card.dataset.adaptiveMinW=String(card.offsetWidth||parseFloat(s.width)||0);
+    card.dataset.adaptiveMinH=String(card.offsetHeight||parseFloat(s.height)||0);
     card.style.setProperty('box-sizing','border-box');
   }
   function fit(card){
-    if(!card)return;rememberBase(card);
+    if(!card||!card.offsetWidth)return;rememberBase(card);
     const minW=parseFloat(card.dataset.adaptiveMinW)||0,minH=parseFloat(card.dataset.adaptiveMinH)||0;
     const items=Array.from(card.querySelectorAll(TEXT_SELECTORS)).filter(el=>(el.textContent||'').trim());
     if(!items.length)return;
@@ -25,11 +25,11 @@
     let widest=0,total=0;
     items.forEach(el=>{
       el.style.setProperty('white-space','nowrap','important');
-      const er=el.getBoundingClientRect(),scale=(card.getBoundingClientRect().width/card.offsetWidth)||1;
-      widest=Math.max(widest,er.width/scale);total+=er.height/scale;
+      widest=Math.max(widest,el.scrollWidth);total+=el.offsetHeight;
     });
-    const gap=Math.max(0,items.length-1)*4;
-    const needW=Math.ceil(widest+px+8),needH=Math.ceil(total+py+gap+4);
+    const gap=Math.max(0,items.length-1)*(parseFloat(cs.rowGap)||0);
+    const borderX=(parseFloat(cs.borderLeftWidth)||0)+(parseFloat(cs.borderRightWidth)||0),borderY=(parseFloat(cs.borderTopWidth)||0)+(parseFloat(cs.borderBottomWidth)||0);
+    const needW=Math.ceil(widest+px+borderX),needH=Math.ceil(total+py+gap+borderY);
     card.style.setProperty('width',Math.max(minW,needW)+'px','important');
     card.style.setProperty('min-width',Math.max(minW,needW)+'px','important');
     card.style.setProperty('height',Math.max(minH,needH)+'px','important');
@@ -48,6 +48,15 @@
       if(m.some(x=>x.type==='childList'))schedule(document);
     }).observe(document.body,{subtree:true,childList:true});
   }
-  window.PrayerAdaptiveBoxes={fit,fitRoot,fitAll};
+  function restoreStyle(el,style){
+    if(style)el.setAttribute('style',style);else el.removeAttribute('style');
+    if(el.matches('.ref-date-card')){
+      // These dimensions came from the old auto-fit routines, not user controls.
+      // Recalculate from the original card and the preserved font/position.
+      ['width','height','min-width','min-height','max-width','max-height','padding','overflow'].forEach(p=>el.style.removeProperty(p));
+      delete el.dataset.adaptiveBoxReady;
+    }
+  }
+  window.PrayerAdaptiveBoxes={fit,fitRoot,fitAll,restoreStyle};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();

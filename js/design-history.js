@@ -11,11 +11,21 @@
   function editableIn(slide){
     return Array.from(slide.querySelectorAll('[style],[data-x],[data-y],.draggable,.drag,.quran,.weekday,.hijri-month,.gregorian-month,.hijri-year,.gregorian-year,.prayer-row,.footer,.nf-title,.nf-sub,.nf-day,.nf-date,.nf-row,.nf-footer'));
   }
+  function identity(el,slide){
+    const classes=Array.from(el.classList).filter(c=>!['draggable','drag','dragging','preview-moving'].includes(c)).sort().join('.');
+    const field=el.dataset.field||el.dataset.f||'';
+    const card=el.closest('.greg,.hijri');
+    const row=el.closest('[data-prayer-row],.ref-prayer-row,.or-row');
+    const prayer=row?.dataset.prayerRow||row?.querySelector('[data-field]')?.dataset.field||'';
+    return el.id?'id:'+el.id:[el.tagName,classes,field,card?.classList.contains('greg')?'greg':card?'hijri':'',prayer].join('|');
+  }
   function snapshot(){
     return JSON.stringify(slides().map((slide,si)=>({
       si,
+      designId:slide.firstElementChild?.id||'',
       items:editableIn(slide).map((el,ei)=>({
         ei,
+        key:identity(el,slide),
         id:el.id||"",
         cls:el.className||"",
         style:el.getAttribute('style')||"",
@@ -30,20 +40,35 @@
     try{state=typeof raw==='string'?JSON.parse(raw):raw;}catch(_){return;}
     restoring=true;
     const currentSlides=slides();
+    if(!Array.isArray(state)){restoring=false;return;}
     state.forEach(s=>{
-      const slide=currentSlides[s.si]; if(!slide)return;
+      let slide=s.designId?currentSlides.find(x=>x.firstElementChild?.id===s.designId):null;
+      if(!slide&&!s.designId){
+        // Older records identify their root in the first item. Never attach a
+        // removed design's styles to the slide that later occupies its index.
+        const rootId=s.items?.find(item=>item.id&&document.getElementById(item.id)?.closest('.design-slide')?.firstElementChild?.id===item.id)?.id;
+        if(rootId)slide=currentSlides.find(x=>x.firstElementChild?.id===rootId);
+        if(!slide){const candidate=currentSlides[s.si];const root=candidate?.firstElementChild;
+          if(root&&s.items?.some(item=>item.cls&&String(root.className)===item.cls))slide=candidate;}
+      }
+      if(!slide)return;
       const els=editableIn(slide);
       s.items.forEach(item=>{
         let el=null;
         if(item.id)el=slide.querySelector('#'+CSS.escape(item.id));
-        if(!el)el=els[item.ei];
+        if(!el&&item.key){const matches=Array.from(slide.querySelectorAll('*')).filter(x=>identity(x,slide)===item.key);if(matches.length===1)el=matches[0];}
+        if(!el&&!item.key&&item.cls){
+          const matches=Array.from(slide.querySelectorAll('*')).filter(x=>String(x.className)===item.cls);
+          if(matches.length===1)el=matches[0];
+          else if(matches.includes(els[item.ei]))el=els[item.ei];
+        }
         if(!el)return;
-        if(item.style)el.setAttribute('style',item.style);else el.removeAttribute('style');
+        if(window.PrayerAdaptiveBoxes)window.PrayerAdaptiveBoxes.restoreStyle(el,item.style);else {if(item.style)el.setAttribute('style',item.style);else el.removeAttribute('style');}
         if(item.x===null)delete el.dataset.x;else el.dataset.x=String(item.x);
         if(item.y===null)delete el.dataset.y;else el.dataset.y=String(item.y);
       });
     });
-    requestAnimationFrame(()=>{restoring=false;lastState=snapshot();});
+    requestAnimationFrame(()=>{window.PrayerAdaptiveBoxes?.fitAll();restoring=false;lastState=snapshot();});
   }
   function ensureUndoButton(){
     let btn=document.getElementById('undoDesignChange');

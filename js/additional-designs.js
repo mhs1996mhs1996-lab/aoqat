@@ -73,7 +73,7 @@
 
   function createReference(){
     const d=document.createElement("div");d.id="designRef";d.className="reference-design";
-    d.innerHTML=`<div class="ref-sky"></div><div class="ref-water"></div><div class="ref-mosque"></div><div class="ref-minaret a"></div><div class="ref-minaret b"></div><div class="ref-minaret c"></div><div class="ref-minaret d"></div><div class="ref-arch"></div><div class="ref-verse draggable">﴿ إِنَّ الصَّلَاةَ تَنْهَى عَنِ الْفَحْشَاءِ وَالْمُنكَرِ ﴾</div><div class="ref-verse-source draggable">(العنكبوت: 45)</div><div class="ref-date-area"><div class="ref-date-card greg draggable"><div class="ref-date-year" data-field="gyear"></div><div class="ref-date-num" data-field="gday"></div><div class="ref-date-month" data-field="gmonth"></div></div><div class="ref-date-card hijri draggable"><div class="ref-date-num" data-field="hday"></div><div class="ref-date-month" data-field="hmonth"></div><div class="ref-date-year" data-field="hyear"></div></div></div><div class="ref-day draggable" data-field="day"></div><div class="ref-prayers">${rows("ref",true)}</div><div class="ref-footer draggable" data-field="footer"></div>`;
+    d.innerHTML=`<div class="ref-sky"></div><div class="ref-water"></div><div class="ref-mosque"></div><div class="ref-minaret a"></div><div class="ref-minaret b"></div><div class="ref-minaret c"></div><div class="ref-minaret d"></div><div class="ref-arch"></div><div class="ref-verse draggable">﴿ إِنَّ الصَّلَاةَ تَنْهَى عَنِ الْفَحْشَاءِ وَالْمُنكَرِ ﴾</div><div class="ref-verse-source draggable">(العنكبوت: 45)</div><div class="ref-date-area"><div class="ref-date-card greg draggable"><div class="ref-date-num" data-field="gday"></div><div class="ref-date-month" data-field="gmonth"></div><div class="ref-date-year" data-field="gyear"></div></div><div class="ref-date-card hijri draggable"><div class="ref-date-num" data-field="hday"></div><div class="ref-date-month" data-field="hmonth"></div><div class="ref-date-year" data-field="hyear"></div></div></div><div class="ref-day draggable" data-field="day"></div><div class="ref-prayers">${rows("ref",true)}</div><div class="ref-footer draggable" data-field="footer"></div>`;
     return d;
   }
 
@@ -84,6 +84,18 @@
   function setupDragging(design){design.querySelectorAll(".draggable").forEach(el=>{let drag=false,sx=0,sy=0,bx=0,by=0,scale=1;const p=e=>e.touches?e.touches[0]:e;const start=e=>{if(e.button!==undefined&&e.button!==0)return;const q=p(e),r=design.getBoundingClientRect();scale=r.width/design.offsetWidth||1;sx=q.clientX;sy=q.clientY;bx=parseFloat(el.dataset.x)||0;by=parseFloat(el.dataset.y)||0;drag=true;el.classList.add("dragging");e.preventDefault()};const move=e=>{if(!drag)return;const q=p(e),x=bx+(q.clientX-sx)/scale,y=by+(q.clientY-sy)/scale;el.dataset.x=x;el.dataset.y=y;el.style.transform=`translate(${x}px,${y}px)`;e.preventDefault()};const end=()=>{drag=false;el.classList.remove("dragging")};el.addEventListener("mousedown",start);window.addEventListener("mousemove",move,{passive:false});window.addEventListener("mouseup",end);el.addEventListener("touchstart",start,{passive:false});window.addEventListener("touchmove",move,{passive:false});window.addEventListener("touchend",end)});}
 
   function rebuild(){
+    if(document.body.dataset.designSet==='current'){
+      const preview=document.querySelector('.previewBox');if(!preview)return false;
+      if(document.getElementById('designRef'))return true;
+      const storage=document.createElement('div');storage.id='removedDesignStorage';storage.className='removed-design-storage';storage.hidden=true;
+      const legacy=document.getElementById('design');if(legacy)storage.appendChild(legacy);
+      document.body.appendChild(storage);
+      const carousel=document.createElement('div');carousel.className='design-carousel';
+      const track=document.createElement('div');track.className='design-carousel-track';
+      const slide=document.createElement('div');slide.className='design-slide';slide.appendChild(createReference());track.appendChild(slide);carousel.appendChild(track);preview.appendChild(carousel);
+      const style=document.createElement('style');style.textContent='.design-carousel{position:relative;width:100%;overflow:hidden}.design-carousel-track{width:100%}.design-slide{width:100%;display:flex;justify-content:center;align-items:flex-start}.design-carousel-btn{border:0;background:#0c2230;color:#fff;border-radius:8px}.design-carousel-status{color:#d7e2e8}.design-carousel-dot{border:0;border-radius:50%;background:#667782}.design-carousel-dot.active{background:#e8bd58}';document.head.appendChild(style);
+      sync();return true;
+    }
     const track=document.querySelector(".design-carousel-track"),carousel=document.querySelector(".design-carousel");if(!track||!carousel)return false;
     if(document.getElementById("designRef"))return true;
 
@@ -119,7 +131,7 @@
     render();return true;
   }
 
-  function resize(){const p=document.querySelector(".previewBox"),car=document.querySelector(".design-carousel"),designs=["design2","design3","design4","designRef"].map(id=>document.getElementById(id));if(!p||!car||designs.some(x=>!x))return;if(window.innerWidth>800){designs.forEach(d=>d.style.zoom="1");car.style.height=HEIGHT+"px";return}const cs=getComputedStyle(p),pad=parseFloat(cs.paddingLeft||0)+parseFloat(cs.paddingRight||0),avail=Math.max(220,p.clientWidth-pad-2),sc=Math.min(1,avail/WIDTH);designs.forEach(d=>d.style.zoom=String(sc));car.style.height=Math.ceil(HEIGHT*sc)+"px";}
+  function resize(){const p=document.querySelector(".previewBox"),car=document.querySelector(".design-carousel"),designs=["design2","design3","design4","designRef"].map(id=>document.getElementById(id)).filter(Boolean);if(!p||!car||!designs.length)return;if(window.innerWidth>800){designs.forEach(d=>d.style.zoom="1");car.style.height=HEIGHT+"px";return}const cs=getComputedStyle(p),pad=parseFloat(cs.paddingLeft||0)+parseFloat(cs.paddingRight||0),avail=Math.max(220,p.clientWidth-pad-2),sc=Math.min(1,avail/WIDTH);designs.forEach(d=>d.style.zoom=String(sc));car.style.height=Math.ceil(HEIGHT*sc)+"px";}
 
   function rr(ctx,r,rad=24){ctx.beginPath();if(ctx.roundRect)ctx.roundRect(r.x,r.y,r.w,r.h,rad);else ctx.rect(r.x,r.y,r.w,r.h)}
   function rect(el,d){const r=el.getBoundingClientRect(),dr=d.getBoundingClientRect(),s=dr.width/d.offsetWidth||1;return{x:(r.left-dr.left)/s,y:(r.top-dr.top)/s,w:r.width/s,h:r.height/s}}
