@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
  try{
   await new Promise(r=>setTimeout(r,700));
   browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
-  const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>{errors.push(e.stack);console.log('PAGE ERROR',e.stack);});
+  const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('console',m=>{if(m.type()==='error')console.log('Browser console:',m.text());});page.on('pageerror',e=>{errors.push(e.stack);console.log('PAGE ERROR',e.stack);});
   await page.route('**/rest/v1/annual_prayer_times**',r=>r.fulfill({json:[{gregorian_month:10,gregorian_day:1,fajr:'4:43',sunrise:'6:04',dhuhr:'11:59',asr:'3:22',maghrib:'5:53',isha:'7:13'}]}));
   await page.goto('http://127.0.0.1:8767',{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#designRef',{state:'visible'});
@@ -39,11 +39,12 @@ const assert=require('node:assert/strict');
   await page.addScriptTag({path:'assets/vendor/html2canvas.min.js'});
   await page.evaluate(()=>{
    const render=window.html2canvas;
-   window.html2canvas=async(node,opts)=>{const badge=node.querySelector('.ref-day img');if(!badge?.src.startsWith('data:image/svg+xml'))throw Error('Day badge polygon missing from export');if(badge.style.zIndex!=='0')throw Error('Day badge must remain above export background');const canvas=await render(node,opts);const ctx=canvas.getContext('2d');const c=ctx.getImageData(1024,700,1,1).data;if(c[0]>40||c[2]<50)throw Error('Day badge fill missing from rendered image');window.__aoqatTestExportData=canvas.toDataURL('image/png');return canvas;};
+   window.html2canvas=async(node,opts)=>{const badge=node.querySelector('.ref-export-day-badge');if(!badge?.width)throw Error('Day badge polygon missing from export');if(badge.style.zIndex!=='0')throw Error('Day badge must remain above export background');const canvas=await render(node,opts);const ctx=canvas.getContext('2d');const c=ctx.getImageData(1024,700,1,1).data;window.__aoqatTestBadgePixel=[...c];window.__aoqatTestExportData=canvas.toDataURL('image/png');return canvas;};
    const button=document.createElement('button');button.dataset.exportFormat='jpg';document.body.appendChild(button);button.click();
   });
-  await page.waitForFunction(()=>typeof window.__aoqatTestExportData==='string',{timeout:45000});
+  await page.waitForFunction(()=>typeof window.__aoqatTestExportData==='string',null,{timeout:45000});
   require('node:fs').writeFileSync('/tmp/aoqat-design-export.png',Buffer.from(await page.evaluate(()=>window.__aoqatTestExportData.split(',')[1]),'base64'));
+  const pixel=await page.evaluate(()=>window.__aoqatTestBadgePixel);assert.ok(pixel[0]<40&&pixel[2]>50,'Badge fill missing: '+pixel);
   await page.evaluate(()=>document.querySelector('[data-unified-next]').click());await page.waitForTimeout(200);
   console.log('Navigation state',await page.evaluate(()=>({status:document.querySelector('.unified-preview-controls .design-carousel-status')?.textContent,dirty:window.PrayerFontDesignManager?.isDirty(),active:window.__prayerActiveDesignElement?.id,modal:document.getElementById('fontSaveWarning')?.className,slides:[...document.querySelectorAll('.design-slide')].map(s=>({id:s.firstElementChild.id,style:s.getAttribute('style'),disabled:s.dataset.designDisabled}))})));
   await page.screenshot({path:'/tmp/aoqat-design-navigation.png',fullPage:true});

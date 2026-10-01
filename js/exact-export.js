@@ -111,14 +111,16 @@
       const day=clone.querySelector('.ref-day'),original=source.querySelector('.ref-day');
       if(day&&original){
         // html2canvas does not paint CSS polygon clips. Rasterize the existing
-        // badge as an SVG image inside the clone; keep its text and position.
+        // badge on a canvas inside the clone; keep its text and position.
         const points='50,0 62,12 80,8 88,25 100,37 91,52 100,68 84,78 79,96 59,90 50,100 39,89 20,96 15,78 0,68 9,52 0,37 12,25 20,8 38,12';
         const fill=getComputedStyle(original).backgroundColor;
-        const img=document.createElement('img');img.setAttribute('aria-hidden','true');
-        img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="${points}" fill="${fill}"/></svg>`);
+        const img=document.createElement('canvas');img.className='ref-export-day-badge';img.setAttribute('aria-hidden','true');
+        img.width=original.offsetWidth;img.height=original.offsetHeight;
+        const ctx=img.getContext('2d');ctx.scale(img.width/100,img.height/100);ctx.fillStyle=fill;ctx.beginPath();
+        points.split(' ').forEach((point,i)=>{const [x,y]=point.split(',').map(Number);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.fill();
         img.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none';
         const text=document.createElement('span');text.style.cssText='position:relative;z-index:1';while(day.firstChild)text.appendChild(day.firstChild);day.appendChild(text);
-        day.style.clipPath='none';day.style.background='transparent';day.style.borderColor='transparent';day.style.isolation='isolate';day.prepend(img);
+        day.style.clipPath='none';day.style.background='transparent';day.style.borderColor='transparent';day.style.isolation='isolate';day.style.zIndex='2';day.prepend(img);
       }
     }
     if(source.classList.contains("night-design")){
