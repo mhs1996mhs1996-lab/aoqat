@@ -52,6 +52,11 @@ class IqamaNotificationTest {
             start + 600_000L, true, "باقي على الإقامة")
     }
 
+    @Test fun backgroundAccessPermissionIsDeclared() {
+        val info = context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
+        assertTrue(info.requestedPermissions.contains(android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS))
+    }
+
     @Test @Config(sdk = [34]) fun backgroundCountdownIsPublishedImmediately() {
         val display = IqamaCycle.display(SystemClock.elapsedRealtime() - 10_000L, SystemClock.elapsedRealtime())!!
         val notification = IqamaNotificationRenderer.build(context, display)
