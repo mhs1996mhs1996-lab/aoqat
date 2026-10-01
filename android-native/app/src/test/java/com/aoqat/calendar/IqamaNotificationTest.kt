@@ -52,7 +52,7 @@ class IqamaNotificationTest {
             start + 600_000L, true, "باقي على الإقامة")
     }
 
-    @Test fun backgroundAccessPermissionIsDeclared() {
+    @Test fun backgroundAccessAndWakeLockPermissionsAreDeclared() {
         val info = context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
         assertTrue(info.requestedPermissions?.contains(android.Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) == true)
         assertTrue(info.requestedPermissions?.contains(android.Manifest.permission.WAKE_LOCK) == true)

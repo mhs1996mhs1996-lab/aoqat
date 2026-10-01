@@ -116,7 +116,8 @@
         const fill=getComputedStyle(original).backgroundColor;
         const img=document.createElement('img');img.setAttribute('aria-hidden','true');
         img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="${points}" fill="${fill}"/></svg>`);
-        img.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none';
+        img.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none';
+        const text=document.createElement('span');text.style.cssText='position:relative;z-index:1';while(day.firstChild)text.appendChild(day.firstChild);day.appendChild(text);
         day.style.clipPath='none';day.style.background='transparent';day.style.borderColor='transparent';day.style.isolation='isolate';day.prepend(img);
       }
     }
