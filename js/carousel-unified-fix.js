@@ -29,6 +29,7 @@
     if(busy)return false;busy=true;
     try{
       styles();const track=document.querySelector('.design-carousel-track'),car=document.querySelector('.design-carousel');if(!track||!car)return false;
+      if(firstInstall&&track.firstElementChild?.firstElementChild?.id!=='designRef')return false;
       compactParent(car);const slides=allSlides(track);if(!slides.length)return false;const parent=car.parentElement;
       parent.querySelectorAll('.design-carousel-controls,.design-carousel-dots,.night-carousel-controls,.night-carousel-dots,.ornate-carousel-controls,.ornate-carousel-dots,.final-carousel-controls,.final-carousel-dots').forEach(el=>{if(!el.classList.contains('unified-preview-controls')&&!el.classList.contains('unified-preview-dots'))el.remove();});
       let controls=parent.querySelector('.unified-preview-controls'),dots=parent.querySelector('.unified-preview-dots');
