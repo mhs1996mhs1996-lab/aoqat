@@ -39,11 +39,11 @@ const assert=require('node:assert/strict');
   await page.addScriptTag({path:'assets/vendor/html2canvas.min.js'});
   await page.evaluate(()=>{
    const render=window.html2canvas;
-   window.html2canvas=async(node,opts)=>{const badge=node.querySelector('.ref-day img');if(!badge?.src.startsWith('data:image/svg+xml'))throw Error('Day badge polygon missing from export');const canvas=await render(node,opts);window.exportImage=canvas.toDataURL('image/png');return canvas;};
+   window.html2canvas=async(node,opts)=>{const badge=node.querySelector('.ref-day img');if(!badge?.src.startsWith('data:image/svg+xml'))throw Error('Day badge polygon missing from export');const canvas=await render(node,opts);window.__aoqatTestExportData=canvas.toDataURL('image/png');return canvas;};
    const button=document.createElement('button');button.dataset.exportFormat='jpg';document.body.appendChild(button);button.click();
   });
-  await page.waitForFunction(()=>window.exportImage,{timeout:45000});
-  require('node:fs').writeFileSync('/tmp/aoqat-design-export.png',Buffer.from(await page.evaluate(()=>window.exportImage.split(',')[1]),'base64'));
+  await page.waitForFunction(()=>typeof window.__aoqatTestExportData==='string',{timeout:45000});
+  require('node:fs').writeFileSync('/tmp/aoqat-design-export.png',Buffer.from(await page.evaluate(()=>window.__aoqatTestExportData.split(',')[1]),'base64'));
   await page.evaluate(()=>document.querySelector('[data-unified-next]').click());await page.waitForTimeout(200);
   console.log('Navigation state',await page.evaluate(()=>({status:document.querySelector('.unified-preview-controls .design-carousel-status')?.textContent,dirty:window.PrayerFontDesignManager?.isDirty(),active:window.__prayerActiveDesignElement?.id,modal:document.getElementById('fontSaveWarning')?.className,slides:[...document.querySelectorAll('.design-slide')].map(s=>({id:s.firstElementChild.id,style:s.getAttribute('style'),disabled:s.dataset.designDisabled}))})));
   await page.screenshot({path:'/tmp/aoqat-design-navigation.png',fullPage:true});
