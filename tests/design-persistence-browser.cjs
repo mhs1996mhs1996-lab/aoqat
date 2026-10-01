@@ -12,7 +12,7 @@ const assert=require('node:assert/strict');
   await page.waitForSelector('#designRef',{state:'visible'});
   await page.waitForFunction(()=>document.querySelectorAll('[data-unified-dot]').length===4&&document.getElementById('saveDesignAdjustments'));
   await page.waitForTimeout(2200);
-  assert.equal(await page.locator('.design-carousel-status').textContent(),'التصميم 1 من 4');
+  assert.equal(await page.locator('.unified-preview-controls .design-carousel-status').textContent(),'التصميم 1 من 4');
   assert.equal(await page.locator('#designRef .ref-verse-source').evaluate(e=>getComputedStyle(e).fontSize),'19px');
   await page.evaluate(()=>{
    const d=document.getElementById('designRef');
@@ -37,7 +37,7 @@ const assert=require('node:assert/strict');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.aoqatAfterIqamaMinutesV1)),{fajr:20,isha:30});
   await page.locator('#designRef').screenshot({path:'/tmp/aoqat-design-restored.png'});
   await page.evaluate(()=>document.querySelector('[data-unified-next]').click());await page.waitForTimeout(200);
-  console.log('Navigation state',await page.evaluate(()=>({status:document.querySelector('.design-carousel-status')?.textContent,dirty:window.PrayerFontDesignManager?.isDirty(),active:window.__prayerActiveDesignElement?.id,modal:document.getElementById('fontSaveWarning')?.className,slides:[...document.querySelectorAll('.design-slide')].map(s=>({id:s.firstElementChild.id,style:s.getAttribute('style'),disabled:s.dataset.designDisabled}))})));
+  console.log('Navigation state',await page.evaluate(()=>({status:document.querySelector('.unified-preview-controls .design-carousel-status')?.textContent,dirty:window.PrayerFontDesignManager?.isDirty(),active:window.__prayerActiveDesignElement?.id,modal:document.getElementById('fontSaveWarning')?.className,slides:[...document.querySelectorAll('.design-slide')].map(s=>({id:s.firstElementChild.id,style:s.getAttribute('style'),disabled:s.dataset.designDisabled}))})));
   await page.screenshot({path:'/tmp/aoqat-design-navigation.png',fullPage:true});
   assert.equal(await page.locator('#design2').isVisible(),true);
   await page.evaluate(()=>document.querySelector('[data-unified-prev]').click());

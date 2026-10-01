@@ -13,12 +13,7 @@
   }
 
   function firstDesignActive(){
-    /* حالة الكاروسيل الظاهرة هي المرجع الأدق. المتغير القديم قد يبقى على تصميم سابق. */
-    const status=document.querySelector('.final-carousel-controls .design-carousel-status')?.textContent||document.querySelector('.design-carousel-status')?.textContent||'';
-    if(/التصميم\s*1\s*من\s*4/.test(status))return true;
-    if(/التصميم\s*[234]\s*من\s*4/.test(status))return false;
-    const active=window.__prayerActiveDesignElement;
-    return !!active&&active.id==='designRef';
+    return window.__prayerActiveDesignElement?.id==='designRef';
   }
 
   function selectedDateTarget(){
