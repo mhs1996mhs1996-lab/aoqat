@@ -68,7 +68,7 @@ test("packaged Quran and four full/partial recordings are present", () => {
     6236,
   );
   for (let i = 1; i <= 4; i++) {
-    assert.ok(fs.statSync(`assets/audio/adhan-${i}.mp3`).size > 100000);
-    assert.ok(fs.statSync(`assets/audio/adhan-${i}-short.mp3`).size > 10000);
+    assert.ok(fs.statSync(`assets/audio/adhan-v124-${i}.mp3`).size > 100000);
+    assert.ok(fs.statSync(`assets/audio/adhan-v124-${i}-short.mp3`).size > 10000);
   }
 });

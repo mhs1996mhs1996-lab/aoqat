@@ -85,7 +85,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             player=MediaPlayer().apply{
                 setAudioAttributes(attrs)
                 if(config.optString("sound","1")=="custom")setDataSource(File(filesDir,"custom-adhan").absolutePath)
-                else {val id=config.optString("sound","1").takeIf{it in listOf("1","2","3","4")}?:"1";val suffix=if(config.optBoolean("partial"))"-short" else "";assets.openFd("www/assets/audio/adhan-$id$suffix.mp3").use{setDataSource(it.fileDescriptor,it.startOffset,it.length)}}
+                else {val id=config.optString("sound","1").takeIf{it in listOf("1","2","3","4")}?:"1";val suffix=if(config.optBoolean("partial"))"-short" else "";assets.openFd("www/assets/audio/adhan-v124-$id$suffix.mp3").use{setDataSource(it.fileDescriptor,it.startOffset,it.length)}}
                 val v=config.optInt("volume",80).coerceIn(0,100)/100f;setVolume(v,v)
                 setOnCompletionListener{successful=true;stopSelf()};setOnErrorListener{_,_,_->Toast.makeText(this@AdhanPlaybackService,"تعذر تشغيل الصوت المختار؛ اختر ملفًا صوتيًا صالحًا",Toast.LENGTH_LONG).show();stopSelf();true};prepare();start()
             }

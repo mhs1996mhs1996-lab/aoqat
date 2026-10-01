@@ -85,7 +85,7 @@
   }
   async function source() {
     if (state.sound !== "custom")
-      return `assets/audio/adhan-${state.sound}${state.partial ? "-short" : ""}.mp3`;
+      return `assets/audio/adhan-v124-${state.sound}${state.partial ? "-short" : ""}.mp3`;
     if (customURL) return customURL;
     const db = await audioDB();
     const blob = await new Promise((res, rej) => {
@@ -190,10 +190,10 @@
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
  <button type="button" id="adEnable" class="ad-master ${state.enabled ? "on" : ""}" aria-pressed="${state.enabled}">${state.enabled ? "🔊 الأذان مفعل" : "🔇 الأذان متوقف — اضغط للتفعيل"}</button>
  <fieldset ${state.enabled ? "" : "disabled"}><div class="ad-card"><h3>صوت الأذان</h3><label>المؤذن<select data-setting="sound">${[
-   ["1", "مشاري العفاسي"],
-   ["2", "علي أحمد ملا"],
-   ["3", "عبد الرحمن العراقي"],
-   ["4", "أذان الحرم المدني"],
+   ["1", "أذان مكة — علي أحمد ملا"],
+   ["2", "أذان المدينة — الحرم النبوي"],
+   ["3", "أذان مكة — محمد خليل رمل"],
+   ["4", "ناصر القطامي"],
    ["custom", "صوت من الهاتف"],
  ]
    .map(

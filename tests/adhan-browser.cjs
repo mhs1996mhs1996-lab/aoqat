@@ -82,12 +82,12 @@ const { spawn } = require("node:child_process");
     );
     assert.ok(
       await page.evaluate(() =>
-        window.testAdhanAudio.src.endsWith("adhan-3-short.mp3"),
+        window.testAdhanAudio.src.endsWith("adhan-v124-3-short.mp3"),
       ),
     );
     await page.locator("#adStop").click();
     assert.equal(await page.evaluate(() => window.testAdhanAudio.paused), true);
-    await page.locator("#adFile").setInputFiles("assets/audio/adhan-1.mp3");
+    await page.locator("#adFile").setInputFiles("assets/audio/adhan-v124-1.mp3");
     await page.waitForFunction(
       () => JSON.parse(localStorage.aoqatAdhanV1).sound === "custom",
     );
