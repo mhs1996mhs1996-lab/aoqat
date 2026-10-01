@@ -103,14 +103,13 @@
 
   function finish(){
     cleanLegacyExportUi();
-    stabilizeCarousel();
     document.body.classList.remove('aoqat-booting');
     document.body.classList.add('aoqat-ready');
   }
 
   function init(){
     addStyle();
-    clearObsoleteSavedStateOnce();
+
     document.body.classList.add('aoqat-booting');
     cleanLegacyExportUi();
 
@@ -118,7 +117,7 @@
     const timer=setInterval(()=>{
       tries++;
       cleanLegacyExportUi();
-      const designsOk=stabilizeCarousel();
+      const designsOk=currentSlides().length===REQUIRED_DESIGNS.length;
       if((designsOk&&prayerDataReady())||tries>=80){
         clearInterval(timer);
         finish();

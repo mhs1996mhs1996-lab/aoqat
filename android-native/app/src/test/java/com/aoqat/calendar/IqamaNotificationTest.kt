@@ -55,7 +55,7 @@ class IqamaNotificationTest {
     @Test @Config(sdk = [34]) fun backgroundCountdownIsPublishedImmediately() {
         val display = IqamaCycle.display(SystemClock.elapsedRealtime() - 10_000L, SystemClock.elapsedRealtime())!!
         val notification = IqamaNotificationRenderer.build(context, display)
-        assertEquals(Notification.FOREGROUND_SERVICE_IMMEDIATE, notification.foregroundServiceBehavior)
+        assertEquals(Notification.FOREGROUND_SERVICE_IMMEDIATE, org.robolectric.util.ReflectionHelpers.getField<Int>(notification, "mFgsDeferBehavior"))
         assertTrue(notification.flags and Notification.FLAG_NO_CLEAR != 0)
         assertSurfaces(notification, display.baseRealtime, true, "باقي على الإقامة")
     }

@@ -6,7 +6,7 @@ const prayerTimes = [];
     function loadScript(src, dataName, parent=document.body){
         return new Promise(resolve=>{
             const selector=`script[data-${dataName}]`;
-            if(document.querySelector(selector)){resolve();return;}
+            if(document.querySelector(selector)||Array.from(document.scripts).some(script=>new URL(script.src||"",location.href).pathname===new URL(src,location.href).pathname)){resolve();return;}
             const s=document.createElement("script");
             s.src=src;
             s.setAttribute(`data-${dataName}`,"true");
