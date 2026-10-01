@@ -200,6 +200,7 @@ class IqamaNotificationService : android.app.Service() {
     }
     override fun onDestroy() {
         handler.removeCallbacks(boundary)
+        IqamaPersistentNotification.releaseDispatchLock()
         unregisterReceiver(screenReceiver)
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null

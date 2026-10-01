@@ -62,7 +62,7 @@
     panel.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid">'+themes.map(t=>'<button type="button" class="wt-card" data-theme="'+t.id+'"><span class="wt-swatch" style="background:linear-gradient(90deg,'+t.vars.bg+','+t.vars.accent+')"></span><span>'+t.icon+' '+t.name+'</span></button>').join("")+'</div>';
 
     const backgroundBtn=main.querySelector('[data-open-panel="backgroundPanel"]');
-    if(backgroundBtn)main.insertBefore(btn,backgroundBtn); else main.appendChild(btn);
+    if(backgroundBtn?.parentElement===main)main.insertBefore(btn,backgroundBtn); else main.appendChild(btn);
     main.insertBefore(panel,btn.nextSibling);
 
     btn.addEventListener("click",()=>{panel.hidden=!panel.hidden;});

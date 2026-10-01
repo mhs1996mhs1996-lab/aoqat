@@ -6,7 +6,7 @@ const assert=require('node:assert/strict');
  try{
   await new Promise(r=>setTimeout(r,700));
   browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
-  const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:390,height:844}});const errors=[];page.on('pageerror',e=>{errors.push(e.stack);console.log('PAGE ERROR',e.stack);});
   await page.route('**/rest/v1/annual_prayer_times**',r=>r.fulfill({json:[{gregorian_month:10,gregorian_day:1,fajr:'4:43',sunrise:'6:04',dhuhr:'11:59',asr:'3:22',maghrib:'5:53',isha:'7:13'}]}));
   await page.goto('http://127.0.0.1:8767',{waitUntil:'domcontentloaded'});
   await page.waitForSelector('#designRef',{state:'visible'});
@@ -37,6 +37,8 @@ const assert=require('node:assert/strict');
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.aoqatAfterIqamaMinutesV1)),{fajr:20,isha:30});
   await page.locator('#designRef').screenshot({path:'/tmp/aoqat-design-restored.png'});
   await page.evaluate(()=>document.querySelector('[data-unified-next]').click());await page.waitForTimeout(200);
+  console.log('Navigation state',await page.evaluate(()=>({status:document.querySelector('.design-carousel-status')?.textContent,dirty:window.PrayerFontDesignManager?.isDirty(),active:window.__prayerActiveDesignElement?.id,modal:document.getElementById('fontSaveWarning')?.className,slides:[...document.querySelectorAll('.design-slide')].map(s=>({id:s.firstElementChild.id,style:s.getAttribute('style'),disabled:s.dataset.designDisabled}))})));
+  await page.screenshot({path:'/tmp/aoqat-design-navigation.png',fullPage:true});
   assert.equal(await page.locator('#designOrnateRef').isVisible(),true);
   await page.evaluate(()=>document.querySelector('[data-unified-prev]').click());
   // Saving all designs must not reapply one design's font sizes to another.

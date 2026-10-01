@@ -79,7 +79,7 @@
         return;
       }
       const s=document.createElement("script");
-      s.src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+      s.src="assets/vendor/html2canvas.min.js";
       s.async=true;s.dataset.html2canvas="true";
       s.onload=()=>typeof window.html2canvas==="function"?resolve(window.html2canvas):reject(new Error("html2canvas missing"));
       s.onerror=reject;
@@ -107,6 +107,19 @@
   }
 
   function fixSpecialDesignForExport(source,clone){
+    if(source.classList.contains('reference-design')){
+      const day=clone.querySelector('.ref-day'),original=source.querySelector('.ref-day');
+      if(day&&original){
+        // html2canvas does not paint CSS polygon clips. Rasterize the existing
+        // badge as an SVG image inside the clone; keep its text and position.
+        const points='50,0 62,12 80,8 88,25 100,37 91,52 100,68 84,78 79,96 59,90 50,100 39,89 20,96 15,78 0,68 9,52 0,37 12,25 20,8 38,12';
+        const fill=getComputedStyle(original).backgroundColor;
+        const img=document.createElement('img');img.setAttribute('aria-hidden','true');
+        img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="${points}" fill="${fill}"/></svg>`);
+        img.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none';
+        day.style.clipPath='none';day.style.background='transparent';day.style.borderColor='transparent';day.style.isolation='isolate';day.prepend(img);
+      }
+    }
     if(source.classList.contains("night-design")){
       const arch=document.createElement("div");arch.className="nd-export-arch";clone.insertBefore(arch,clone.firstChild);
     }

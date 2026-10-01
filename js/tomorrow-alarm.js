@@ -113,7 +113,7 @@
   function addEnableButton(){
     const panel=document.getElementById("switchPanel");if(!panel||document.getElementById("tomorrowAlarmEnable"))return false;
     const b=document.createElement("button");b.id="tomorrowAlarmEnable";b.type="button";b.addEventListener("click",async()=>{if(enabled()){localStorage.setItem(ALARM_KEY,"0");stopAlarm();refreshButton();}else await requestPermission();});
-    const status=document.getElementById("tomorrowSwitchStatus");panel.insertBefore(b,status||null);
+    const status=document.getElementById("tomorrowSwitchStatus");panel.insertBefore(b,status?.parentElement===panel?status:null);
     const note=document.createElement("div");note.className="tomorrow-alarm-note";note.textContent="التنبيه يظهر عند تبديل المواقيت بعد العشاء بـ35 دقيقة، مع إيقاف وغفوة.";b.insertAdjacentElement("afterend",note);refreshButton();return true;
   }
   function refreshButton(){const b=document.getElementById("tomorrowAlarmEnable");if(!b)return;const on=enabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";b.classList.toggle("enabled",on);b.setAttribute("aria-pressed",String(on));b.innerHTML=`<span class="alarm-enable-label">🔔 تفعيل تنبيه النشر على الهاتف</span><span class="alarm-enable-state">${on?"تشغيل":"إيقاف"}</span>`;}
