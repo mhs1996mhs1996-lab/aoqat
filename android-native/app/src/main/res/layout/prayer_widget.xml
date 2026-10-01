@@ -1,0 +1,5 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/prayer_widget_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:padding="12dp" android:background="#CC123946">
+<TextView android:id="@+id/widget_prayer" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="20sp" android:text="الصلاة القادمة" />
+<Chronometer android:id="@+id/widget_counter" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="24sp" android:format="%s" />
+<TextView android:id="@+id/widget_date" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="12sp" />
+</LinearLayout>

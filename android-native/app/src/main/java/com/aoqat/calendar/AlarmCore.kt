@@ -148,10 +148,9 @@ object IqamaNativeScheduler {
     }
 
     fun refresh(context: Context) {
-        if (!enabled(context)) return
         try {
             val location = URLEncoder.encode("الحويجة وضواحيها", "UTF-8")
-            val fields = "gregorian_month,gregorian_day," + prayers.joinToString(",") { it.first }
+            val fields = "gregorian_month,gregorian_day,sunrise," + prayers.joinToString(",") { it.first }
             val url = URL("https://ytdvhiijxxaqofduorwm.supabase.co/rest/v1/annual_prayer_times?select=$fields&location_name=eq.$location&limit=400")
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 3000; readTimeout = 3000
@@ -165,6 +164,8 @@ object IqamaNativeScheduler {
             } finally { conn.disconnect() }
         } catch (e: Exception) { android.util.Log.w("IqamaScheduler", "Using cached prayer times", e) }
         scheduleCached(context)
+        AdhanSchedule.schedule(context)
+        PrayerWidget.update(context)
     }
 
     @Synchronized fun scheduleCached(context: Context, recoverActive: Boolean = true) {
@@ -178,13 +179,8 @@ object IqamaNativeScheduler {
                 it.optInt("gregorian_month") == date.monthValue && it.optInt("gregorian_day") == date.dayOfMonth
             } ?: continue
             prayers.forEachIndexed { index, prayer ->
-                val parts = row.optString(prayer.first).split(":")
-                if (parts.size < 2) return@forEachIndexed
-                var hour = parts[0].toIntOrNull() ?: return@forEachIndexed
-                val minute = parts[1].take(2).toIntOrNull() ?: return@forEachIndexed
-                if (prayer.first != "fajr" && hour < 12) hour += 12
-                if (prayer.first == "fajr" && hour == 12) hour = 0
-                if (hour !in 0..23 || minute !in 0..59) return@forEachIndexed
+                val time = PrayerTimes.minutes(row.optString(prayer.first), prayer.first) ?: return@forEachIndexed
+                val hour = time / 60; val minute = time % 60
                 val prayerAt = date.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val endAt = prayerAt + durations(context, prayer.first).totalMs
                 val request = BASE_REQUEST + date.dayOfYear * 10 + index
@@ -251,6 +247,10 @@ class BootReceiver : BroadcastReceiver() {
             AlarmScheduler.scheduleFromDatabase(context)
         }
         IqamaNativeScheduler.scheduleCached(context)
+        AdhanSchedule.schedule(context)
+        AdhanPlaybackService.restoreRingerIfExpired(context)
+        PrayerWidget.update(context)
+        if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
         val pending = goAsync()
         Thread { try { IqamaNativeScheduler.refresh(context) } finally { pending.finish() } }.start()
     }

@@ -6,6 +6,7 @@ import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -253,6 +254,7 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
 class MainActivity : Activity() {
 
     private lateinit var webView: WebView
+    private val ADHAN_AUDIO_REQUEST = 812
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -274,6 +276,9 @@ class MainActivity : Activity() {
         requestExactAlarmAccessIfNeeded()
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
+        AdhanSchedule.schedule(this)
+        AdhanPlaybackService.restoreRingerIfExpired(this)
+        if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         restoreIqamaServiceIfActive()
 
         webView.loadUrl("file:///android_asset/www/index.html")
@@ -292,6 +297,9 @@ class MainActivity : Activity() {
         super.onResume()
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
+        AdhanSchedule.schedule(this)
+        AdhanPlaybackService.restoreRingerIfExpired(this)
+        if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
         }
@@ -513,6 +521,32 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun readAdhanSettings(): String = AdhanSchedule.settings(this@MainActivity).toString()
+        @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
+            try {
+                val settings=org.json.JSONObject(json)
+                if(settings.optBoolean("enabled") || settings.optBoolean("persistent")) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
+                if(settings.optInt("afterSilent")>0 && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
+                    settings.put("afterSilent",0)
+                    startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                    webView.evaluateJavascript("window.aoqatAdhanStatus?.('امنح إذن التحكم بوضع الصامت ثم حدّد المدة مرة أخرى')",null)
+                }
+                if(settings.optBoolean("screen") && Build.VERSION.SDK_INT>=34 && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent()) {
+                    settings.put("screen",false)
+                    startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))
+                }
+                AdhanSchedule.configure(this@MainActivity,settings.toString())
+                if(settings.toString()!=org.json.JSONObject(json).toString())webView.evaluateJavascript("window.aoqatNativeAdhanSettings?.("+settings.toString()+")",null)
+            } catch(e:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ إعدادات الأذان",Toast.LENGTH_LONG).show()}
+        } }
+        @JavascriptInterface fun cachePrayerRows(json:String){AdhanSchedule.storeRows(this@MainActivity,json)}
+        @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}
+        @JavascriptInterface fun stopAdhan(){stopService(Intent(this@MainActivity,AdhanPlaybackService::class.java))}
+        @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
+        @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
+        @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
+        @JavascriptInterface fun adhanPermissions(){runOnUiThread{requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(!nm.isNotificationPolicyAccessGranted)startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))else if(Build.VERSION.SDK_INT>=34&&!nm.canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))else Toast.makeText(this@MainActivity,"أذونات الأذان وشاشة القفل متاحة",Toast.LENGTH_LONG).show()}}
+
         @JavascriptInterface
         fun enableAlarm() {
             runOnUiThread {
@@ -624,6 +658,20 @@ class MainActivity : Activity() {
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode==ADHAN_AUDIO_REQUEST){
+            val uri=if(resultCode==RESULT_OK)data?.data else null
+            if(uri!=null)Thread{
+                try{
+                    val temp=File(filesDir,"custom-adhan.tmp")
+                    contentResolver.openInputStream(uri)?.use{input->FileOutputStream(temp).use{out->val buf=ByteArray(8192);var count=0L;while(true){val n=input.read(buf);if(n<0)break;count+=n;if(count>25*1024*1024)throw IllegalArgumentException("Audio too large");out.write(buf,0,n)}}}?:throw IllegalArgumentException("Cannot read audio")
+                    val retriever=android.media.MediaMetadataRetriever();try{retriever.setDataSource(temp.absolutePath);if(retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()==null)throw IllegalArgumentException("Invalid audio")}finally{retriever.release()}
+                    val target=File(filesDir,"custom-adhan");if(!temp.renameTo(target))throw IllegalStateException("Cannot store audio")
+                    var name="صوت من الهاتف";contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use{cursor->if(cursor.moveToFirst())name=cursor.getString(0)}
+                    runOnUiThread{webView.evaluateJavascript("window.aoqatAudioChosen?.("+org.json.JSONObject.quote(name)+")",null)}
+                }catch(_:Exception){runOnUiThread{Toast.makeText(this,"اختر ملفًا صوتيًا صالحًا أقل من 25 ميغابايت",Toast.LENGTH_LONG).show()}}
+            }.start()
+            return
+        }
         if (requestCode != FILE_CHOOSER_REQUEST) return
 
         val result = if (resultCode == RESULT_OK) {

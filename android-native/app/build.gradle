@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 56 // Wake the native prayer reminder without opening WebView
-        versionName '1.22.1'
+        versionCode 57 // Adhan, per-prayer audio settings, widgets and services
+        versionName '1.23'
     }
 
     compileOptions {

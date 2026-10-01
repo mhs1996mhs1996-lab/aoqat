@@ -13,8 +13,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+
     <application
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:label="اوقات الصلاة في الحويجة"
         android:icon="@mipmap/app_icon"
         android:roundIcon="@mipmap/app_icon"
@@ -30,6 +36,17 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true" />
 
+        <activity android:name=".QiblaActivity" android:exported="false" />
+        <activity android:name=".AdhanScreenActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true" android:excludeFromRecents="true" />
+        <service android:name=".AdhanPlaybackService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
+        <service android:name=".NextPrayerService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User enabled next prayer notification with a live countdown" />
+        </service>
+        <receiver android:name=".AdhanReceiver" android:exported="false" />
+        <receiver android:name=".PrayerWidget" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_widget_info" />
+        </receiver>
         <activity
             android:name=".MainActivity"
             android:exported="true">
