@@ -204,8 +204,18 @@ object IqamaNativeScheduler {
         val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val pi = PendingIntent.getBroadcast(context, request, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || am.canScheduleExactAlarms()) {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
-        } else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+            if (intent.action == "NATIVE_START") {
+                // User-enabled prayer reminders must wake the device and grant the
+                // receiver permission to start the countdown service while backgrounded.
+                val show = PendingIntent.getActivity(context, request,
+                    Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                am.setAlarmClock(AlarmManager.AlarmClockInfo(at, show), pi)
+            } else am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
+        } else {
+            // An inexact alarm is not a valid replacement for a prayer deadline:
+            // it can be delayed and cannot authorize a background foreground service.
+            android.util.Log.w("IqamaScheduler", "Exact alarm access required; reschedule on permission grant")
+        }
     }
 
     private fun cancelAlarm(context: Context, request: Int, intent: Intent) {
