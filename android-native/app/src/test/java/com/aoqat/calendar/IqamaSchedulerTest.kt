@@ -31,7 +31,7 @@ class IqamaSchedulerTest {
     @Test fun cachedPrayerSchedulesAnAlarmClockWithoutActivityOrNetwork() {
         val expected = seedTomorrow()
         val manager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (android.os.Build.VERSION.SDK_INT >= 31) shadowOf(manager).setCanScheduleExactAlarms(true)
+        if (android.os.Build.VERSION.SDK_INT >= 31) org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
         IqamaNativeScheduler.scheduleCached(context)
         val alarms = shadowOf(manager).scheduledAlarms
         val fajr = alarms.first { shadowOf(it.operation).savedIntent.getStringExtra("prayerId") == "fajr" }
@@ -60,10 +60,10 @@ class IqamaSchedulerTest {
     @Test @Config(sdk = [34]) fun missingExactAccessNeverSilentlySchedulesAnInexactPrayerAlarm() {
         seedTomorrow()
         val manager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        shadowOf(manager).setCanScheduleExactAlarms(false)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(false)
         IqamaNativeScheduler.scheduleCached(context)
         assertTrue(shadowOf(manager).scheduledAlarms.isEmpty())
-        shadowOf(manager).setCanScheduleExactAlarms(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
         IqamaNativeScheduler.scheduleCached(context)
         assertNotNull(manager.nextAlarmClock)
     }
