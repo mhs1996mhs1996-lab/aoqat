@@ -31,6 +31,8 @@
     playing = false,
     lastTick = Date.now(),
     delivered = new Set(),
+    audioUnlocked = false,
+    audioUnlocking = false,
     quran,
     service = "",
     orientationHandler,
@@ -105,6 +107,21 @@
     customURL = URL.createObjectURL(blob);
     return customURL;
   }
+  // Unlock the same audio element during a real tap, for later scheduled playback.
+  function unlockAudio() {
+    if (native || !state.enabled || playing || audioUnlocked || audioUnlocking) return;
+    const src = state.sound === "custom" ? customURL
+      : `assets/audio/adhan-v124-${state.sound}${state.partial ? "-short" : ""}.mp3`;
+    if (!src) return;
+    if (!audio) audio = new Audio(src);
+    audioUnlocking = true;
+    audio.volume = 0;
+    audio.play().then(() => {
+      audioUnlocked = true;
+      if (!playing) { audio.pause(); audio.currentTime = 0; audio.volume = state.volume / 100; }
+    }).catch(() => {}).finally(() => { audioUnlocking = false; });
+  }
+  document.addEventListener("pointerdown", unlockAudio);
   function stop() {
     if (native) window.AndroidNative.stopAdhan();
     if (audio) {
@@ -338,6 +355,7 @@
       )
         Notification.requestPermission();
       lastTick = Date.now();
+      if (state.enabled) unlockAudio();
       persist();
       render();
       status(
