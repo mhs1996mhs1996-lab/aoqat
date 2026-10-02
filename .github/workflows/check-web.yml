@@ -27,6 +27,7 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright
           node tests/adhan-browser.cjs
+          node tests/adhan-scheduled-browser.cjs
           node tests/adhan-sections-browser.cjs
           node tests/iqama-native-browser.cjs
           node tests/design-persistence-browser.cjs

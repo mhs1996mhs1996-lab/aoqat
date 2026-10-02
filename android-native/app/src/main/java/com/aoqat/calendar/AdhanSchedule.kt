@@ -37,11 +37,24 @@ object PrayerTimes {
 object AdhanSchedule {
     private fun prefs(c: Context) = c.getSharedPreferences("adhan_settings", Context.MODE_PRIVATE)
     fun settings(c: Context): JSONObject = try { JSONObject(prefs(c).getString("settings", "{}")) } catch (_: Exception) { JSONObject() }
+    private fun deliveryKey(id: String, at: Long) = "delivered_$id"
+    fun delivered(c: Context, p: PrayerTimes.Prayer) = prefs(c).getLong(deliveryKey(p.id,p.at),0) == p.at
+    @Synchronized fun claim(c: Context, id: String, at: Long): Boolean {
+        val now=System.currentTimeMillis()
+        if (!enabled(c) || id !in PrayerTimes.ids || now-at !in 0L until 120000L || at < prefs(c).getLong("enabledAt",0)) return false
+        val key=deliveryKey(id,at)
+        if (prefs(c).getLong(key,0)==at) return false
+        return prefs(c).edit().putLong(key,at).commit()
+    }
+    @Synchronized fun release(c: Context,id: String,at: Long) {
+        if (prefs(c).getLong(deliveryKey(id,at),0)==at) prefs(c).edit().remove(deliveryKey(id,at)).commit()
+    }
     fun enabled(c: Context) = settings(c).optBoolean("enabled", false)
     fun configure(c: Context, json: String) {
         val s = try { JSONObject(json) } catch (_: Exception) { return }
         // Permission-dependent features must never appear enabled when Android refuses them.
         if (s.optInt("afterSilent") > 0 && !(c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) s.put("afterSilent", 0)
+        if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).commit()
         prefs(c).edit().putString("settings", s.toString()).commit()
         if (!s.optBoolean("enabled")) c.stopService(Intent(c, AdhanPlaybackService::class.java))
         if (!s.optBoolean("enabled") || s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
@@ -73,9 +86,10 @@ object AdhanSchedule {
         val s = settings(c); val now = System.currentTimeMillis(); val events = PrayerTimes.events(c)
         // Fixed slots are replaced/cancelled on every settings edit, not accumulated.
         for (i in 0..39) { cancel(c, 60000 + i, "PLAY"); cancel(c, 60100 + i, "REMINDER"); cancel(c, 60200 + i, "SUHOOR") }
-        for ((i,p) in events.withIndex()) if (p.at > now && i < 40 && s.optBoolean("enabled", false)) {
+        for ((i,p) in events.withIndex()) if (i < 40 && s.optBoolean("enabled", false)) {
             val mode = s.optJSONObject("modes")?.optString(if (p.friday) "friday" else p.id, "sound") ?: "sound"
-            if (mode != "silent") alarm(c, 60000+i, "PLAY", p.at, p)
+            val due = now-p.at in 0L until 120000L && p.at >= prefs(c).getLong("enabledAt",0) && !delivered(c,p)
+            if (mode != "silent" && (p.at > now || due)) alarm(c, 60000+i, "PLAY", maxOf(p.at,now+100), p)
             val before = s.optInt("reminder", 0).coerceIn(0,60)*60000L
             if (before > 0 && p.at-before > now) alarm(c, 60100+i, "REMINDER", p.at-before, p)
             val suhoor = s.optInt("suhoor",0).coerceIn(0,120)*60000L
@@ -90,8 +104,13 @@ object AdhanSchedule {
 class AdhanReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
         when(intent.action) {
-            "PLAY" -> if (AdhanSchedule.enabled(c) && kotlin.math.abs(System.currentTimeMillis()-intent.getLongExtra("prayerAt",0)) < 120000) {
-                androidx.core.content.ContextCompat.startForegroundService(c, Intent(c, AdhanPlaybackService::class.java).putExtras(intent))
+            "PLAY" -> {
+                val id=intent.getStringExtra("prayerId") ?: return
+                val at=intent.getLongExtra("prayerAt",0)
+                if (AdhanSchedule.claim(c,id,at)) {
+                    try { androidx.core.content.ContextCompat.startForegroundService(c, Intent(c, AdhanPlaybackService::class.java).putExtras(intent)) }
+                    catch (e: Exception) { AdhanSchedule.release(c,id,at); android.util.Log.e("AdhanReceiver","Unable to start scheduled adhan",e) }
+                }
             }
             "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c)) {
                 val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

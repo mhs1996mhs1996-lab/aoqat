@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 60 // Restore current designs and background iqama access
-        versionName '1.25'
+        versionCode 61 // Repair scheduled adhan delivery
+        versionName '1.26'
     }
 
     compileOptions {
@@ -67,6 +67,9 @@ tasks.register('syncWebAssets', Sync) {
     into(webAssetDir)
 
     doLast {
+        // Keep the installed v1.25 controls while the new web layout is under review.
+        copy { from(file("$apkOverrideRoot/adhan-settings.js")); into(file("$webAssetDir/js")) }
+
         def indexFile = file("$webAssetDir/index.html")
         if (indexFile.exists()) {
             def html = indexFile.getText('UTF-8')
