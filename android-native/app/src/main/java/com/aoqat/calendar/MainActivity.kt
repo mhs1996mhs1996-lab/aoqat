@@ -297,7 +297,8 @@ class MainActivity : Activity() {
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         restoreIqamaServiceIfActive()
-        if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
+        if (AdhanSchedule.enabled(this)) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
+        else if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
         webView.loadUrl("file:///android_asset/www/index.html")
 
@@ -335,14 +336,15 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun requestIqamaBackgroundAccessIfNeeded(force: Boolean = false) {
+    private fun requestIqamaBackgroundAccessIfNeeded(force: Boolean = false, forAdhan: Boolean = false) {
         val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) return
         val asked = getSharedPreferences("iqama_schedule", MODE_PRIVATE)
-        if (!force && asked.getBoolean("backgroundAccessRequestedV125", false)) return
-        asked.edit().putBoolean("backgroundAccessRequestedV125", true).apply()
+        val key = if (forAdhan) "adhanBackgroundAccessRequestedV126" else "backgroundAccessRequestedV125"
+        if (!force && asked.getBoolean(key, false)) return
+        asked.edit().putBoolean(key, true).apply()
         try {
-            Toast.makeText(this, "اسمح بالعمل في الخلفية حتى يظهر إشعار الإقامة بدون فتح البرنامج", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, if (forAdhan) "اسمح بالعمل في الخلفية حتى يعمل الأذان بدون فتح البرنامج" else "اسمح بالعمل في الخلفية حتى يظهر إشعار الإقامة بدون فتح البرنامج", Toast.LENGTH_LONG).show()
             startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")))
         } catch (e: Exception) { android.util.Log.w("IqamaCycle", "Cannot open background access settings", e) }
     }
@@ -581,6 +583,7 @@ class MainActivity : Activity() {
                     startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))
                 }
                 AdhanSchedule.configure(this@MainActivity,settings.toString())
+                if(settings.optBoolean("enabled")) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
                 if(settings.toString()!=org.json.JSONObject(json).toString())webView.evaluateJavascript("window.aoqatNativeAdhanSettings?.("+settings.toString()+")",null)
             } catch(e:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ إعدادات الأذان",Toast.LENGTH_LONG).show()}
         } }
