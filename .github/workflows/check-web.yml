@@ -1,0 +1,41 @@
+name: Check web preview
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'js/**'
+      - 'css/**'
+      - 'data/**'
+      - 'tests/**'
+      - 'index.html'
+      - 'sw.js'
+      - '.github/workflows/check-web.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  web-check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check timing and web settings
+        run: node --test tests/adhan-core.test.cjs
+      - name: Check web controls in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/adhan-browser.cjs
+          node tests/adhan-sections-browser.cjs
+          node tests/iqama-native-browser.cjs
+          node tests/design-persistence-browser.cjs
+      - name: Upload web previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: adhan-services-web-preview
+          path: |
+            /tmp/aoqat-adhan-*.png
+            /tmp/aoqat-design-*.png
+          if-no-files-found: ignore

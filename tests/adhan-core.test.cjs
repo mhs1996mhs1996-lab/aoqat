@@ -72,3 +72,43 @@ test("packaged Quran and four full/partial recordings are present", () => {
     assert.ok(fs.statSync(`assets/audio/adhan-v124-${i}-short.mp3`).size > 10000);
   }
 });
+
+test("after-iqama silent durations stay independent of existing adhan settings", () => {
+  const s = C.normalize({ enabled: true, sound: "4", volume: 52,
+    modes: { asr: "vibrate" }, afterSilent: 8,
+    afterIqamaSilent: { enabled: true, minutes: { asr: 7, fajr: 200, isha: -1, maghrib: 5.8 } } });
+  assert.equal(s.sound, "4");
+  assert.equal(s.volume, 52);
+  assert.equal(s.afterSilent, 8);
+  assert.equal(s.modes.asr, "vibrate");
+  assert.deepEqual(s.afterIqamaSilent.minutes, { fajr: 120, dhuhr: 0, asr: 7, maghrib: 5, isha: 0 });
+  assert.equal(C.defaults().afterIqamaSilent.enabled, false);
+  assert.equal(C.defaults().afterIqamaSilent.minutes.asr, 0);
+});
+
+test("seven-minute silent window begins at configured asr iqama and ends exactly", () => {
+  const rows = [{ gregorian_month: 10, gregorian_day: 2, asr: "3:22", dhuhr: "11:59" }];
+  const s = C.normalize({ enabled: true, afterIqamaSilent: { enabled: true, minutes: { asr: 7 } } });
+  const at = (h, m, sec = 0) => new Date(2026, 9, 2, h, m, sec);
+  assert.equal(C.afterIqamaSilentWindow(rows, at(15, 36, 59), s, { asr: 15 }), null);
+  const w = C.afterIqamaSilentWindow(rows, at(15, 37), s, { asr: 15 });
+  assert.equal(w.prayerId, "asr");
+  assert.equal(w.start, +at(15, 37));
+  assert.equal(w.end, +at(15, 44));
+  assert.ok(C.afterIqamaSilentWindow(rows, at(15, 43, 59), s, { asr: 15 }));
+  assert.equal(C.afterIqamaSilentWindow(rows, at(15, 44), s, { asr: 15 }), null);
+  assert.equal(C.afterIqamaSilentWindow(rows, at(15, 38), s, { asr: 20 }), null);
+  s.enabled = false;
+  assert.equal(C.afterIqamaSilentWindow(rows, at(15, 38), s, { asr: 15 }), null);
+  s.enabled = true; s.afterIqamaSilent.enabled = false;
+  assert.equal(C.afterIqamaSilentWindow(rows, at(15, 38), s, { asr: 15 }), null);
+});
+
+test("silent window can cross midnight without starting at adhan or resetting on reload", () => {
+  const rows = [{ gregorian_month: 10, gregorian_day: 2, isha: "11:40" }];
+  const s = C.normalize({ enabled: true, afterIqamaSilent: { enabled: true, minutes: { isha: 20 } } });
+  const w = C.afterIqamaSilentWindow(rows, new Date(2026, 9, 3, 0, 2), s, { isha: 15 });
+  assert.equal(w.start, +new Date(2026, 9, 2, 23, 55));
+  assert.equal(w.end, +new Date(2026, 9, 3, 0, 15));
+  assert.equal(C.afterIqamaSilentWindow(rows, new Date(2026, 9, 3, 0, 15), s, { isha: 15 }), null);
+});

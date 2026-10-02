@@ -62,6 +62,7 @@ const { spawn } = require("node:child_process");
       await page.locator("#adEnable").getAttribute("aria-pressed"),
       "true",
     );
+    await page.locator('[data-ad-section="modes"]').click();
     await page.locator('[data-prayer="fajr"][data-mode="silent"]').click();
     assert.equal(
       await page.evaluate(
@@ -69,6 +70,7 @@ const { spawn } = require("node:child_process");
       ),
       "silent",
     );
+    await page.locator('[data-ad-section="sound"]').click();
     await page.locator('[data-setting="sound"]').selectOption("3");
     await page.locator('[data-setting="partial"]').check();
     assert.equal(
@@ -99,14 +101,16 @@ const { spawn } = require("node:child_process");
         !window.testAdhanAudio.paused,
     );
     await page.locator("#adStop").click();
+    await page.locator('[data-ad-section="services"]').click();
     await page.locator('[data-service="quran"]').click();
     await page.waitForSelector("#adSurah");
     await page.locator("#adSurah").selectOption("114");
     assert.ok(
       (await page.locator("#adVerses").textContent()).includes("ٱلنَّاسِ"),
     );
+    await page.locator("#adServiceBack").click();
     await page.locator('[data-service="azkar"]').click();
-    await page.locator("#adAzkarKind").selectOption("prayer");
+    await page.locator('[data-azkar-kind="prayer"]').click();
     const first = page.locator('[data-dhikr="0"]');
     await first.click();
     assert.equal(await first.getAttribute("data-remaining"), "2");
@@ -171,9 +175,13 @@ const { spawn } = require("node:child_process");
       .click();
     assert.equal(await phone.locator('[data-setting="screen"]').count(), 1);
     await phone.locator("#adEnable").click();
+    await phone.locator('[data-ad-section="notifications"]').click();
     await phone.locator('[data-setting="screen"]').check();
+    await phone.locator('[data-ad-section="services"]').click();
+    await phone.locator('[data-service="widget"]').click();
     await phone.locator('[data-setting="persistent"]').check();
     await phone.locator("#adWidget").click();
+    await phone.locator('[data-ad-section="sound"]').click();
     await phone.locator("#adPreview").click();
     await phone.locator("#adChoose").click();
     assert.ok(

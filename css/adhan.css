@@ -205,3 +205,98 @@ body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-verse {
 body.design-menu-open .sidebar #webDrawerSub #adhanPanel label {
   color: var(--wt-text, #153642) !important;
 }
+
+/* Only the adhan panel uses these compact disclosure containers. */
+#adhanPanel [hidden] {
+  display: none !important;
+}
+#adhanPanel .ad-section-menu,
+#adhanPanel .ad-service-menu,
+#adhanPanel .ad-azkar-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+#adhanPanel .ad-section-menu button,
+#adhanPanel .ad-service-menu button,
+#adhanPanel .ad-azkar-menu button {
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 56px;
+  font-size: 14px;
+  font-weight: 700;
+}
+#adhanPanel .ad-section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  text-align: right;
+}
+#adhanPanel .ad-section-icon {
+  font-size: 22px;
+  flex: none;
+}
+#adhanPanel .ad-section-chevron {
+  margin-inline-start: auto;
+  font-size: 24px;
+  line-height: 1;
+  transform: rotate(0deg);
+}
+#adhanPanel .ad-section-toggle[aria-expanded="true"] .ad-section-chevron {
+  transform: rotate(-90deg);
+}
+#adhanPanel .ad-section-active,
+#adhanPanel .ad-azkar-menu button[aria-pressed="true"] {
+  outline: 2px solid var(--wt-accent, #bd9b55);
+  outline-offset: -2px;
+}
+#adhanPanel .ad-section .ad-card {
+  margin-top: 0;
+}
+#adhanPanel .ad-service-frame,
+#adhanPanel .ad-silent-settings {
+  padding: 10px;
+  margin-top: 10px;
+  border: 1px solid var(--wt-border, #ddcfaf);
+  border-radius: 10px;
+}
+#adhanPanel .ad-silent-toggle,
+#adhanPanel .ad-inner-back {
+  width: 100%;
+  margin: 8px 0 0;
+}
+#adhanPanel .ad-minute-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+}
+#adhanPanel .ad-minute-control input {
+  width: 72px;
+  max-width: 72px;
+}
+#adhanPanel .ad-silent-settings fieldset label {
+  border-bottom: 1px solid var(--wt-border, #ddcfaf);
+}
+#adhanPanel .ad-silent-settings fieldset label:last-child {
+  border-bottom: 0;
+}
+#adhanPanel .ad-azkar-menu button:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+#adhanPanel .ad-service-frame h4 {
+  margin: 12px 0;
+  font-size: 17px;
+}
+@media (max-width: 360px) {
+  #adhanPanel .ad-section-menu {
+    gap: 6px;
+  }
+  #adhanPanel .ad-section-menu button {
+    font-size: 12px;
+    padding: 8px;
+  }
+}

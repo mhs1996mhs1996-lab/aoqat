@@ -1,11 +1,11 @@
-const CACHE_NAME = "aoqat-pwa-v12";
+const CACHE_NAME = "aoqat-pwa-v13";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/css/style.css",
-  "/css/adhan.css?v=1",
-  "/js/adhan-core.js?v=1",
-  "/js/adhan-settings.js?v=1",
+  "/css/adhan.css?v=2",
+  "/js/adhan-core.js?v=2",
+  "/js/adhan-settings.js?v=3",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
   "/assets/audio/adhan-v124-1.mp3",
