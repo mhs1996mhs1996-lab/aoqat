@@ -107,3 +107,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=se
 body.quran-reader-open:has(#aqReader #aqSheet:not([hidden])) #webDrawerSub .web-sub-head{display:none!important}
 body.quran-reader-open #adService{min-height:100dvh!important}
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqBookmark{position:fixed!important;top:124px!important;left:8px!important;z-index:4!important;background:var(--qr-bar)!important;border-radius:7px!important;height:32px!important;line-height:32px!important}
+
+/* Floating reader tools show the paper beneath; service dialogs retain their surface. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-top,.aq-bottom,.aq-turn,.aq-slider,.aq-notice){background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+body.quran-reader-open #webDrawerSub .web-sub-head{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqBookmark{background:transparent!important}
