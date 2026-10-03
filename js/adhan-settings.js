@@ -219,6 +219,7 @@
     return `<button type="button" id="adSilentSettingsToggle" class="ad-section-toggle ad-silent-toggle" aria-expanded="false" aria-controls="adSilentSettings">🤫 تفعيل وضع صامت بعد الإقامة</button><div id="adSilentSettings" class="ad-silent-settings" hidden><label>وضع صامت بعد الإقامة<input id="adSilentAfterEnabled" type="checkbox" ${s.enabled ? 'checked' : ''}></label><p class="ad-note">يبدأ عند الإقامة حسب المدة المحددة لكل صلاة في أوقات الإقامة. حدّد مدة الصامت بالدقائق؛ صفر لإيقافه لهذه الصلاة. الجمعة تتبع إعداد الظهر.</p><fieldset ${s.enabled ? '' : 'disabled'}>${C.ids.map(id=>`<label>${names[id]}<span class="ad-minute-control"><input type="number" min="0" max="120" step="1" data-silent-minutes="${id}" aria-label="مدة الصامت بعد إقامة ${names[id]}" value="${s.minutes[id]}"><span>دقيقة</span></span></label>`).join('')}</fieldset><p class="ad-note">على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.</p></div>`;
   }
   function stopServiceSensors(){
+    window.AoqatQuranReader?.close();
     if(!orientationHandler)return;
     window.removeEventListener('deviceorientationabsolute',orientationHandler);
     window.removeEventListener('deviceorientation',orientationHandler);orientationHandler=null;
@@ -539,6 +540,20 @@
       orientationHandler = null;
     }
     if (kind === "widget")return;
+    if (kind === "quran" && !native) {
+      try {
+        if (!window.AoqatQuranReader) {
+          if (!window.aoqatQuranReaderLoading) window.aoqatQuranReaderLoading = new Promise((resolve,reject)=>{
+            const script=document.createElement("script");script.src="js/quran-reader.js";
+            script.onload=resolve;script.onerror=()=>{script.remove();window.aoqatQuranReaderLoading=null;reject(Error());};document.head.appendChild(script);
+          });
+          await window.aoqatQuranReaderLoading;
+        }
+        if(service!==kind || !el.isConnected || !externalService)return;
+        await window.AoqatQuranReader.open(el);
+      } catch (_) { if(service===kind && el.isConnected) el.textContent="تعذر تحميل المصحف؛ افتح القرآن مرة أخرى للمحاولة."; }
+      return;
+    }
     if (kind === "quran") {
       el.innerHTML = "<p>تحميل القرآن الكريم…</p>";
       try {

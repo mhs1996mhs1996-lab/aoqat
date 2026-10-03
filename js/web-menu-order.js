@@ -124,6 +124,13 @@
       if(id==="savePhone")savePhone();
     });
     try{mainList.querySelector('[data-drawer="adhanIqama"]').classList.toggle("adhan-on",JSON.parse(localStorage.getItem("aoqatAdhanV1")||"{}").enabled===true);}catch(_){}
+    const sharedPage=Number(new URL(location.href).searchParams.get("quranPage"));
+    if(!window.AndroidNative?.configureAdhan && Number.isInteger(sharedPage) && sharedPage>=1 && sharedPage<=604){
+      let attempts=0;const timer=setInterval(()=>{
+        if(document.getElementById("prayerServicePanel") && window.aoqatOpenService){clearInterval(timer);document.body.classList.add("design-menu-open");mainList.querySelector('[data-drawer="quran"]').click();}
+        else if(++attempts>50)clearInterval(timer);
+      },100);
+    }
     return true;
   }
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}

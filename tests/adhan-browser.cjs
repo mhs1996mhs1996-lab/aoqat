@@ -104,6 +104,8 @@ const { spawn } = require("node:child_process");
     await page.locator(".web-back").click();
     await page.locator(".web-back").click();
     await page.locator('[data-drawer="quran"]').click();
+    await page.waitForSelector("#aqReader");
+    await page.locator('[data-qr-panel="index"]').click();
     await page.waitForSelector("#adSurah");
     await page.locator("#adSurah").selectOption("114");
     assert.ok(

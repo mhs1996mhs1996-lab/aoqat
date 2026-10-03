@@ -22,13 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check timing and web settings
-        run: node --test tests/adhan-core.test.cjs
+        run: node --test tests/adhan-core.test.cjs tests/quran-pages.test.cjs
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
           node tests/adhan-browser.cjs
           node tests/adhan-scheduled-browser.cjs
           node tests/adhan-sections-browser.cjs
+          node tests/quran-reader-browser.cjs
           node tests/iqama-native-browser.cjs
           node tests/design-persistence-browser.cjs
       - name: Upload web previews
