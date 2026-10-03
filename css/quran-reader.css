@@ -8,64 +8,68 @@ body.quran-reader-open.design-menu-open #webDrawerSub #prayerServicePanel{paddin
 body.quran-reader-open #adSection-services>.ad-card{padding:0!important;margin:0!important;border:0!important;border-radius:0!important}
 body.quran-reader-open #adServiceTitle{display:none!important}
 body.quran-reader-open #adServiceFrame,body.quran-reader-open #adService{padding:0!important;margin:0!important;border:0!important}
-#aqReader{--qr-bg:#e9e2d1;--qr-ink:#222016;--qr-bar:#fff;--qr-muted:#777;--qr-accent:#536daf;--qr-line:#cbb994;position:relative;height:calc(100dvh - 58px);min-height:300px;display:grid;grid-template-rows:62px 25px minmax(0,1fr) 33px 26px 20px 62px;background:var(--qr-bg);color:var(--qr-ink);font:14px Tahoma,Arial,sans-serif;overflow:hidden;isolation:isolate;direction:rtl}
-#aqReader[data-theme=white]{--qr-bg:#fffdf7;--qr-ink:#1d1c18}
-#aqReader[data-theme=night]{--qr-bg:#19232b;--qr-ink:#eee5cc;--qr-bar:#25333d;--qr-muted:#c0c6cb;--qr-line:#78828a;--qr-accent:#a2b8f5}
-#aqReader *,#aqReader *::before,#aqReader *::after{box-sizing:border-box}
-#aqReader button{font-family:Tahoma,Arial,sans-serif;cursor:pointer;touch-action:manipulation}
-#aqReader button:disabled{opacity:.35;cursor:default}
-#aqReader button:focus-visible,#aqReader input:focus-visible,#aqReader select:focus-visible,#aqReader [role=button]:focus-visible{outline:2px solid var(--qr-accent);outline-offset:2px}
-#aqReader .aq-top,#aqReader .aq-bottom{display:grid;grid-template-columns:repeat(4,1fr);background:var(--qr-bar);padding:5px 8px;border-bottom:1px solid #8882;gap:2px;z-index:1}
-#aqReader .aq-bottom{grid-template-columns:repeat(5,1fr);border-bottom:0;border-top:1px solid #8882}
-#aqReader .aq-top button,#aqReader .aq-bottom button{margin:0!important;min-width:0!important;width:100%!important;min-height:0!important;height:auto!important;padding:1px 0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;color:var(--qr-muted)!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important}
-#aqReader nav button span{font-size:27px;line-height:29px;font-weight:400}
-#aqReader nav button small{font-size:12px;line-height:19px;white-space:nowrap}
-#aqReader nav .aq-active{color:var(--qr-accent)!important}
-#aqReader .aq-page-meta{display:flex;justify-content:space-between;align-items:center;padding:0 15px;font-size:11px;color:var(--qr-muted)}
-#aqReader #aqBookmark{border:0;background:transparent;color:var(--qr-accent);font-size:25px;margin:0;padding:0 4px;height:25px;min-height:0;line-height:25px}
-#aqReader .aq-paper{overflow:hidden;padding:8px 10px;display:flex;align-items:center;justify-content:center;touch-action:pan-y pinch-zoom;perspective:1000px;min-height:0}
-#aqReader .aq-page-text{width:100%;font-family:AoqatQuran,'Traditional Arabic',serif;font-weight:400;line-height:1.8;text-align:justify;direction:rtl;transform-origin:right center;overflow:visible}
-#aqReader .aq-page-text p{margin:0;padding:0;font:inherit;color:inherit}
-#aqReader .aq-opening{text-align:center;width:94%;line-height:2}
-#aqReader .aq-surah-banner{position:relative;margin:4px 0 15px;padding:3px 30px;border:3px double var(--qr-line);border-radius:4px;font:inherit;font-size:1.05em;line-height:1.5;text-align:center;color:inherit;background:linear-gradient(90deg,#a38a4820,transparent 30%,transparent 70%,#a38a4820)}
-#aqReader .aq-surah-banner::before,#aqReader .aq-surah-banner::after{content:'❖';position:absolute;top:50%;transform:translateY(-50%);font-size:1em;color:#9d8756}
-#aqReader .aq-surah-banner::before{right:8px}#aqReader .aq-surah-banner::after{left:8px}
-#aqReader .aq-bismillah{text-align:center;margin:3px 0 8px;font:inherit}
-#aqReader .aq-ayah{cursor:pointer;border-radius:3px;font:inherit;white-space:normal}
-#aqReader .aq-ayah-number{color:#927f55;font-size:.65em;white-space:nowrap}
-#aqReader .aq-selected,#aqReader .aq-playing{background:#d3b95b55;box-shadow:0 0 0 2px #d3b95b44}
-#aqReader .aq-turn{display:flex;align-items:center;justify-content:space-between;padding:0 12px;gap:6px}
-#aqReader .aq-turn button{background:transparent;border:0;color:var(--qr-ink);font-size:12px;min-height:28px;margin:0;padding:2px 6px}
-#aqReader #aqPageNumber{color:var(--qr-accent);direction:ltr;font-weight:700;min-width:75px}
-#aqReader .aq-slider{margin:0;padding:0 18px;display:flex;align-items:center}
-#aqReader .aq-slider input{width:100%;height:18px;margin:0;accent-color:var(--qr-accent);direction:rtl;min-width:0}
-#aqReader .aq-notice{margin:0;padding:2px 10px;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:10px;color:var(--qr-accent);line-height:16px}
-#aqReader .aq-sheet[hidden]{display:none!important}
-#aqReader .aq-sheet{position:absolute;inset:0;z-index:5;background:var(--qr-bar);color:var(--qr-ink);display:flex;flex-direction:column;overflow:hidden}
-#aqReader .aq-sheet>header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:52px;padding:8px 15px;border-bottom:1px solid var(--qr-line)}
-#aqReader .aq-sheet h3{margin:0;font:700 18px Tahoma,Arial,sans-serif;color:var(--qr-ink)}
-#aqReader #aqCloseSheet{background:transparent;color:var(--qr-ink);border:0;font-size:28px;padding:0 8px;margin:0;min-height:36px;line-height:36px}
-#aqReader .aq-sheet-body{padding:12px 16px;overflow-y:auto;min-height:0;flex:1;font:14px/1.8 Tahoma,Arial,sans-serif;overscroll-behavior:contain}
-#aqReader .aq-sheet-body label{display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:6px 0;color:inherit;font-size:14px}
-#aqReader .aq-sheet-body input,#aqReader .aq-sheet-body select,#aqReader .aq-sheet-body textarea{width:100%;min-width:0;background:var(--qr-bg);color:var(--qr-ink);border:1px solid var(--qr-line);border-radius:8px;padding:9px;font:inherit;accent-color:var(--qr-accent)}
-#aqReader .aq-sheet-body button{margin:4px 0;padding:9px 12px;background:var(--qr-accent);color:var(--qr-bar);border:0;border-radius:8px;font-size:14px;min-height:40px;width:auto;white-space:normal;line-height:1.6}
-#aqReader .aq-sheet-body h4{color:inherit;margin:18px 0 8px}
-#aqReader .aq-sheet-body p{margin:10px 0;color:inherit}
-#aqReader .aq-tabs,#aqReader .aq-tools,#aqReader .aq-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-#aqReader .aq-tabs button{flex:1;background:var(--qr-bg);color:var(--qr-ink);border:1px solid var(--qr-line)}
-#aqReader .aq-tabs .selected{background:var(--qr-accent);color:var(--qr-bar)}
-#aqReader .aq-row label{flex:1;min-width:80px}
-#aqReader .aq-sheet-body .aq-list-row,#aqReader .aq-sheet-body .aq-result{width:100%;background:var(--qr-bg);color:var(--qr-ink);border:1px solid var(--qr-line);text-align:right;display:flex;flex-direction:column;align-items:flex-start;gap:4px}
-#aqReader .aq-list-row small,#aqReader .aq-result small{font-size:11px;color:var(--qr-muted)}
-#aqReader .aq-result span,#aqReader .aq-quote{font-family:AoqatQuran,serif;font-size:22px;line-height:1.9}
-#aqReader .aq-saved{display:flex;gap:6px;align-items:stretch;margin-bottom:5px}
-#aqReader .aq-saved>button:first-child{flex:1;text-align:right;background:var(--qr-bg);color:var(--qr-ink);border:1px solid var(--qr-line)}
-#aqReader .aq-saved small{display:block;font-weight:400;overflow-wrap:anywhere}
-#aqReader progress{width:100%;height:14px;accent-color:var(--qr-accent)}
-#aqReader .aq-caption{font-size:11px;color:var(--qr-muted)}
-#aqReader a{color:var(--qr-accent);overflow-wrap:anywhere}
-@media(min-width:700px){#aqReader .aq-page-text{max-width:640px}#aqReader .aq-top,#aqReader .aq-bottom{padding-inline:max(15px,calc((100vw - 650px)/2))}#aqReader .aq-sheet-body{width:min(100%,700px);margin:0 auto}}
-@media(max-height:600px){#aqReader{grid-template-rows:48px 20px minmax(0,1fr) 28px 22px 16px 48px}#aqReader nav button span{font-size:21px;line-height:22px}#aqReader nav button small{font-size:10px;line-height:14px}}
-@media(prefers-reduced-motion:reduce){#aqReader *{animation:none!important;transition:none!important}}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader{--qr-bg:#e9e2d1!important;--qr-ink:#222016!important;--qr-bar:#fff!important;--qr-muted:#777!important;--qr-accent:#536daf!important;--qr-line:#cbb994!important;position:relative!important;height:calc(100dvh - 58px)!important;min-height:300px!important;display:grid!important;grid-template-rows:62px 25px minmax(0,1fr) 33px 26px 20px 62px!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;font:14px Tahoma,Arial,sans-serif!important;overflow:hidden!important;isolation:isolate!important;direction:rtl!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=white]{--qr-bg:#fffdf7!important;--qr-ink:#1d1c18!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=night]{--qr-bg:#19232b!important;--qr-ink:#eee5cc!important;--qr-bar:#25333d!important;--qr-muted:#c0c6cb!important;--qr-line:#78828a!important;--qr-accent:#a2b8f5!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader *,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader *::before,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader *::after{box-sizing:border-box!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader button{font-family:Tahoma,Arial,sans-serif!important;cursor:pointer!important;touch-action:manipulation!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader button:disabled{opacity:.35!important;cursor:default!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader button:focus-visible,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader input:focus-visible,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader select:focus-visible,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader [role=button]:focus-visible{outline:2px solid var(--qr-accent)!important;outline-offset:2px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-top,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-bottom{display:grid!important;grid-template-columns:repeat(4,1fr)!important;background:var(--qr-bar)!important;padding:5px 8px!important;border-bottom:1px solid #8882!important;gap:2px!important;z-index:1!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-bottom{grid-template-columns:repeat(5,1fr)!important;border-bottom:0!important;border-top:1px solid #8882!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-top button,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-bottom button{margin:0!important;min-width:0!important;width:100%!important;min-height:0!important;height:auto!important;padding:1px 0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;color:var(--qr-muted)!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:1px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav button span{font-size:27px!important;line-height:29px!important;font-weight:400!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav button small{font-size:12px!important;line-height:19px!important;white-space:nowrap!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav .aq-active{color:var(--qr-accent)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-meta{display:flex!important;justify-content:space-between!important;align-items:center!important;padding:0 15px!important;font-size:11px!important;color:var(--qr-muted)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqBookmark{border:0!important;background:transparent!important;color:var(--qr-accent)!important;font-size:25px!important;margin:0!important;padding:0 4px!important;height:25px!important;min-height:0!important;line-height:25px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-paper{overflow:hidden!important;padding:8px 10px!important;display:flex!important;align-items:center!important;justify-content:center!important;touch-action:pan-y pinch-zoom!important;perspective:1000px!important;min-height:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{width:100%!important;font-family:AoqatQuran,'Traditional Arabic',serif!important;font-weight:400!important;line-height:1.8!important;text-align:justify!important;direction:rtl!important;transform-origin:right center!important;overflow:visible!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text p{margin:0!important;padding:0!important;font:inherit!important;color:inherit!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-opening{text-align:center!important;width:94%!important;line-height:2!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-banner{position:relative!important;margin:4px 0 15px!important;padding:3px 30px!important;border:3px double var(--qr-line)!important;border-radius:4px!important;font:inherit!important;font-size:1.05em!important;line-height:1.5!important;text-align:center!important;color:inherit!important;background:linear-gradient(90deg,#a38a4820,transparent 30%,transparent 70%,#a38a4820)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-banner::before,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-banner::after{content:'❖'!important;position:absolute!important;top:50%!important;transform:translateY(-50%)!important;font-size:1em!important;color:#9d8756!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-banner::before{right:8px!important}body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-banner::after{left:8px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-bismillah{text-align:center!important;margin:3px 0 8px!important;font:inherit!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah{cursor:pointer!important;border-radius:3px!important;font:inherit!important;white-space:normal!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{color:#927f55!important;font-size:.65em!important;white-space:nowrap!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-selected,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-playing{background:#d3b95b55!important;box-shadow:0 0 0 2px #d3b95b44!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-turn{display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 12px!important;gap:6px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-turn button{background:transparent!important;border:0!important;color:var(--qr-ink)!important;font-size:12px!important;min-height:28px!important;margin:0!important;padding:2px 6px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqPageNumber{color:var(--qr-accent)!important;direction:ltr!important;font-weight:700!important;min-width:75px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-slider{margin:0!important;padding:0 18px!important;display:flex!important;align-items:center!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-slider input{width:100%!important;height:18px!important;margin:0!important;accent-color:var(--qr-accent)!important;direction:rtl!important;min-width:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-notice{margin:0!important;padding:2px 10px!important;text-align:center!important;overflow:hidden!important;white-space:nowrap!important;text-overflow:ellipsis!important;font-size:10px!important;color:var(--qr-accent)!important;line-height:16px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet[hidden]{display:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{position:absolute!important;inset:0!important;z-index:5!important;background:var(--qr-bar)!important;color:var(--qr-ink)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet>header{display:flex!important;align-items:center!important;justify-content:space-between!important;flex-shrink:0!important;height:52px!important;padding:8px 15px!important;border-bottom:1px solid var(--qr-line)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet h3{margin:0!important;font:700 18px Tahoma,Arial,sans-serif!important;color:var(--qr-ink)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqCloseSheet{background:transparent!important;color:var(--qr-ink)!important;border:0!important;font-size:28px!important;padding:0 8px!important;margin:0!important;min-height:36px!important;line-height:36px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body{padding:12px 16px!important;overflow-y:auto!important;min-height:0!important;flex:1!important;font:14px/1.8 Tahoma,Arial,sans-serif!important;overscroll-behavior:contain!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body label{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:5px!important;padding:6px 0!important;color:inherit!important;font-size:14px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body input,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body select,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body textarea{width:100%!important;min-width:0!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;border:1px solid var(--qr-line)!important;border-radius:8px!important;padding:9px!important;font:inherit!important;accent-color:var(--qr-accent)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body button{margin:4px 0!important;padding:9px 12px!important;background:var(--qr-accent)!important;color:var(--qr-bar)!important;border:0!important;border-radius:8px!important;font-size:14px!important;min-height:40px!important;width:auto!important;white-space:normal!important;line-height:1.6!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body h4{color:inherit!important;margin:18px 0 8px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body p{margin:10px 0!important;color:inherit!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-tabs,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-tools,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-row{display:flex!important;gap:8px!important;flex-wrap:wrap!important;align-items:center!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-tabs button{flex:1!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;border:1px solid var(--qr-line)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-tabs .selected{background:var(--qr-accent)!important;color:var(--qr-bar)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-row label{flex:1!important;min-width:80px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body .aq-list-row,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body .aq-result{width:100%!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;border:1px solid var(--qr-line)!important;text-align:right!important;display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:4px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-list-row small,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-result small{font-size:11px!important;color:var(--qr-muted)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-result span,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-quote{font-family:AoqatQuran,serif!important;font-size:22px!important;line-height:1.9!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-saved{display:flex!important;gap:6px!important;align-items:stretch!important;margin-bottom:5px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-saved>button:first-child{flex:1!important;text-align:right!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;border:1px solid var(--qr-line)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-saved small{display:block!important;font-weight:400!important;overflow-wrap:anywhere!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader progress{width:100%!important;height:14px!important;accent-color:var(--qr-accent)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-caption{font-size:11px!important;color:var(--qr-muted)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader a{color:var(--qr-accent)!important;overflow-wrap:anywhere!important}
+@media(min-width:700px){body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{max-width:640px!important}body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-top,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-bottom{padding-inline:max(15px,calc((100vw - 650px)/2))!important}body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body{width:min(100%,700px)!important;margin:0 auto!important}}
+@media(max-height:600px){body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader{grid-template-rows:48px 20px minmax(0,1fr) 28px 22px 16px 48px!important}body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav button span{font-size:21px!important;line-height:22px!important}body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav button small{font-size:10px!important;line-height:14px!important}}
+@media(prefers-reduced-motion:reduce){body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader *{animation:none!important;transition:none!important}}
 
-#aqReader nav svg{width:27px;height:27px;display:block}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav svg{width:27px!important;height:27px!important;display:block!important}
+
+body.quran-reader-open.design-menu-open .sidebar .main-panel{position:fixed!important;inset:0!important;margin:0!important;height:100dvh!important;max-height:100dvh!important;padding:0!important;overflow:hidden!important;transform:none!important}
+body.quran-reader-open.design-menu-open #webDrawerSub #prayerServicePanel{max-height:none!important;overflow:visible!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{font-family:Tahoma,Arial,sans-serif!important}

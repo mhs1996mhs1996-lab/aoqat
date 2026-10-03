@@ -1,6 +1,6 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
 (async()=>{const server=spawn('python3',['-m','http.server','8770'],{stdio:'ignore'});let browser;try{
- await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Baghdad',permissions:['clipboard-read','clipboard-write']});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack));
+ await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Baghdad',permissions:['clipboard-read','clipboard-write'],serviceWorkers:'block'});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack));
  await page.addInitScript(()=>{if(!localStorage.qrSeed){localStorage.aoqatAdhanV1=JSON.stringify({enabled:false,sound:'4',volume:52,partial:true});localStorage.aoqatIqamaMinutesV1=JSON.stringify({asr:17});localStorage.qrSeed='1';}});
  await page.route('**/rest/v1/annual_prayer_times**',r=>r.fulfill({json:[{gregorian_month:10,gregorian_day:3,fajr:'4:45',sunrise:'6:06',dhuhr:'11:59',asr:'3:20',maghrib:'5:50',isha:'7:10'}]}));
  // Verify real HTMLAudio decoding independently from the remote CDN's availability.
@@ -10,6 +10,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  async function panel(kind){await page.locator(`[data-qr-panel="${kind}"]`).click();}
  async function jump(n){await panel('index');await page.locator('#aqJump').fill(String(n));await page.locator('#aqJumpForm button').click();await page.waitForFunction(n=>document.getElementById('aqReader').dataset.page===String(n),n);}
  await page.goto('http://127.0.0.1:8770',{waitUntil:'domcontentloaded'});await openQuran();assert.equal(await page.locator('[data-qr-panel]').count(),9);assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'1');assert.equal(await page.locator('[data-qr-verse]').count(),7);assert.equal(await page.locator('#aqPrevious').isDisabled(),true);
+ assert.ok(await page.locator('#adVerses').evaluate(e=>getComputedStyle(e).fontFamily.includes('AoqatQuran')));
+ assert.equal(await page.locator('[data-qr-panel="index"]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+ assert.ok(await page.locator('.aq-bottom').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight+1));
  await page.screenshot({path:'/tmp/aoqat-adhan-quran-opening.png'});
  await page.locator('#aqNext').click();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'2');assert.equal(await page.locator('[data-qr-verse]').count(),5);
  const box=await page.locator('#aqPaper').boundingBox();await page.mouse.move(box.x+30,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+200,box.y+box.height/2,{steps:8});await page.mouse.up();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'3');
