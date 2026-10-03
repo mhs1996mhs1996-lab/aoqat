@@ -26,6 +26,8 @@
   }
   let rows = [],
     panel,
+    servicePanel,
+    externalService = false,
     audio,
     customURL,
     playing = false,
@@ -233,6 +235,7 @@
   function syncServices(){
     $("adServiceMenu").hidden=!!service;$("adServiceFrame").hidden=!service;
     $("adServiceTitle").textContent={quran:'القرآن الكريم',qibla:'اتجاه القبلة',azkar:'الأذكار',widget:'الصلاة القادمة على الهاتف'}[service]||'';
+    if (!native) { $("adServiceMenu").hidden=true; $("adServiceBack").hidden=true; }
     $("adService").hidden=service==='widget';$("adWidgetControls").hidden=service!=='widget';
   }
   function render() {
@@ -242,7 +245,7 @@
  <fieldset class="ad-options" ${state.enabled ? "" : "disabled"}>
  <div class="ad-section-menu" aria-label="أقسام الأذان والخدمات">${[
    ["sound", "🔊", "صوت الأذان"], ["notifications", "🔔", "التنبيهات"],
-   ["modes", "🕌", "وضع الأذان لكل صلاة"], ["services", "✨", "الخدمات"],
+   ["modes", "🕌", "وضع الأذان لكل صلاة"], ...(native ? [["services", "✨", "الخدمات"]] : []),
  ].map(([id, icon, title])=>`<button type="button" class="ad-section-toggle" data-ad-section="${id}" aria-expanded="false" aria-controls="adSection-${id}"><span class="ad-section-icon" aria-hidden="true">${icon}</span><span>${title}</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>`).join("")}</div>
  <section id="adSection-sound" class="ad-section" hidden><div class="ad-card"><h3>صوت الأذان</h3><label>المؤذن<select data-setting="sound">${[
    ["1", "أذان مكة — علي أحمد ملا"],
@@ -307,6 +310,10 @@
      : ""
  }
 </div></div></div></section></fieldset><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+    if (!native && servicePanel) {
+      const services = $("adSection-services"); services.hidden = false;
+      servicePanel.replaceChildren(services);
+    }
     panel.querySelectorAll("[data-ad-section]").forEach((button)=>{
       button.onclick=()=>{
         if(!state.enabled)return;
@@ -408,7 +415,7 @@
     tick();
     syncSections();
     syncServices();
-    if (service && openSection==="services" && state.enabled) showService(service);
+    if (service && (externalService || (openSection==="services" && state.enabled))) showService(service);
     persist();
   }
   function tick() {
@@ -506,8 +513,17 @@
     status("تم حفظ صوت الهاتف");
   };
   window.aoqatAdhanStatus = status;
+  window.aoqatOpenService = (kind) => {
+    if (native || !["quran","qibla","azkar"].includes(kind)) return;
+    externalService = true;
+    showService(kind);
+  };
+  window.aoqatCloseService = () => {
+    if (!externalService) return;
+    externalService = false; service = ""; stopServiceSensors();
+  };
   async function showService(kind) {
-    if(!state.enabled || openSection!=="services")return;
+    if(!externalService && (!state.enabled || openSection!=="services"))return;
     service = kind;
     syncServices();
     const el = $("adService");
@@ -573,7 +589,7 @@
             throw Error("لم يُسمح بحساس الاتجاه");
           navigator.geolocation.getCurrentPosition(
             (p) => {
-              if(service!=="qibla"||openSection!=="services"||!state.enabled||!el.isConnected)return;
+              if(service!=="qibla"||(!externalService && (openSection!=="services"||!state.enabled))||!el.isConnected)return;
               const rad = Math.PI / 180,
                 a = p.coords.latitude * rad,
                 dl = (39.8262 - p.coords.longitude) * rad,
@@ -592,7 +608,7 @@
                 locationBearing.toFixed(1) +
                 "° من الشمال. حرّك الهاتف لتفعيل البوصلة.";
               orientationHandler = (e) => {
-                if (e.alpha === null || service!=="qibla" || openSection!=="services") return;
+                if (e.alpha === null || service!=="qibla" || (!externalService && openSection!=="services")) return;
                 const heading =
                   e.webkitCompassHeading ?? (e.absolute ? 360 - e.alpha : null);
                 if (heading === null) {
@@ -654,6 +670,13 @@
     panel.className = "panel inline-control-panel";
     panel.style.display = "none";
     home.appendChild(panel);
+    if (!native) {
+      servicePanel = document.createElement("section");
+      servicePanel.id = "prayerServicePanel";
+      servicePanel.className = "panel inline-control-panel";
+      servicePanel.style.display = "none";
+      home.appendChild(servicePanel);
+    }
     render();
     loadRows();
     setInterval(tick, 1000);

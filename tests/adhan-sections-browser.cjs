@@ -45,15 +45,15 @@ const { spawn } = require('node:child_process');
     await openAdhan();
     await page.waitForFunction(() => document.getElementById('adTimes').textContent.includes('4:43'));
     assert.equal(await page.locator('#adTimes tr').count(), 6);
-    assert.equal(await page.locator('[data-ad-section]').count(), 4);
-    for (const id of ['sound', 'notifications', 'modes', 'services']) {
+    assert.equal(await page.locator('[data-ad-section]').count(), 3);
+    for (const id of ['sound', 'notifications', 'modes']) {
       assert.equal(await page.locator(`[data-ad-section="${id}"]`).isDisabled(), true);
       assert.equal(await page.locator(`#adSection-${id}`).isVisible(), false);
     }
     assert.equal(await page.locator('#adRefresh').isEnabled(), true);
     await page.screenshot({ path: '/tmp/aoqat-adhan-sections-off.png', fullPage: true });
     await page.locator('#adEnable').click();
-    for (const id of ['sound', 'notifications', 'modes', 'services'])
+    for (const id of ['sound', 'notifications', 'modes'])
       assert.equal(await page.locator(`[data-ad-section="${id}"]`).isEnabled(), true);
     await page.screenshot({ path: '/tmp/aoqat-adhan-sections-home.png', fullPage: true });
     await page.locator('[data-ad-section="sound"]').click();
@@ -66,23 +66,24 @@ const { spawn } = require('node:child_process');
     await page.locator('#adSilentAfterEnabled').check();
     await setMinutes('asr', 7); await setMinutes('maghrib', 9);
     await page.screenshot({ path: '/tmp/aoqat-adhan-after-iqama.png', fullPage: true });
-    await page.locator('[data-ad-section="services"]').click();
-    await page.locator('[data-service="azkar"]').click();
+    await page.locator(".web-back").click(); await page.locator(".web-back").click();
+    await page.locator('[data-drawer="azkar"]').click();
     assert.equal(await page.locator('#adAzkarList').isVisible(), false);
     await page.locator('[data-azkar-kind="morning"]').click();
     await page.locator('[data-dhikr="0"]').click();
     assert.equal(await page.locator('[data-dhikr="0"]').getAttribute('data-remaining'), '0');
-    await page.locator('#adServiceBack').click();
-    await page.locator('[data-service="quran"]').click();
+    await page.locator(".web-back").click();
+    await page.locator('[data-drawer="quran"]').click();
     await page.waitForSelector('#adSurah');
     await page.locator('#adSurah').selectOption('114');
-    await page.locator('#adServiceBack').click();
-    await page.locator('[data-service="azkar"]').click();
+    await page.locator(".web-back").click();
+    await page.locator('[data-drawer="azkar"]').click();
     assert.equal(await page.locator('[data-dhikr="0"]').getAttribute('data-remaining'), '0');
     await page.screenshot({ path: '/tmp/aoqat-adhan-services.png', fullPage: true });
-    await page.locator('#adServiceBack').click();
-    await page.locator('[data-service="quran"]').click();
+    await page.locator(".web-back").click();
+    await page.locator('[data-drawer="quran"]').click();
     assert.equal(await page.locator('#adSurah').inputValue(), '114');
+    await page.locator(".web-back").click(); await openAdhan();
     await page.locator('[data-ad-section="sound"]').click();
     await page.locator('#adPreview').click();
     await page.waitForFunction(() => window.__adhanTestAudio?.readyState >= 2 && !window.__adhanTestAudio.paused);
@@ -113,7 +114,20 @@ const { spawn } = require('node:child_process');
     await page.locator('#adEnable').click();
     assert.equal(await page.locator('#adSection-notifications').isVisible(), false);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.aoqatAdhanV1).afterIqamaSilent.minutes.asr), 7);
-    assert.equal(await page.locator('[data-ad-section="services"]').isDisabled(), true);
+    assert.equal(await page.locator('[data-ad-section="services"]').count(), 0);
+    await page.locator(".web-back").click(); await page.locator(".web-back").click();
+    for (const kind of ['quran','qibla','azkar']) {
+      const row=page.locator(`[data-drawer="${kind}"]`);
+      assert.equal(await row.getAttribute('class'), 'web-drawer-row');
+      await row.click();
+      assert.equal(await page.locator('#prayerServicePanel').isVisible(), true);
+      assert.equal(await page.locator('#adService').isVisible(), true);
+      if(kind==='quran')await page.waitForSelector('#adSurah');
+      if(kind==='qibla')assert.equal(await page.locator('#adQiblaStart').isEnabled(),true);
+      await page.locator('.web-back').click();
+    }
+    assert.equal(await page.evaluate(()=>JSON.parse(localStorage.aoqatAdhanV1).enabled),false);
+    await openAdhan();
     await page.setViewportSize({ width: 320, height: 740 });
     assert.ok(await page.locator('#adhanPanel').evaluate(e => e.scrollWidth <= e.clientWidth + 1));
     assert.deepEqual(errors, []);

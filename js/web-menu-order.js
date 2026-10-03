@@ -5,7 +5,8 @@
   const ROWS=[
     ["settings","⚙️","إعدادت التصميم"],["notifications","🔔","الإشعارات"],["appearance","🎨","شكل التطبيق"],
     ["night","🌙","الوضع الليلي"],["savePhone","📱","حفظ على الهاتف"],
-    ["datePrayer","📅","بيانات التاريخ و الصلاة"],["adhanIqama","🕌","بيانات الاذان والإقامة"]
+    ["datePrayer","📅","بيانات التاريخ و الصلاة"],["adhanIqama","🕌","بيانات الاذان والإقامة"],
+    ...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])
   ];
   const SETTINGS=[
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
@@ -61,6 +62,7 @@
   }
 
   function restoreMoved(){
+    window.aoqatCloseService?.();
     const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
     if(!body||!home)return;
     [...body.children].forEach(el=>{if(el.matches(".panel,.font-panel,.inline-control-panel")&&el.id!=="webSettingsTemp"){el.classList.remove("inline-open","active-panel");home.appendChild(el);}});
@@ -109,6 +111,10 @@
     sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
+      if(["quran","qibla","azkar"].includes(id)){
+        const title=ROWS.find(row=>row[0]===id)[2];
+        openPanel(title,"prayerServicePanel");window.aoqatOpenService?.(id);return;
+      }
       if(id==="settings"){settingsView();return;}
       if(id==="datePrayer"){datePrayerView();return;}
       if(id==="adhanIqama"){adhanIqamaView();return;}

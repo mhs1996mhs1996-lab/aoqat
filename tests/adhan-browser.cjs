@@ -101,20 +101,20 @@ const { spawn } = require("node:child_process");
         !window.testAdhanAudio.paused,
     );
     await page.locator("#adStop").click();
-    await page.locator('[data-ad-section="services"]').click();
-    await page.locator('[data-service="quran"]').click();
+    await page.locator(".web-back").click();
+    await page.locator(".web-back").click();
+    await page.locator('[data-drawer="quran"]').click();
     await page.waitForSelector("#adSurah");
     await page.locator("#adSurah").selectOption("114");
     assert.ok(
       (await page.locator("#adVerses").textContent()).includes("ٱلنَّاسِ"),
     );
-    await page.locator("#adServiceBack").click();
-    await page.locator('[data-service="azkar"]').click();
+    await page.locator(".web-back").click();
+    await page.locator('[data-drawer="azkar"]').click();
     await page.locator('[data-azkar-kind="prayer"]').click();
     const first = page.locator('[data-dhikr="0"]');
     await first.click();
     assert.equal(await first.getAttribute("data-remaining"), "2");
-    await page.locator("#webDrawerSub .web-back").click();
     await page.locator("#webDrawerSub .web-back").click();
     await page.locator('[data-drawer="datePrayer"]').click();
     assert.equal(
