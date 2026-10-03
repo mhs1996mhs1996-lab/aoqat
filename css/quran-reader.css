@@ -73,3 +73,5 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader nav svg{width
 body.quran-reader-open.design-menu-open .sidebar .main-panel{position:fixed!important;inset:0!important;margin:0!important;height:100dvh!important;max-height:100dvh!important;padding:0!important;overflow:hidden!important;transform:none!important}
 body.quran-reader-open.design-menu-open #webDrawerSub #prayerServicePanel{max-height:none!important;overflow:visible!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{font-family:Tahoma,Arial,sans-serif!important}
+/* The reader has its own visible back control; the floating settings toggle must not cover it. */
+body.quran-reader-open #designSideMenuBtn{display:none!important}
