@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   if (window.AndroidNative?.configureAdhan) return;
+  const markColors={"blue":["أزرق","#5379c3"],"green":["أخضر","#328663"],"amber":["ذهبي","#bd8b25"],"red":["أحمر","#c55050"],"purple":["بنفسجي","#8d60b3"]};
   const KEY='aoqatQuranReaderV1', TOTAL=604;
   const paths={index:'M4 6h16M4 12h16M4 18h16',wird:'M3 5c4-2 7-1 9 1 2-2 5-3 9-1v14c-4-2-7-1-9 1-2-2-5-3-9-1V5zm9 1v14',profile:'M8 7a4 4 0 1 0 8 0 4 4 0 1 0-8 0M4 22v-4c0-5 16-5 16 0v4',settings:'M3 6h18M3 18h18M8 3v6M16 15v6',mushaf:'M3 5c4-2 7-1 9 1 2-2 5-3 9-1v14c-4-2-7-1-9 1-2-2-5-3-9-1V5zm9 1v14',search:'M17 17l5 5M3 10a7 7 0 1 0 14 0 7 7 0 1 0-14 0',audio:'M3 14v-3a9 9 0 0 1 18 0v3M3 12h4v9H3zM17 12h4v9h-4z',library:'M3 3h18v18H3zM7 8h10M7 13h10M7 17h6',more:'M3 3h6v6H3zM15 3h6v6h-6zM3 15h6v6H3zM15 18h6M18 15v6'};
   const icons=Object.fromEntries(Object.entries(paths).map(([k,d])=>[k,`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`]));
@@ -70,7 +71,7 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;pointer=null;
-      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;go(state.page+(dx>0?1:-1));}
+      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;go(state.page+(dx>0?-1:1));}
       else if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;ignoreClickUntil=performance.now()+500;});
@@ -106,6 +107,7 @@
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
+    items.forEach((v,n)=>{const mark=state.bookmarks.find(b=>b.i===start+n);if(mark){const el=root.querySelector('[data-qr-verse="'+(start+n)+'"]');el.style.setProperty('--qr-mark',markColors[mark.color]?.[1]||markColors.blue[1]);el.classList.add('aq-marked');}});
     root.dataset.page=state.page;root.dataset.theme=state.theme;
     fit();
     if(animate&&oldPage&&Math.abs(oldPage-state.page)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
@@ -113,8 +115,8 @@
       leaf.className='aq-leaf';leaf.setAttribute('aria-hidden','true');leaf.inert=true;
       oldText.removeAttribute('id');oldText.querySelectorAll('[data-qr-verse]').forEach(v=>{v.removeAttribute('data-qr-verse');v.removeAttribute('role');v.removeAttribute('tabindex');});
       const front=document.createElement('div'),back=document.createElement('div');front.className='aq-leaf-front';back.className='aq-leaf-back';front.append(oldText);leaf.append(front,back);paper.append(leaf);
-      leaf.style.transformOrigin=next?'left center':'right center';
-      const animation=leaf.animate([{transform:'rotateY(0deg)'},{transform:`rotateY(${next?165:-165}deg)`}],{duration:560,easing:'cubic-bezier(.3,.08,.3,1)',fill:'forwards'});
+      leaf.style.transformOrigin=next?'right center':'left center';
+      const animation=leaf.animate([{transform:'rotateY(0deg)'},{transform:`rotateY(${next?-165:165}deg)`}],{duration:560,easing:'cubic-bezier(.3,.08,.3,1)',fill:'forwards'});
       turnAnimation=animation;animation.finished.then(()=>{leaf.remove();if(turnAnimation===animation)turnAnimation=null;}).catch(()=>leaf.remove());
     }
   }
@@ -155,11 +157,28 @@
     $('aqSearch').oninput=()=>{searchLimit=60;draw();};$('aqMoreResults').onclick=()=>{searchLimit+=60;draw();};draw();$('aqSearch').focus();
   }
   function bookmark(i){const v=verses[i];if(!v)return;const old=state.bookmarks.findIndex(b=>b.i===i);if(old>=0)state.bookmarks.splice(old,1);else state.bookmarks.push({i,page:pageOf(i),label:`${v.name} · الآية ${v.a}`});save();renderPage();notice(old>=0?'تم حذف العلامة':'تم حفظ العلامة في ملفاتي');}
-  function versePanel(i){selected=i;const v=verses[i];sheet(`${v.name} · الآية ${v.a}`,`<p class="aq-quote">${esc(v.text)}</p><div class="aq-tools"><button type="button" id="aqVerseBookmark">${state.bookmarks.some(b=>b.i===i)?'حذف العلامة':'حفظ علامة'}</button><button type="button" id="aqVerseListen">استماع للآية</button><button type="button" id="aqVerseTafsir">التفسير الميسر</button><button type="button" id="aqVerseCopy">نسخ الآية</button></div><label>ملاحظة على الآية<textarea id="aqNote" rows="3" maxlength="2000">${esc(state.notes.find(n=>n.i===i)?.text||'')}</textarea></label><button type="button" id="aqSaveNote">حفظ الملاحظة</button><p id="aqVerseStatus" role="status"></p>`);
-    $('aqVerseBookmark').onclick=()=>{bookmark(i);versePanel(i);};$('aqVerseListen').onclick=()=>{closeSheet();startAudio(i);};$('aqVerseTafsir').onclick=()=>tafsirPanel(i);
+  function versePanel(i){selected=i;const v=verses[i];sheet(`${v.name} · الآية ${v.a}`,`<p class="aq-quote">${esc(v.text)}</p><div class="aq-tools"><button type="button" id="aqVerseBookmark">علامة مرجعية</button><button type="button" id="aqVerseListen">استماع للآية</button><button type="button" id="aqVerseTafsir">التفسير الميسر</button><button type="button" id="aqVerseCopy">نسخ الآية</button></div><label>ملاحظة على الآية<textarea id="aqNote" rows="3" maxlength="2000">${esc(state.notes.find(n=>n.i===i)?.text||'')}</textarea></label><button type="button" id="aqSaveNote">حفظ الملاحظة</button><p id="aqVerseStatus" role="status"></p>`);
+    $('aqVerseBookmark').onclick=()=>markPanel(i);$('aqVerseListen').onclick=()=>{closeSheet();startAudio(i);};$('aqVerseTafsir').onclick=()=>tafsirPanel(i);
     $('aqSaveNote').onclick=()=>{state.notes=state.notes.filter(n=>n.i!==i);const text=$('aqNote').value.trim();if(text)state.notes.push({i,text});save();$('aqVerseStatus').textContent=text?'تم حفظ الملاحظة':'تم حذف الملاحظة';};
     $('aqVerseCopy').onclick=async()=>{try{await navigator.clipboard.writeText(`${v.text} (${v.name}: ${v.a})`);if($('aqVerseStatus'))$('aqVerseStatus').textContent='تم نسخ الآية';}catch(_){if($('aqVerseStatus'))$('aqVerseStatus').textContent='تعذر النسخ؛ يمكنك تحديد النص ونسخه';}};
   }
+
+  function markPanel(i){
+    const v=verses[i],old=state.bookmarks.find(b=>b.i===i);
+    sheet('علامة مرجعية',`<p>${esc(v.name)} · الآية ${v.a}</p><label>لون العلامة<select id="aqMarkColor">${Object.entries(markColors).map(([key,[name]])=>`<option value="${key}">${name}</option>`).join('')}</select></label><label>اسم العلامة أو معنى اللون (اختياري)<input id="aqMarkLabel" maxlength="80" value="${esc(old?.purpose||'')}"></label><p>اختر اللون وحدّد معناه كما يناسبك.</p><button type="button" id="aqSaveMark">حفظ العلامة</button><p id="aqMarkStatus" role="status"></p>`);
+    $('aqMarkColor').value=markColors[old?.color]?old.color:'blue';
+    $('aqSaveMark').onclick=()=>{const color=$('aqMarkColor').value,purpose=$('aqMarkLabel').value.trim();state.bookmarks=state.bookmarks.filter(b=>b.i!==i);state.bookmarks.push({i,page:pageOf(i),label:`${v.name} · الآية ${v.a}`,color,purpose});save();renderPage();$('aqMarkStatus').textContent='تم حفظ العلامة';};
+  }
+  function marksPanel(){
+    sheet('علامات','<div id="aqMarks"></div><button type="button" id="aqBackProfile">رجوع إلى ملفاتي</button>');drawMarks();$('aqBackProfile').onclick=profilePanel;
+  }
+  function drawMarks(){
+    $('aqMarks').innerHTML=state.bookmarks.filter(b=>verses[b.i]).map(b=>`<div class="aq-saved"><button type="button" data-saved="${b.i}"><span class="aq-mark-dot" style="--qr-mark:${markColors[b.color]?.[1]||markColors.blue[1]}"></span>${esc(b.label)} · صفحة ${pageOf(b.i)}<small>${esc(b.purpose||markColors[b.color]?.[0]||'أزرق')}</small></button><button type="button" data-edit-mark="${b.i}">تعديل</button><button type="button" data-delete-mark="${b.i}" aria-label="حذف العلامة">×</button></div>`).join('')||'<p>لم تحفظ علامة بعد.</p>';
+    root.querySelectorAll('[data-saved]').forEach(b=>b.onclick=()=>go(pageOf(Number(b.dataset.saved)),Number(b.dataset.saved)));
+    root.querySelectorAll('[data-edit-mark]').forEach(b=>b.onclick=()=>markPanel(Number(b.dataset.editMark)));
+    root.querySelectorAll('[data-delete-mark]').forEach(b=>b.onclick=()=>{state.bookmarks=state.bookmarks.filter(x=>x.i!==Number(b.dataset.deleteMark));save();renderPage();drawMarks();});
+  }
+
   function settingsPanel(){
     sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="42" value="${state.font}"></label><p>المس الصفحة لإخفاء الأدوات، والمسها مرة أخرى لإظهارها. اضغط مطوّلاً على الآية لخدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
@@ -170,9 +189,9 @@
     $('aqSaveGoal').onclick=()=>{const n=Number($('aqGoal').value);if(!Number.isInteger(n)||n<1||n>604){$('aqGoalStatus').textContent='اختر هدفاً من 1 إلى 604 صفحة';return;}state.goal=n;save();wirdPanel();};$('aqMarkRead').onclick=()=>{markRead();wirdPanel();};$('aqContinue').onclick=closeSheet;
   }
   function profilePanel(){
-    sheet('ملفاتي',`<label>الاسم<input id="aqName" maxlength="60" value="${esc(state.name)}"></label><button type="button" id="aqSaveName">حفظ الاسم</button><p id="aqNameStatus" role="status"></p><h4>العلامات المحفوظة</h4><div id="aqMarks"></div><h4>ملاحظاتي</h4><div id="aqNotes"></div>`);
+    sheet('ملفاتي',`<label>الاسم<input id="aqName" maxlength="60" value="${esc(state.name)}"></label><button type="button" id="aqSaveName">حفظ الاسم</button><p id="aqNameStatus" role="status"></p><button type="button" id="aqShowMarks">علامات</button><h4>العلامات المحفوظة</h4><div id="aqMarks"></div><h4>ملاحظاتي</h4><div id="aqNotes"></div>`);
     $('aqSaveName').onclick=()=>{state.name=$('aqName').value.trim();save();$('aqNameStatus').textContent='تم حفظ الاسم';};
-    $('aqMarks').innerHTML=state.bookmarks.length?state.bookmarks.filter(b=>verses[b.i]).map(b=>`<div class="aq-saved"><button type="button" data-saved="${b.i}">${esc(b.label)} · صفحة ${b.page}</button><button type="button" data-delete-mark="${b.i}" aria-label="حذف العلامة">×</button></div>`).join(''):'<p>لم تحفظ علامة بعد. اضغط نجمة الصفحة أو اختر آية.</p>';
+    $('aqShowMarks').onclick=marksPanel;drawMarks();
     $('aqNotes').innerHTML=state.notes.length?state.notes.filter(n=>verses[n.i]).map(n=>`<div class="aq-saved"><button type="button" data-note="${n.i}">${esc(verses[n.i].name)} · ${verses[n.i].a}<small>${esc(n.text)}</small></button><button type="button" data-delete-note="${n.i}" aria-label="حذف الملاحظة">×</button></div>`).join(''):'<p>اضغط أي آية لإضافة ملاحظة.</p>';
     root.querySelectorAll('[data-saved]').forEach(b=>b.onclick=()=>go(pageOf(Number(b.dataset.saved)),Number(b.dataset.saved)));
     root.querySelectorAll('[data-note]').forEach(b=>b.onclick=()=>versePanel(Number(b.dataset.note)));
