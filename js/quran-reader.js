@@ -92,7 +92,7 @@
   }
   function go(page,highlight){
     if(!Number.isInteger(page)||page<1||page>604){notice('اختر صفحة من 1 إلى 604');return;}
-    state.page=page;save();closeSheet();renderPage(true);notice('');
+    state.page=page;state.surah=Number.isInteger(highlight)?verses[highlight].s:pageItems(page)[0].s;save();closeSheet();renderPage(true);notice('');
     if(Number.isInteger(highlight))root.querySelector(`[data-qr-verse="${highlight}"]`)?.classList.add('aq-selected');
   }
   function sheet(title,html){
@@ -100,7 +100,7 @@
     $('aqCloseSheet').focus();
   }
   function closeSheet(){request?.abort();request=null;if($('aqSheet'))$('aqSheet').hidden=true;returnFocus?.isConnected&&returnFocus.focus();}
-  function surahOptions(id=pageItems()[0].s){return quran.map(s=>`<option value="${s.id}" ${s.id===id?'selected':''}>${s.id}. ${esc(s.name)}</option>`).join('');}
+  function surahOptions(id=pageItems().some(v=>v.s===state.surah)?state.surah:pageItems()[0].s){return quran.map(s=>`<option value="${s.id}" ${s.id===id?'selected':''}>${s.id}. ${esc(s.name)}</option>`).join('');}
   function openPanel(kind){
     if(kind==='mushaf'){closeSheet();return;}
     if(kind==='index')indexPanel();else if(kind==='search')searchPanel();else if(kind==='audio')audioPanel();else if(kind==='settings')settingsPanel();else if(kind==='wird')wirdPanel();else if(kind==='profile')profilePanel();else if(kind==='library')libraryPanel();else if(kind==='more')morePanel();
@@ -108,7 +108,7 @@
   function indexPanel(){
     sheet('الفهرس',`<div class="aq-tabs"><button type="button" data-index-tab="surahs" class="selected">السور</button><button type="button" data-index-tab="juz">الأجزاء</button></div><label>السورة<select id="adSurah">${surahOptions()}</select></label><form id="aqJumpForm" class="aq-row"><label>رقم الصفحة<input id="aqJump" type="number" min="1" max="604" required value="${state.page}"></label><button type="submit">انتقال</button></form><div id="aqIndexList"></div>`);
     const list=tab=>{$('aqIndexList').innerHTML=tab==='juz'?meta.juzs.map(j=>`<button type="button" class="aq-list-row" data-goto="${pageOf(j.start)}">الجزء ${j.id}<small>صفحة ${pageOf(j.start)}</small></button>`).join(''):quran.map(s=>{const i=verses.findIndex(v=>v.s===s.id);return `<button type="button" class="aq-list-row" data-goto="${pageOf(i)}">${s.id}. سورة ${esc(s.name)}<small>${s.total_verses} آية · صفحة ${pageOf(i)}</small></button>`;}).join('');$('aqIndexList').querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>go(Number(b.dataset.goto)));};list('surahs');
-    $('adSurah').onchange=e=>go(pageOf(verses.findIndex(v=>v.s===Number(e.target.value))));
+    $('adSurah').onchange=e=>{const i=verses.findIndex(v=>v.s===Number(e.target.value));go(pageOf(i),i);};
     $('aqJumpForm').onsubmit=e=>{e.preventDefault();go(Number($('aqJump').value));};
     root.querySelectorAll('[data-index-tab]').forEach(b=>b.onclick=()=>{root.querySelectorAll('[data-index-tab]').forEach(x=>x.classList.toggle('selected',x===b));list(b.dataset.indexTab);});
   }
@@ -151,7 +151,7 @@
     sheet('التلاوة',`<label>القارئ<select id="aqReciter">${readers.map(([id,name])=>`<option value="${id}">${name}</option>`).join('')}</select></label><label>مستوى الصوت<input id="aqVolume" type="range" min="0" max="100" value="${state.volume}"></label><label>تكرار الآية<select id="aqRepeat"><option value="1">مرة واحدة</option><option value="3">3 مرات</option><option value="5">5 مرات</option></select></label><div class="aq-tools"><button type="button" id="aqAudioPlay">${audioOn?'استئناف / إعادة':'تشغيل من هذه الصفحة'}</button><button type="button" id="aqAudioPause">إيقاف مؤقت</button><button type="button" id="aqAudioStop">إيقاف التلاوة</button></div><p>التلاوة تحتاج اتصالاً بالإنترنت، وتتابع الآيات مع انتقال الصفحات.</p><p id="aqAudioStatus" role="status"></p>`);
     $('aqReciter').value=state.reciter;$('aqRepeat').value=String(audioRepeat);
     $('aqReciter').onchange=e=>{state.reciter=e.target.value;save();stopAudio();};$('aqVolume').oninput=e=>{state.volume=Number(e.target.value);if(audio)audio.volume=state.volume/100;save();};$('aqRepeat').onchange=e=>{audioRepeat=Number(e.target.value);repeated=0;};
-    $('aqAudioPlay').onclick=()=>{if(audio&&audioIndex>=0&&audio.paused){audioOn=true;audio.play().then(()=>audioMessage('التلاوة قيد التشغيل')).catch(()=>audioMessage('تعذر تشغيل التلاوة؛ تحقق من الإنترنت واضغط تشغيل'));}else startAudio(first);};
+    $('aqAudioPlay').onclick=()=>{if(audio&&audioIndex>=0&&audio.error){startAudio(audioIndex);}else if(audio&&audioIndex>=0&&audio.paused){audioOn=true;audio.play().then(()=>audioMessage('التلاوة قيد التشغيل')).catch(()=>audioMessage('تعذر تشغيل التلاوة؛ تحقق من الإنترنت واضغط تشغيل'));}else startAudio(first);};
     $('aqAudioPause').onclick=()=>{audio?.pause();audioOn=false;audioMessage('التلاوة متوقفة مؤقتاً');};$('aqAudioStop').onclick=()=>{stopAudio();audioMessage('توقفت التلاوة');};
     audioMessage(audioOn?'التلاوة قيد التشغيل':'اختر القارئ واضغط تشغيل');
   }
