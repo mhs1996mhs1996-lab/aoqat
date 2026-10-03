@@ -51,7 +51,7 @@
       <nav class="aq-bottom" aria-label="خدمات القرآن">${['mushaf','search','audio','library','more'].map(barButton).join('')}</nav>
       <section id="aqSheet" class="aq-sheet" role="dialog" aria-modal="true" aria-labelledby="aqSheetTitle" hidden><header><h3 id="aqSheetTitle"></h3><button type="button" id="aqCloseSheet" aria-label="إغلاق">×</button></header><div id="aqSheetBody" class="aq-sheet-body"></div></section>
     </section>`;
-    root=host.querySelector('#aqReader');
+    root=host.querySelector('#aqReader');root.tabIndex=-1;
     root.addEventListener('click',e=>{const b=e.target.closest('[data-qr-panel]');if(b)openPanel(b.dataset.qrPanel);});
     $('aqCloseSheet').onclick=closeSheet;
     $('aqPrevious').onclick=()=>go(state.page-1);$('aqNext').onclick=()=>go(state.page+1);
@@ -131,7 +131,7 @@
     request?.abort();request=null;returnFocus=document.activeElement;$('aqSheetTitle').textContent=title;$('aqSheetBody').innerHTML=html;$('aqSheet').hidden=false;
     $('aqCloseSheet').focus();
   }
-  function closeSheet(){request?.abort();request=null;if($('aqSheet'))$('aqSheet').hidden=true;returnFocus?.isConnected&&returnFocus.focus();}
+  function closeSheet(){request?.abort();request=null;if($('aqSheet'))$('aqSheet').hidden=true;if(returnFocus?.isConnected&&root.contains(returnFocus))returnFocus.focus({preventScroll:true});else root?.focus({preventScroll:true});}
   function surahOptions(id=pageItems().some(v=>v.s===state.surah)?state.surah:pageItems()[0].s){return quran.map(s=>`<option value="${s.id}" ${s.id===id?'selected':''}>${s.id}. ${esc(s.name)}</option>`).join('');}
   function openPanel(kind){
     if(kind==='mushaf'){closeSheet();return;}
