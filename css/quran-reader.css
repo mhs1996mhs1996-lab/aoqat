@@ -134,3 +134,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-folio{pos
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqToggleTools{position:absolute!important;left:12px!important;bottom:2px!important;min-height:25px!important;height:25px!important;padding:0 10px!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;border:1px solid var(--qr-line)!important;border-radius:7px!important;z-index:5!important}
 
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqToggleTools{position:fixed!important;top:124px!important;right:8px!important;left:auto!important;bottom:auto!important}
+
+/* Flat gallery-style page slides, including a live neighbouring page while dragging. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-paper{perspective:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf{transform-style:flat!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-front{backface-visibility:visible!important;box-shadow:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-front::after{display:none!important}
