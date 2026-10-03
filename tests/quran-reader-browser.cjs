@@ -13,6 +13,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  assert.ok(await page.locator('#adVerses').evaluate(e=>getComputedStyle(e).fontFamily.includes('AoqatQuran')));
  assert.equal(await page.locator('[data-qr-panel="index"]').evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
  assert.ok(await page.locator('.aq-bottom').evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight+1));
+ console.log('Quran toolbar styles',await page.locator('[data-qr-panel="index"] small').evaluate(e=>{const s=getComputedStyle(e),b=getComputedStyle(e.parentElement);return {text:e.textContent,color:s.color,display:s.display,visibility:s.visibility,opacity:s.opacity,font:s.font,fontFamily:s.fontFamily,rect:e.getBoundingClientRect().toJSON(),buttonColor:b.color,buttonDisplay:b.display,buttonRect:e.parentElement.getBoundingClientRect().toJSON()};}));
  await page.screenshot({path:'/tmp/aoqat-adhan-quran-opening.png'});
  await page.locator('#aqNext').click();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'2');assert.equal(await page.locator('[data-qr-verse]').count(),5);
  const box=await page.locator('#aqPaper').boundingBox();await page.mouse.move(box.x+30,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+200,box.y+box.height/2,{steps:8});await page.mouse.up();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'3');

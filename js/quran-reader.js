@@ -80,7 +80,7 @@
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
     $('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
-    const marked=state.bookmarks.some(b=>b.page===state.page);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
+    const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;
     if(animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches){$('adVerses').animate([{opacity:.35,transform:'rotateY(-12deg)'},{opacity:1,transform:'rotateY(0deg)'}],{duration:240,easing:'ease-out'});}
     fit();
