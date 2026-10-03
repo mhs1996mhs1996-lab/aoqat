@@ -312,6 +312,7 @@
 </div></div></div></section></fieldset><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     if (!native && servicePanel) {
       const services = $("adSection-services"); services.hidden = false;
+      services.querySelector("h3")?.remove();
       servicePanel.replaceChildren(services);
     }
     panel.querySelectorAll("[data-ad-section]").forEach((button)=>{

@@ -1,24 +1,24 @@
-#adhanPanel {
+:is(#adhanPanel, #prayerServicePanel) {
   direction: rtl;
   font-family: Tahoma, Arial, sans-serif;
   line-height: 1.7;
 }
-#adhanPanel * {
+:is(#adhanPanel, #prayerServicePanel) * {
   box-sizing: border-box;
 }
-#adhanPanel .ad-card {
+:is(#adhanPanel, #prayerServicePanel) .ad-card {
   background: var(--wt-surface, #fffaf0);
   border: 1px solid var(--wt-border, #ddcfaf);
   border-radius: 12px;
   padding: 12px;
   margin: 10px 0;
 }
-#adhanPanel h3 {
+:is(#adhanPanel, #prayerServicePanel) h3 {
   font-size: 17px;
   margin: 0 0 8px;
   color: var(--wt-text, #153642);
 }
-#adhanPanel label {
+:is(#adhanPanel, #prayerServicePanel) label {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,18 +26,18 @@
   padding: 8px 0;
   font-size: 14px;
 }
-#adhanPanel input[type="checkbox"] {
+:is(#adhanPanel, #prayerServicePanel) input[type="checkbox"] {
   width: 22px;
   height: 22px;
   flex: none;
   accent-color: #247950;
 }
-#adhanPanel input[type="range"] {
+:is(#adhanPanel, #prayerServicePanel) input[type="range"] {
   width: 55%;
   accent-color: #247950;
 }
-#adhanPanel select,
-#adhanPanel input[type="number"] {
+:is(#adhanPanel, #prayerServicePanel) select,
+:is(#adhanPanel, #prayerServicePanel) input[type="number"] {
   max-width: 55%;
   padding: 7px;
   border: 1px solid #b9c5be;
@@ -45,7 +45,7 @@
   background: #fff;
   color: #173743;
 }
-#adhanPanel button {
+:is(#adhanPanel, #prayerServicePanel) button {
   background: #137985;
   color: white;
   border: 0;
@@ -56,11 +56,11 @@
   cursor: pointer;
   font: inherit;
 }
-#adhanPanel button:disabled {
+:is(#adhanPanel, #prayerServicePanel) button:disabled {
   background: #939a98;
   cursor: default;
 }
-#adhanPanel .ad-master {
+:is(#adhanPanel, #prayerServicePanel) .ad-master {
   display: block;
   width: 100%;
   margin: 0;
@@ -68,74 +68,74 @@
   font-weight: 700;
   font-size: 17px;
 }
-#adhanPanel .ad-master.on {
+:is(#adhanPanel, #prayerServicePanel) .ad-master.on {
   background: #287b50;
 }
-#adhanPanel fieldset {
+:is(#adhanPanel, #prayerServicePanel) fieldset {
   border: 0;
   padding: 0;
   margin: 0;
 }
-#adhanPanel fieldset:disabled {
+:is(#adhanPanel, #prayerServicePanel) fieldset:disabled {
   opacity: 0.6;
 }
-#adhanPanel .ad-mode {
+:is(#adhanPanel, #prayerServicePanel) .ad-mode {
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid #ddd;
   padding: 8px 0;
 }
-#adhanPanel .ad-mode button {
+:is(#adhanPanel, #prayerServicePanel) .ad-mode button {
   padding: 6px 9px;
   min-width: 38px;
   background: #e4e8e6;
   color: #475453;
 }
-#adhanPanel .ad-mode button.selected {
+:is(#adhanPanel, #prayerServicePanel) .ad-mode button.selected {
   background: #ddad38;
   color: #172c2b;
 }
-#adhanPanel .ad-note {
+:is(#adhanPanel, #prayerServicePanel) .ad-note {
   font-size: 12px;
   color: var(--wt-muted, #56686c);
   margin: 6px 0;
 }
-#adhanPanel .ad-next {
+:is(#adhanPanel, #prayerServicePanel) .ad-next {
   text-align: center;
   font-size: 20px;
   font-weight: 700;
 }
-#adhanPanel .ad-counter {
+:is(#adhanPanel, #prayerServicePanel) .ad-counter {
   font-variant-numeric: tabular-nums;
   direction: ltr;
   font-size: 26px;
   color: #187850;
 }
-#adhanPanel table {
+:is(#adhanPanel, #prayerServicePanel) table {
   width: 100%;
   border-collapse: collapse;
 }
-#adhanPanel td {
+:is(#adhanPanel, #prayerServicePanel) td {
   padding: 7px;
   border-bottom: 1px solid #ddd;
 }
-#adhanPanel td:last-child {
+:is(#adhanPanel, #prayerServicePanel) td:last-child {
   text-align: left;
   direction: ltr;
 }
-#adhanPanel .ad-service {
+:is(#adhanPanel, #prayerServicePanel) .ad-service {
   display: none;
 }
-#adhanPanel .ad-service.open {
+:is(#adhanPanel, #prayerServicePanel) .ad-service.open {
   display: block;
 }
-#adhanPanel .ad-verse {
+:is(#adhanPanel, #prayerServicePanel) .ad-verse {
   font-family: serif;
   font-size: 22px;
   line-height: 2.1;
 }
-#adhanPanel .ad-compass {
+:is(#adhanPanel, #prayerServicePanel) .ad-compass {
   width: 160px;
   height: 160px;
   border: 4px solid #bba363;
@@ -144,19 +144,19 @@
   position: relative;
   text-align: center;
 }
-#adhanPanel .ad-arrow {
+:is(#adhanPanel, #prayerServicePanel) .ad-arrow {
   font-size: 85px;
   line-height: 145px;
   color: #187850;
   display: block;
 }
-#adhanPanel .ad-azkar {
+:is(#adhanPanel, #prayerServicePanel) .ad-azkar {
   font-size: 17px;
   line-height: 1.9;
   border-bottom: 1px solid #ddd;
   padding: 12px 0;
 }
-#adhanPanel .ad-status {
+:is(#adhanPanel, #prayerServicePanel) .ad-status {
   font-size: 13px;
   color: #285f48;
   min-height: 22px;
@@ -169,58 +169,58 @@
   filter: none;
   opacity: 1;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel button {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) button {
   background: #137985 !important;
   border: 0 !important;
   color: #fff !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel button:disabled {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) button:disabled {
   background: #939a98 !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-master {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) .ad-master {
   background: #8a9391 !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-master.on {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) .ad-master.on {
   background: #287b50 !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-mode button {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) .ad-mode button {
   background: #e4e8e6 !important;
   color: #475453 !important;
 }
 body.design-menu-open
   .sidebar
   #webDrawerSub
-  #adhanPanel
+  :is(#adhanPanel, #prayerServicePanel)
   .ad-mode
   button.selected {
   background: #ddad38 !important;
   color: #172c2b !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel fieldset {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) fieldset {
   border: 0 !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-verse {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) .ad-verse {
   color: var(--wt-text, #153642) !important;
 }
-body.design-menu-open .sidebar #webDrawerSub #adhanPanel label {
+body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePanel) label {
   color: var(--wt-text, #153642) !important;
 }
 
 /* Only the adhan panel uses these compact disclosure containers. */
-#adhanPanel [hidden] {
+:is(#adhanPanel, #prayerServicePanel) [hidden] {
   display: none !important;
 }
-#adhanPanel .ad-section-menu,
-#adhanPanel .ad-service-menu,
-#adhanPanel .ad-azkar-menu {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-menu,
+:is(#adhanPanel, #prayerServicePanel) .ad-service-menu,
+:is(#adhanPanel, #prayerServicePanel) .ad-azkar-menu {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   margin: 12px 0;
 }
-#adhanPanel .ad-section-menu button,
-#adhanPanel .ad-service-menu button,
-#adhanPanel .ad-azkar-menu button {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-menu button,
+:is(#adhanPanel, #prayerServicePanel) .ad-service-menu button,
+:is(#adhanPanel, #prayerServicePanel) .ad-azkar-menu button {
   margin: 0;
   width: 100%;
   min-width: 0;
@@ -228,74 +228,74 @@ body.design-menu-open .sidebar #webDrawerSub #adhanPanel label {
   font-size: 14px;
   font-weight: 700;
 }
-#adhanPanel .ad-section-toggle {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-toggle {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   text-align: right;
 }
-#adhanPanel .ad-section-icon {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-icon {
   font-size: 22px;
   flex: none;
 }
-#adhanPanel .ad-section-chevron {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-chevron {
   margin-inline-start: auto;
   font-size: 24px;
   line-height: 1;
   transform: rotate(0deg);
 }
-#adhanPanel .ad-section-toggle[aria-expanded="true"] .ad-section-chevron {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-toggle[aria-expanded="true"] .ad-section-chevron {
   transform: rotate(-90deg);
 }
-#adhanPanel .ad-section-active,
-#adhanPanel .ad-azkar-menu button[aria-pressed="true"] {
+:is(#adhanPanel, #prayerServicePanel) .ad-section-active,
+:is(#adhanPanel, #prayerServicePanel) .ad-azkar-menu button[aria-pressed="true"] {
   outline: 2px solid var(--wt-accent, #bd9b55);
   outline-offset: -2px;
 }
-#adhanPanel .ad-section .ad-card {
+:is(#adhanPanel, #prayerServicePanel) .ad-section .ad-card {
   margin-top: 0;
 }
-#adhanPanel .ad-service-frame,
-#adhanPanel .ad-silent-settings {
+:is(#adhanPanel, #prayerServicePanel) .ad-service-frame,
+:is(#adhanPanel, #prayerServicePanel) .ad-silent-settings {
   padding: 10px;
   margin-top: 10px;
   border: 1px solid var(--wt-border, #ddcfaf);
   border-radius: 10px;
 }
-#adhanPanel .ad-silent-toggle,
-#adhanPanel .ad-inner-back {
+:is(#adhanPanel, #prayerServicePanel) .ad-silent-toggle,
+:is(#adhanPanel, #prayerServicePanel) .ad-inner-back {
   width: 100%;
   margin: 8px 0 0;
 }
-#adhanPanel .ad-minute-control {
+:is(#adhanPanel, #prayerServicePanel) .ad-minute-control {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   flex: none;
 }
-#adhanPanel .ad-minute-control input {
+:is(#adhanPanel, #prayerServicePanel) .ad-minute-control input {
   width: 72px;
   max-width: 72px;
 }
-#adhanPanel .ad-silent-settings fieldset label {
+:is(#adhanPanel, #prayerServicePanel) .ad-silent-settings fieldset label {
   border-bottom: 1px solid var(--wt-border, #ddcfaf);
 }
-#adhanPanel .ad-silent-settings fieldset label:last-child {
+:is(#adhanPanel, #prayerServicePanel) .ad-silent-settings fieldset label:last-child {
   border-bottom: 0;
 }
-#adhanPanel .ad-azkar-menu button:last-child:nth-child(odd) {
+:is(#adhanPanel, #prayerServicePanel) .ad-azkar-menu button:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
-#adhanPanel .ad-service-frame h4 {
+:is(#adhanPanel, #prayerServicePanel) .ad-service-frame h4 {
   margin: 12px 0;
   font-size: 17px;
 }
 @media (max-width: 360px) {
-  #adhanPanel .ad-section-menu {
+  :is(#adhanPanel, #prayerServicePanel) .ad-section-menu {
     gap: 6px;
   }
-  #adhanPanel .ad-section-menu button {
+  :is(#adhanPanel, #prayerServicePanel) .ad-section-menu button {
     font-size: 12px;
     padding: 8px;
   }
