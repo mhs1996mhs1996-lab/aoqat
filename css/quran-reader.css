@@ -132,3 +132,5 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mark-pale
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mark-palette small{font-size:11px!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-folio{position:relative!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqToggleTools{position:absolute!important;left:12px!important;bottom:2px!important;min-height:25px!important;height:25px!important;padding:0 10px!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;border:1px solid var(--qr-line)!important;border-radius:7px!important;z-index:5!important}
+
+body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqToggleTools{position:fixed!important;top:124px!important;right:8px!important;left:auto!important;bottom:auto!important}
