@@ -45,7 +45,7 @@
       <nav class="aq-top" aria-label="أدوات المصحف">${['index','wird','profile','settings'].map(barButton).join('')}</nav>
       <div class="aq-page-meta"><span id="aqSurahName"></span><span id="aqJuz"></span><button type="button" id="aqBookmark" aria-label="حفظ علامة الصفحة">☆</button></div>
       <main id="aqPaper" class="aq-paper" aria-label="صفحة القرآن"><div id="adVerses" class="aq-page-text"></div></main>
-      <div class="aq-folio"><span id="aqFolio" aria-label="رقم الصفحة"></span><button type="button" id="aqToggleTools" aria-label="إظهار أو إخفاء الأدوات">◉</button></div>
+      <div class="aq-folio"><span id="aqFolio" aria-label="رقم الصفحة"></span></div>
       <div class="aq-turn"><button type="button" id="aqPrevious" aria-label="الصفحة السابقة">‹ السابق</button><button type="button" id="aqPageNumber" aria-label="الانتقال إلى صفحة"></button><button type="button" id="aqNext" aria-label="الصفحة التالية">التالي ›</button></div>
       <label class="aq-slider" aria-label="تصفح صفحات المصحف"><input type="range" id="aqPageSlider" min="1" max="604" step="1" value="${state.page}" aria-label="رقم صفحة المصحف"></label>
       <p id="aqNotice" class="aq-notice" role="status" aria-live="polite"></p>
@@ -54,7 +54,7 @@
     </section>`;
     root=host.querySelector('#aqReader');root.tabIndex=-1;
     root.addEventListener('click',e=>{const b=e.target.closest('[data-qr-panel]');if(b)openPanel(b.dataset.qrPanel);});
-    $('aqCloseSheet').onclick=closeSheet;$('aqToggleTools').onclick=()=>immersive(!document.body.classList.contains('quran-reader-immersive'));
+    $('aqCloseSheet').onclick=closeSheet;
     $('aqPrevious').onclick=()=>go(state.page-1);$('aqNext').onclick=()=>go(state.page+1);
     $('aqPageNumber').onclick=()=>openPanel('index');
     $('aqPageSlider').oninput=e=>go(Number(e.target.value),undefined,false);
@@ -65,7 +65,7 @@
       clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId};
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
-      if(v)pressTimer=setTimeout(()=>{pointer=null;ignoreClickUntil=performance.now()+800;versePanel(Number(v.dataset.qrVerse));},550);
+      if(v)pressTimer=setTimeout(()=>{pointer=null;ignoreClickUntil=performance.now()+800;versePanel(Number(v.dataset.qrVerse));},400);
     });
     $('aqPaper').addEventListener('pointermove',e=>{
       if(!pointer||pointer.id!==e.pointerId)return;
@@ -81,7 +81,7 @@
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
     $('aqPaper').addEventListener('contextmenu',e=>e.preventDefault());
-    $('aqPaper').addEventListener('click',e=>{if(performance.now()<ignoreClickUntil||!$('aqSheet').hidden)return;const v=e.target.closest('[data-qr-verse]');if(v)versePanel(Number(v.dataset.qrVerse));else immersive(!document.body.classList.contains('quran-reader-immersive'));});
+    $('aqPaper').addEventListener('click',e=>{if(performance.now()<ignoreClickUntil||!$('aqSheet').hidden)return;immersive(!document.body.classList.contains('quran-reader-immersive'));});
     root.addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();if(!$('aqSheet').hidden)closeSheet();else immersive(false);return;}
       if(!$('aqSheet').hidden){if(e.key==='Escape'){e.preventDefault();closeSheet();}if(e.key==='Tab'){const f=[...$('aqSheet').querySelectorAll('button,input,select,textarea,a[href]')].filter(x=>!x.disabled&&x.offsetParent);const first=f[0],last=f.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}return;}
@@ -207,7 +207,7 @@
   }
 
   function settingsPanel(){
-    sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="42" value="${state.font}"></label><p>اضغط الآية لفتح خدماتها. لإظهار الأدوات أو إخفائها اضغط زر العين أسفل الورقة أو مساحة فارغة من الصفحة. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
+    sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="42" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
