@@ -126,8 +126,8 @@ const { spawn } = require('node:child_process');
       assert.equal(await row.getAttribute('class'), 'web-drawer-row');
       await row.click();
       assert.equal(await page.locator('#prayerServicePanel').isVisible(), true);
-      assert.equal(await page.locator('#adService').isVisible(), true);
       if(kind==='quran')await page.waitForSelector('#aqReader');
+      assert.equal(await page.locator('#adService').isVisible(), true);
       if(kind==='qibla')assert.equal(await page.locator('#adQiblaStart').isEnabled(),true);
       await page.locator('.web-back').click();
     }
