@@ -106,3 +106,4 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fff9ed!important;--qr-ink:#181510!important}
 body.quran-reader-open:has(#aqReader #aqSheet:not([hidden])) #webDrawerSub .web-sub-head{display:none!important}
 body.quran-reader-open #adService{min-height:100dvh!important}
+body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqBookmark{position:fixed!important;top:124px!important;left:8px!important;z-index:4!important;background:var(--qr-bar)!important;border-radius:7px!important;height:32px!important;line-height:32px!important}
