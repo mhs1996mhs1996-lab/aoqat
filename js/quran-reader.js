@@ -45,7 +45,7 @@
       <nav class="aq-top" aria-label="أدوات المصحف">${['index','wird','profile','settings'].map(barButton).join('')}</nav>
       <div class="aq-page-meta"><span id="aqSurahName"></span><span id="aqJuz"></span><button type="button" id="aqBookmark" aria-label="حفظ علامة الصفحة">☆</button></div>
       <main id="aqPaper" class="aq-paper" aria-label="صفحة القرآن"><div id="adVerses" class="aq-page-text"></div></main>
-      <div id="aqFolio" class="aq-folio" aria-label="رقم الصفحة"></div>
+      <div class="aq-folio"><span id="aqFolio" aria-label="رقم الصفحة"></span><button type="button" id="aqToggleTools" aria-label="إظهار أو إخفاء الأدوات">◉</button></div>
       <div class="aq-turn"><button type="button" id="aqPrevious" aria-label="الصفحة السابقة">‹ السابق</button><button type="button" id="aqPageNumber" aria-label="الانتقال إلى صفحة"></button><button type="button" id="aqNext" aria-label="الصفحة التالية">التالي ›</button></div>
       <label class="aq-slider" aria-label="تصفح صفحات المصحف"><input type="range" id="aqPageSlider" min="1" max="604" step="1" value="${state.page}" aria-label="رقم صفحة المصحف"></label>
       <p id="aqNotice" class="aq-notice" role="status" aria-live="polite"></p>
@@ -54,7 +54,7 @@
     </section>`;
     root=host.querySelector('#aqReader');root.tabIndex=-1;
     root.addEventListener('click',e=>{const b=e.target.closest('[data-qr-panel]');if(b)openPanel(b.dataset.qrPanel);});
-    $('aqCloseSheet').onclick=closeSheet;
+    $('aqCloseSheet').onclick=closeSheet;$('aqToggleTools').onclick=()=>immersive(!document.body.classList.contains('quran-reader-immersive'));
     $('aqPrevious').onclick=()=>go(state.page-1);$('aqNext').onclick=()=>go(state.page+1);
     $('aqPageNumber').onclick=()=>openPanel('index');
     $('aqPageSlider').oninput=e=>go(Number(e.target.value),undefined,false);
@@ -71,12 +71,12 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;pointer=null;
-      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;go(state.page+(dx>0?-1:1));}
+      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;go(state.page+(dx>0?1:-1));}
       else if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;ignoreClickUntil=performance.now()+500;});
     $('aqPaper').addEventListener('contextmenu',e=>e.preventDefault());
-    $('aqPaper').addEventListener('click',()=>{if(performance.now()<ignoreClickUntil||!$('aqSheet').hidden)return;immersive(!document.body.classList.contains('quran-reader-immersive'));});
+    $('aqPaper').addEventListener('click',e=>{if(performance.now()<ignoreClickUntil||!$('aqSheet').hidden)return;const v=e.target.closest('[data-qr-verse]');if(v)versePanel(Number(v.dataset.qrVerse));else immersive(!document.body.classList.contains('quran-reader-immersive'));});
     root.addEventListener('keydown',e=>{
       if(e.key==='Escape'){e.preventDefault();e.stopPropagation();if(!$('aqSheet').hidden)closeSheet();else immersive(false);return;}
       if(!$('aqSheet').hidden){if(e.key==='Escape'){e.preventDefault();closeSheet();}if(e.key==='Tab'){const f=[...$('aqSheet').querySelectorAll('button,input,select,textarea,a[href]')].filter(x=>!x.disabled&&x.offsetParent);const first=f[0],last=f.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}}return;}
@@ -107,8 +107,6 @@
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
-    items.forEach((v,n)=>{const mark=state.bookmarks.find(b=>b.i===start+n);if(mark){const el=root.querySelector('[data-qr-verse="'+(start+n)+'"]');el.style.setProperty('--qr-mark',markColors[mark.color]?.[1]||markColors.blue[1]);el.classList.add('aq-marked');}});
-    if(Number.isInteger(state.lastVerse))root.querySelector('[data-qr-verse="'+state.lastVerse+'"]')?.classList.add('aq-selected');
     root.dataset.page=state.page;root.dataset.theme=state.theme;
     fit();
     if(animate&&oldPage&&Math.abs(oldPage-state.page)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
@@ -116,8 +114,8 @@
       leaf.className='aq-leaf';leaf.setAttribute('aria-hidden','true');leaf.inert=true;
       oldText.removeAttribute('id');oldText.querySelectorAll('[data-qr-verse]').forEach(v=>{v.removeAttribute('data-qr-verse');v.removeAttribute('role');v.removeAttribute('tabindex');});
       const front=document.createElement('div'),back=document.createElement('div');front.className='aq-leaf-front';back.className='aq-leaf-back';front.append(oldText);leaf.append(front,back);paper.append(leaf);
-      leaf.style.transformOrigin=next?'right center':'left center';
-      const animation=leaf.animate([{transform:'rotateY(0deg)'},{transform:`rotateY(${next?-165:165}deg)`}],{duration:560,easing:'cubic-bezier(.3,.08,.3,1)',fill:'forwards'});
+      leaf.style.transformOrigin=next?'left center':'right center';
+      const animation=leaf.animate([{transform:'rotateY(0deg)'},{transform:`rotateY(${next?165:-165}deg)`}],{duration:560,easing:'cubic-bezier(.3,.08,.3,1)',fill:'forwards'});
       turnAnimation=animation;animation.finished.then(()=>{leaf.remove();if(turnAnimation===animation)turnAnimation=null;}).catch(()=>leaf.remove());
     }
   }
@@ -133,7 +131,7 @@
   }
   function sheet(title,html){
     request?.abort();request=null;returnFocus=document.activeElement;$('aqSheetTitle').textContent=title;$('aqSheetBody').innerHTML=html;$('aqSheet').hidden=false;
-    $('aqCloseSheet').focus();
+    $('aqSheet').dataset.kind=['ملفاتي','علامات','علامة مرجعية'].includes(title)?'personal':'full';$('aqCloseSheet').focus();
   }
   function closeSheet(){request?.abort();request=null;if($('aqSheet'))$('aqSheet').hidden=true;if(returnFocus?.isConnected&&root.contains(returnFocus))returnFocus.focus({preventScroll:true});else root?.focus({preventScroll:true});}
   function surahOptions(id=pageItems().some(v=>v.s===state.surah)?state.surah:pageItems()[0].s){return quran.map(s=>`<option value="${s.id}" ${s.id===id?'selected':''}>${s.id}. ${esc(s.name)}</option>`).join('');}
@@ -159,15 +157,19 @@
   }
   function bookmark(i){const v=verses[i];if(!v)return;const old=state.bookmarks.findIndex(b=>b.i===i);if(old>=0)state.bookmarks.splice(old,1);else {state.lastVerse=i;state.bookmarks.push({i,page:pageOf(i),label:`${v.name} · الآية ${v.a}`});}save();renderPage();notice(old>=0?'تم حذف العلامة':'تم حفظ العلامة في ملفاتي');}
   function versePanel(i){selected=i;const v=verses[i];sheet(`${v.name} · الآية ${v.a}`,`<p class="aq-quote">${esc(v.text)}</p><div class="aq-tools"><button type="button" id="aqVerseBookmark">علامة مرجعية</button><button type="button" id="aqVerseListen">استماع للآية</button><button type="button" id="aqVerseTafsir">التفسير الميسر</button><button type="button" id="aqVerseCopy">نسخ الآية</button></div><label>ملاحظة على الآية<textarea id="aqNote" rows="3" maxlength="2000">${esc(state.notes.find(n=>n.i===i)?.text||'')}</textarea></label><button type="button" id="aqSaveNote">حفظ الملاحظة</button><p id="aqVerseStatus" role="status"></p>`);
+    $('aqSheet').dataset.kind='verse';
+    const palette=document.createElement('div');palette.className='aq-mark-palette';
+    palette.innerHTML=Object.entries(markColors).map(([key,[name,color]])=>`<button type="button" data-mark-color="${key}" style="--qr-mark:${color}" aria-label="علامة مرجعية باللون ${name}"><span aria-hidden="true">⚑</span><small>${name}</small></button>`).join('');
+    $('aqSheetBody').append(palette);palette.querySelectorAll('[data-mark-color]').forEach(b=>b.onclick=()=>markPanel(i,b.dataset.markColor));
     $('aqVerseBookmark').onclick=()=>markPanel(i);$('aqVerseListen').onclick=()=>{closeSheet();startAudio(i);};$('aqVerseTafsir').onclick=()=>tafsirPanel(i);
     $('aqSaveNote').onclick=()=>{state.notes=state.notes.filter(n=>n.i!==i);const text=$('aqNote').value.trim();if(text)state.notes.push({i,text});save();$('aqVerseStatus').textContent=text?'تم حفظ الملاحظة':'تم حذف الملاحظة';};
     $('aqVerseCopy').onclick=async()=>{try{await navigator.clipboard.writeText(`${v.text} (${v.name}: ${v.a})`);if($('aqVerseStatus'))$('aqVerseStatus').textContent='تم نسخ الآية';}catch(_){if($('aqVerseStatus'))$('aqVerseStatus').textContent='تعذر النسخ؛ يمكنك تحديد النص ونسخه';}};
   }
 
-  function markPanel(i){
+  function markPanel(i,preset){
     const v=verses[i],old=state.bookmarks.find(b=>b.i===i);
     sheet('علامة مرجعية',`<p>${esc(v.name)} · الآية ${v.a}</p><label>لون العلامة<select id="aqMarkColor">${Object.entries(markColors).map(([key,[name]])=>`<option value="${key}">${name}</option>`).join('')}</select></label><label>اسم العلامة أو معنى اللون (اختياري)<input id="aqMarkLabel" maxlength="80" value="${esc(old?.purpose||'')}"></label><p>اختر اللون وحدّد معناه كما يناسبك.</p><button type="button" id="aqSaveMark">حفظ العلامة</button><p id="aqMarkStatus" role="status"></p>`);
-    $('aqMarkColor').value=markColors[old?.color]?old.color:'blue';
+    $('aqMarkColor').value=markColors[preset]?preset:markColors[old?.color]?old.color:'blue';
     $('aqSaveMark').onclick=()=>{const color=$('aqMarkColor').value,purpose=$('aqMarkLabel').value.trim();state.bookmarks=state.bookmarks.filter(b=>b.i!==i);state.bookmarks.push({i,page:pageOf(i),label:`${v.name} · الآية ${v.a}`,color,purpose});save();renderPage();$('aqMarkStatus').textContent='تم حفظ العلامة';};
   }
   function marksPanel(){
@@ -181,7 +183,7 @@
   }
 
   function settingsPanel(){
-    sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="42" value="${state.font}"></label><p>المس الصفحة لإخفاء الأدوات، والمسها مرة أخرى لإظهارها. اضغط مطوّلاً على الآية لخدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
+    sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="42" value="${state.font}"></label><p>اضغط الآية لفتح خدماتها. لإظهار الأدوات أو إخفائها اضغط زر العين أسفل الورقة أو مساحة فارغة من الصفحة. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
