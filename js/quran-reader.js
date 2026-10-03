@@ -6,13 +6,14 @@
   const icons=Object.fromEntries(Object.entries(paths).map(([k,d])=>[k,`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`]));
   const titles={index:'الفهرس',wird:'وردي',profile:'ملفاتي',settings:'الإعدادات',mushaf:'المصحف',search:'البحث',audio:'التلاوة',library:'المكتبة',more:'المزيد'};
   const readers=[['ar.alafasy','مشاري راشد العفاسي'],['ar.husary','محمود خليل الحصري'],['ar.minshawi','محمد صديق المنشاوي'],['ar.abdulbasitmurattal','عبد الباسط عبد الصمد']];
-  let state={page:1,theme:'sepia',font:36,reciter:'ar.alafasy',volume:80,goal:20,name:'',bookmarks:[],notes:[],days:{}};
+  let state={page:1,theme:'sepia',font:40,reciter:'ar.alafasy',volume:80,goal:20,name:'',bookmarks:[],notes:[],days:{}};
   try {Object.assign(state,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(_){}
   state.page=Math.max(1,Math.min(TOTAL,Math.floor(Number(state.page)||1)));
   state.theme=['sepia','white','night'].includes(state.theme)?state.theme:'sepia';
-  state.font=Math.max(22,Math.min(42,Number(state.font)||36));
+  state.font=Math.max(22,Math.min(42,Number(state.font)||40));
   if(!state.readingRevision && state.font===32)state.font=36;
-  state.readingRevision=2;
+  if(state.readingRevision===2 && state.font===36 && !state.fontCustomized)state.font=40;
+  state.readingRevision=3;
   state.goal=Math.max(1,Math.min(604,Math.floor(Number(state.goal)||20)));
   state.volume=Math.max(0,Math.min(100,Number(state.volume)||80));
   state.reciter=readers.some(r=>r[0]===state.reciter)?state.reciter:readers[0][0];
@@ -43,6 +44,7 @@
       <nav class="aq-top" aria-label="أدوات المصحف">${['index','wird','profile','settings'].map(barButton).join('')}</nav>
       <div class="aq-page-meta"><span id="aqSurahName"></span><span id="aqJuz"></span><button type="button" id="aqBookmark" aria-label="حفظ علامة الصفحة">☆</button></div>
       <main id="aqPaper" class="aq-paper" aria-label="صفحة القرآن"><div id="adVerses" class="aq-page-text"></div></main>
+      <div id="aqFolio" class="aq-folio" aria-label="رقم الصفحة"></div>
       <div class="aq-turn"><button type="button" id="aqPrevious" aria-label="الصفحة السابقة">‹ السابق</button><button type="button" id="aqPageNumber" aria-label="الانتقال إلى صفحة"></button><button type="button" id="aqNext" aria-label="الصفحة التالية">التالي ›</button></div>
       <label class="aq-slider" aria-label="تصفح صفحات المصحف"><input type="range" id="aqPageSlider" min="1" max="604" step="1" value="${state.page}" aria-label="رقم صفحة المصحف"></label>
       <p id="aqNotice" class="aq-notice" role="status" aria-live="polite"></p>
@@ -85,7 +87,6 @@
   }
   function immersive(on){
     document.body.classList.toggle('quran-reader-immersive',on);
-    fit();
   }
   function clearTurn(){turnAnimation?.cancel();turnAnimation=null;$('aqPaper')?.querySelector('.aq-leaf')?.remove();}
   function renderPage(animate=false){
@@ -101,7 +102,7 @@
     });html+='</p>';
     $('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
-    $('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
+    $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;
@@ -160,7 +161,7 @@
   }
   function settingsPanel(){
     sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="42" value="${state.font}"></label><p>المس الصفحة لإخفاء الأدوات، والمسها مرة أخرى لإظهارها. اضغط مطوّلاً على الآية لخدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
-    $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);save();fit();};
+    $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
   function wirdPanel(){

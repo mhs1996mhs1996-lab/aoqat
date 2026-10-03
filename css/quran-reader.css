@@ -82,10 +82,26 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-numb
 
 /* Reading mode and paper animation stay confined to the web Quran reader. */
 body.quran-reader-open.quran-reader-immersive #webDrawerSub .web-sub-head{display:none!important}
-body.quran-reader-open.quran-reader-immersive #webDrawerSub #prayerServicePanel #aqReader{height:100dvh!important;grid-template-rows:30px minmax(0,1fr)!important}
 body.quran-reader-open.quran-reader-immersive #webDrawerSub #prayerServicePanel #aqReader :is(.aq-top,.aq-bottom,.aq-turn,.aq-slider,.aq-notice){display:none!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-paper{position:relative!important;user-select:none!important;-webkit-user-select:none!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf{position:absolute!important;inset:0!important;z-index:2!important;pointer-events:none!important;transform-style:preserve-3d!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-front,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-back{position:absolute!important;inset:0!important;padding:8px 10px!important;display:flex!important;align-items:center!important;justify-content:center!important;background:var(--qr-bg)!important;backface-visibility:hidden!important;box-shadow:0 0 24px #0005!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-back{transform:rotateY(180deg)!important;background:linear-gradient(90deg,#0002,transparent 20%),var(--qr-bg)!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-front::after{content:""!important;position:absolute!important;inset:0!important;background:linear-gradient(90deg,#0002,transparent 12%,#fff1 75%,#0001)!important;pointer-events:none!important}
+
+/* Tools float above a single, permanently full-size sheet. Toggling never reflows scripture. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader{position:fixed!important;inset:0!important;height:100dvh!important;min-height:0!important;grid-template-rows:35px minmax(0,1fr) 30px!important}
+body.quran-reader-open #webDrawerSub .web-sub-head{position:fixed!important;inset:0 0 auto!important;height:58px!important;z-index:9!important;background:var(--qr-bar,#fff)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-meta{grid-row:1!important;font-family:AoqatQuran,serif!important;font-size:15px!important;border:1px solid var(--qr-line)!important;border-radius:10px!important;margin:3px 12px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-paper{grid-row:2!important;grid-column:1!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-folio{grid-row:3!important;text-align:center!important;font:16px AoqatQuran,serif!important;color:var(--qr-ink)!important;line-height:28px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-top,.aq-bottom,.aq-turn,.aq-slider,.aq-notice){position:absolute!important;left:0!important;right:0!important;z-index:4!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-top{top:58px!important;height:62px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-bottom{bottom:0!important;height:62px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-turn{bottom:108px!important;height:33px!important;background:var(--qr-bar)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-slider{bottom:82px!important;height:26px!important;background:var(--qr-bar)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-notice{bottom:62px!important;height:20px!important;background:var(--qr-bar)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-index:10!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{line-height:1.7!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fff9ed!important;--qr-ink:#181510!important}
+body.quran-reader-open:has(#aqReader #aqSheet:not([hidden])) #webDrawerSub .web-sub-head{display:none!important}
