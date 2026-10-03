@@ -74,7 +74,7 @@
         if(v.a===1){html+=`<h2 class="aq-surah-banner">سورة ${esc(v.name)}</h2>`;if(v.s!==1&&v.s!==9)html+=`<div class="aq-bismillah">${esc(quran[0].verses[0].text)}</div>`;}
         html+='<p class="aq-verses">';
       }
-      html+=`<span role="button" tabindex="0" data-qr-verse="${start+n}" class="aq-ayah${audioOn&&audioIndex===start+n?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}">${esc(v.text)} <span class="aq-ayah-number">﴿${arabic(v.a)}﴾</span></span> `;
+      html+=`<span role="button" tabindex="0" data-qr-verse="${start+n}" class="aq-ayah${audioOn&&audioIndex===start+n?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}">${esc(v.text)} <span class="aq-ayah-number">${arabic(v.a)}</span></span> `;
     });html+='</p>';
     $('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));

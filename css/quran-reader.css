@@ -75,3 +75,7 @@ body.quran-reader-open.design-menu-open #webDrawerSub #prayerServicePanel{max-he
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{font-family:Tahoma,Arial,sans-serif!important}
 /* The reader has its own visible back control; the floating settings toggle must not cover it. */
 body.quran-reader-open #designSideMenuBtn{display:none!important}
+/* Legacy drawer rules paint every child of a button white; reader tools inherit their own contrast. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader button *{color:inherit!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{color:var(--qr-ink)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{display:inline-block!important;border:1px solid #ad9563!important;border-radius:50%!important;min-width:1.45em!important;padding:0 .15em!important;line-height:1.4!important;text-align:center!important;vertical-align:middle!important}
