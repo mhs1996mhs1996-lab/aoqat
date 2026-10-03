@@ -105,3 +105,4 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-i
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{line-height:1.7!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fff9ed!important;--qr-ink:#181510!important}
 body.quran-reader-open:has(#aqReader #aqSheet:not([hidden])) #webDrawerSub .web-sub-head{display:none!important}
+body.quran-reader-open #adService{min-height:100dvh!important}
