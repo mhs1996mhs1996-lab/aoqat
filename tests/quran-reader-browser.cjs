@@ -6,7 +6,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  // Verify real HTMLAudio decoding independently from the remote CDN's availability.
  await page.route('https://cdn.islamic.network/quran/audio/**',r=>r.fulfill({path:'assets/audio/adhan-v124-1-short.mp3',contentType:'audio/mpeg'}));
  await page.route('https://api.alquran.cloud/v1/ayah/**',r=>r.fulfill({json:{code:200,data:{text:'تفسير تجريبي للفحص الآلي فقط'}}}));
- async function openQuran(){await page.waitForSelector('[data-drawer="quran"]',{state:'attached'});await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="quran"]').click();await page.waitForSelector('#aqReader');await page.evaluate(()=>document.fonts.ready);}
+ async function openQuran(){await page.waitForSelector('[data-drawer="quran"]',{state:'attached'});await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="quran"]').click();await page.waitForSelector('#aqReader[data-page]');await page.evaluate(()=>document.fonts.ready);}
  async function panel(kind){await page.locator(`[data-qr-panel="${kind}"]`).click();}
  async function jump(n){await panel('index');await page.locator('#aqJump').fill(String(n));await page.locator('#aqJumpForm button').click();await page.waitForFunction(n=>document.getElementById('aqReader').dataset.page===String(n),n);}
  await page.goto('http://127.0.0.1:8770',{waitUntil:'domcontentloaded'});await openQuran();assert.equal(await page.locator('[data-qr-panel]').count(),9);assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'1');assert.equal(await page.locator('[data-qr-verse]').count(),7);assert.equal(await page.locator('#aqPrevious').isDisabled(),true);

@@ -265,11 +265,11 @@
     $('aqSharePage').onclick=async()=>{const url=new URL(location.href);url.searchParams.set('quranPage',state.page);try{if(navigator.share)await navigator.share({title:'القرآن الكريم · صفحة '+state.page,url:url.href});else{await navigator.clipboard.writeText(url.href);if($('aqMoreStatus'))$('aqMoreStatus').textContent='تم نسخ رابط الصفحة';}}catch(e){if(e.name!=='AbortError'&&$('aqMoreStatus'))$('aqMoreStatus').textContent='تعذر مشاركة الرابط';}};
   }
   async function open(element){
-    host=element;const token=element;host.innerHTML='<p>تحميل المصحف…</p>';
+    host=element;const token=element;document.body.classList.add('quran-reader-open');shell();root.inert=true;notice('تحميل المصحف…');
     try{await load();if(host!==token||!token.isConnected)return;
       const url=new URL(location.href),shared=Number(url.searchParams.get('quranPage'));if(Number.isInteger(shared)&&shared>=1&&shared<=604){state.page=shared;save();url.searchParams.delete('quranPage');history.replaceState(history.state,'',url.href);}
-      document.body.classList.add('quran-reader-open');shell();renderPage();
-    }catch(_){if(host===token&&token.isConnected){host.innerHTML='<p>تعذر تحميل المصحف.</p><button type="button" id="aqRetry">إعادة المحاولة</button>';token.querySelector('#aqRetry').onclick=()=>open(token);}}
+      root.inert=false;renderPage();notice('');
+    }catch(_){if(host===token&&token.isConnected){root.inert=false;$('adVerses').innerHTML='<p>تعذر تحميل المصحف. اتصل بالإنترنت لأول تحميل.</p><button type="button" id="aqRetry">إعادة المحاولة</button>';$('aqRetry').onclick=()=>open(token);}}
   }
   function close(){save();clearTimeout(pressTimer);pointer=null;clearTurn();immersive(false);host=null;resize?.disconnect();request?.abort();request=null;stopAudio();document.body.classList.remove('quran-reader-open');}
   new MutationObserver(()=>{
@@ -283,4 +283,6 @@
   }).observe(document.body,{attributes:true,attributeFilter:['class']});
   const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css';document.head.appendChild(css);
   window.AoqatQuranReader={open,close};
+  // Load the packaged text before the user opens its menu; failures remain retryable.
+  load().catch(()=>{});
 })();

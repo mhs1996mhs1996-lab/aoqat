@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v13";
+const CACHE_NAME = "aoqat-pwa-v14";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -27,7 +27,23 @@ const APP_SHELL = [
   "/js/push-notifications.js",
   "/data/prayer-times.js",
   "/manifest.webmanifest",
-  "/assets/icons/app-icon.svg"
+  "/assets/icons/app-icon.svg",
+  "/data/prayer-times.js?v=5",
+  "/js/script.js?v=4",
+  "/js/export-toolbar.js?v=2",
+  "/js/exact-export.js?v=2",
+  "/js/modal-panels.js?v=9",
+  "/js/tomorrow-alarm.js?v=9",
+  "/js/push-notifications.js?v=9",
+  "/js/quran-reader.js",
+  "/js/iqama-timing.js?v=1",
+  "/js/prayer-countdown.js?v=15",
+  "/js/compact-design-menu.js?v=12",
+  "/js/web-theme-settings.js?v=4",
+  "/js/web-menu-order.js?v=22",
+  "/css/quran-reader.css",
+  "/assets/quran-pages.json",
+  "/assets/fonts/uthmanic-hafs.woff2"
 ];
 
 const PUSH_ACTION_URL="https://ytdvhiijxxaqofduorwm.supabase.co/functions/v1/push-action";

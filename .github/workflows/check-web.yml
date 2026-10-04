@@ -30,6 +30,7 @@ jobs:
           node tests/adhan-scheduled-browser.cjs
           node tests/adhan-sections-browser.cjs
           node tests/quran-reader-browser.cjs
+          node tests/quran-offline-browser.cjs
           node tests/iqama-native-browser.cjs
           node tests/design-persistence-browser.cjs
       - name: Upload web previews
