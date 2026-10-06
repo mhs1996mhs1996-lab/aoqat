@@ -99,6 +99,11 @@
   }
   function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   function pageHTML(page){
+    if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
+      if(line.s)return `<div class="aq-mushaf-line"><h2 class="aq-surah-banner">سورة ${esc(quran[line.s-1].name)}</h2></div>`;
+      if(line.b)return `<div class="aq-mushaf-line aq-centered"><span class="aq-line-ink">${esc(quran[0].verses[0].text)}</span></div>`;
+      return `<div class="aq-mushaf-line"><span class="aq-line-ink">${line.v.map(([i,start,end])=>{const v=verses[i],words=v.text.split(/\s+/);return `<span role="button" tabindex="0" data-qr-verse="${i}" class="aq-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}">${esc(words.slice(start,end).join(' '))}${end===words.length?` <span class="aq-ayah-number">${arabic(v.a)}</span>`:''}</span>`;}).join(' ')}</span></div>`;
+    }).join('');
     const items=pageItems(page),start=meta.pages[page-1].start;let html='',group=-1;
     items.forEach((v,n)=>{
       if(group!==v.s){if(group!==-1)html+='</p>';group=v.s;
@@ -148,6 +153,18 @@
   }
   function fitText(paper,text,page){
     const height=paper.clientHeight-20,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
+    if(page>2&&meta.lines?.[page-1]){
+      text.classList.add('aq-lined-page');text.style.height=height+'px';
+      const inks=[...text.querySelectorAll('.aq-line-ink')],rows=meta.lines[page-1].length;
+      const cached=fittedSizes.get(key);
+      if(Array.isArray(cached)){inks.forEach((ink,i)=>{ink.style.fontSize=cached[i][0]+'px';ink.style.transform='scaleX('+cached[i][1]+')';});return;}
+      inks.forEach(ink=>{ink.style.fontSize=state.font+'px';ink.style.transform='';});
+      const widths=inks.map(ink=>ink.scrollWidth);
+      const size=Math.min(state.font,height/rows/1.35,...widths.map(w=>state.font*width/Math.max(1,w)));
+      const sizes=inks.map((ink,i)=>{ink.style.fontSize=size+'px';const scale=ink.closest('.aq-centered')?1:width/Math.max(1,widths[i]*size/state.font);ink.style.transform='scaleX('+scale+')';return [size,scale];});
+      if(fittedSizes.size>12)fittedSizes.clear();fittedSizes.set(key,sizes);return;
+    }
+    text.classList.remove('aq-lined-page');text.style.height='';
     if(fittedSizes.has(key)){text.style.fontSize=fittedSizes.get(key)+'px';return;}
     let low=18,high=Math.round(state.font*2),best=18;
     // Binary search half-pixel sizes instead of repeatedly forcing layout for each step.
@@ -202,7 +219,7 @@
     $('aqSearch').oninput=()=>{searchLimit=60;draw();};$('aqMoreResults').onclick=()=>{searchLimit+=60;draw();};draw();$('aqSearch').focus();
   }
   function bookmark(i){const v=verses[i];if(!v)return;const old=state.bookmarks.findIndex(b=>b.i===i);if(old>=0)state.bookmarks.splice(old,1);else {state.lastVerse=i;state.bookmarks.push({i,page:pageOf(i),label:`${v.name} · الآية ${v.a}`});}save();renderPage();notice(old>=0?'تم حذف العلامة':'تم حفظ العلامة في ملفاتي');}
-  function versePanel(i){window.getSelection()?.removeAllRanges();root.querySelectorAll('.aq-selected').forEach(e=>e.classList.remove('aq-selected'));root.querySelector(`[data-qr-verse="${i}"]`)?.classList.add('aq-selected');selected=i;const v=verses[i];sheet(`${v.name} · الآية ${v.a}`,`<p class="aq-quote">${esc(v.text)}</p><div class="aq-tools"><button type="button" id="aqVerseBookmark">علامة مرجعية</button><button type="button" id="aqVerseListen">استماع للآية</button><button type="button" id="aqVerseTafsir">التفسير الميسر</button><button type="button" id="aqVerseCopy">نسخ الآية</button></div><label>ملاحظة على الآية<textarea id="aqNote" rows="3" maxlength="2000">${esc(state.notes.find(n=>n.i===i)?.text||'')}</textarea></label><button type="button" id="aqSaveNote">حفظ الملاحظة</button><p id="aqVerseStatus" role="status"></p>`);
+  function versePanel(i){window.getSelection()?.removeAllRanges();root.querySelectorAll('.aq-selected').forEach(e=>e.classList.remove('aq-selected'));root.querySelectorAll(`[data-qr-verse="${i}"]`).forEach(e=>e.classList.add('aq-selected'));selected=i;const v=verses[i];sheet(`${v.name} · الآية ${v.a}`,`<p class="aq-quote">${esc(v.text)}</p><div class="aq-tools"><button type="button" id="aqVerseBookmark">علامة مرجعية</button><button type="button" id="aqVerseListen">استماع للآية</button><button type="button" id="aqVerseTafsir">التفسير الميسر</button><button type="button" id="aqVerseCopy">نسخ الآية</button></div><label>ملاحظة على الآية<textarea id="aqNote" rows="3" maxlength="2000">${esc(state.notes.find(n=>n.i===i)?.text||'')}</textarea></label><button type="button" id="aqSaveNote">حفظ الملاحظة</button><p id="aqVerseStatus" role="status"></p>`);
     $('aqSheet').dataset.kind='verse';
     const palette=document.createElement('div');palette.className='aq-mark-palette';
     palette.innerHTML=Object.entries(markColors).map(([key,[name,color]])=>`<button type="button" data-mark-color="${key}" style="--qr-mark:${color}" aria-label="علامة مرجعية باللون ${name}"><span aria-hidden="true">⚑</span><small>${name}</small></button>`).join('');

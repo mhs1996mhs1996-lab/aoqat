@@ -1,3 +1,4 @@
+const fs=require('node:fs');
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const q=require('../assets/quran.json'),m=require('../assets/quran-pages.json');
 test('604 canonical pages partition all 6236 unchanged verses in order',()=>{
@@ -6,3 +7,10 @@ test('604 canonical pages partition all 6236 unchanged verses in order',()=>{
  assert.deepEqual(m.pages.slice(0,3).map(p=>verses[p.start]),[{s:1,a:1},{s:2,a:1},{s:2,a:6}]);assert.deepEqual(verses[m.pages[603].start],{s:112,a:1});
  assert.deepEqual(verses[m.juzs[1].start],{s:2,a:142});assert.deepEqual(verses[m.juzs[29].start],{s:78,a:1});
 });
+
+ test('canonical line layout preserves every original verse word once on its page',()=>{
+ const q=JSON.parse(fs.readFileSync('assets/quran.json')),m=JSON.parse(fs.readFileSync('assets/quran-pages.json')),v=q.flatMap(s=>s.verses),seen=v.map(()=>[]);
+ assert.equal(m.lines.length,604);
+ for(let p=0;p<604;p++)for(const line of m.lines[p])for(const [i,a,b] of line.v||[]){assert.ok(i>=m.pages[p].start&&i<(m.pages[p+1]?.start||6236));seen[i].push(...Array.from({length:b-a},(_,n)=>a+n));}
+ for(let i=0;i<v.length;i++)assert.deepEqual(seen[i],v[i].text.split(/\s+/).map((_,n)=>n));
+ });

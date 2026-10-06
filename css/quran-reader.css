@@ -144,3 +144,10 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-paper
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body .aq-quote{user-select:text!important;-webkit-user-select:text!important;-webkit-touch-callout:default!important}
 /* Slightly closer lines allow larger Hafs lettering while retaining the entire page. */
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text:not(.aq-opening){line-height:1.6!important}
+
+/* Canonical Mushaf lines occupy the complete reading sheet, independent of wrapping. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-lined-page{display:flex!important;flex-direction:column!important;justify-content:space-between!important;max-width:none!important;width:100%!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line{flex:1!important;min-height:0!important;display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;white-space:nowrap!important;line-height:1.35!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-line-ink{display:inline-block!important;flex:none!important;white-space:nowrap!important;text-align:right!important;transform-origin:center!important;line-height:1.35!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-surah-banner{width:100%!important;font-size:21px!important;margin:0!important;padding:0 25px!important;line-height:1.5!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-ayah-number{border:2px double #ad9563!important;border-radius:35%!important;font-size:.58em!important;min-width:1.2em!important;padding:0 .13em!important;line-height:1.35!important}
