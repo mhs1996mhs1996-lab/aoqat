@@ -42,7 +42,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await page.goto('http://127.0.0.1:8770/?quranPage=2',{waitUntil:'domcontentloaded'});await page.waitForSelector('#aqReader');assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'2');
  assert.ok(!page.url().includes('quranPage='));await jump(4);await page.reload({waitUntil:'domcontentloaded'});await openQuran();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'4');
  await page.locator('#aqPageSlider').evaluate(e=>{e.value='50';e.dispatchEvent(new Event('input',{bubbles:true}));});await page.reload({waitUntil:'domcontentloaded'});await openQuran();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'50');
- await page.locator('#aqPaper').click({position:{x:190,y:300}});const v=await page.locator('[data-qr-verse]').first().boundingBox();await page.mouse.move(v.x+v.width/2,v.y+v.height/2);await page.mouse.down();await page.waitForTimeout(450);await page.mouse.up();assert.equal(await page.locator('#aqNote').isVisible(),true);await page.locator('#aqCloseSheet').click();await page.keyboard.press('Escape');
+ await page.locator('#aqPaper').click({position:{x:190,y:300}});const v=await page.locator('[data-qr-verse]').first().boundingBox();await page.mouse.move(v.x+v.width/2,v.y+v.height/2);await page.mouse.down();await page.waitForTimeout(450);await page.mouse.up();assert.equal(await page.locator('#aqNote').isVisible(),true);
+ assert.equal(await page.evaluate(()=>getSelection().toString()),'','opening verse actions must not select their heading');
+ assert.equal(await page.locator('#aqSheet h3').evaluate(e=>getComputedStyle(e).userSelect),'none');
+ assert.equal(await page.locator('#aqSheet .aq-quote').evaluate(e=>getComputedStyle(e).userSelect),'text','verse text remains selectable in its service sheet');
+ await page.locator('#aqSheet .aq-quote').evaluate(e=>{const range=document.createRange();range.selectNodeContents(e);getSelection().addRange(range);});
+ assert.ok(await page.evaluate(()=>getSelection().toString().length>0));await page.locator('#aqCloseSheet').click();await page.keyboard.press('Escape');
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#aqNext').click();assert.equal(await page.locator('.aq-leaf').count(),0);
  assert.deepEqual(errors,[]);
  console.log('Quran page turns, 9 working tools, search, actual audio decoding, tafsir routing, notes, bookmarks, wird, persistence, responsive page fit and shared page passed');

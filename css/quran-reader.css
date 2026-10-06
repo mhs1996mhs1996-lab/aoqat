@@ -138,3 +138,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-paper{per
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf{transform-style:flat!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-front{backface-visibility:visible!important;box-shadow:none!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-leaf-front::after{display:none!important}
+
+/* Keep the initial verse hold separate from Android text-selection controls. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-paper,.aq-paper *,.aq-sheet>header,.aq-sheet>header *,button,button *){user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet-body .aq-quote{user-select:text!important;-webkit-user-select:text!important;-webkit-touch-callout:default!important}
+/* Slightly closer lines allow larger Hafs lettering while retaining the entire page. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text:not(.aq-opening){line-height:1.6!important}
