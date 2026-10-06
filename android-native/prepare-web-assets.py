@@ -17,6 +17,7 @@ transform('quran-reader.js',[
  ("fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();})",'Promise.resolve().then(()=>JSON.parse(window.AndroidNative.readQuranAsset("quran.json")))'),
  ("fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();})",'Promise.resolve().then(()=>JSON.parse(window.AndroidNative.readQuranAsset("quran-pages.json")))')])
 transform('adhan-settings.js',[
+ ('panel.querySelectorAll("[data-setting]")', 'document.querySelectorAll("#adhanPanel [data-setting], #prayerServicePanel [data-setting]")'),
  ('if (!native) { $("adServiceMenu").hidden=true;', 'if (servicePanel) { $("adServiceMenu").hidden=true;'),
  ('...(native ? [["services", "✨", "الخدمات"]] : [])','...[]'),
  ('if (!native && servicePanel)', 'if (servicePanel)'),
