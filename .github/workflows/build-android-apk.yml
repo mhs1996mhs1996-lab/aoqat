@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - 'android-native/**'
+      - 'tests/apk-services-browser.cjs'
+      - '.github/workflows/build-android-apk.yml'
 
 permissions:
   contents: read
