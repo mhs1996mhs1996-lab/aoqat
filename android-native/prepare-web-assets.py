@@ -10,7 +10,7 @@ def transform(name,changes):
         text=text.replace(old,new)
     path=target/'js'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text)
 transform('web-menu-order.js',[
- ('...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])','["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"],["widget","📱","الصلاة القادمة على الهاتف"]'),
+ ('...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])','["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]'),
  ('["quran","qibla","azkar"].includes(id)','["quran","qibla","azkar","widget"].includes(id)')])
 transform('quran-reader.js',[
  ('  if (window.AndroidNative?.configureAdhan) return;',''),

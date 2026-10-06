@@ -20,7 +20,8 @@
   state.reciter=readers.some(r=>r[0]===state.reciter)?state.reciter:readers[0][0];
   for(const key of ['bookmarks','notes'])if(!Array.isArray(state[key]))state[key]=[];
   if(!state.days || typeof state.days!=='object' || Array.isArray(state.days))state.days={};
-  let root,host,quran,meta,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0;
+  let root,host,quran,meta,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0,dragFrame=0,warmTask=0;
+  const fittedSizes=new Map();
   const $=id=>root?.querySelector('#'+id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const arabic=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
   const plain=s=>String(s).normalize('NFKD').replace(/[\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g,'').replace(/[ٱأإآ]/g,'ا').replace(/ى/g,'ي');
@@ -71,7 +72,7 @@
       if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
       if(Math.hypot(dx,dy)>12)clearTimeout(pressTimer);
-      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4){dragOffset=dx;previewDrag(dx);}
+      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4){dragOffset=dx;if(!dragFrame)dragFrame=requestAnimationFrame(()=>{dragFrame=0;if(pointer)previewDrag(dragOffset);});}
     });
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
@@ -90,12 +91,12 @@
       if(e.key==='ArrowLeft'){e.preventDefault();go(state.page+1);}if(e.key==='ArrowRight'){e.preventDefault();go(state.page-1);}if((e.key==='Enter'||e.key===' ')&&e.target.dataset.qrVerse){e.preventDefault();versePanel(Number(e.target.dataset.qrVerse));}
     });
     resize?.disconnect();resize=new ResizeObserver(()=>fit());resize.observe($('aqPaper'));
-    document.fonts?.ready.then(()=>{if(root?.isConnected)fit();});
+    document.fonts?.ready.then(()=>{fittedSizes.clear();if(root?.isConnected){fit();warmAdjacent();}});
   }
   function immersive(on){
     document.body.classList.toggle('quran-reader-immersive',on);
   }
-  function clearTurn(){turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
+  function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   function pageHTML(page){
     const items=pageItems(page),start=meta.pages[page-1].start;let html='',group=-1;
     items.forEach((v,n)=>{
@@ -114,7 +115,7 @@
     let leaf=paper.querySelector('.aq-drag-preview');
     if(!leaf||Number(leaf.dataset.target)!==target){
       leaf?.remove();leaf=document.createElement('div');leaf.className='aq-leaf aq-drag-preview';leaf.dataset.target=target;leaf.setAttribute('aria-hidden','true');leaf.inert=true;
-      const front=document.createElement('div');front.className='aq-leaf-front';const text=$('adVerses').cloneNode(false);text.innerHTML=pageHTML(target);text.classList.toggle('aq-opening',target<=2);inertText(text);text.style.transform='';front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text);
+      const front=document.createElement('div');front.className='aq-leaf-front';const text=$('adVerses').cloneNode(false);text.innerHTML=pageHTML(target);text.classList.toggle('aq-opening',target<=2);inertText(text);text.style.transform='';front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,target);
     }
     const offset=Math.max(-width,Math.min(width,dx));$('adVerses').style.transform='translateX('+offset+'px)';leaf.style.transform='translateX('+(offset+(dx>0?-width:width))+'px)';
   }
@@ -128,7 +129,7 @@
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;
-    fit();
+    fit();warmAdjacent();
     if(animate&&oldPage&&Math.abs(oldPage-state.page)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       const next=state.page>oldPage,paper=$('aqPaper'),leaf=document.createElement('div');
       leaf.className='aq-leaf';leaf.setAttribute('aria-hidden','true');leaf.inert=true;
@@ -142,11 +143,31 @@
   }
   function fit(){
     const paper=$('aqPaper'),text=$('adVerses');if(!paper||!text||paper.clientHeight<1)return;
-    fitText(paper,text);
+    fitText(paper,text,state.page);
   }
-  function fitText(paper,text){
-    let size=state.font;text.style.fontSize=size+'px';
-    while(size>9&&(text.scrollHeight>paper.clientHeight-20||text.scrollWidth>paper.clientWidth-20)){size-=.5;text.style.fontSize=size+'px';}
+  function fitText(paper,text,page){
+    const height=paper.clientHeight-20,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
+    if(fittedSizes.has(key)){text.style.fontSize=fittedSizes.get(key)+'px';return;}
+    let low=18,high=Math.round(state.font*2),best=18;
+    // Binary search half-pixel sizes instead of repeatedly forcing layout for each step.
+    while(low<=high){const mid=(low+high)>>1;text.style.fontSize=mid/2+'px';
+      if(text.scrollHeight<=height&&text.scrollWidth<=width){best=mid;low=mid+1;}else high=mid-1;}
+    const size=best/2;text.style.fontSize=size+'px';
+    if(fittedSizes.size>12)fittedSizes.clear();fittedSizes.set(key,size);
+  }
+  function warmAdjacent(){
+    clearTimeout(warmTask);
+    const current=state.page;
+    warmTask=setTimeout(()=>{
+      const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
+      for(const page of [current+1,current-1]){
+        if(page<1||page>TOTAL)continue;
+        const leaf=document.createElement('div');leaf.className='aq-leaf';leaf.style.visibility='hidden';leaf.inert=true;
+        const front=document.createElement('div');front.className='aq-leaf-front';
+        const text=$('adVerses').cloneNode(false);text.removeAttribute('id');text.innerHTML=pageHTML(page);text.classList.toggle('aq-opening',page<=2);text.style.transform='';
+        front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,page);leaf.remove();
+      }
+    },300);
   }
   function go(page,highlight,animate=true){
     if(!Number.isInteger(page)||page<1||page>604){notice('اختر صفحة من 1 إلى 604');return;}
@@ -271,7 +292,7 @@
       root.inert=false;renderPage();notice('');
     }catch(_){if(host===token&&token.isConnected){root.inert=false;$('adVerses').innerHTML='<p>تعذر تحميل المصحف. اتصل بالإنترنت لأول تحميل.</p><button type="button" id="aqRetry">إعادة المحاولة</button>';$('aqRetry').onclick=()=>open(token);}}
   }
-  function close(){save();clearTimeout(pressTimer);pointer=null;clearTurn();immersive(false);host=null;resize?.disconnect();request?.abort();request=null;stopAudio();document.body.classList.remove('quran-reader-open');}
+  function close(){clearTimeout(warmTask);save();clearTimeout(pressTimer);pointer=null;clearTurn();immersive(false);host=null;resize?.disconnect();request?.abort();request=null;stopAudio();document.body.classList.remove('quran-reader-open');}
   new MutationObserver(()=>{
     if(!host || !root?.isConnected)return;
     if(!document.body.classList.contains('design-menu-open')){

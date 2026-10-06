@@ -5,7 +5,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await page.goto('http://127.0.0.1:8771',{waitUntil:'domcontentloaded'});
  await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;});
  await page.waitForFunction(()=>navigator.serviceWorker.controller);
- await page.evaluate(async()=>{const c=await caches.open('aoqat-pwa-v15');for(const path of ['/js/quran-reader.js','/assets/quran.json','/assets/quran-pages.json','/assets/fonts/uthmanic-hafs.woff2','/js/web-menu-order.js?v=22'])if(!await c.match(path))throw Error('Missing cached resource: '+path);});
+ await page.evaluate(async()=>{const c=await caches.open('aoqat-pwa-v16');for(const path of ['/js/quran-reader.js','/assets/quran.json','/assets/quran-pages.json','/assets/fonts/uthmanic-hafs.woff2','/js/web-menu-order.js?v=22'])if(!await c.match(path))throw Error('Missing cached resource: '+path);});
  // First Quran visit and subsequent reload both work without any network.
  await context.setOffline(true);await page.reload({waitUntil:'domcontentloaded'});
  await page.waitForSelector('[data-drawer="quran"]',{state:'attached'});await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="quran"]').click();
