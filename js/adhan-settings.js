@@ -275,7 +275,7 @@
        ]
          .map(
            ([v, i, l]) =>
-             `<button type="button" data-prayer="${id}" data-mode="${v}" class="${state.modes[id] === v ? "selected" : ""}" aria-label="${names[id]} ${l}" aria-pressed="${state.modes[id] === v}">${i}</button>`,
+             `<button type="button" data-prayer="${id}" data-mode="${v}" class="${state.modes[id] === v ? "selected" : ""}" aria-label="${names[id]} ${l}" aria-pressed="${state.modes[id] === v}">${i}<small>${v === "sound" ? "صوت" : v === "vibrate" ? "هزاز" : "صامت"}</small></button>`,
          )
          .join("")}</div></div>`,
    )
@@ -322,6 +322,7 @@
         openSection=openSection===button.dataset.adSection ? "" : button.dataset.adSection;
         if(openSection!=="services")stopServiceSensors();
         syncSections();
+        if(openSection==="modes")requestAnimationFrame(()=>$("adSection-modes").scrollIntoView({block:"start",behavior:"auto"}));
         if(openSection==="services" && service)showService(service);
       };
     });

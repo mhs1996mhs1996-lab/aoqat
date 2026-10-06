@@ -300,3 +300,12 @@ body.design-menu-open .sidebar #webDrawerSub :is(#adhanPanel, #prayerServicePane
     padding: 8px;
   }
 }
+
+/* Keep the per-prayer mode entry and its three choices readable in narrow drawers. */
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-section-menu [data-ad-section="modes"]{grid-column:1 / -1!important;min-height:58px!important}
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel .ad-section-menu [data-ad-section="modes"] span{width:auto!important;min-width:0!important;white-space:normal!important}
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes{scroll-margin-top:112px}
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes .ad-mode{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes .ad-mode>div{display:flex!important;gap:6px!important;flex:1!important}
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes [data-mode]{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-width:48px!important;flex:1!important;padding:8px 3px!important}
+body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes [data-mode] small{font-size:12px!important;line-height:1.5!important;color:inherit!important}
