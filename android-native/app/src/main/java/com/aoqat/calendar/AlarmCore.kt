@@ -125,6 +125,7 @@ object IqamaNativeScheduler {
         val after = try { org.json.JSONObject(afterMinutes) } catch (_: Exception) { org.json.JSONObject() }
         prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString())
             .putString("afterMinutes", after.toString()).commit()
+        AdhanSchedule.schedule(context)
         if (!enabled) {
             cancel(context)
             IqamaPersistentNotification.hide(context)

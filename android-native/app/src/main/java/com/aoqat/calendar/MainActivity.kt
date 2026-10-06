@@ -573,8 +573,9 @@ class MainActivity : Activity() {
             try {
                 val settings=org.json.JSONObject(json)
                 if(settings.optBoolean("enabled") || settings.optBoolean("persistent")) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
-                if(settings.optInt("afterSilent")>0 && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
+                if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
                     settings.put("afterSilent",0)
+                    settings.optJSONObject("afterIqamaSilent")?.put("enabled",false)
                     startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
                     webView.evaluateJavascript("window.aoqatAdhanStatus?.('امنح إذن التحكم بوضع الصامت ثم حدّد المدة مرة أخرى')",null)
                 }
@@ -587,6 +588,10 @@ class MainActivity : Activity() {
                 if(settings.toString()!=org.json.JSONObject(json).toString())webView.evaluateJavascript("window.aoqatNativeAdhanSettings?.("+settings.toString()+")",null)
             } catch(e:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ إعدادات الأذان",Toast.LENGTH_LONG).show()}
         } }
+        @JavascriptInterface fun readQuranAsset(name:String):String {
+            if (name !in listOf("quran.json", "quran-pages.json")) return "null"
+            return assets.open("www/assets/$name").bufferedReader().use { it.readText() }
+        }
         @JavascriptInterface fun readPrayerRows():String = PrayerTimes.rows(this@MainActivity).toString()
         @JavascriptInterface fun cachePrayerRows(json:String){AdhanSchedule.storeRows(this@MainActivity,json)}
         @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}

@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 62 // Correct cached prayer display and scrollable settings
-        versionName '1.27'
+        versionCode 63 // Integrate tested services and Quran reader in Android
+        versionName '1.28'
     }
 
     compileOptions {
@@ -67,8 +67,8 @@ tasks.register('syncWebAssets', Sync) {
     into(webAssetDir)
 
     doLast {
-        // Keep the installed v1.25 controls while the new web layout is under review.
-        copy { from(file("$apkOverrideRoot/adhan-settings.js")); into(file("$webAssetDir/js")) }
+        // Integrate tested web services without modifying the hosted web build.
+        exec { commandLine 'python3', file("$rootProject.projectDir/prepare-web-assets.py"), webAssetDir }
 
         def indexFile = file("$webAssetDir/index.html")
         if (indexFile.exists()) {

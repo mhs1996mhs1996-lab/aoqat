@@ -57,7 +57,7 @@ object AdhanSchedule {
         if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).commit()
         prefs(c).edit().putString("settings", s.toString()).commit()
         if (!s.optBoolean("enabled")) c.stopService(Intent(c, AdhanPlaybackService::class.java))
-        if (!s.optBoolean("enabled") || s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
+        if (!s.optBoolean("enabled") || (s.optInt("afterSilent",0)==0 && s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true)) AdhanPlaybackService.restoreRinger(c)
         schedule(c)
         if (s.optBoolean("persistent")) NextPrayerService.start(c) else c.stopService(Intent(c, NextPrayerService::class.java))
         PrayerWidget.update(c)
@@ -85,8 +85,11 @@ object AdhanSchedule {
     @Synchronized fun schedule(c: Context) {
         val s = settings(c); val now = System.currentTimeMillis(); val events = PrayerTimes.events(c)
         // Fixed slots are replaced/cancelled on every settings edit, not accumulated.
-        for (i in 0..39) { cancel(c, 60000 + i, "PLAY"); cancel(c, 60100 + i, "REMINDER"); cancel(c, 60200 + i, "SUHOOR") }
+        for (i in 0..39) { cancel(c, 60000 + i, "PLAY"); cancel(c, 60100 + i, "REMINDER"); cancel(c, 60200 + i, "SUHOOR"); cancel(c,60500+i,"IQAMA_QUIET") }
         for ((i,p) in events.withIndex()) if (i < 40 && s.optBoolean("enabled", false)) {
+            AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let { (start,end) ->
+                if (end>now) alarm(c,60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
+            }
             val mode = s.optJSONObject("modes")?.optString(if (p.friday) "friday" else p.id, "sound") ?: "sound"
             val due = now-p.at in 0L until 120000L && p.at >= prefs(c).getLong("enabledAt",0) && !delivered(c,p)
             if (mode != "silent" && (p.at > now || due)) alarm(c, 60000+i, "PLAY", maxOf(p.at,now+100), p)
@@ -126,7 +129,8 @@ class AdhanReceiver : BroadcastReceiver() {
                 if(screen)n.setCategory(Notification.CATEGORY_ALARM).setFullScreenIntent(PendingIntent.getActivity(c,if(intent.action=="SUHOOR")60422 else 60421,Intent(c,AdhanScreenActivity::class.java).putExtra("reminderMessage","$title • $prayer"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),true)
                 nm.notify(if(intent.action=="SUHOOR")60402 else 60401,n.build())
             }
-            "RESTORE_SOUND" -> AdhanPlaybackService.restoreRinger(c)
+            "IQAMA_QUIET" -> AfterIqamaQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
+            "RESTORE_SOUND" -> AdhanPlaybackService.restoreRingerIfExpired(c)
             "REFRESH" -> { AdhanSchedule.schedule(c); val pending=goAsync(); Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start() }
             "NEXT" -> { PrayerWidget.update(c); if(AdhanSchedule.settings(c).optBoolean("persistent"))NextPrayerService.start(c); AdhanSchedule.schedule(c) }
         }
