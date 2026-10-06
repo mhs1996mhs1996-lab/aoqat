@@ -220,28 +220,11 @@ function initPrayerTimes() {
     });
 
 
-    $("fajr").value =
-        "4:17";
-
-
-    $("sunrise").value =
-        "5:39";
-
-
-    $("dhuhr").value =
-        "12:10";
-
-
-    $("asr").value =
-        "3:50";
-
-
-    $("maghrib").value =
-        "6:37";
-
-
-    $("isha").value =
-        "7:57";
+    // Leave timings unset until the correct day's database/cache row is loaded.
+    ["fajr","sunrise","dhuhr","asr","maghrib","isha"].forEach(id=>{
+        const option=document.createElement("option");option.value="";option.textContent="--:--";
+        $(id).prepend(option);$(id).value="";
+    });
 
 }
 

@@ -58,15 +58,7 @@
 
   async function fetchAnnualPrayer(month,day){
     if(typeof SUPABASE_URL==="undefined"||typeof dbHeaders!=="function") return null;
-    const url=new URL(`${SUPABASE_URL}/rest/v1/annual_prayer_times`);
-    url.searchParams.set("select","*");
-    url.searchParams.set("gregorian_month",`eq.${month}`);
-    url.searchParams.set("gregorian_day",`eq.${day}`);
-    url.searchParams.set("limit","1");
-    const response=await fetch(url,{headers:dbHeaders()});
-    if(!response.ok) return null;
-    const rows=await response.json();
-    return rows[0]||null;
+    return readAnnualPrayer(month,day);
   }
 
   function parseIshaMinutes(value){

@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 61 // Repair scheduled adhan delivery
-        versionName '1.26'
+        versionCode 62 // Correct cached prayer display and scrollable settings
+        versionName '1.27'
     }
 
     compileOptions {

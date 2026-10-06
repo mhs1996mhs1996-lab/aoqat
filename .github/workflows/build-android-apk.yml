@@ -34,7 +34,7 @@ jobs:
           base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
       - name: Check prayer timing and web settings
-        run: node --test tests/adhan-core.test.cjs
+        run: node --test tests/adhan-core.test.cjs tests/prayer-cache.test.cjs
 
       - name: Build debug APK
         run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
@@ -42,7 +42,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.26-build61
+          name: aoqat-android-v1.27-build62
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
