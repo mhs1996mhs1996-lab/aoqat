@@ -35,6 +35,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDays').isVisible(),false);assert.equal(await page.locator('#paDeleteRow').isVisible(),false);
    await page.locator('#paRepeat').selectOption('days');assert.equal(await page.locator('#paDays').isVisible(),true);
    const days=await page.locator('#paDays').boundingBox();assert.ok(days.height<140,JSON.stringify(days));
+   const focusedHeader=await page.locator('#adhanServicesBack').boundingBox();assert.ok(focusedHeader.y>=0&&focusedHeader.y+focusedHeader.height<=80,JSON.stringify(focusedHeader));
+   assert.equal(await page.locator('#adhanServicesDialog').evaluate(e=>e.scrollTop),0);
    await page.screenshot({path:'/tmp/aoqat-adhan-modal-'+(native?'apk':'web')+'.png'});
    await page.locator('#paRepeat').selectOption('once');assert.equal(await page.locator('#paDays').isVisible(),false);assert.equal(await page.locator('#paDeleteRow').isVisible(),true);
    await page.locator('#paDuration').fill('7');await page.locator('#paSave').click();
