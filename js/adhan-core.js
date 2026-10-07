@@ -106,6 +106,13 @@
     }
     return out.sort((a, b) => a.at - b.at);
   }
+  function displayDate(rows, now = new Date()) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const row = rows.find(r => +r.gregorian_month === date.getMonth() + 1 && +r.gregorian_day === date.getDate());
+    const isha = minutes(row?.isha, "isha");
+    if (isha !== null && +now >= +date + (isha + 35) * 60000) date.setDate(date.getDate() + 1);
+    return date;
+  }
   function afterIqamaSilentWindow(rows, now, settings, iqamaMinutes = {}) {
     const s = normalize(settings);
     if (!s.enabled || !s.afterIqamaSilent.enabled) return null;
@@ -131,7 +138,7 @@
     active.sort((a, b) => b.start - a.start);
     return { ...active[0], end: Math.max(...active.map((w) => w.end)) };
   }
-  const api = { ids, minutes, defaults, normalize, events, afterIqamaSilentWindow };
+  const api = { ids, minutes, defaults, normalize, events, displayDate, afterIqamaSilentWindow };
   root.AoqatAdhanCore = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof window === "undefined" ? globalThis : window);

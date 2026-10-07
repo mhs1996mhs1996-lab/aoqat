@@ -112,3 +112,16 @@ test("silent window can cross midnight without starting at adhan or resetting on
   assert.equal(w.end, +new Date(2026, 9, 3, 0, 15));
   assert.equal(C.afterIqamaSilentWindow(rows, new Date(2026, 9, 3, 0, 15), s, { isha: 15 }), null);
 });
+
+test("services display switches at database Isha plus 35 minutes without shifting alarms", () => {
+  const rows = [{gregorian_month:10,gregorian_day:7,isha:"7:05",fajr:"4:49"},{gregorian_month:10,gregorian_day:8,isha:"7:04",fajr:"4:50"}];
+  const before = new Date(2026,9,7,19,39,59), after = new Date(2026,9,7,19,40);
+  assert.equal(C.displayDate(rows,before).getDate(),7);
+  assert.equal(C.displayDate(rows,after).getDate(),8);
+  assert.equal(C.displayDate(rows,new Date(2026,9,8,0,1)).getDate(),8);
+  assert.equal(C.displayDate(rows,new Date(2026,9,8,4,0)).getDate(),8);
+  assert.equal(C.events(rows,after).find(e=>e.id==='fajr'&&e.at>+after).at,+new Date(2026,9,8,4,50));
+  assert.equal(C.displayDate([{gregorian_month:12,gregorian_day:31,isha:'19:00'}],new Date(2026,11,31,19,35)).getFullYear(),2027);
+  assert.equal(C.displayDate([],after).getDate(),7);
+  assert.equal(C.displayDate([{gregorian_month:10,gregorian_day:7,isha:'invalid'}],after).getDate(),7);
+});

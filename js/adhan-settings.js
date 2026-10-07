@@ -423,6 +423,7 @@
   }
   function tick() {
     const now = new Date(),
+      displayDate = C.displayDate(rows, now),
       ev = C.events(rows, now),
       next = ev.find((e) => e.at > now.getTime());
     if ($("adNext"))
@@ -441,17 +442,17 @@
     }
     if ($("adDates"))
       $("adDates").textContent =
-        new Intl.DateTimeFormat("ar-IQ", { dateStyle: "full" }).format(now) +
+        new Intl.DateTimeFormat("ar-IQ", { dateStyle: "full" }).format(displayDate) +
         " • " +
         new Intl.DateTimeFormat("ar-SA-u-ca-islamic", {
           day: "numeric",
           month: "long",
           year: "numeric",
-        }).format(now);
+        }).format(displayDate);
     const row = rows.find(
       (r) =>
-        +r.gregorian_month === now.getMonth() + 1 &&
-        +r.gregorian_day === now.getDate(),
+        +r.gregorian_month === displayDate.getMonth() + 1 &&
+        +r.gregorian_day === displayDate.getDate(),
     );
     if ($("adTimes"))
       $("adTimes").innerHTML = [
