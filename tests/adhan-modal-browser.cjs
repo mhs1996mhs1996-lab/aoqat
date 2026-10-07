@@ -25,6 +25,8 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    assert.equal(await page.locator('#adhanServicesDialog').isVisible(),true);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>[...e.querySelectorAll('.design-popup-close')].some(b=>b.getClientRects().length)),false);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>e.closest('#adhanServicesDialog')!==null),true);
+   for(const id of ['adEnable','paMaster'])assert.equal(await page.locator('#'+id).evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(39, 128, 82)');
+   await page.locator('#paMaster').click();assert.equal(await page.locator('#paMaster').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(133, 142, 139)');await page.locator('#paMaster').click();
    for(const size of [{width:320,height:640},{width:390,height:740},{width:430,height:860}]){
     await page.setViewportSize(size);
     const layout=await page.locator('#adhanServicesDialog').evaluate(e=>{const r=e.getBoundingClientRect(),p=document.getElementById('adhanPanel'),b=document.getElementById('adhanServicesBody');return {x:r.x,y:r.y,w:r.width,h:r.height,overflow:b.scrollWidth>b.clientWidth+1,panelOverflow:p.scrollWidth>p.clientWidth+1,font:getComputedStyle(document.getElementById('adEnable')).fontSize}});
