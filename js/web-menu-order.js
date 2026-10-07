@@ -38,7 +38,7 @@
       document.body.appendChild(dialog);
       dialog.querySelector("#adhanServicesBack").onclick=closeAdhanServices;
       dialog.addEventListener("keydown",e=>{
-        if(e.key==="Escape"){e.preventDefault();closeAdhanServices();}
+        if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAdhanServices();}
         if(e.key!=="Tab")return;
         const controls=[...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)')].filter(el=>el.getClientRects().length);
         const first=controls[0],last=controls.at(-1);
