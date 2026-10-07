@@ -23,6 +23,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="adhanIqama"]').click();
    await page.getByRole('button',{name:'🔊 الأذان والخدمات',exact:true}).click();
    assert.equal(await page.locator('#adhanServicesDialog').isVisible(),true);
+   assert.equal(await page.locator('#adhanPanel').evaluate(e=>[...e.querySelectorAll('.design-popup-close')].some(b=>b.getClientRects().length)),false);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>e.closest('#adhanServicesDialog')!==null),true);
    for(const size of [{width:320,height:640},{width:390,height:740},{width:430,height:860}]){
     await page.setViewportSize(size);
@@ -32,6 +33,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDays').isVisible(),false);assert.equal(await page.locator('#paDeleteRow').isVisible(),false);
    await page.locator('#paRepeat').selectOption('days');assert.equal(await page.locator('#paDays').isVisible(),true);
    const days=await page.locator('#paDays').boundingBox();assert.ok(days.height<140,JSON.stringify(days));
+   await page.screenshot({path:'/tmp/aoqat-adhan-modal-'+(native?'apk':'web')+'.png'});
    await page.locator('#paRepeat').selectOption('once');assert.equal(await page.locator('#paDays').isVisible(),false);assert.equal(await page.locator('#paDeleteRow').isVisible(),true);
    await page.locator('#paDuration').fill('7');await page.locator('#paSave').click();
    await page.locator('#adhanServicesBody').evaluate(e=>e.scrollTop=e.scrollHeight);
