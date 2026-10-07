@@ -45,5 +45,5 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog #prayerAlarmPanel #paDays label{display:flex!important;flex-direction:column!important;gap:5px!important;margin:0!important;padding:5px 0!important;justify-content:center!important;font-size:12px!important}
 #adhanServicesDialog #prayerAlarmPanel .pa-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-top:10px!important}
 #adhanServicesDialog #prayerAlarmPanel .pa-actions button{width:100%!important;margin:0!important}
-#adhanServicesDialog #adhanPanel [hidden],#adhanServicesDialog #prayerAlarmPanel [hidden]{display:none!important}
+#adhanServicesDialog #adhanPanel [hidden],#adhanServicesDialog #prayerAlarmPanel [hidden],#adhanServicesDialog #prayerAlarmPanel #paDays[hidden]{display:none!important}
 @media(min-width:800px){#adhanServicesDialog #adhanServicesBody{padding:16px 24px 24px!important}#adhanServicesDialog .ad-modal-head{padding-inline:24px!important}}
