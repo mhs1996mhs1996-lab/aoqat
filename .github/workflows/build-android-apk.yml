@@ -5,6 +5,9 @@ on:
   push:
     paths:
       - 'android-native/**'
+      - 'js/prayer-alarm.js'
+      - 'js/prayer-alarm-core.js'
+      - 'css/prayer-alarm.css'
       - 'tests/apk-services-browser.cjs'
       - '.github/workflows/build-android-apk.yml'
 
