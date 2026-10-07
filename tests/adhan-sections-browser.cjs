@@ -52,7 +52,7 @@ const { spawn } = require('node:child_process');
     }
     assert.equal(await page.locator('#adRefresh').isEnabled(), true);
     await page.screenshot({ path: '/tmp/aoqat-adhan-sections-off.png', fullPage: true });
-    await page.locator('#adEnable').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adEnable').click();
     for (const id of ['sound', 'notifications', 'modes'])
       assert.equal(await page.locator(`[data-ad-section="${id}"]`).isEnabled(), true);
     await page.screenshot({ path: '/tmp/aoqat-adhan-sections-home.png', fullPage: true });
@@ -116,7 +116,7 @@ const { spawn } = require('node:child_process');
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="notifications"]').click();
     await page.locator('#adSilentSettingsToggle').click();
     assert.equal(await page.locator('[data-silent-minutes="asr"]').inputValue(), '7');
-    await page.locator('#adEnable').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adEnable').click();
     assert.equal(await page.locator('#adSection-notifications').isVisible(), false);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.aoqatAdhanV1).afterIqamaSilent.minutes.asr), 7);
     assert.equal(await page.locator('[data-ad-section="services"]').count(), 0);

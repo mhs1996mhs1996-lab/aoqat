@@ -56,7 +56,7 @@ const { spawn } = require("node:child_process");
       true,
     );
     await page.screenshot({ path: "/tmp/aoqat-adhan-off.png" });
-    await page.locator("#adEnable").click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator("#adEnable").click();
     await page.screenshot({ path: "/tmp/aoqat-adhan-on.png" });
     assert.equal(
       await page.locator("#adEnable").getAttribute("aria-pressed"),
@@ -128,7 +128,7 @@ const { spawn } = require("node:child_process");
     await page
       .getByRole("button", { name: "🔊 الأذان والخدمات", exact: true })
       .click();
-    await page.locator("#adEnable").click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator("#adEnable").click();
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForSelector("#adEnable", { state: "attached" });
     assert.equal(
@@ -176,14 +176,14 @@ const { spawn } = require("node:child_process");
       .getByRole("button", { name: "🔊 الأذان والخدمات", exact: true })
       .click();
     assert.equal(await phone.locator('[data-setting="screen"]').count(), 1);
-    await phone.locator("#adEnable").click();
-    await phone.locator('[data-ad-section="notifications"]').click();
+    await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator("#adEnable").click();
+    await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator('[data-ad-section="notifications"]').click();
     await phone.locator('[data-setting="screen"]').check();
-    await phone.locator('[data-ad-section="services"]').click();
+    await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator('[data-ad-section="services"]').click();
     await phone.locator('[data-service="widget"]').click();
     await phone.locator('[data-setting="persistent"]').check();
     await phone.locator("#adWidget").click();
-    await phone.locator('[data-ad-section="sound"]').click();
+    await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator('[data-ad-section="sound"]').click();
     await phone.locator("#adPreview").click();
     await phone.locator("#adChoose").click();
     assert.ok(
