@@ -268,6 +268,28 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
 }
 
 class MainActivity : Activity() {
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(base.createConfigurationContext(DisplayColorPolicy.light(base.resources.configuration)))
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(DisplayColorPolicy.light(newConfig))
+        if (::webView.isInitialized) {
+            protectDisplayColors()
+            webView.invalidate()
+        }
+    }
+
+    private fun protectDisplayColors() {
+        if (Build.VERSION.SDK_INT >= 29) {
+            window.decorView.isForceDarkAllowed = false
+            webView.isForceDarkAllowed = false
+            @Suppress("DEPRECATION")
+            webView.settings.forceDark = WebSettings.FORCE_DARK_OFF
+        }
+        if (Build.VERSION.SDK_INT >= 33) webView.settings.isAlgorithmicDarkeningAllowed = false
+    }
+
 
     private lateinit var webView: WebView
     private val ADHAN_AUDIO_REQUEST = 812
@@ -290,6 +312,7 @@ class MainActivity : Activity() {
 
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
+        protectDisplayColors()
         requestNotificationPermissionIfNeeded()
         requestExactAlarmAccessIfNeeded()
         AlarmScheduler.scheduleFromDatabase(this)
@@ -316,6 +339,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (::webView.isInitialized) protectDisplayColors()
         PrayerAlarm.schedule(this)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerAlarmNativeSettings?.("+PrayerAlarm.settings(this).toString()+")",null)
         AlarmScheduler.scheduleFromDatabase(this)
