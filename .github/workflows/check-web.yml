@@ -26,6 +26,7 @@ jobs:
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
+          node tests/settings-subwindows-browser.cjs
           node tests/adhan-modal-browser.cjs
           node tests/prayer-alarm-browser.cjs
           node tests/settings-scroll-browser.cjs

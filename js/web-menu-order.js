@@ -100,6 +100,11 @@
     `;document.head.appendChild(s);
   }
 
+  function subOverlay(){
+    let d=document.getElementById("settingsContentDialog");if(d)return d;
+    d=document.createElement("section");d.id="settingsContentDialog";d.className="sidebar";d.hidden=true;d.dir="rtl";d.setAttribute("role","dialog");d.setAttribute("aria-modal","true");d.setAttribute("aria-labelledby","webSubTitle");document.body.appendChild(d);
+    d.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();e.stopPropagation();d.querySelector(".web-back")?.click();}});return d;
+  }
   function restoreMoved(){
     window.aoqatCloseService?.();
     const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
@@ -107,13 +112,13 @@
     [...body.children].forEach(el=>{if(el.matches(".panel,.font-panel,.inline-control-panel")&&el.id!=="webSettingsTemp"){el.classList.remove("inline-open","active-panel");home.appendChild(el);}});
   }
   function mainView(){
-    restoreMoved();document.getElementById("webDrawerSub")?.classList.remove("open");
+    restoreMoved();const sub=document.getElementById("webDrawerSub");sub?.classList.remove("open");if(sub)document.getElementById("webExactDrawer")?.appendChild(sub);const overlay=document.getElementById("settingsContentDialog");if(overlay)overlay.hidden=true;
     const m=document.getElementById("webDrawerMain");if(m)m.style.display="block";returnMode="main";
   }
   function openSub(title,node,backTo="main"){
     restoreMoved();const m=document.getElementById("webDrawerMain"),sub=document.getElementById("webDrawerSub"),body=document.getElementById("webSubBody");
     if(!sub||!body)return;if(m)m.style.display="none";body.innerHTML="";document.getElementById("webSubTitle").textContent=title;
-    if(node)body.appendChild(node);sub.classList.add("open");returnMode=backTo;
+    if(node)body.appendChild(node);sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
   }
   function openPanel(title,id,backTo="main"){
     if(id==="adhanPanel"){openAdhanServices();return;}

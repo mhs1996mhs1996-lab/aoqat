@@ -283,10 +283,12 @@ class MainActivity : Activity() {
         }
 
         webView = WebView(this).apply {
+            if (Build.VERSION.SDK_INT >= 29) isForceDarkAllowed = false
             setBackgroundColor(Color.rgb(5, 24, 34))
         }
         setContentView(webView)
 
+        if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
         requestNotificationPermissionIfNeeded()
         requestExactAlarmAccessIfNeeded()

@@ -62,7 +62,7 @@ const { spawn } = require("node:child_process");
       await page.locator("#adEnable").getAttribute("aria-pressed"),
       "true",
     );
-    await page.locator('[data-ad-section="modes"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="modes"]').click();
     await page.locator('[data-prayer="fajr"][data-mode="silent"]').click();
     assert.equal(
       await page.evaluate(
@@ -70,7 +70,7 @@ const { spawn } = require("node:child_process");
       ),
       "silent",
     );
-    await page.locator('[data-ad-section="sound"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="sound"]').click();
     await page.locator('[data-setting="sound"]').selectOption("3");
     await page.locator('[data-setting="partial"]').check();
     assert.equal(
@@ -101,7 +101,7 @@ const { spawn } = require("node:child_process");
         !window.testAdhanAudio.paused,
     );
     await page.locator("#adStop").click();
-    await page.locator("#adhanServicesBack").click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator("#adhanServicesBack").click();
     await page.locator(".web-back").click();
     await page.locator('[data-drawer="quran"]').click();
     await page.waitForSelector("#aqReader");

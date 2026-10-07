@@ -1,6 +1,6 @@
-const CACHE_NAME = "aoqat-pwa-v21";
+const CACHE_NAME = "aoqat-pwa-v22";
 const APP_SHELL = [
-  "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
+  "/js/settings-subwindows.js", "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
   "/",
   "/index.html",
   "/css/style.css",
@@ -42,7 +42,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=15",
   "/js/compact-design-menu.js?v=12",
   "/js/web-theme-settings.js?v=4",
-  "/js/web-menu-order.js?v=23",
+  "/js/web-menu-order.js?v=24",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"

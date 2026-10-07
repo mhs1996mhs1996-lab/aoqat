@@ -48,3 +48,19 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog #prayerAlarmPanel .pa-actions button{width:100%!important;margin:0!important}
 #adhanServicesDialog #adhanPanel [hidden],#adhanServicesDialog #prayerAlarmPanel [hidden],#adhanServicesDialog #prayerAlarmPanel #paDays[hidden]{display:none!important}
 @media(min-width:800px){#adhanServicesDialog #adhanServicesBody{padding:16px 24px 24px!important}#adhanServicesDialog .ad-modal-head{padding-inline:24px!important}}
+/* The app theme is chosen inside the app, independently of the device theme. */
+:root{color-scheme:only light!important}
+#settingsContentDialog{position:fixed!important;inset:0!important;z-index:100050!important;width:100%!important;max-width:none!important;height:100dvh!important;min-height:0!important;margin:0!important;padding:0!important;transform:none!important;display:block!important;overflow:clip!important;background:var(--wt-surface,#fffaf0)!important;border:0!important;box-sizing:border-box!important}
+#settingsContentDialog[hidden]{display:none!important}
+#settingsContentDialog #webDrawerSub{height:100%!important;margin:0!important;overflow:clip!important}
+#settingsContentDialog .web-sub-head{box-sizing:border-box!important;flex:0 0 54px!important;padding:7px 12px!important;background:var(--wt-surface,#fffaf0)!important}
+#settingsContentDialog .web-sub-body{padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px))!important}
+#settingsContentDialog .web-back,#adhanServicesDialog #adhanServicesBack{width:auto!important;height:40px!important;min-height:40px!important;padding:5px 10px!important;font-size:13px!important;border-radius:8px!important}
+#settingsContentDialog .web-sub-title{font-size:18px!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-window{position:fixed!important;inset:0!important;z-index:calc(100101 + var(--leaf-level,1))!important;display:flex!important;flex-direction:column!important;width:100%!important;max-width:none!important;height:100dvh!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:clip!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#203b44)!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-head{flex:none!important;display:flex!important;align-items:center!important;gap:12px!important;padding:7px 12px!important;padding-top:calc(7px + env(safe-area-inset-top,0px))!important;border-bottom:1px solid var(--wt-border,#ddd0b8)!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-head h3{flex:1!important;margin:0!important;font-size:18px!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-back{min-height:40px!important;padding:5px 10px!important;margin:0!important;font-size:13px!important;border-radius:8px!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-body{flex:1!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;touch-action:pan-y!important;padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px))!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-body>.ad-card{max-width:760px!important;margin:0 auto!important}
+#adhanServicesDialog #adhanPanel .ad-leaf-window[hidden]{display:none!important}
