@@ -28,7 +28,7 @@ object PrayerAlarm {
     }
     fun events(c:Context,today:LocalDate=LocalDate.now()):List<PrayerTimes.Prayer>{
         val normal=PrayerTimes.events(c,today.minusDays(1));val out=normal.toMutableList()
-        normal.filter{it.id=="maghrib"}.forEach{m->normal.firstOrNull{it.id=="fajr"&&it.at>m.at}?.let{f->out.add(PrayerTimes.Prayer("third",m.at+(f.at-m.at)*2/3,false))}}
+        normal.filter{it.id=="maghrib"}.forEach{m->normal.firstOrNull{it.id=="fajr"&&Instant.ofEpochMilli(it.at).atZone(ZoneId.systemDefault()).toLocalDate()==Instant.ofEpochMilli(m.at).atZone(ZoneId.systemDefault()).toLocalDate().plusDays(1)}?.let{f->out.add(PrayerTimes.Prayer("third",m.at+(f.at-m.at)*2/3,false))}}
         return out.sortedBy{it.at}
     }
     fun configure(c:Context,json:String){val s=try{JSONObject(json)}catch(_:Exception){return};prefs(c).edit().putString("settings",s.toString()).commit();
