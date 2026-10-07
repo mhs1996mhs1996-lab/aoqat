@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 67 // Integrate tested services and Quran reader in Android
-        versionName '1.32'
+        versionCode 68 // Integrate tested services and Quran reader in Android
+        versionName '1.33'
     }
 
     compileOptions {

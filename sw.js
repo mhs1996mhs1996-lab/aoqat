@@ -1,5 +1,6 @@
-const CACHE_NAME = "aoqat-pwa-v19";
+const CACHE_NAME = "aoqat-pwa-v20";
 const APP_SHELL = [
+  "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
   "/",
   "/index.html",
   "/css/style.css",

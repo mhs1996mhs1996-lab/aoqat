@@ -1,0 +1,13 @@
+(function(root){'use strict';
+ const ids=['fajr','dhuhr','asr','maghrib','isha','third'];
+ const names={fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء',third:'ثلث الليل الأخير'};
+ function item(id,raw={}){const n=(k,d,a,b)=>Math.max(a,Math.min(b,Math.floor(Number(raw[k])||d)));return {enabled:raw.enabled===true,label:String(raw.label||names[id]).slice(0,80),repeat:['daily','once','days'].includes(raw.repeat)?raw.repeat:'daily',days:Array.isArray(raw.days)?[...new Set(raw.days.filter(d=>Number.isInteger(d)&&d>=0&&d<7))]:[0,1,2,3,4,5,6],duration:n('duration',5,1,30),snooze:n('snooze',10,1,30),count:Math.max(0,Math.min(10,Math.floor(Number(raw.count===undefined?3:raw.count))||0)),deleteAfter:raw.deleteAfter===true,tone:raw.tone&&typeof raw.tone==='object'?{kind:['default','soft','custom','system'].includes(raw.tone.kind)?raw.tone.kind:'default',value:String(raw.tone.value||''),name:String(raw.tone.name||'نغمة المنبّه').slice(0,100)}:{kind:'default',value:'',name:'نغمة المنبّه'}};}
+ function normalize(raw={}){return {enabled:raw.enabled===true,items:Object.fromEntries(ids.map(id=>[id,item(id,raw.items?.[id])]))};}
+ function minutes(v,id){let m=String(v||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return null;let h=+m[1],n=+m[2];if(h>23||n>59)return null;if(['asr','maghrib','isha'].includes(id)&&h<12)h+=12;return h*60+n;}
+ function events(rows,now=new Date(),span=8){const out=[];const date=(offset)=>new Date(now.getFullYear(),now.getMonth(),now.getDate()+offset);const row=d=>rows.find(r=>+r.gregorian_month===d.getMonth()+1&&+r.gregorian_day===d.getDate());const at=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate(),0,n).getTime();
+ for(let offset=-1;offset<span;offset++){const d=date(offset),r=row(d);if(!r)continue;for(const id of ids.slice(0,5)){const n=minutes(r[id],id);if(n!==null)out.push({id,at:at(d,n)});}const tomorrow=date(offset+1),next=row(tomorrow),m=minutes(r.maghrib,'maghrib'),f=minutes(next?.fajr,'fajr');if(m!==null&&f!==null){const start=at(d,m),end=at(tomorrow,f);out.push({id:'third',at:Math.round(start+(end-start)*2/3)});}}
+ return out.sort((a,b)=>a.at-b.at);}
+ function allowed(config,event){const s=config.items[event.id];return config.enabled&&s?.enabled&&(s.repeat!=='days'||s.days.includes(new Date(event.at).getDay()));}
+ function next(rows,config,now=new Date()){const out={};for(const e of events(rows,now))if(e.at>now.getTime()&&allowed(config,e)&&!out[e.id])out[e.id]=e;return out;}
+ const api={ids,names,item,normalize,events,allowed,next};if(typeof module!=='undefined')module.exports=api;root.AoqatPrayerAlarmCore=api;
+})(typeof window==='undefined'?globalThis:window);

@@ -65,7 +65,7 @@ object AdhanSchedule {
     }
     fun storeRows(c: Context, value: String) {
         try { val a = JSONArray(value); if (a.length() > 0) c.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit().putString("rows", a.toString()).commit() } catch (_: Exception) { return }
-        schedule(c); IqamaNativeScheduler.scheduleCached(c); PrayerWidget.update(c)
+        schedule(c); IqamaNativeScheduler.scheduleCached(c); PrayerAlarm.schedule(c); PrayerWidget.update(c)
     }
     fun alarm(c: Context, id: Int, action: String, at: Long, prayer: PrayerTimes.Prayer? = null) {
         val am = c.getSystemService(Context.ALARM_SERVICE) as AlarmManager

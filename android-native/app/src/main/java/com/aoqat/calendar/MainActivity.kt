@@ -314,6 +314,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        PrayerAlarm.schedule(this)
+        if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerAlarmNativeSettings?.("+PrayerAlarm.settings(this).toString()+")",null)
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
         AdhanSchedule.schedule(this)
@@ -568,6 +570,11 @@ class MainActivity : Activity() {
             (getSystemService(POWER_SERVICE) as android.os.PowerManager).isIgnoringBatteryOptimizations(packageName)
         @JavascriptInterface fun requestIqamaBackgroundPermission() { runOnUiThread { requestIqamaBackgroundAccessIfNeeded(force = true) } }
 
+        @JavascriptInterface fun readPrayerAlarmSettings():String = PrayerAlarm.settings(this@MainActivity).toString()
+        @JavascriptInterface fun configurePrayerAlarm(json:String){runOnUiThread{try{val s=org.json.JSONObject(json);if(s.optBoolean("enabled")){requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();requestIqamaBackgroundAccessIfNeeded(forAdhan=true);if(Build.VERSION.SDK_INT>=34&&!(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))};PrayerAlarm.configure(this@MainActivity,json)}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ المنبّه",Toast.LENGTH_LONG).show()}}}
+        @JavascriptInterface fun previewPrayerAlarm(id:String){runOnUiThread{if(id in PrayerAlarm.ids){requestNotificationPermissionIfNeeded();PrayerAlarm.start(this@MainActivity,id,preview=true)}}}
+        @JavascriptInterface fun stopPrayerAlarm(){stopService(Intent(this@MainActivity,PrayerAlarmService::class.java))}
+        @JavascriptInterface fun choosePrayerAlarmTone(id:String,system:Boolean){runOnUiThread{if(id in PrayerAlarm.ids){prayerAlarmToneId=id;val pick=if(system)Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE,android.media.RingtoneManager.TYPE_ALARM) else Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)};startActivityForResult(pick,if(system)8202 else 8201)}}}
         @JavascriptInterface fun readAdhanSettings(): String = AdhanSchedule.settings(this@MainActivity).toString()
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
             try {
@@ -720,8 +727,19 @@ class MainActivity : Activity() {
         }
     }
 
+    private var prayerAlarmToneId=""
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode==8201||requestCode==8202){
+            val id=prayerAlarmToneId;val uri=if(resultCode==RESULT_OK){if(requestCode==8202)data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)else data?.data}else null
+            if(uri!=null&&id in PrayerAlarm.ids)Thread{try{
+                var name="نغمة الهاتف"
+                if(requestCode==8201){val temp=File(filesDir,"prayer-alarm-$id.tmp");contentResolver.openInputStream(uri)?.use{input->FileOutputStream(temp).use{out->val buf=ByteArray(8192);var count=0L;while(true){val n=input.read(buf);if(n<0)break;count+=n;if(count>25*1024*1024)throw IllegalArgumentException();out.write(buf,0,n)}}}?:throw IllegalArgumentException();val retriever=android.media.MediaMetadataRetriever();try{retriever.setDataSource(temp.absolutePath);if(retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()==null)throw IllegalArgumentException()}finally{retriever.release()};if(!temp.renameTo(File(filesDir,"prayer-alarm-$id")))throw IllegalStateException();contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use{if(it.moveToFirst())name=it.getString(0)}}else name=android.media.RingtoneManager.getRingtone(this,uri)?.getTitle(this)?:name
+                val tone=org.json.JSONObject().put("kind",if(requestCode==8201)"custom"else"system").put("value",if(requestCode==8202)uri.toString()else"").put("name",name)
+                runOnUiThread{webView.evaluateJavascript("window.aoqatPrayerAlarmToneChosen?.("+org.json.JSONObject.quote(id)+","+tone.toString()+")",null)}
+            }catch(_:Exception){runOnUiThread{Toast.makeText(this,"اختر صوتًا صالحًا أقل من 25 ميغابايت",Toast.LENGTH_LONG).show()}}}.start()
+            return
+        }
         if(requestCode==ADHAN_AUDIO_REQUEST){
             val uri=if(resultCode==RESULT_OK)data?.data else null
             if(uri!=null)Thread{

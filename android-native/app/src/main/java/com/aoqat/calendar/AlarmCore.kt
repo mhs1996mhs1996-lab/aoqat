@@ -126,6 +126,7 @@ object IqamaNativeScheduler {
         prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString())
             .putString("afterMinutes", after.toString()).commit()
         AdhanSchedule.schedule(context)
+        PrayerAlarm.schedule(context)
         if (!enabled) {
             cancel(context)
             IqamaPersistentNotification.hide(context)
@@ -166,6 +167,7 @@ object IqamaNativeScheduler {
         } catch (e: Exception) { android.util.Log.w("IqamaScheduler", "Using cached prayer times", e) }
         scheduleCached(context)
         AdhanSchedule.schedule(context)
+        PrayerAlarm.schedule(context)
         PrayerWidget.update(context)
     }
 
@@ -249,6 +251,7 @@ class BootReceiver : BroadcastReceiver() {
         }
         IqamaNativeScheduler.scheduleCached(context)
         AdhanSchedule.schedule(context)
+        PrayerAlarm.schedule(context)
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) AdhanPlaybackService.restoreVolume(context)
         AdhanPlaybackService.restoreRingerIfExpired(context)
         PrayerWidget.update(context)
