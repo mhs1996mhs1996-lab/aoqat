@@ -43,7 +43,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await page.locator('#adhanServicesBody').evaluate(e=>e.scrollTop=e.scrollHeight);
    const header=await page.locator('#adhanServicesBack').boundingBox();assert.ok(header.y>=0&&header.y+header.height<=80,JSON.stringify(header));
    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adhanServicesBack').click();assert.equal(await page.locator('#adhanServicesDialog').isVisible(),false);
-   assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات الاذان والإقامة');assert.equal(await page.locator('.sidebar').evaluate(e=>e.inert),false);
+   assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات الاذان والإقامة');assert.equal(await page.locator('aside.sidebar').evaluate(e=>e.inert),false);
    await page.getByRole('button',{name:'🔊 الأذان والخدمات',exact:true}).click();
    await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDuration').inputValue(),'7');
    assert.equal(await page.locator('[data-setting="volume"]').inputValue(),'34');

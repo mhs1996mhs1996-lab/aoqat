@@ -12,6 +12,8 @@ on:
       - 'js/web-menu-order.js'
       - 'js/settings-subwindows.js'
       - 'tests/apk-services-browser.cjs'
+      - 'tests/adhan-modal-browser.cjs'
+      - 'tests/settings-subwindows-browser.cjs'
       - '.github/workflows/build-android-apk.yml'
 
 permissions:

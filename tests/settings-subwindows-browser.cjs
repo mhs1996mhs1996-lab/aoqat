@@ -5,6 +5,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await page.goto('http://127.0.0.1:8777',{waitUntil:'domcontentloaded'});await page.waitForSelector('[data-drawer="settings"]',{state:'attached'});await page.waitForSelector('#paMaster',{state:'attached'});
  const colors=()=>page.evaluate(()=>{const d=document.getElementById('designRef');return [document.body.dataset.webTheme,getComputedStyle(document.body).backgroundColor,d&&getComputedStyle(d).backgroundColor,getComputedStyle(document.documentElement).colorScheme];});
  const light=await colors();await page.emulateMedia({colorScheme:'dark'});assert.deepEqual(await colors(),light);await page.emulateMedia({colorScheme:'light'});assert.deepEqual(await colors(),light);assert.ok(light[3].includes('light'));
+ await page.evaluate(()=>window.applyWebTheme('dark-night'));assert.equal((await colors())[0],'dark-night');const chosenNight=await colors();await page.emulateMedia({colorScheme:'dark'});assert.deepEqual(await colors(),chosenNight);await page.emulateMedia({colorScheme:'light'});assert.deepEqual(await colors(),chosenNight);await page.evaluate(()=>window.applyWebTheme('cream-blue'));
+
  await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="settings"]').click();
  async function full(selector){const r=await page.locator(selector).boundingBox();assert.equal(r.x,0);assert.equal(r.y,0);assert.equal(r.width,390);assert.equal(r.height,740);}
  await full('#settingsContentDialog');await page.locator('.web-settings-list [data-panel="fontPanel"]').click();assert.equal(await page.locator('#fontPanel').isVisible(),true);await full('#settingsContentDialog');assert.ok((await page.locator('.web-back').boundingBox()).height<=40);
