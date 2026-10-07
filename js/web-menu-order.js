@@ -16,6 +16,43 @@
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
   ];
   let returnMode="main";
+  let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
+
+  function closeAdhanServices(){
+    const dialog=document.getElementById("adhanServicesDialog");
+    if(!dialog||dialog.hidden)return false;
+    dialog.hidden=true;document.body.classList.remove("adhan-services-open");
+    const p=document.getElementById("adhanPanel");
+    if(p&&adhanHome){p.classList.remove("inline-open","active-panel");adhanHome.appendChild(p);}
+    const sidebar=document.querySelector(".sidebar");if(sidebar)sidebar.inert=sidebarWasInert;
+    if(adhanReturnFocus?.isConnected)adhanReturnFocus.focus({preventScroll:true});
+    return true;
+  }
+  function openAdhanServices(){
+    const p=document.getElementById("adhanPanel");if(!p)return;
+    let dialog=document.getElementById("adhanServicesDialog");
+    if(!dialog){
+      dialog=document.createElement("section");dialog.id="adhanServicesDialog";dialog.hidden=true;
+      dialog.dir="rtl";dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","adhanServicesTitle");
+      dialog.innerHTML='<header class="ad-modal-head"><button type="button" id="adhanServicesBack" aria-label="رجوع إلى بيانات الأذان والإقامة">‹ رجوع</button><h2 id="adhanServicesTitle">الأذان والخدمات</h2></header><div id="adhanServicesBody"></div>';
+      document.body.appendChild(dialog);
+      dialog.querySelector("#adhanServicesBack").onclick=closeAdhanServices;
+      dialog.addEventListener("keydown",e=>{
+        if(e.key==="Escape"){e.preventDefault();closeAdhanServices();}
+        if(e.key!=="Tab")return;
+        const controls=[...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled)')].filter(el=>el.getClientRects().length);
+        const first=controls[0],last=controls.at(-1);
+        if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
+        else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+      });
+    }
+    adhanReturnFocus=document.activeElement;adhanHome=p.parentElement;
+    const sidebar=document.querySelector(".sidebar");sidebarWasInert=sidebar?.inert||false;if(sidebar)sidebar.inert=true;
+    dialog.querySelector("#adhanServicesBody").appendChild(p);dialog.hidden=false;
+    document.body.classList.add("adhan-services-open");dialog.querySelector("#adhanServicesBody").scrollTop=0;
+    dialog.querySelector("#adhanServicesBack").focus({preventScroll:true});
+  }
+  window.aoqatCloseAdhanServices=closeAdhanServices;
 
   function addStyles(){
     if(document.getElementById("webDrawerExactStyles"))return;
@@ -79,6 +116,7 @@
     if(node)body.appendChild(node);sub.classList.add("open");returnMode=backTo;
   }
   function openPanel(title,id,backTo="main"){
+    if(id==="adhanPanel"){openAdhanServices();return;}
     const p=document.getElementById(id);if(!p)return;p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
   function settingsView(){

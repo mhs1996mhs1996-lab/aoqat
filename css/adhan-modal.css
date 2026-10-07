@@ -1,0 +1,49 @@
+/* Isolated full-screen adhan settings. Other drawers and service readers keep their styles. */
+body.adhan-services-open{overflow:hidden!important}
+#adhanServicesDialog{position:fixed!important;inset:0!important;z-index:100100!important;width:100%!important;height:100dvh!important;max-width:none!important;margin:0!important;padding:0!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#203b44)!important;font:15px/1.6 Tahoma,Arial,sans-serif!important;box-sizing:border-box!important}
+#adhanServicesDialog[hidden]{display:none!important}
+#adhanServicesDialog .ad-modal-head{display:flex!important;align-items:center!important;gap:12px!important;flex:none!important;padding:8px 12px!important;padding-top:calc(8px + env(safe-area-inset-top,0px))!important;background:var(--wt-surface,#fffaf0)!important;border-bottom:1px solid var(--wt-border,#ddd0b8)!important;box-shadow:0 2px 8px #0001!important}
+#adhanServicesDialog #adhanServicesTitle{flex:1!important;margin:0!important;font:700 20px/1.4 Tahoma,Arial,sans-serif!important;color:inherit!important;text-align:right!important}
+#adhanServicesDialog #adhanServicesBack{flex:none!important;min-height:44px!important;margin:0!important;padding:8px 14px!important;border:0!important;border-radius:9px!important;font:700 15px/1.4 Tahoma,Arial,sans-serif!important;background:#137985!important;color:#fff!important}
+#adhanServicesDialog #adhanServicesBody{flex:1!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;touch-action:pan-y!important;padding:10px 12px calc(16px + env(safe-area-inset-bottom,0px))!important;box-sizing:border-box!important;-webkit-overflow-scrolling:touch}
+#adhanServicesDialog #adhanPanel{display:block!important;position:static!important;transform:none!important;width:100%!important;max-width:760px!important;height:auto!important;max-height:none!important;min-height:0!important;overflow:visible!important;margin:0 auto!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;color:inherit!important;font:15px/1.6 Tahoma,Arial,sans-serif!important}
+#adhanServicesDialog #adhanPanel *{box-sizing:border-box!important;font-family:Tahoma,Arial,sans-serif!important}
+#adhanServicesDialog #adhanPanel .ad-card{margin:8px 0!important;padding:10px!important;border:1px solid var(--wt-border,#ddcfaf)!important;border-radius:12px!important;background:var(--wt-surface,#fffaf0)!important;overflow:visible!important}
+#adhanServicesDialog #adhanPanel :is(h3,h4){margin:0 0 8px!important;font-size:17px!important;line-height:1.6!important;color:inherit!important}
+#adhanServicesDialog #adhanPanel button{width:auto!important;height:auto!important;min-width:0!important;min-height:44px!important;max-width:100%!important;margin:3px!important;padding:8px 12px!important;font:15px/1.5 Tahoma,Arial,sans-serif!important;white-space:normal!important;border:0!important;border-radius:9px!important;box-shadow:none!important;background:#137985!important;color:#fff!important}
+#adhanServicesDialog #adhanPanel button:disabled{background:#858e8b!important}
+#adhanServicesDialog #adhanPanel :is(.ad-master,#paMaster){width:100%!important;margin:4px 0!important;font-weight:700!important;background:#858e8b!important}
+#adhanServicesDialog #adhanPanel :is(.ad-master.on,.pa-switch.pa-on){background:#278052!important}
+#adhanServicesDialog #adhanPanel .pa-switch:not(.pa-on){background:#858e8b!important}
+#adhanServicesDialog #adhanPanel label{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;margin:6px 0!important;padding:5px 0!important;min-height:0!important;font-size:14px!important;line-height:1.7!important;color:inherit!important}
+#adhanServicesDialog #adhanPanel :is(input:not([type=checkbox]):not([type=range]):not([type=file]),select){width:54%!important;max-width:54%!important;min-width:0!important;min-height:40px!important;height:auto!important;margin:0!important;padding:7px 9px!important;border:1px solid #b9c5be!important;border-radius:8px!important;background:var(--wt-surface2,#fff)!important;color:inherit!important;font-size:14px!important;line-height:1.5!important}
+#adhanServicesDialog #adhanPanel input[type=checkbox]{width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;margin:0!important;flex:none!important;accent-color:#278052!important}
+#adhanServicesDialog #adhanPanel input[type=range]{width:50%!important;min-height:32px!important;padding:0!important;accent-color:#278052!important}
+#adhanServicesDialog #adhanPanel fieldset{min-width:0!important;border:0!important;padding:0!important;margin:0!important}
+#adhanServicesDialog #adhanPanel .ad-section-menu{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:10px 0!important}
+#adhanServicesDialog #adhanPanel .ad-section-menu button{width:100%!important;min-height:48px!important;margin:0!important;display:flex!important;align-items:center!important;gap:7px!important;text-align:right!important}
+#adhanServicesDialog #adhanPanel [data-ad-section=modes]{grid-column:1 / -1!important}
+#adhanServicesDialog #adhanPanel .ad-section-icon{font-size:21px!important}
+#adhanServicesDialog #adhanPanel .ad-section-chevron{margin-inline-start:auto!important;font-size:22px!important}
+#adhanServicesDialog #adhanPanel .ad-mode{display:flex!important;flex-wrap:wrap!important;gap:8px!important;padding:8px 0!important}
+#adhanServicesDialog #adhanPanel .ad-mode>div{display:flex!important;gap:6px!important;flex:1!important;min-width:0!important}
+#adhanServicesDialog #adhanPanel .ad-mode [data-mode]{flex:1!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:1px!important;margin:0!important;padding:5px 3px!important;background:#e4e8e6!important;color:#475453!important}
+#adhanServicesDialog #adhanPanel .ad-mode button.selected{background:#ddad38!important;color:#172c2b!important}
+#adhanServicesDialog #adhanPanel .ad-mode small{font-size:12px!important;line-height:1.5!important}
+#adhanServicesDialog #adhanPanel .ad-note,#adhanServicesDialog #adhanPanel .pa-note{margin:8px 0!important;font-size:12px!important;line-height:1.8!important;color:var(--wt-muted,#56686c)!important}
+#adhanServicesDialog #adhanPanel .ad-next{font-size:19px!important;line-height:1.6!important}
+#adhanServicesDialog #adhanPanel .ad-counter{font-size:24px!important;line-height:1.6!important}
+#adhanServicesDialog #adhanPanel table{width:100%!important;font-size:14px!important}
+#adhanServicesDialog #adhanPanel td{padding:5px 7px!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-alarm{display:flex!important;align-items:center!important;gap:10px!important;padding:8px 0!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-edit{flex:1!important;display:flex!important;flex-direction:column!important;gap:2px!important;min-height:48px!important;padding:4px!important;margin:0!important;text-align:right!important;background:transparent!important;color:inherit!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-edit strong{font-size:16px!important;line-height:1.5!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-edit span{font-size:14px!important;line-height:1.5!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-switch{flex:none!important;padding:8px 14px!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-settings{padding:10px!important;margin-top:12px!important;border-radius:12px!important}
+#adhanServicesDialog #prayerAlarmPanel #paDays{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;margin:8px 0!important}
+#adhanServicesDialog #prayerAlarmPanel #paDays label{display:flex!important;flex-direction:column!important;gap:5px!important;margin:0!important;padding:5px 0!important;justify-content:center!important;font-size:12px!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-actions{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-top:10px!important}
+#adhanServicesDialog #prayerAlarmPanel .pa-actions button{width:100%!important;margin:0!important}
+#adhanServicesDialog #adhanPanel [hidden],#adhanServicesDialog #prayerAlarmPanel [hidden]{display:none!important}
+@media(min-width:800px){#adhanServicesDialog #adhanServicesBody{padding:16px 24px 24px!important}#adhanServicesDialog .ad-modal-head{padding-inline:24px!important}}

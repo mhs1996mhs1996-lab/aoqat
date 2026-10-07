@@ -101,7 +101,7 @@ const { spawn } = require("node:child_process");
         !window.testAdhanAudio.paused,
     );
     await page.locator("#adStop").click();
-    await page.locator(".web-back").click();
+    await page.locator("#adhanServicesBack").click();
     await page.locator(".web-back").click();
     await page.locator('[data-drawer="quran"]').click();
     await page.waitForSelector("#aqReader");

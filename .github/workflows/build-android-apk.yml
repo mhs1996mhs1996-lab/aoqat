@@ -8,6 +8,8 @@ on:
       - 'js/prayer-alarm.js'
       - 'js/prayer-alarm-core.js'
       - 'css/prayer-alarm.css'
+      - 'css/adhan-modal.css'
+      - 'js/web-menu-order.js'
       - 'tests/apk-services-browser.cjs'
       - '.github/workflows/build-android-apk.yml'
 
@@ -47,7 +49,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.33-build68
+          name: aoqat-android-v1.34-build69
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -61,6 +63,7 @@ jobs:
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
+          node tests/adhan-modal-browser.cjs
           node tests/prayer-alarm-browser.cjs
           node tests/apk-services-browser.cjs
           node tests/adhan-browser.cjs

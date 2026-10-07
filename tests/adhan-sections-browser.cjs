@@ -66,7 +66,7 @@ const { spawn } = require('node:child_process');
     await page.locator('#adSilentAfterEnabled').check();
     await setMinutes('asr', 7); await setMinutes('maghrib', 9);
     await page.screenshot({ path: '/tmp/aoqat-adhan-after-iqama.png', fullPage: true });
-    await page.locator(".web-back").click(); await page.locator(".web-back").click();
+    await page.locator("#adhanServicesBack").click(); await page.locator(".web-back").click();
     await page.locator('[data-drawer="azkar"]').click();
     assert.equal(await page.locator('#adAzkarList').isVisible(), false);
     await page.locator('[data-azkar-kind="morning"]').click();
@@ -120,7 +120,7 @@ const { spawn } = require('node:child_process');
     assert.equal(await page.locator('#adSection-notifications').isVisible(), false);
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.aoqatAdhanV1).afterIqamaSilent.minutes.asr), 7);
     assert.equal(await page.locator('[data-ad-section="services"]').count(), 0);
-    await page.locator(".web-back").click(); await page.locator(".web-back").click();
+    await page.locator("#adhanServicesBack").click(); await page.locator(".web-back").click();
     for (const kind of ['quran','qibla','azkar']) {
       const row=page.locator(`[data-drawer="${kind}"]`);
       assert.equal(await row.getAttribute('class'), 'web-drawer-row');
