@@ -153,7 +153,7 @@
     fitText(paper,text,state.page);
   }
   function fitText(paper,text,page){
-    const height=paper.clientHeight-20,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
+    const height=paper.clientHeight-28,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
     if(page>2&&meta.lines?.[page-1]){
       text.classList.add('aq-lined-page');text.style.height=height+'px';
       const inks=[...text.querySelectorAll('.aq-line-ink')],rows=meta.lines[page-1].length;
