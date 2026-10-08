@@ -1,0 +1,37 @@
+name: Prepare original Hafs web pages
+on:
+  push:
+    branches: ['quran-original-hafs-web']
+    paths: ['scripts/render-original-hafs.py', '.github/workflows/prepare-original-mushaf.yml']
+permissions:
+  contents: write
+jobs:
+  original-pages:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render verified original artwork
+        run: |
+          python -m pip install PyMuPDF==1.26.6 Pillow==12.3.0
+          python scripts/render-original-hafs.py
+      - name: Check pages and web reader
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node --test tests/quran-pages.test.cjs tests/quran-original-pages.test.cjs
+          node tests/quran-reader-browser.cjs
+          node tests/quran-offline-browser.cjs
+      - name: Preserve verified web assets
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/mushaf-hafs-1441 assets/mushaf-hafs-1441-ready.json
+          git commit -m 'Bundle verified 604 original KFGQPC Hafs page images for web'
+          git push origin HEAD:quran-original-hafs-web
+      - name: Upload original-page previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-hafs-web-previews
+          path: /tmp/aoqat-original-*.png
+          if-no-files-found: ignore
