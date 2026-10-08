@@ -165,3 +165,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-previ
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-ayah-number{font-family:AoqatQuran!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-title{flex:1.7!important;flex-direction:column!important;gap:3px!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-bismillah{font:22px/1.5 AoqatQuran!important}
+
+/* Limited readability trial: slightly fuller outlines on pages 499 and 500. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader:is([data-page="499"],[data-page="500"]) .aq-line-ink,
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader:is([data-page="499"],[data-page="500"]) .aq-line-ink .aq-ayah{-webkit-text-stroke:.22px currentColor!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader:is([data-page="499"],[data-page="500"]) .aq-ayah-number{-webkit-text-stroke:0!important}
