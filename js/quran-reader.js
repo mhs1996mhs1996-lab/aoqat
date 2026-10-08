@@ -115,7 +115,7 @@
     if(official){
       const p=official.pages[page-1],start=meta.pages[page-1].start,items=pageItems(page),indices=new Map(items.map((v,n)=>[v.s+':'+v.a,start+n]));
       const hits=p.hits.map(h=>{const i=indices.get(h.surahNumber+':'+h.ayahNumber);if(i===undefined)throw Error('Mushaf ayah mapping mismatch');const v=verses[i];return `<path d="${esc(h.polygon)}" role="button" tabindex="0" data-qr-verse="${i}" class="aq-original-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}"><title>${esc(v.text)}</title></path>`;}).join('');
-      return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${p.width} ${p.height}" preserveAspectRatio="xMidYMid meet" aria-label="مصحف المدينة برواية حفص، صفحة ${page}"><image href="assets/mushaf-hafs-1441/${String(page).padStart(3,'0')}.webp" width="${p.width}" height="${p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
+      return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="مصحف المدينة برواية حفص، صفحة ${page}"><image href="assets/mushaf-hafs-1441/${String(page).padStart(3,'0')}.webp" width="${p.width}" height="${p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
     }
     if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
       if(line.s)return `<div class="aq-mushaf-line">${surahBanner(line.s)}</div>`;
@@ -150,7 +150,7 @@
     fitText(paper,text,state.page);
   }
   function fitText(paper,text,page){
-    if(official){text.classList.remove('aq-lined-page','aq-opening');text.classList.add('aq-original-page');const zoom=Math.max(1,state.font/44);text.style.height=(paper.clientHeight-16)*zoom+'px';text.style.setProperty('width',(paper.clientWidth-16)*zoom+'px','important');return;}
+    if(official){text.classList.remove('aq-lined-page','aq-opening');text.classList.add('aq-original-page');const zoom=Math.max(1,state.font/44);const p=official.pages[page-1],box=p.displayBox||[0,0,p.width,p.height],width=(paper.clientWidth-16)*zoom;text.style.height=width*box[3]/box[2]+'px';text.style.setProperty('width',width+'px','important');return;}
     const height=paper.clientHeight-28,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
     if(page>2&&meta.lines?.[page-1]){
       text.classList.add('aq-lined-page');text.style.height=height+'px';

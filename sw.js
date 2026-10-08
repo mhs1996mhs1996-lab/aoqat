@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v27";
+const CACHE_NAME = "aoqat-pwa-v28";
 const APP_SHELL = [
   "/assets/mushaf-hafs-1441-ready.json", "/assets/mushaf-hafs-1441.json.gz", "/assets/mushaf-hafs-1441/001.webp", "/assets/mushaf-hafs-1441/604.webp", "/css/quran-reader.css?v=original-hafs-1441",
   "/assets/qcf-preview/data.json", "/assets/qcf-preview/p498.woff2", "/assets/qcf-preview/p499.woff2",
