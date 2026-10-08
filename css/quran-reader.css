@@ -202,6 +202,6 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=night] .aq-original-art image{filter:invert(.9) hue-rotate(180deg)!important}
 
 /* The pocket publication keeps its own source artwork; themes affect display only. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=sepia] .aq-original-art image{filter:sepia(1) saturate(.7)!important;mix-blend-mode:multiply!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=sepia] .aq-original-art image{filter:hue-rotate(180deg) saturate(.4) contrast(1.25)!important;mix-blend-mode:multiply!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=green] .aq-original-art image{filter:hue-rotate(-85deg) saturate(.6)!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=blue] .aq-original-art image{filter:none!important}
