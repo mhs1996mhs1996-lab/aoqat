@@ -74,7 +74,6 @@
       if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
       if(Math.hypot(dx,dy)>12)clearTimeout(pressTimer);
-      if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4){dragOffset=dx;if(!dragFrame)dragFrame=requestAnimationFrame(()=>{dragFrame=0;if(pointer)previewDrag(dragOffset);});}
     });
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
@@ -115,19 +114,8 @@
     });html+='</p>';
     return html;
   }
-  function inertText(text){text.removeAttribute('id');text.querySelectorAll('[data-qr-verse]').forEach(v=>{v.removeAttribute('data-qr-verse');v.removeAttribute('role');v.removeAttribute('tabindex');});return text;}
-  function previewDrag(dx){
-    const paper=$('aqPaper'),width=paper.clientWidth,target=state.page+(dx>0?1:-1);
-    if(target<1||target>TOTAL){$('adVerses').style.transform='translateX('+Math.max(-35,Math.min(35,dx*.15))+'px)';return;}
-    let leaf=paper.querySelector('.aq-drag-preview');
-    if(!leaf||Number(leaf.dataset.target)!==target){
-      leaf?.remove();leaf=document.createElement('div');leaf.className='aq-leaf aq-drag-preview';leaf.dataset.target=target;leaf.setAttribute('aria-hidden','true');leaf.inert=true;
-      const front=document.createElement('div');front.className='aq-leaf-front';const text=$('adVerses').cloneNode(false);const cached=preparedPages.get(pageKey(paper,target));if(cached){text.className=cached.className;text.style.cssText=cached.style.cssText;text.innerHTML=cached.innerHTML;}else{text.innerHTML=pageHTML(target);text.classList.toggle('aq-opening',target<=2);}inertText(text);text.style.transform='';front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,target);
-    }
-    const offset=Math.max(-width,Math.min(width,dx));$('adVerses').style.transform='translateX('+offset+'px)';leaf.style.transform='translateX('+(offset+(dx>0?-width:width))+'px)';
-  }
   function renderPage(animate=false){
-    const offset=dragOffset;dragOffset=0;const oldPage=Number(root.dataset.page),oldText=animate?$('adVerses').cloneNode(true):null;if(oldText)oldText.style.transform='';
+    dragOffset=0;
     clearTurn();
     const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
     const cached=!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
@@ -136,18 +124,9 @@
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;
-    fit();warmAdjacent(animate?200:80);
-    if(animate&&oldPage&&Math.abs(oldPage-state.page)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
-      const next=state.page>oldPage,paper=$('aqPaper'),leaf=document.createElement('div');
-      leaf.className='aq-leaf';leaf.setAttribute('aria-hidden','true');leaf.inert=true;
-      oldText.removeAttribute('id');oldText.querySelectorAll('[data-qr-verse]').forEach(v=>{v.removeAttribute('data-qr-verse');v.removeAttribute('role');v.removeAttribute('tabindex');});
-      const front=document.createElement('div');front.className='aq-leaf-front';front.append(oldText);leaf.append(front);paper.append(leaf);
-      const direction=next?1:-1,width=paper.clientWidth,start=Math.max(-width,Math.min(width,offset)),options={duration:180,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'};
-      incomingAnimation=$('adVerses').animate([{transform:'translateX('+(start-direction*width)+'px)'},{transform:'translateX(0px)'}],options);
-      const animation=leaf.animate([{transform:'translateX('+start+'px)'},{transform:'translateX('+(direction*width)+'px)'}],options);
-      turnAnimation=animation;animation.finished.then(()=>{leaf.remove();if(turnAnimation===animation)turnAnimation=null;incomingAnimation?.cancel();incomingAnimation=null;}).catch(()=>leaf.remove());
-    }
+    fit();warmAdjacent(80);
   }
+
   function fit(){
     const paper=$('aqPaper'),text=$('adVerses');if(!paper||!text||paper.clientHeight<1)return;
     fitText(paper,text,state.page);

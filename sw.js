@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v24";
+const CACHE_NAME = "aoqat-pwa-v25";
 const APP_SHELL = [
   "/js/settings-subwindows.js", "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
   "/",
