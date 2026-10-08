@@ -155,18 +155,13 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-li
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-line-ink .aq-ayah{font-size:inherit!important;line-height:inherit!important}
 
 /* Clearer ink on warm paper; preserve authored Quran glyphs and line divisions. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-line-ink{-webkit-text-stroke:.14px currentColor!important;text-rendering:optimizeLegibility!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-line-ink{-webkit-text-stroke:.22px currentColor!important;text-rendering:optimizeLegibility!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-ayah-number{border-radius:50%!important;font-size:.62em!important;border:1px solid #a9854c!important;-webkit-text-stroke:0!important;color:#8d6d36!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-page-text,.aq-leaf){will-change:transform!important}
 
-/* QCF V2 reading trial: original word outlines, uniform size, no horizontal distortion. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-line-ink,
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-line-ink .aq-ayah{font-family:var(--qcf-family)!important;-webkit-text-stroke:0!important;transform:none!important;line-height:1.4!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-ayah-number{font-family:AoqatQuran!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-title{flex:1.7!important;flex-direction:column!important;gap:3px!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-bismillah{font:22px/1.5 AoqatQuran!important}
 
-/* Limited readability trial: slightly fuller outlines on pages 499 and 500. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader:is([data-page="499"],[data-page="500"]) .aq-line-ink,
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader:is([data-page="499"],[data-page="500"]) .aq-line-ink .aq-ayah{-webkit-text-stroke:.22px currentColor!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader:is([data-page="499"],[data-page="500"]) .aq-ayah-number{-webkit-text-stroke:0!important}
+/* The standard end-of-ayah ornament surrounds the verse number. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{-webkit-text-stroke:.22px currentColor!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;vertical-align:middle!important;min-width:1.8em!important;width:1.8em!important;height:1.8em!important;padding:0!important;margin-inline:.12em!important;border:0!important;border-radius:0!important;line-height:1!important;font-size:.62em!important;color:var(--qr-ink)!important;-webkit-text-stroke:0!important;direction:ltr!important;unicode-bidi:isolate!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-rosette{position:absolute!important;inset:0!important;display:flex!important;align-items:center!important;justify-content:center!important;font:1.8em/1 AoqatQuran,serif!important;color:inherit!important;-webkit-text-stroke:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-digits{position:relative!important;font:.65em/1 Tahoma,Arial,sans-serif!important;color:inherit!important;-webkit-text-stroke:0!important}
