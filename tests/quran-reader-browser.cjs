@@ -17,7 +17,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  console.log('Quran toolbar styles',await page.locator('[data-qr-panel="index"] small').evaluate(e=>{const s=getComputedStyle(e),b=getComputedStyle(e.parentElement);return {text:e.textContent,color:s.color,display:s.display,visibility:s.visibility,opacity:s.opacity,font:s.font,fontFamily:s.fontFamily,rect:e.getBoundingClientRect().toJSON(),buttonColor:b.color,buttonDisplay:b.display,buttonRect:e.parentElement.getBoundingClientRect().toJSON()};}));
  await jump(498);assert.deepEqual(await page.locator('.aq-surah-banner').allTextContents(),['سورة الجاثية']);
  await page.screenshot({path:'/tmp/aoqat-quran-heading498.png'});
- await jump(499);assert.equal(await page.locator('.aq-surah-banner').count(),0);assert.ok((await page.locator('#adVerses').textContent()).includes('حم'));
+ await jump(499);await page.waitForFunction(()=>!document.querySelector('.aq-leaf'));assert.equal(await page.locator('#adVerses .aq-surah-banner').count(),0);assert.ok((await page.locator('#adVerses').textContent()).includes('حم'));
  await page.screenshot({path:'/tmp/aoqat-quran-heading499.png'});await jump(1);
  const layout=()=>page.locator('#adVerses').evaluate(e=>({box:e.getBoundingClientRect().toJSON(),font:getComputedStyle(e).fontSize,text:e.innerText,paper:document.getElementById('aqPaper').getBoundingClientRect().toJSON()}));const normalLayout=await layout();assert.equal(await page.locator('#aqToggleTools').count(),0);
  await page.locator('#aqPaper').click({position:{x:190,y:300}});assert.equal(await page.locator('.aq-top').isVisible(),false);assert.deepEqual(await layout(),normalLayout,'hiding tools must not resize the page, font, or verses');assert.ok(normalLayout.paper.height>700);
