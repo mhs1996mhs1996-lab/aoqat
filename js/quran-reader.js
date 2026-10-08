@@ -10,7 +10,7 @@
   let state={page:1,theme:'sepia',font:44,reciter:'ar.alafasy',volume:80,goal:20,name:'',bookmarks:[],notes:[],days:{}};
   try {Object.assign(state,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(_){}
   state.page=Math.max(1,Math.min(TOTAL,Math.floor(Number(state.page)||1)));
-  state.theme=['sepia','white','night'].includes(state.theme)?state.theme:'sepia';
+  state.theme=['sepia','white','night','green','blue','contrast'].includes(state.theme)?state.theme:'sepia';
   state.font=Math.max(22,Math.min(46,Number(state.font)||44));
   if(!state.readingRevision && state.font===32)state.font=36;
   if(state.readingRevision===2 && state.font===36 && !state.fontCustomized)state.font=40;
@@ -235,7 +235,7 @@
   }
 
   function settingsPanel(){
-    sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="46" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
+    sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>حجم الخط<input id="aqFont" type="range" min="22" max="46" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
@@ -277,7 +277,7 @@
     sheet('المكتبة',`<button type="button" class="aq-list-row" id="aqLibraryTafsir">التفسير الميسر<small>تفسير الآية من الصفحة الحالية</small></button><button type="button" class="aq-list-row" id="aqLibraryGuide">دليل استخدام المصحف<small>القراءة والورد والعلامات</small></button><button type="button" class="aq-list-row" id="aqLibrarySources">مصادر المصحف<small>النص وتقسيم الصفحات والتلاوة</small></button>`);
     $('aqLibraryTafsir').onclick=()=>tafsirPanel(meta.pages[state.page-1].start);$('aqLibraryGuide').onclick=()=>sheet('دليل استخدام المصحف','<p>اسحب الصفحة أفقياً لتقليب المصحف، أو استخدم السابق والتالي. الفهرس ينقلك إلى السور والأجزاء والصفحات.</p><p>اضغط مطوّلاً على الآية لحفظ علامة أو كتابة ملاحظة أو سماعها أو قراءة تفسيرها. تجد العلامات والملاحظات في «ملفاتي».</p><p>حدّد هدفك في «وردي»، واضغط «قرأت الصفحة» بعد القراءة. يمكنك تغيير لون المصحف من إعداداته.</p>');$('aqLibrarySources').onclick=sourcesPanel;
   }
-  function sourcesPanel(){sheet('مصادر المصحف',`<p>نص القرآن الموجود بالمشروع: Risan Quran JSON، 114 سورة و6236 آية، دون تغيير النص.</p><a href="https://github.com/risan/quran-json" target="_blank" rel="noopener">مصدر النص وترخيص CC BY-SA 4.0</a><p>حدود صفحات مصحف المدينة والأجزاء: مشروع تنزيل.</p><a href="https://tanzil.net/docs/Quran_Metadata" target="_blank" rel="noopener">بيانات تنزيل · CC BY</a><p>التلاوة والتفسير الميسر: Al Quran Cloud.</p><a href="https://alquran.cloud" target="_blank" rel="noopener">مصدر التلاوة والتفسير</a><p>خط Amiri Quran · ترخيص SIL Open Font License.</p><p>الواجهة مبنية لهذا المشروع؛ الأزرار مستوحاة من ترتيب السكرين المرجعي.</p>`);}
+  function sourcesPanel(){sheet('مصادر المصحف',`<p>نص القرآن الموجود بالمشروع: Risan Quran JSON، 114 سورة و6236 آية، دون تغيير النص.</p><a href="https://github.com/risan/quran-json" target="_blank" rel="noopener">مصدر النص وترخيص CC BY-SA 4.0</a><p>حدود صفحات مصحف المدينة والأجزاء: مشروع تنزيل.</p><a href="https://tanzil.net/docs/Quran_Metadata" target="_blank" rel="noopener">بيانات تنزيل · CC BY</a><p>التلاوة والتفسير الميسر: Al Quran Cloud.</p><a href="https://alquran.cloud" target="_blank" rel="noopener">مصدر التلاوة والتفسير</a><p>خط حفص العثماني المستخدم بالمشروع. مرجع المقارنة: مصحف المدينة النبوية برواية حفص، الصادر عن مجمع الملك فهد.</p><a href="https://qurancomplex.gov.sa/quran-hafs/" target="_blank" rel="noopener">مصحف المدينة · المصدر الرسمي</a><p>العرض هنا واجهة نصية للمشروع، وليس نسخة رقمية حاصلة على شهادة اعتماد من المجمع. ألوان القراءة وإطار عنوان السورة من تنسيق الواجهة؛ لا تدخل في النص القرآني.</p><p>الواجهة مبنية لهذا المشروع؛ الأزرار مستوحاة من ترتيب السكرين المرجعي.</p>`);}
   function tafsirPanel(i){
     selected=i;const v=verses[i];sheet('التفسير الميسر',`<label>السورة<select id="aqTafsirSurah">${surahOptions(v.s)}</select></label><label>الآية<input id="aqTafsirAyah" type="number" min="1" max="${quran[v.s-1].total_verses}" value="${v.a}"></label><button type="button" id="aqLoadTafsir">عرض التفسير</button><p id="aqTafsirVerse" class="aq-quote">${esc(v.text)}</p><p id="aqTafsirText" role="status"></p><p class="aq-caption">التفسير الميسر · يحتاج اتصالاً بالإنترنت</p>`);
     $('aqTafsirSurah').onchange=e=>{$('aqTafsirAyah').value=1;$('aqTafsirAyah').max=quran[Number(e.target.value)-1].total_verses;};
@@ -309,7 +309,7 @@
       document.body.classList.add('quran-reader-open');resize?.observe($('aqPaper'));fit();
     }
   }).observe(document.body,{attributes:true,attributeFilter:['class']});
-  const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css?v=verse-digits-3';document.head.appendChild(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css?v=mushaf-colors-4';document.head.appendChild(css);
   window.AoqatQuranReader={open,close};
   // Load the packaged text before the user opens its menu; failures remain retryable.
   load().catch(()=>{});
