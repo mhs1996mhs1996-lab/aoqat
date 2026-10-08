@@ -309,7 +309,7 @@
       document.body.classList.add('quran-reader-open');resize?.observe($('aqPaper'));fit();
     }
   }).observe(document.body,{attributes:true,attributeFilter:['class']});
-  const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css';document.head.appendChild(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css?v=verse-digits-3';document.head.appendChild(css);
   window.AoqatQuranReader={open,close};
   // Load the packaged text before the user opens its menu; failures remain retryable.
   load().catch(()=>{});
