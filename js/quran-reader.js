@@ -136,7 +136,7 @@
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;
-    fit();warmAdjacent();
+    fit();warmAdjacent(animate?200:80);
     if(animate&&oldPage&&Math.abs(oldPage-state.page)===1&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
       const next=state.page>oldPage,paper=$('aqPaper'),leaf=document.createElement('div');
       leaf.className='aq-leaf';leaf.setAttribute('aria-hidden','true');leaf.inert=true;
@@ -174,7 +174,7 @@
     const size=best/2;text.style.fontSize=size+'px';
     if(fittedSizes.size>64)fittedSizes.delete(fittedSizes.keys().next().value);fittedSizes.set(key,size);
   }
-  function warmAdjacent(){
+  function warmAdjacent(delay=80){
     clearTimeout(warmTask);
     const current=state.page;
     warmTask=setTimeout(()=>{
@@ -186,7 +186,7 @@
         const text=$('adVerses').cloneNode(false);text.removeAttribute('id');text.innerHTML=pageHTML(page);text.classList.toggle('aq-opening',page<=2);text.style.transform='';
         front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,page);if(!audioOn){preparedPages.set(pageKey(paper,page),text.cloneNode(true));if(preparedPages.size>6)preparedPages.delete(preparedPages.keys().next().value);}leaf.remove();
       }
-    },80);
+    },delay);
   }
   function go(page,highlight,animate=true){
     if(!Number.isInteger(page)||page<1||page>604){notice('اختر صفحة من 1 إلى 604');return;}
