@@ -33,6 +33,10 @@
   function pageOf(i){let lo=0,hi=603;while(lo<hi){const m=Math.ceil((lo+hi)/2);if(meta.pages[m].start<=i)lo=m;else hi=m-1;}return lo+1;}
   function juzOf(i){return meta.juzs.filter(j=>j.start<=i).at(-1)?.id||1;}
   function pageItems(p=state.page){return verses.slice(meta.pages[p-1].start,p<604?meta.pages[p].start:verses.length);}
+  function surahBanner(id){
+    const s=quran[id-1],kind=s.type==='meccan'?'مكية':'مدنية';
+    return `<h2 class="aq-surah-banner aq-surah-details"><span class="aq-surah-count">${arabic(s.total_verses)} آية</span><span class="aq-surah-name">سورة ${esc(s.name)}</span><span class="aq-surah-kind">${kind}</span></h2>`;
+  }
   function notice(text){if($('aqNotice'))$('aqNotice').textContent=text;}
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
   async function load(){
@@ -100,14 +104,14 @@
   function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   function pageHTML(page){
     if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
-      if(line.s)return `<div class="aq-mushaf-line"><h2 class="aq-surah-banner">سورة ${esc(quran[line.s-1].name)}</h2></div>`;
+      if(line.s)return `<div class="aq-mushaf-line">${surahBanner(line.s)}</div>`;
       if(line.b)return `<div class="aq-mushaf-line aq-centered"><span class="aq-line-ink">${esc(quran[0].verses[0].text)}</span></div>`;
       return `<div class="aq-mushaf-line"><span class="aq-line-ink">${line.v.map(([i,start,end])=>{const v=verses[i],words=v.text.split(/\s+/);return `<span role="button" tabindex="0" data-qr-verse="${i}" class="aq-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}">${esc(words.slice(start,end).join(' '))}${end===words.length?` <span class="aq-ayah-number" aria-label="نهاية الآية ${v.a}"><span class="aq-ayah-rosette" aria-hidden="true">۝</span><span class="aq-ayah-digits">${arabic(v.a)}</span></span>`:''}</span>`;}).join(' ')}</span></div>`;
     }).join('');
     const items=pageItems(page),start=meta.pages[page-1].start;let html='',group=-1;
     items.forEach((v,n)=>{
       if(group!==v.s){if(group!==-1)html+='</p>';group=v.s;
-        if(v.a===1){html+=`<h2 class="aq-surah-banner">سورة ${esc(v.name)}</h2>`;if(v.s!==1&&v.s!==9)html+=`<div class="aq-bismillah">${esc(quran[0].verses[0].text)}</div>`;}
+        if(v.a===1){html+=`${surahBanner(v.s)}`;if(v.s!==1&&v.s!==9)html+=`<div class="aq-bismillah">${esc(quran[0].verses[0].text)}</div>`;}
         html+='<p class="aq-verses">';
       }
       html+=`<span role="button" tabindex="0" data-qr-verse="${start+n}" class="aq-ayah${audioOn&&audioIndex===start+n?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}">${esc(v.text)} <span class="aq-ayah-number" aria-label="نهاية الآية ${v.a}"><span class="aq-ayah-rosette" aria-hidden="true">۝</span><span class="aq-ayah-digits">${arabic(v.a)}</span></span></span> `;
