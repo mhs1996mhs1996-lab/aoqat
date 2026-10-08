@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 73 // Integrate tested services and Quran reader in Android
-        versionName '1.38'
+        versionCode 74 // Repair independent prayer alarm delivery
+        versionName '1.39'
     }
 
     compileOptions {

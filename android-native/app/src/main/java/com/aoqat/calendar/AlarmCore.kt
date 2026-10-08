@@ -126,6 +126,7 @@ object IqamaNativeScheduler {
         prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString())
             .putString("afterMinutes", after.toString()).commit()
         AdhanSchedule.schedule(context)
+        if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(context)
         PrayerAlarm.schedule(context)
         if (!enabled) {
             cancel(context)

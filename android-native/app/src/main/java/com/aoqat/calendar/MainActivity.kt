@@ -340,6 +340,7 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         if (::webView.isInitialized) protectDisplayColors()
+        if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
         PrayerAlarm.schedule(this)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerAlarmNativeSettings?.("+PrayerAlarm.settings(this).toString()+")",null)
         AlarmScheduler.scheduleFromDatabase(this)
@@ -596,8 +597,16 @@ class MainActivity : Activity() {
             (getSystemService(POWER_SERVICE) as android.os.PowerManager).isIgnoringBatteryOptimizations(packageName)
         @JavascriptInterface fun requestIqamaBackgroundPermission() { runOnUiThread { requestIqamaBackgroundAccessIfNeeded(force = true) } }
 
+        @JavascriptInterface fun prayerAlarmReadiness():String {
+            val am=getSystemService(ALARM_SERVICE) as AlarmManager
+            if(Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms())return "الرنين يحتاج السماح بالمنبّهات الدقيقة من إعدادات الهاتف"
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if(!nm.areNotificationsEnabled()||nm.getNotificationChannel("prayer_alarm_v1")?.importance==NotificationManager.IMPORTANCE_NONE)return "اسمح بإشعارات منبّه الصلاة حتى يظهر المنبّه على الهاتف"
+            if(PrayerAlarm.events(this@MainActivity).none{it.at>System.currentTimeMillis()})return "المواقيت غير متوفرة: اتصل بالإنترنت مرة لتحديثها"
+            return "الرنين يعمل بالخلفية حسب المواقيت المحفوظة"
+        }
         @JavascriptInterface fun readPrayerAlarmSettings():String = PrayerAlarm.settings(this@MainActivity).toString()
-        @JavascriptInterface fun configurePrayerAlarm(json:String){runOnUiThread{try{val s=org.json.JSONObject(json);if(s.optBoolean("enabled")){requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();requestIqamaBackgroundAccessIfNeeded(forAdhan=true);if(Build.VERSION.SDK_INT>=34&&!(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))};PrayerAlarm.configure(this@MainActivity,json)}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ المنبّه",Toast.LENGTH_LONG).show()}}}
+        @JavascriptInterface fun configurePrayerAlarm(json:String){runOnUiThread{try{val s=org.json.JSONObject(json);PrayerAlarm.configure(this@MainActivity,json);if(s.optBoolean("enabled")){requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();requestIqamaBackgroundAccessIfNeeded(forAdhan=true);if(Build.VERSION.SDK_INT>=34&&!(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))};}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ المنبّه",Toast.LENGTH_LONG).show()}}}
         @JavascriptInterface fun previewPrayerAlarm(id:String){runOnUiThread{if(id in PrayerAlarm.ids){requestNotificationPermissionIfNeeded();PrayerAlarm.start(this@MainActivity,id,preview=true)}}}
         @JavascriptInterface fun stopPrayerAlarm(){stopService(Intent(this@MainActivity,PrayerAlarmService::class.java))}
         @JavascriptInterface fun choosePrayerAlarmTone(id:String,system:Boolean){runOnUiThread{if(id in PrayerAlarm.ids){prayerAlarmToneId=id;val pick=if(system)Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE,android.media.RingtoneManager.TYPE_ALARM) else Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)};startActivityForResult(pick,if(system)8202 else 8201)}}}
