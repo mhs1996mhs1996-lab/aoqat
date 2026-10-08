@@ -40,9 +40,11 @@
   function notice(text){if($('aqNotice'))$('aqNotice').textContent=text;}
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
   async function loadOfficial(){
-    const ready=await fetch('assets/mushaf-hafs-1441-ready.json');
+    const pocket=await fetch('assets/mushaf-hafs-pocket-ready.json');
+    const prefix=pocket.ok?'assets/mushaf-hafs-pocket':'assets/mushaf-hafs-1441';
+    const ready=pocket.ok?pocket:await fetch(prefix+'-ready.json');
     if(!ready.ok)return null;
-    const r=await fetch('assets/mushaf-hafs-1441.json.gz');if(!r.ok)throw Error('Mushaf metadata unavailable');
+    const r=await fetch(prefix+'.json.gz');if(!r.ok)throw Error('Mushaf metadata unavailable');
     const bytes=new Uint8Array(await r.arrayBuffer());
     const data=bytes[0]===31&&bytes[1]===139?await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));
     if(data.pages.length!==604||data.pages.some((p,i)=>p.id!==i+1||!p.hits.length))throw Error('Invalid original Mushaf pages');return data;
@@ -115,7 +117,7 @@
     if(official){
       const p=official.pages[page-1],start=meta.pages[page-1].start,items=pageItems(page),indices=new Map(items.map((v,n)=>[v.s+':'+v.a,start+n]));
       const hits=p.hits.map(h=>{const i=indices.get(h.surahNumber+':'+h.ayahNumber);if(i===undefined)throw Error('Mushaf ayah mapping mismatch');const v=verses[i];return `<path d="${esc(h.polygon)}" role="button" tabindex="0" data-qr-verse="${i}" class="aq-original-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}"><title>${esc(v.text)}</title></path>`;}).join('');
-      return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="مصحف المدينة برواية حفص، صفحة ${page}"><image href="assets/mushaf-hafs-1441/${String(page).padStart(3,'0')}.webp" width="${p.width}" height="${p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
+      return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="مصحف المدينة برواية حفص، صفحة ${page}"><image href="${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(page).padStart(3,'0')}.webp" width="${p.width}" height="${p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
     }
     if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
       if(line.s)return `<div class="aq-mushaf-line">${surahBanner(line.s)}</div>`;
@@ -142,7 +144,7 @@
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
-    root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=official?'hafs-1441':'text';
+    root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=official?(official.imageDirectory?'hafs-pocket':'hafs-1441'):'text';
     fit();if(official&&pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
 
@@ -252,7 +254,7 @@
 
   function settingsPanel(){
     sheet('إعدادات المصحف',`<label>لون المصحف<select id="aqTheme"><option value="sepia">ورقي</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>${official?'تكبير الصفحة الأصلية':'حجم الخط'}<input id="aqFont" type="range" min="${official?44:22}" max="${official?80:46}" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
-    if(official){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';const status=document.createElement('p');status.setAttribute('role','status');$('aqSheetBody').append(button,status);button.onclick=async()=>{button.disabled=true;let next=1,done=0;try{const cache=await caches.open('aoqat-mushaf-hafs1441');await Promise.all(Array.from({length:4},async()=>{while(next<=604){const n=next++,url=`assets/mushaf-hafs-1441/${String(n).padStart(3,'0')}.webp`;if(!await cache.match(url)){const r=await fetch(url);if(!r.ok||!r.headers.get('content-type')?.includes('image/'))throw Error();await cache.put(url,r);}status.textContent=`تم تنزيل ${++done} / 604 صفحة`;}}));status.textContent='تم تنزيل المصحف كاملاً للقراءة بدون إنترنت';}catch(_){status.textContent='توقف التنزيل؛ الصفحات المكتملة محفوظة. يمكنك إعادة المحاولة.';}finally{button.disabled=false;}};}
+    if(official){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';const status=document.createElement('p');status.setAttribute('role','status');$('aqSheetBody').append(button,status);button.onclick=async()=>{button.disabled=true;let next=1,done=0;try{const cache=await caches.open(official.cacheName||'aoqat-mushaf-hafs1441');await Promise.all(Array.from({length:4},async()=>{while(next<=604){const n=next++,url=`${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(n).padStart(3,'0')}.webp`;if(!await cache.match(url)){const r=await fetch(url);if(!r.ok||!r.headers.get('content-type')?.includes('image/'))throw Error();await cache.put(url,r);}status.textContent=`تم تنزيل ${++done} / 604 صفحة`;}}));status.textContent='تم تنزيل المصحف كاملاً للقراءة بدون إنترنت';}catch(_){status.textContent='توقف التنزيل؛ الصفحات المكتملة محفوظة. يمكنك إعادة المحاولة.';}finally{button.disabled=false;}};}
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
@@ -326,7 +328,7 @@
       document.body.classList.add('quran-reader-open');resize?.observe($('aqPaper'));fit();
     }
   }).observe(document.body,{attributes:true,attributeFilter:['class']});
-  const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css?v=original-hafs-1441';document.head.appendChild(css);
+  const css=document.createElement('link');css.rel='stylesheet';css.href='css/quran-reader.css?v=pocket-hafs-1';document.head.appendChild(css);
   window.AoqatQuranReader={open,close};
   // Load the packaged text before the user opens its menu; failures remain retryable.
   load().catch(()=>{});

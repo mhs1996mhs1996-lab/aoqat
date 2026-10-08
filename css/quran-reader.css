@@ -189,14 +189,19 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-ban
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=contrast] .aq-surah-banner.aq-surah-details{background:#fff!important}
 
 /* Original KFGQPC page artwork is fitted uniformly; no text or line reconstruction. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441] .aq-paper{display:block!important;overflow:auto!important;padding:8px!important;touch-action:pan-y pinch-zoom!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441] .aq-original-page{margin:0 auto!important;max-width:none!important;line-height:1!important;-webkit-text-stroke:0!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441] .aq-original-art{display:block!important;width:100%!important;height:100%!important;overflow:hidden!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441] .aq-original-ayah{fill:transparent!important;stroke:none!important;cursor:pointer!important;pointer-events:all!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441] .aq-original-ayah:is(.aq-selected,.aq-playing){fill:#dfb85255!important;box-shadow:none!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441] .aq-original-ayah:focus-visible{fill:#dfb85255!important;outline:none!important;stroke:#846929!important;stroke-width:1!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441][data-theme=sepia] .aq-original-art image{filter:sepia(.16)!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441][data-theme=green] .aq-original-art image{filter:none!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441][data-theme=blue] .aq-original-art image{filter:hue-rotate(65deg)!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441][data-theme=contrast] .aq-original-art image{filter:grayscale(1) contrast(2)!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-1441][data-theme=night] .aq-original-art image{filter:invert(.9) hue-rotate(180deg)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-] .aq-paper{display:block!important;overflow:auto!important;padding:8px!important;touch-action:pan-y pinch-zoom!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-] .aq-original-page{margin:0 auto!important;max-width:none!important;line-height:1!important;-webkit-text-stroke:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-] .aq-original-art{display:block!important;width:100%!important;height:100%!important;overflow:hidden!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-] .aq-original-ayah{fill:transparent!important;stroke:none!important;cursor:pointer!important;pointer-events:all!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-] .aq-original-ayah:is(.aq-selected,.aq-playing){fill:#dfb85255!important;box-shadow:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-] .aq-original-ayah:focus-visible{fill:#dfb85255!important;outline:none!important;stroke:#846929!important;stroke-width:1!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=sepia] .aq-original-art image{filter:sepia(.16)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=green] .aq-original-art image{filter:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=blue] .aq-original-art image{filter:hue-rotate(65deg)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=contrast] .aq-original-art image{filter:grayscale(1) contrast(2)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=night] .aq-original-art image{filter:invert(.9) hue-rotate(180deg)!important}
+
+/* The pocket publication keeps its own source artwork; themes affect display only. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=sepia] .aq-original-art image{filter:sepia(1) saturate(.7)!important;mix-blend-mode:multiply!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=green] .aq-original-art image{filter:hue-rotate(-85deg) saturate(.6)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=blue] .aq-original-art image{filter:none!important}
