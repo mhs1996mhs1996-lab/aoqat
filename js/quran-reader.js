@@ -133,6 +133,7 @@
     return html;
   }
   function renderPage(animate=false){
+    const pageChanged=root.dataset.page!==String(state.page);
     dragOffset=0;
     clearTurn();
     const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
@@ -142,7 +143,7 @@
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=official?'hafs-1441':'text';
-    fit();warmAdjacent(80);
+    fit();if(official&&pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
 
   function fit(){
