@@ -205,3 +205,16 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=sepia] .aq-original-art image{filter:hue-rotate(180deg) saturate(.4) contrast(1.25)!important;mix-blend-mode:multiply!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=green] .aq-original-art image{filter:hue-rotate(-85deg) saturate(.6)!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=hafs-pocket][data-theme=blue] .aq-original-art image{filter:none!important}
+
+/* Phone rows use unchanged QCF2 glyph outlines and responsive row spacing. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=qcf2-phone] .aq-paper{display:block!important;overflow:auto!important;padding:6px 8px!important;touch-action:pan-y pinch-zoom!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-page{display:grid!important;grid-template-rows:repeat(var(--native-rows,15),minmax(0,1fr))!important;align-items:stretch!important;gap:0!important;margin:0 auto!important;padding:0!important;max-width:none!important;line-height:1!important;-webkit-text-stroke:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-line{display:block!important;width:100%!important;height:100%!important;min-height:0!important;overflow:visible!important;fill:var(--qr-ink)!important;stroke:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse{cursor:pointer!important;pointer-events:all!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse rect{fill:transparent!important;stroke:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse:is(.aq-selected,.aq-playing,:focus-visible) rect{fill:#dfb85255!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse:focus-visible{outline:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-native-heading,.aq-native-bismillah){display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;margin:0!important;padding:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-bismillah{font:clamp(24px,7vw,36px)/1.4 AoqatQuran,serif!important;color:var(--qr-ink)!important;-webkit-text-stroke:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-heading .aq-surah-banner{width:100%!important;margin:0!important;min-height:0!important;height:85%!important;box-sizing:border-box!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-loading{font:16px/1.6 Tahoma,Arial,sans-serif!important;text-align:center!important}

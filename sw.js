@@ -1,6 +1,7 @@
-const CACHE_NAME = "aoqat-pwa-v29";
+const CACHE_NAME = "aoqat-pwa-v30";
 const APP_SHELL = [
-  "/assets/mushaf-hafs-pocket-ready.json", "/assets/mushaf-hafs-pocket.json.gz", "/assets/mushaf-hafs-pocket/001.webp", "/assets/mushaf-hafs-pocket/604.webp", "/assets/mushaf-hafs-1441-ready.json", "/assets/mushaf-hafs-1441.json.gz", "/assets/mushaf-hafs-1441/001.webp", "/assets/mushaf-hafs-1441/604.webp", "/css/quran-reader.css?v=pocket-hafs-1",
+  "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
+  "/assets/mushaf-hafs-pocket-ready.json", "/assets/mushaf-hafs-pocket.json.gz", "/assets/mushaf-hafs-pocket/001.webp", "/assets/mushaf-hafs-pocket/604.webp", "/assets/mushaf-hafs-1441-ready.json", "/assets/mushaf-hafs-1441.json.gz", "/assets/mushaf-hafs-1441/001.webp", "/assets/mushaf-hafs-1441/604.webp", "/css/quran-reader.css?v=phone-hafs-1",
   "/assets/qcf-preview/data.json", "/assets/qcf-preview/p498.woff2", "/assets/qcf-preview/p499.woff2",
   "/js/settings-subwindows.js", "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
   "/",
@@ -59,7 +60,7 @@ self.addEventListener("install", event => {
 
 self.addEventListener("activate", event => {
   event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-hafs1441" && key !== "aoqat-mushaf-hafs-pocket").map(key => caches.delete(key))))
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-hafs1441" && key !== "aoqat-mushaf-hafs-pocket" && key !== "aoqat-mushaf-phone-hafs").map(key => caches.delete(key))))
   );
   self.clients.claim();
 });

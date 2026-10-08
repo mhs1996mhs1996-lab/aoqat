@@ -1,4 +1,5 @@
-if(require('node:fs').existsSync('assets/mushaf-hafs-1441-ready.json')){require('./quran-original-browser.cjs');}else{
+if(require('node:fs').existsSync('assets/mushaf-phone-hafs-ready.json')){require('./quran-responsive-browser.cjs');}
+else if(require('node:fs').existsSync('assets/mushaf-hafs-1441-ready.json')){require('./quran-original-browser.cjs');}else{
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
 (async()=>{const server=spawn('python3',['-m','http.server','8770'],{stdio:'ignore'});let browser;try{
  await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Asia/Baghdad',permissions:['clipboard-read','clipboard-write'],serviceWorkers:'block'});const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.stack));

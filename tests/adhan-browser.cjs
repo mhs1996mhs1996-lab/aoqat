@@ -108,6 +108,7 @@ const { spawn } = require("node:child_process");
     await page.locator('[data-qr-panel="index"]').click();
     await page.waitForSelector("#adSurah");
     await page.locator("#adSurah").selectOption("114");
+    await page.waitForFunction(()=>document.querySelector("#aqReader")?.dataset.page==="604");
     assert.ok(
       (await page.locator("#adVerses").textContent()).includes("ٱلنَّاسِ"),
     );
