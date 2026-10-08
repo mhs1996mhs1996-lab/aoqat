@@ -41,3 +41,9 @@ This describes source provenance, not certification of our application by KFGQPC
 Reference rendering documentation:
 https://api-docs.quran.com/docs/tutorials/fonts/font-rendering/
 https://api-docs.quran.com/docs/api/field-reference/
+
+Original page-font 245 contains a malformed competing `cmap` subtable. The
+build supplies HarfBuzz with the original valid Unicode-to-glyph mapping in a
+normalized shaping container, checks every required glyph ID, and still exports
+the original font’s unchanged glyph contours. This is recorded per page as
+`cmapNormalized`; the original archive and font checksums remain unchanged.

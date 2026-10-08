@@ -8,7 +8,7 @@ import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 from fontTools.pens.svgPathPen import SVGPathPen
 from fontTools.pens.transformPen import TransformPen
-from fontTools.pens.boundsPen import BoundsPen
+from fontTools.ttLib.tables._c_m_a_p import CmapSubtable
 ROOT=Path(__file__).resolve().parents[1]
 SHA='077ee64d5bcb35bc6d07bca0b3a8faacd97add0c610b5ee72e0ccb3b457445a5'
 ARCHIVE='https://media.githubusercontent.com/media/manaf/KFGQPC-Madinah-Mushaf/main/Al_Madinah_Mushaf_Win_Setup-2.1.zip'
@@ -19,7 +19,7 @@ def download(url,path):
  return path.read_bytes()
 def pack(path,data):path.write_bytes(gzip.compress(json.dumps(data,ensure_ascii=False,separators=(',',':')).encode(),compresslevel=9,mtime=0))
 def main():
- ap=argparse.ArgumentParser();ap.add_argument('--cache',default='/tmp/qcf2-oracle-cache');ap.add_argument('--archive',default='/tmp/qcf2-official-installer.zip');args=ap.parse_args();cache=Path(args.cache)
+ ap=argparse.ArgumentParser();ap.add_argument('--cache',default='/tmp/qcf2-oracle-cache');ap.add_argument('--archive',default='/tmp/qcf2-official-installer.zip');ap.add_argument('--page',type=int);ap.add_argument('--start',type=int,default=1);args=ap.parse_args();cache=Path(args.cache)
  raw=download(ARCHIVE,Path(args.archive));assert hashlib.sha256(raw).hexdigest()==SHA,'Original installer checksum mismatch';z=zipfile.ZipFile(io.BytesIO(raw))
  q=json.loads((ROOT/'assets/quran.json').read_text());indices={f'{s["id"]}:{v["id"]}':i for i,(s,v) in enumerate((s,v) for s in q for v in s['verses'])}
  out=ROOT/'assets/mushaf-phone-hafs';out.mkdir(exist_ok=True);ends={};starts={};pages=[]
@@ -40,7 +40,7 @@ def main():
  def fetch_layout(n):
   return n,json.loads(download(f'https://raw.githubusercontent.com/manaf/KFGQPC-Madinah-Mushaf/{LAYOUT_COMMIT}/data/pages/page-{n:03}.json',cache/f'layout-{n:03}.json'))
  with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
-  for n,layout in pool.map(fetch_layout,range(1,605)):
+  for n,layout in pool.map(fetch_layout,[args.page] if args.page else range(1,605)):
    a={'verses':by_page[n]}
    name=next(k for k in z.namelist() if k.endswith(f'QCF2{n:03}.ttf'));fontbytes=z.read(name);font=TTFont(io.BytesIO(fontbytes));glyphset=font.getGlyphSet();cmap=font.getBestCmap();order=font.getGlyphOrder();hfont=hb.Font(hb.Face(fontbytes));hb.ot_font_set_funcs(hfont)
    rowwords={};pageindices=[];codes=[]
@@ -52,8 +52,20 @@ def main():
      rowwords.setdefault(w['line_v2'],[]).append((i,code,w['char_type_name']))
      starts.setdefault(i,n);pageindices.append(i);codes.append(code)
      if w['char_type_name']=='end':assert i not in ends,(n,i,'duplicate verse end');ends[i]=n
-   rows=[]
+   normalized=False
+   if any(hfont.get_nominal_glyph(ord(c))!=font.getGlyphID(cmap[ord(c)]) for code in codes for c in code):
+    # A few original files contain a malformed competing cmap subtable.
+    # Normalize the lookup container for HarfBuzz only; contours, metrics,
+    # OpenType layout tables and the recorded original font bytes stay intact.
+    table=CmapSubtable.newSubtable(4);table.platformID=3;table.platEncID=1;table.language=0;table.cmap=cmap
+    font['cmap'].tables=[table];buffer=io.BytesIO();font.save(buffer);hfont=hb.Font(hb.Face(buffer.getvalue()));hb.ot_font_set_funcs(hfont);normalized=True
+   assert all(hfont.get_nominal_glyph(ord(c))==font.getGlyphID(cmap[ord(c)]) for code in codes for c in code),(n,'native cmap mismatch')
+   existing=out/f'{n:03}.json.gz'
+   reuse=n<args.start and existing.exists()
+   if reuse:rows=json.loads(gzip.decompress(existing.read_bytes()))['lines']
+   else:rows=[]
    for line in layout['lines']:
+    if reuse:continue
     typ=line['type'];ln=line['line']
     if typ=='blank':continue
     if typ=='surah_name':assert ln not in rowwords;rows.append({'s':line['decor']['surah']});continue
@@ -71,21 +83,24 @@ def main():
      cursor-=width;x=cursor
      for info,pos in zip(infos,positions):
       glyph=order[info.codepoint];matrix=(1,0,0,-1,x+pos.x_offset,-pos.y_offset)
-      pen=SVGPathPen(glyphset,ntos=lambda v:str(round(v,2)).rstrip('0').rstrip('.') if round(v,2)%1 else str(int(round(v,2))))
+      pen=SVGPathPen(glyphset,ntos=lambda v:str(int(v)) if v==int(v) else str(round(v,2)))
       glyphset[glyph].draw(TransformPen(pen,matrix));d=pen.getCommands()
       if d:
-       paths.setdefault(i,[]).append(d);bp=BoundsPen(glyphset);glyphset[glyph].draw(TransformPen(bp,matrix));bounds.append(bp.bounds)
+       paths.setdefault(i,[]).append(d);g=font['glyf'][glyph];bounds.append((g.xMin+matrix[4],-g.yMax+matrix[5],g.xMax+matrix[4],-g.yMin+matrix[5]))
       x+=pos.x_advance
      cursor-=gap
     x0=min(b[0] for b in bounds)-30;y0=min(b[1] for b in bounds)-60;x1=max(b[2] for b in bounds)+30;y1=max(b[3] for b in bounds)+60
     rows.append({'box':[round(x0,2),round(y0,2),round(x1-x0,2),round(y1-y0,2)],'c':bool(line.get('centered')),'v':[[i,''.join(ds)] for i,ds in paths.items()]})
+   if reuse:rowwords.clear()
    assert not rowwords,(n,'unplaced original rows');assert pageindices
    common=max(r['box'][2] for r in rows if 'box' in r)
    for r in rows:
-    if r.get('c'):r['box'][0]-=(common-r['box'][2])/2;r['box'][2]=common
-   data={'page':n,'lines':rows};pack(out/f'{n:03}.json.gz',data)
-   pages.append({'id':n,'start':min(pageindices),'end':max(pageindices)+1,'sha256':hashlib.sha256((out/f'{n:03}.json.gz').read_bytes()).hexdigest(),'fontSha256':hashlib.sha256(fontbytes).hexdigest(),'glyphSequenceSha256':hashlib.sha256(''.join(codes).encode()).hexdigest()})
+    if r.get('c') and not reuse:r['box'][0]-=(common-r['box'][2])/2;r['box'][2]=common
+   data={'page':n,'lines':rows}
+   if not reuse:pack(out/f'{n:03}.json.gz',data)
+   pages.append({'id':n,'start':min(pageindices),'end':max(pageindices)+1,'sha256':hashlib.sha256((out/f'{n:03}.json.gz').read_bytes()).hexdigest(),'fontSha256':hashlib.sha256(fontbytes).hexdigest(),'cmapNormalized':normalized,'glyphSequenceSha256':hashlib.sha256(''.join(codes).encode()).hexdigest()})
    if n%50==0:print('Rendered verified native outline rows',n,flush=True)
+ if args.page:return
  assert sorted(ends)==list(range(6236));assert sorted(starts)==list(range(6236));assert len(pages)==604
  manifest={'edition':'KFGQPC QCF2 Hafs 1421','sourceArchiveSha256':SHA,'layoutCommit':LAYOUT_COMMIT,'wordSource':'https://api.quran.com/api/v4/verses/by_chapter/{chapter}?words=true&word_fields=code_v2,v2_page,line_v2,text_qpc_hafs&per_page=50&page={part}','directory':'assets/mushaf-phone-hafs','cacheName':'aoqat-mushaf-phone-hafs','pages':pages,'versePages':[starts[i] for i in range(6236)],'verseEndPages':[ends[i] for i in range(6236)]}
  pack(ROOT/'assets/mushaf-phone-hafs.json.gz',manifest);(ROOT/'assets/mushaf-phone-hafs-ready.json').write_text(json.dumps({'pages':604,'verses':6236,'sourceArchiveSha256':SHA})+'\n');print('Verified 604 pages and all 6236 verse endings',flush=True)
