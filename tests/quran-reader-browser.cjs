@@ -51,6 +51,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await page.locator('#aqSheet .aq-quote').evaluate(e=>{const range=document.createRange();range.selectNodeContents(e);getSelection().addRange(range);});
  assert.ok(await page.evaluate(()=>getSelection().toString().length>0));await page.locator('#aqCloseSheet').click();await page.keyboard.press('Escape');
  await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#aqNext').click();assert.equal(await page.locator('.aq-leaf').count(),0);
+ await page.emulateMedia({reducedMotion:'no-preference'});await jump(499);await page.waitForTimeout(180);
+ const reading=await page.locator('#adVerses').evaluate(e=>{const paper=document.getElementById('aqPaper'),ink=e.querySelector('.aq-line-ink');return {size:parseFloat(getComputedStyle(ink).fontSize),height:paper.clientHeight,rows:e.children.length,bg:getComputedStyle(document.getElementById('aqReader')).getPropertyValue('--qr-bg').trim(),stroke:getComputedStyle(ink).webkitTextStrokeWidth};});
+ assert.equal(reading.rows,15);assert.ok(reading.size>=(reading.height-20)/15/1.45-.5,'longest line must not shrink the whole page');assert.equal(reading.bg,'#fff9e6');assert.equal(reading.stroke,'0.14px');
+ await page.locator('#aqPaper').click({position:{x:190,y:300}});await page.screenshot({path:'/tmp/aoqat-adhan-quran-page499-clear.png'});
+ const swipeBox=await page.locator('#aqPaper').boundingBox();await page.mouse.move(swipeBox.x+100,swipeBox.y+300);await page.mouse.down();await page.mouse.move(swipeBox.x+150,swipeBox.y+300,{steps:3});await page.mouse.up();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'500');
+ assert.ok(await page.locator('#adVerses').evaluate(e=>e.getAnimations().every(a=>a.effect.getTiming().duration<=180)),'page settles promptly');await page.waitForFunction(()=>!document.querySelector('.aq-leaf'));await page.screenshot({path:'/tmp/aoqat-adhan-quran-page500-clear.png'});
  assert.deepEqual(errors,[]);
  console.log('Quran page turns, 9 working tools, search, actual audio decoding, tafsir routing, notes, bookmarks, wird, persistence, responsive page fit and shared page passed');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exit(1);});

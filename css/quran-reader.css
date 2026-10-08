@@ -103,7 +103,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-slider{bo
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-notice{bottom:62px!important;height:20px!important;background:var(--qr-bar)!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-index:10!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{line-height:1.7!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fff9ed!important;--qr-ink:#181510!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fff9e6!important;--qr-ink:#15120c!important}
 body.quran-reader-open:has(#aqReader #aqSheet:not([hidden])) #webDrawerSub .web-sub-head{display:none!important}
 body.quran-reader-open #adService{min-height:100dvh!important}
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqBookmark{position:fixed!important;top:124px!important;left:8px!important;z-index:4!important;background:var(--qr-bar)!important;border-radius:7px!important;height:32px!important;line-height:32px!important}
@@ -153,3 +153,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-li
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-ayah-number{border:2px double #ad9563!important;border-radius:35%!important;font-size:.58em!important;min-width:1.2em!important;padding:0 .13em!important;line-height:1.35!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-line-ink,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-line-ink .aq-ayah{font-family:AoqatQuran,'Traditional Arabic',serif!important;font-weight:400!important;color:var(--qr-ink)!important;letter-spacing:0!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-line-ink .aq-ayah{font-size:inherit!important;line-height:inherit!important}
+
+/* Clearer ink on warm paper; preserve authored Quran glyphs and line divisions. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-line-ink{-webkit-text-stroke:.14px currentColor!important;text-rendering:optimizeLegibility!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-ayah-number{border-radius:50%!important;font-size:.62em!important;border:1px solid #a9854c!important;-webkit-text-stroke:0!important;color:#8d6d36!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-page-text,.aq-leaf){will-change:transform!important}

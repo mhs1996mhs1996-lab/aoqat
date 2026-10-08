@@ -22,7 +22,8 @@
   for(const key of ['bookmarks','notes'])if(!Array.isArray(state[key]))state[key]=[];
   if(!state.days || typeof state.days!=='object' || Array.isArray(state.days))state.days={};
   let root,host,quran,meta,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0,dragFrame=0,warmTask=0;
-  const fittedSizes=new Map();
+  const fittedSizes=new Map(),preparedPages=new Map();
+  const pageKey=(paper,page)=>[page,paper.clientWidth,paper.clientHeight,state.font].join(':');
   const $=id=>root?.querySelector('#'+id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const arabic=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
   const plain=s=>String(s).normalize('NFKD').replace(/[\u0610-\u061a\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g,'').replace(/[ٱأإآ]/g,'ا').replace(/ى/g,'ي');
@@ -64,7 +65,7 @@
     $('aqBookmark').onclick=()=>bookmark(meta.pages[state.page-1].start);
     $('aqPaper').addEventListener('pointerdown',e=>{
       if(!e.isPrimary)return;
-      clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId};
+      clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
       if(v)pressTimer=setTimeout(()=>{pointer=null;ignoreClickUntil=performance.now()+800;versePanel(Number(v.dataset.qrVerse));},400);
@@ -77,8 +78,8 @@
     });
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
-      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;pointer=null;
-      if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL)go(target);else {clearTurn();dragOffset=0;}}
+      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL)go(target);else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
@@ -92,7 +93,7 @@
       if(e.key==='ArrowLeft'){e.preventDefault();go(state.page+1);}if(e.key==='ArrowRight'){e.preventDefault();go(state.page-1);}if((e.key==='Enter'||e.key===' ')&&e.target.dataset.qrVerse){e.preventDefault();versePanel(Number(e.target.dataset.qrVerse));}
     });
     resize?.disconnect();resize=new ResizeObserver(()=>fit());resize.observe($('aqPaper'));
-    document.fonts?.ready.then(()=>{fittedSizes.clear();if(root?.isConnected){fit();warmAdjacent();}});
+    document.fonts?.ready.then(()=>{fittedSizes.clear();preparedPages.clear();if(root?.isConnected){fit();warmAdjacent();}});
   }
   function immersive(on){
     document.body.classList.toggle('quran-reader-immersive',on);
@@ -121,15 +122,15 @@
     let leaf=paper.querySelector('.aq-drag-preview');
     if(!leaf||Number(leaf.dataset.target)!==target){
       leaf?.remove();leaf=document.createElement('div');leaf.className='aq-leaf aq-drag-preview';leaf.dataset.target=target;leaf.setAttribute('aria-hidden','true');leaf.inert=true;
-      const front=document.createElement('div');front.className='aq-leaf-front';const text=$('adVerses').cloneNode(false);text.innerHTML=pageHTML(target);text.classList.toggle('aq-opening',target<=2);inertText(text);text.style.transform='';front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,target);
+      const front=document.createElement('div');front.className='aq-leaf-front';const text=$('adVerses').cloneNode(false);const cached=preparedPages.get(pageKey(paper,target));if(cached){text.className=cached.className;text.style.cssText=cached.style.cssText;text.innerHTML=cached.innerHTML;}else{text.innerHTML=pageHTML(target);text.classList.toggle('aq-opening',target<=2);}inertText(text);text.style.transform='';front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,target);
     }
     const offset=Math.max(-width,Math.min(width,dx));$('adVerses').style.transform='translateX('+offset+'px)';leaf.style.transform='translateX('+(offset+(dx>0?-width:width))+'px)';
   }
   function renderPage(animate=false){
-    const offset=dragOffset;dragOffset=0;const oldPage=Number(root.dataset.page),oldText=$('adVerses').cloneNode(true);oldText.style.transform='';
+    const offset=dragOffset;dragOffset=0;const oldPage=Number(root.dataset.page),oldText=animate?$('adVerses').cloneNode(true):null;if(oldText)oldText.style.transform='';
     clearTurn();
     const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
-    $('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);
+    const cached=!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
@@ -141,7 +142,7 @@
       leaf.className='aq-leaf';leaf.setAttribute('aria-hidden','true');leaf.inert=true;
       oldText.removeAttribute('id');oldText.querySelectorAll('[data-qr-verse]').forEach(v=>{v.removeAttribute('data-qr-verse');v.removeAttribute('role');v.removeAttribute('tabindex');});
       const front=document.createElement('div');front.className='aq-leaf-front';front.append(oldText);leaf.append(front);paper.append(leaf);
-      const direction=next?1:-1,width=paper.clientWidth,start=Math.max(-width,Math.min(width,offset)),options={duration:260,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'};
+      const direction=next?1:-1,width=paper.clientWidth,start=Math.max(-width,Math.min(width,offset)),options={duration:180,easing:'cubic-bezier(.2,.7,.3,1)',fill:'forwards'};
       incomingAnimation=$('adVerses').animate([{transform:'translateX('+(start-direction*width)+'px)'},{transform:'translateX(0px)'}],options);
       const animation=leaf.animate([{transform:'translateX('+start+'px)'},{transform:'translateX('+(direction*width)+'px)'}],options);
       turnAnimation=animation;animation.finished.then(()=>{leaf.remove();if(turnAnimation===animation)turnAnimation=null;incomingAnimation?.cancel();incomingAnimation=null;}).catch(()=>leaf.remove());
@@ -160,9 +161,9 @@
       if(Array.isArray(cached)){inks.forEach((ink,i)=>{ink.style.setProperty('font-size',cached[i][0]+'px','important');ink.style.transform='scaleX('+cached[i][1]+')';});return;}
       inks.forEach(ink=>{ink.style.setProperty('font-size',state.font+'px','important');ink.style.transform='';});
       const widths=inks.map(ink=>ink.scrollWidth);
-      const size=Math.min(state.font,height/rows/1.35,...widths.map(w=>state.font*width/Math.max(1,w)));
+      const size=Math.min(state.font,height/rows/1.45);
       const sizes=inks.map((ink,i)=>{ink.style.setProperty('font-size',size+'px','important');const scale=ink.closest('.aq-centered')?1:width/Math.max(1,widths[i]*size/state.font);ink.style.transform='scaleX('+scale+')';return [size,scale];});
-      if(fittedSizes.size>12)fittedSizes.clear();fittedSizes.set(key,sizes);return;
+      if(fittedSizes.size>64)fittedSizes.delete(fittedSizes.keys().next().value);fittedSizes.set(key,sizes);return;
     }
     text.classList.remove('aq-lined-page');text.style.height='';
     if(fittedSizes.has(key)){text.style.fontSize=fittedSizes.get(key)+'px';return;}
@@ -171,7 +172,7 @@
     while(low<=high){const mid=(low+high)>>1;text.style.fontSize=mid/2+'px';
       if(text.scrollHeight<=height&&text.scrollWidth<=width){best=mid;low=mid+1;}else high=mid-1;}
     const size=best/2;text.style.fontSize=size+'px';
-    if(fittedSizes.size>12)fittedSizes.clear();fittedSizes.set(key,size);
+    if(fittedSizes.size>64)fittedSizes.delete(fittedSizes.keys().next().value);fittedSizes.set(key,size);
   }
   function warmAdjacent(){
     clearTimeout(warmTask);
@@ -183,9 +184,9 @@
         const leaf=document.createElement('div');leaf.className='aq-leaf';leaf.style.visibility='hidden';leaf.inert=true;
         const front=document.createElement('div');front.className='aq-leaf-front';
         const text=$('adVerses').cloneNode(false);text.removeAttribute('id');text.innerHTML=pageHTML(page);text.classList.toggle('aq-opening',page<=2);text.style.transform='';
-        front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,page);leaf.remove();
+        front.append(text);leaf.append(front);paper.append(leaf);fitText(paper,text,page);if(!audioOn){preparedPages.set(pageKey(paper,page),text.cloneNode(true));if(preparedPages.size>6)preparedPages.delete(preparedPages.keys().next().value);}leaf.remove();
       }
-    },300);
+    },80);
   }
   function go(page,highlight,animate=true){
     if(!Number.isInteger(page)||page<1||page>604){notice('اختر صفحة من 1 إلى 604');return;}
