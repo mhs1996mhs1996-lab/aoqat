@@ -158,3 +158,10 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-li
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-line-ink{-webkit-text-stroke:.14px currentColor!important;text-rendering:optimizeLegibility!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-mushaf-line .aq-ayah-number{border-radius:50%!important;font-size:.62em!important;border:1px solid #a9854c!important;-webkit-text-stroke:0!important;color:#8d6d36!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-page-text,.aq-leaf){will-change:transform!important}
+
+/* QCF V2 reading trial: original word outlines, uniform size, no horizontal distortion. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-line-ink,
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-line-ink .aq-ayah{font-family:var(--qcf-family)!important;-webkit-text-stroke:0!important;transform:none!important;line-height:1.4!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-preview .aq-ayah-number{font-family:AoqatQuran!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-title{flex:1.7!important;flex-direction:column!important;gap:3px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-bismillah{font:22px/1.5 AoqatQuran!important}

@@ -21,7 +21,7 @@
   state.reciter=readers.some(r=>r[0]===state.reciter)?state.reciter:readers[0][0];
   for(const key of ['bookmarks','notes'])if(!Array.isArray(state[key]))state[key]=[];
   if(!state.days || typeof state.days!=='object' || Array.isArray(state.days))state.days={};
-  let root,host,quran,meta,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0,dragFrame=0,warmTask=0;
+  let qcfPreview={},root,host,quran,meta,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0,dragFrame=0,warmTask=0;
   const fittedSizes=new Map(),preparedPages=new Map();
   const pageKey=(paper,page)=>[page,paper.clientWidth,paper.clientHeight,state.font].join(':');
   const $=id=>root?.querySelector('#'+id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -40,6 +40,7 @@
       if(q.length!==114||m.pages.length!==604)throw Error();quran=q;meta=m;
       verses=q.flatMap(s=>s.verses.map(v=>({s:s.id,a:v.id,name:s.name,text:v.text,search:plain(v.text)})));
       if(verses.length!==6236)throw Error();
+      return fetch('assets/qcf-preview/data.json').then(r=>{if(!r.ok)throw Error();return r.json();}).then(async data=>{await Promise.all([498,499].map(async p=>{const f=new FontFace('AoqatQCF'+p,`url(assets/qcf-preview/p${p}.woff2)`);await f.load();document.fonts.add(f);}));qcfPreview=data;}).catch(()=>{qcfPreview={};});
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
@@ -99,6 +100,11 @@
   }
   function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   function pageHTML(page){
+    const preview=qcfPreview[page];
+    if(preview){
+      const title=preview.title?`<div class="aq-mushaf-line aq-qcf-title"><h2 class="aq-surah-banner">سورة ${esc(quran[preview.title-1].name)}</h2><span class="aq-qcf-bismillah">${esc(quran[0].verses[0].text)}</span></div>`:'';
+      return title+preview.rows.map(row=>`<div class="aq-mushaf-line"><span class="aq-line-ink">${row.map(w=>{const v=verses[w.i];return `<span role="button" tabindex="0" data-qr-verse="${w.i}" aria-label="${esc(v.name)} الآية ${v.a}: ${esc(w.t)}" class="aq-ayah${audioOn&&audioIndex===w.i?' aq-playing':''}">${w.end?`<span class="aq-ayah-number">${arabic(v.a)}</span>`:esc(w.g)}</span>`;}).join(' ')}</span></div>`).join('');
+    }
     if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
       if(line.s)return `<div class="aq-mushaf-line"><h2 class="aq-surah-banner">سورة ${esc(quran[line.s-1].name)}</h2></div>`;
       if(line.b)return `<div class="aq-mushaf-line aq-centered"><span class="aq-line-ink">${esc(quran[0].verses[0].text)}</span></div>`;
@@ -133,6 +139,17 @@
   }
   function fitText(paper,text,page){
     const height=paper.clientHeight-28,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
+    text.classList.toggle('aq-qcf-preview',!!qcfPreview[page]);text.style.setProperty('--qcf-family','AoqatQCF'+page);
+    if(qcfPreview[page]){
+      text.classList.add('aq-lined-page');text.style.height=height+'px';
+      const inks=[...text.querySelectorAll('.aq-line-ink')],rows=text.children.length;
+      inks.forEach(ink=>{ink.style.transform='none';ink.style.setProperty('font-size',state.font+'px','important');});
+      const maxWidth=Math.max(...inks.map(ink=>ink.scrollWidth),1);
+      let size=Math.min(state.font,state.font*width/maxWidth,height/(rows*1.55));
+      inks.forEach(ink=>ink.style.setProperty('font-size',size+'px','important'));
+      for(let n=0;n<3&&text.scrollHeight>height;n++){size*=height/(text.scrollHeight+2);inks.forEach(ink=>ink.style.setProperty('font-size',size+'px','important'));}
+      return;
+    }
     if(page>2&&meta.lines?.[page-1]){
       text.classList.add('aq-lined-page');text.style.height=height+'px';
       const inks=[...text.querySelectorAll('.aq-line-ink')],rows=meta.lines[page-1].length;

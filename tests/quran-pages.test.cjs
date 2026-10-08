@@ -32,3 +32,10 @@ test('604 canonical pages partition all 6236 unchanged verses in order',()=>{
  for(let p=0;p<604;p++)for(const line of m.lines[p])for(const [i,a,b] of line.v||[]){assert.ok(i>=m.pages[p].start&&i<(m.pages[p+1]?.start||6236));seen[i].push(...Array.from({length:b-a},(_,n)=>a+n));}
  for(let i=0;i<v.length;i++)assert.deepEqual(seen[i],v[i].text.split(/\s+/).map((_,n)=>n));
  });
+test('QCF reading trial maps every word and verse end on pages 498 and 499',()=>{
+ const data=require('../assets/qcf-preview/data.json'),v=q.flatMap(s=>s.verses);
+ for(const [page,d]of Object.entries(data)){
+  const words=new Map(),ends=new Map();for(const row of d.rows)for(const w of row){assert.ok(w.i>=m.pages[page-1].start&&w.i<(m.pages[page]?.start||6236));assert.ok(w.g);const map=w.end?ends:words;map.set(w.i,(map.get(w.i)||0)+1);}
+  for(let i=m.pages[page-1].start;i<m.pages[page].start;i++){assert.equal(words.get(i),v[i].text.split(/\s+/).length);assert.equal(ends.get(i),1);}
+ }
+});
