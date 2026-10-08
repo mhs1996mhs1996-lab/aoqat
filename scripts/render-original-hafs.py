@@ -23,7 +23,10 @@ def render(name):
 
 if __name__=='__main__':
     if not ARCHIVE.exists(): urllib.request.urlretrieve(URL,ARCHIVE)
-    if hashlib.file_digest(ARCHIVE.open('rb'),'sha256').hexdigest()!=SHA: raise RuntimeError('Official archive checksum mismatch')
+    digest=hashlib.sha256()
+    with ARCHIVE.open('rb') as source:
+        for block in iter(lambda:source.read(8*1024*1024),b''):digest.update(block)
+    if digest.hexdigest()!=SHA: raise RuntimeError('Official archive checksum mismatch')
     with zipfile.ZipFile(ARCHIVE) as archive: names=sorted(n for n in archive.namelist() if n.endswith('.ai'))
     if len(names)!=604: raise RuntimeError('Expected exactly 604 original page masters')
     metadata=json.loads(gzip.decompress((ROOT/'assets/mushaf-hafs-1441.json.gz').read_bytes()))
