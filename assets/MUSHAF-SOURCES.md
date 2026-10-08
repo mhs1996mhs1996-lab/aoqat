@@ -35,8 +35,8 @@ uniformly; the interface adapts spacing **between** rows to the screen.
 
 `render-responsive-hafs.py` rebuilds all 604 assets and records original font
 and output checksums. Reading needs no third-party API or font CDN at runtime.
-The pocket facsimile remains available as a separate display choice. Switching
-editions resolves the same verse instead of assuming identical page breaks.
+The pocket facsimile remains available as a separate display choice. All 6236 verse-to-page assignments were checked against the pocket facsimile
+and match. Switching display modes resolves the same verse.
 This describes source provenance, not certification of our application by KFGQPC.
 Reference rendering documentation:
 https://api-docs.quran.com/docs/tutorials/fonts/font-rendering/

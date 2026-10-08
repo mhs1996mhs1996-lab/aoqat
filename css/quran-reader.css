@@ -218,3 +218,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-nativ
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-bismillah{font:clamp(24px,7vw,36px)/1.4 AoqatQuran,serif!important;color:var(--qr-ink)!important;-webkit-text-stroke:0!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-heading .aq-surah-banner{width:100%!important;margin:0!important;min-height:0!important;height:85%!important;box-sizing:border-box!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-loading{font:16px/1.6 Tahoma,Arial,sans-serif!important;text-align:center!important}
+
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-heading :is(.aq-surah-count,.aq-surah-kind){font-size:calc(clamp(14px,4.8vw,20px) * var(--native-zoom,1))!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-heading .aq-surah-name{font-size:calc(clamp(16px,5.3vw,21px) * var(--native-zoom,1))!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-bismillah{font-size:calc(clamp(24px,7vw,36px) * var(--native-zoom,1))!important}
