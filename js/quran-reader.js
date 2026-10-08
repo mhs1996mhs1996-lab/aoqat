@@ -161,7 +161,7 @@
       if(Array.isArray(cached)){inks.forEach((ink,i)=>{ink.style.setProperty('font-size',cached[i][0]+'px','important');ink.style.transform='scaleX('+cached[i][1]+')';});return;}
       inks.forEach(ink=>{ink.style.setProperty('font-size',state.font+'px','important');ink.style.transform='';});
       const widths=inks.map(ink=>ink.scrollWidth);
-      const size=Math.min(state.font,height/rows/1.45);
+      const size=Math.min(state.font,height/rows/1.65);
       const sizes=inks.map((ink,i)=>{ink.style.setProperty('font-size',size+'px','important');const scale=ink.closest('.aq-centered')?1:width/Math.max(1,widths[i]*size/state.font);ink.style.transform='scaleX('+scale+')';return [size,scale];});
       // Diacritics can extend beyond the font's line box, especially on short screens.
       for(let pass=0;pass<3&&text.scrollHeight>height;pass++){
