@@ -50,6 +50,7 @@ jobs:
 
       - name: Preserve v1.38 Quran assets in this alarm-only release
         run: |
+          git fetch --depth=1 origin d1ee8e14858ff3a16bc1e0c4c7e6806062e68bbb
           git show d1ee8e1:js/quran-reader.js > js/quran-reader.js
           git show d1ee8e1:css/quran-reader.css > css/quran-reader.css
           rm -rf assets/qcf-preview
@@ -81,6 +82,7 @@ jobs:
           node tests/settings-subwindows-browser.cjs
           node tests/adhan-modal-browser.cjs
           node tests/prayer-alarm-browser.cjs
+          git fetch --depth=1 origin d1ee8e14858ff3a16bc1e0c4c7e6806062e68bbb
           node tests/apk-services-browser.cjs
           node tests/adhan-browser.cjs
           node tests/adhan-scheduled-browser.cjs
