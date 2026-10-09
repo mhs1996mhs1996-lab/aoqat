@@ -16,6 +16,7 @@ object AfterIqamaQuiet {
         return start to start+duration*60000L
     }
     fun start(c: Context, prayerId: String, prayerAt: Long) {
+        if(FridaySchedule.suppress(c,prayerId,prayerAt))return
         val times=window(AdhanSchedule.settings(c),prayerId,prayerAt,IqamaNativeScheduler.durations(c,prayerId).beforeMinutes) ?: return
         val now=System.currentTimeMillis()
         if (now !in times.first until times.second) return
@@ -32,3 +33,4 @@ object AfterIqamaQuiet {
         } catch (_: SecurityException) { }
     }
 }
+

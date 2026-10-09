@@ -186,6 +186,9 @@ object IqamaNativeScheduler {
                 val time = PrayerTimes.minutes(row.optString(prayer.first), prayer.first) ?: return@forEachIndexed
                 val hour = time / 60; val minute = time % 60
                 val prayerAt = date.atTime(hour, minute).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                if(FridaySchedule.suppress(context,prayer.first,prayerAt)){
+                    cancelAlarm(context,BASE_REQUEST+date.dayOfYear*10+index,Intent(context,IqamaNotificationReceiver::class.java).setAction("NATIVE_START"));return@forEachIndexed
+                }
                 val endAt = prayerAt + durations(context, prayer.first).totalMs
                 val request = BASE_REQUEST + date.dayOfYear * 10 + index
                 val intent = Intent(context, IqamaNotificationReceiver::class.java).setAction("NATIVE_START")
@@ -462,3 +465,4 @@ class AlarmActivity : Activity() {
         setContentView(root)
     }
 }
+

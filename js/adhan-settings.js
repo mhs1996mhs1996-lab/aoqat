@@ -9,7 +9,7 @@
       asr: "العصر",
       maghrib: "المغرب",
       isha: "العشاء",
-      friday: "الجمعة",
+      friday: "الجمعة",fridayFirst:"الجمعة الأول",fridaySecond:"الجمعة الثاني",
     },
     native = !!window.AndroidNative?.configureAdhan;
   let state;
@@ -111,7 +111,7 @@
   }
   // Unlock the same audio element during a real tap, for later scheduled playback.
   function unlockAudio() {
-    if (native || !state.enabled || playing || audioUnlocked || audioUnlocking) return;
+    if (native || (!state.enabled && !state.friday.enabled) || playing || audioUnlocked || audioUnlocking) return;
     const src = state.sound === "custom" ? customURL
       : `assets/audio/adhan-v124-${state.sound}${state.partial ? "-short" : ""}.mp3`;
     if (!src) return;
@@ -144,7 +144,7 @@
       return;
     }
     const mode = event
-      ? state.modes[event.friday ? "friday" : event.id]
+      ? event.customFriday ? (state.friday[event.id==='fridayFirst'?'firstSound':'secondSound']?'sound':'silent') : state.modes[event.friday ? "friday" : event.id]
       : "sound";
     if (mode === "silent") return;
     if (!quietWindow && (mode === "vibrate" || state.vibrate) && navigator.vibrate)
@@ -161,7 +161,7 @@
       if (!audio) audio = new Audio();
       if (audio.getAttribute("src") !== src) audio.src = src;
       audio.volume = state.volume / 100;
-      audio.muted = !!quietWindow;
+      audio.muted = !!quietWindow && !event?.customFriday;
       audio.onended = () => {
         playing = false;
         status("انتهى الأذان");
@@ -214,6 +214,7 @@
   function number(key, label, max) {
     return `<label>${label}<input type="number" min="0" max="${max}" data-setting="${key}" value="${state[key]}"></label>`;
   }
+  function fridayMarkup(){const f=state.friday;const checkF=(k,label)=>`<label>${label}<input type="checkbox" data-friday="${k}" ${f[k]?'checked':''}></label>`;const numberF=(k,label,min,max)=>`<label>${label}<input type="number" data-friday="${k}" min="${min}" max="${max}" step="1" value="${f[k]}"></label>`;return `<section id="adSection-friday" class="ad-section" hidden><div class="ad-card"><button type="button" id="adFridayBack" class="ad-inner-back">‹ رجوع إلى الأذان والخدمات</button><h3>تخصيص صلاة الجمعة</h3>${checkF('enabled','تفعيل تخصيص صلاة الجمعة')}<p class="ad-note">الأذان الأول قبل وقت الظهر من قاعدة البيانات بـ15 دقيقة، والثاني بوقت الظهر. عند التفعيل تُستبدل إعدادات الظهر يوم الجمعة فقط؛ تبقى محفوظة لبقية الأيام.</p><fieldset ${f.enabled?'':'disabled'}>${numberF('reminder','بدء إشعار الأذان الأول قبله (دقيقة)',1,180)}${numberF('sermon','مدة عدّاد مضى على الخطبة (دقيقة)',1,120)}${checkF('firstSound','تشغيل صوت الأذان الأول')}${checkF('secondSound','تشغيل صوت الأذان الثاني')}<p class="ad-note">يُستخدم المؤذن ومستوى الصوت المختاران في «صوت الأذان». عدّاد باقي على الخطبة: 15 دقيقة.</p>${checkF('quiet','تفعيل الصامت أثناء الجمعة')}<label>وضع الهاتف<select data-friday="quietMode"><option value="silent" ${f.quietMode==='silent'?'selected':''}>صامت</option><option value="dnd" ${f.quietMode==='dnd'?'selected':''}>عدم الإزعاج</option></select></label><label>بدء الصامت<select data-friday="quietTiming"><option value="default" ${f.quietTiming==='default'?'selected':''}>قبل الأذان الأول بـ15 دقيقة</option><option value="custom" ${f.quietTiming==='custom'?'selected':''}>وقت مخصص قبل الأذان الأول</option></select></label>${f.quietTiming==='custom'?numberF('quietBefore','الصامت قبل الأذان الأول (دقيقة)',0,180):''}</fieldset><p class="ad-note">ينتهي الصامت بانتهاء مدة الخطبة ويُستعاد وضع الهاتف السابق. ${native?'الصامت وإشعار الخلفية يحتاجان أذونات Android.':'الويب يعرض العدادات والإشعار أثناء تشغيل الصفحة؛ التحكم بصامت الهاتف والخلفية يعملان في تطبيق Android.'}</p>${native?'<button type="button" id="adFridayPermissions">أذونات إشعار الجمعة والصامت</button>':''}</div></section>`;}
   function silentSettingsMarkup(){
     const s=state.afterIqamaSilent;
     return `<button type="button" id="adSilentSettingsToggle" class="ad-section-toggle ad-silent-toggle" aria-expanded="false" aria-controls="adSilentSettings">🤫 تفعيل وضع صامت بعد الإقامة</button><div id="adSilentSettings" class="ad-silent-settings" hidden><label>وضع صامت بعد الإقامة<input id="adSilentAfterEnabled" type="checkbox" ${s.enabled ? 'checked' : ''}></label><p class="ad-note">يبدأ عند الإقامة حسب المدة المحددة لكل صلاة في أوقات الإقامة. حدّد مدة الصامت بالدقائق؛ صفر لإيقافه لهذه الصلاة. الجمعة تتبع إعداد الظهر.</p><fieldset ${s.enabled ? '' : 'disabled'}>${C.ids.map(id=>`<label>${names[id]}<span class="ad-minute-control"><input type="number" min="0" max="120" step="1" data-silent-minutes="${id}" aria-label="مدة الصامت بعد إقامة ${names[id]}" value="${s.minutes[id]}"><span>دقيقة</span></span></label>`).join('')}</fieldset><p class="ad-note">على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.</p></div>`;
@@ -226,7 +227,7 @@
   }
   function syncSections(){
     panel.querySelectorAll('[data-ad-section]').forEach(b=>{
-      const open=state.enabled&&b.dataset.adSection===openSection;
+      const open=(state.enabled||b.dataset.adSection==='friday')&&b.dataset.adSection===openSection;
       b.setAttribute('aria-expanded',String(open));b.classList.toggle('ad-section-active',open);
       $(b.getAttribute('aria-controls')).hidden=!open;
     });
@@ -243,6 +244,7 @@
     if (!panel) return;
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
  <button type="button" id="adEnable" class="ad-master ${state.enabled ? "on" : ""}" aria-pressed="${state.enabled}">${state.enabled ? "🔊 الأذان مفعل" : "🔇 الأذان متوقف — اضغط للتفعيل"}</button>
+ <button type="button" class="ad-section-toggle" data-ad-section="friday" aria-expanded="false" aria-controls="adSection-friday"><span class="ad-section-icon" aria-hidden="true">🕌</span><span>تخصيص صلاة الجمعة</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>${fridayMarkup()}
  <fieldset class="ad-options" ${state.enabled ? "" : "disabled"}>
  <div class="ad-section-menu" aria-label="أقسام الأذان والخدمات">${[
    ["sound", "🔊", "صوت الأذان"], ["notifications", "🔔", "التنبيهات"],
@@ -318,7 +320,7 @@
     }
     panel.querySelectorAll("[data-ad-section]").forEach((button)=>{
       button.onclick=()=>{
-        if(!state.enabled)return;
+        if(!state.enabled&&button.dataset.adSection!=='friday')return;
         openSection=openSection===button.dataset.adSection ? "" : button.dataset.adSection;
         if(openSection!=="services")stopServiceSensors();
         syncSections();
@@ -326,6 +328,9 @@
         if(openSection==="services" && service)showService(service);
       };
     });
+    $('adFridayBack').onclick=()=>{openSection='';syncSections();};
+    panel.querySelectorAll('[data-friday]').forEach(input=>input.onchange=async()=>{state.friday[input.dataset.friday]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;state.friday=C.normalizeFriday(state.friday);persist();render();if(state.friday.enabled&&!native&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();});
+    $('adFridayPermissions')?.addEventListener('click',()=>window.AndroidNative?.adhanPermissions());
     $("adSilentSettingsToggle").onclick=()=>{silentSettingsOpen=!silentSettingsOpen;syncSections();};
     $("adSilentAfterEnabled").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};
     panel.querySelectorAll("[data-silent-minutes]").forEach((input)=>input.onchange=()=>{
@@ -424,7 +429,7 @@
   function tick() {
     const now = new Date(),
       displayDate = C.displayDate(rows, now),
-      ev = C.events(rows, now),
+      ev = C.events(rows, now, state),
       next = ev.find((e) => e.at > now.getTime());
     if ($("adNext"))
       $("adNext").textContent = next
@@ -470,17 +475,19 @@
         .join("");
     let iqama={};
     try{iqama=JSON.parse(localStorage.getItem("aoqatIqamaMinutesV1")||"{}");}catch(_){}
-    quietWindow=C.afterIqamaSilentWindow(rows,now,state,iqama);
-    if(!native && audio)audio.muted=!!quietWindow;
+    quietWindow=C.fridayQuietWindow(rows,now,state)||C.afterIqamaSilentWindow(rows,now,state,iqama);
+    if(!native && audio && !playing)audio.muted=!!quietWindow;
     const quietStatus=$("adQuietStatus");
     if(quietStatus){quietStatus.hidden=!quietWindow;quietStatus.textContent=quietWindow
       ? "الصامت بعد إقامة "+names[quietWindow.prayerId]+": "+Math.ceil((quietWindow.end-now)/60000)+" دقيقة متبقية" : "";}
-    if (!native && state.enabled) {
+    if (!native && (state.enabled||state.friday.enabled)) {
       for (const e of ev) {
+        if(!e.customFriday&&!state.enabled)continue;
         if (e.at > lastTick && e.at <= now && now - e.at < 120000) {
           const key = e.id + ":" + e.at;
           if (!delivered.has(key)) { delivered.add(key); play(false, e); }
         }
+        if(e.customFriday)continue;
         for (const [key, title] of [
           ["reminder", "تذكير بالصلاة"],
           ["suhoor", "تذكير بالسحور"],
@@ -710,3 +717,4 @@
     document.addEventListener("DOMContentLoaded", start, { once: true });
   else start();
 })();
+

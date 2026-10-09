@@ -1,12 +1,12 @@
 (function(){'use strict';
- const titles={sound:'صوت الأذان',notifications:'التنبيهات',modes:'وضع الأذان لكل صلاة',services:'الخدمات'};
+ const titles={friday:'تخصيص صلاة الجمعة',sound:'صوت الأذان',notifications:'التنبيهات',modes:'وضع الأذان لكل صلاة',services:'الخدمات'};
  function decorate(el,title,back,level){
   if(el.dataset.subwindow)return;el.dataset.subwindow='true';el.classList.add('ad-leaf-window');el.style.setProperty('--leaf-level',level);
   const head=document.createElement('header');head.className='ad-leaf-head';
   const b=document.createElement('button');b.type='button';b.className='ad-leaf-back';b.dataset.subwindowBack='true';b.textContent='‹ رجوع';b.setAttribute('aria-label','رجوع');b.onclick=back;
   const h=document.createElement('h3');h.textContent=title;head.append(b,h);
   const body=document.createElement('div');body.className='ad-leaf-body';while(el.firstChild)body.appendChild(el.firstChild);
-  body.querySelector('h3,h4')?.remove();el.append(head,body);
+  body.querySelector('h3,h4')?.remove();body.querySelector('#adFridayBack')?.remove();el.append(head,body);
   el.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();back();}});
  }
  function mount(){

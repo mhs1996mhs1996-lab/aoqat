@@ -58,12 +58,15 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         config=if(intent?.hasExtra("settings")==true)try{JSONObject(intent.getStringExtra("settings")?:"{}")}catch(_:Exception){JSONObject()} else AdhanSchedule.settings(this)
         preview=intent?.getBooleanExtra("preview",false)==true
         val prayer=intent?.getStringExtra("prayerId")?:"fajr"
+        val special=prayer in listOf("fridayFirst","fridaySecond")
+        if(!preview&&FridaySchedule.suppress(this,prayer,intent?.getLongExtra("prayerAt",0)?:0)){stopSelf();return START_NOT_STICKY}
+        if(special&&!preview){val f=config.optJSONObject("friday")?:JSONObject();config.put("enabled",f.optBoolean("enabled")&&f.optBoolean(if(prayer=="fridayFirst")"firstSound" else "secondSound",true));config.put("modes",JSONObject().put("friday","sound"));config.put("afterSilent",0);config.put("overrideSilent",true);config.put("vibrate",false);config.put("screen",false);config.put("flip",false)}
         val mode=if(preview)"sound" else config.optJSONObject("modes")?.optString(if(intent?.getBooleanExtra("friday",false)==true)"friday" else prayer,"sound")?:"sound"
         if(!preview && (!config.optBoolean("enabled") || mode=="silent")){stopSelf();return START_NOT_STICKY}
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val builder=Notification.Builder(this,"adhan_playback").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview)"تجربة صوت الأذان" else "حان أذان ${PrayerTimes.names[prayer]?:"الصلاة"}").setContentText("اضغط إيقاف لإنهاء الأذان").setOngoing(true).setVisibility(Notification.VISIBILITY_PUBLIC).addAction(Notification.Action.Builder(null,"إيقاف",stop).build()).setContentIntent(PendingIntent.getActivity(this,60411,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
+        val builder=Notification.Builder(this,"adhan_playback").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview)"تجربة صوت الأذان" else "حان أذان ${(if(prayer=="fridayFirst")"الجمعة الأول" else if(prayer=="fridaySecond")"الجمعة الثاني" else PrayerTimes.names[prayer])?:"الصلاة"}").setContentText("اضغط إيقاف لإنهاء الأذان").setOngoing(true).setVisibility(Notification.VISIBILITY_PUBLIC).addAction(Notification.Action.Builder(null,"إيقاف",stop).build()).setContentIntent(PendingIntent.getActivity(this,60411,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
         if(config.optBoolean("screen")&&!preview){val show=PendingIntent.getActivity(this,60412,Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT);builder.setFullScreenIntent(show,true)}
         startForeground(60400,builder.build())
         wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:adhan").apply{acquire(10*60*1000L)}
@@ -110,3 +113,4 @@ class AdhanScreenActivity: Activity(){
     @Deprecated("Deprecated in Java") override fun onBackPressed(){stopService(Intent(this,AdhanPlaybackService::class.java));super.onBackPressed()}
     override fun onDestroy(){unregisterReceiver(stopped);super.onDestroy()}
 }
+

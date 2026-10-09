@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v31";
+const CACHE_NAME = "aoqat-pwa-v32";
 const APP_SHELL = [
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
   "/assets/mushaf-hafs-pocket-ready.json", "/assets/mushaf-hafs-pocket.json.gz", "/assets/mushaf-hafs-pocket/001.webp", "/assets/mushaf-hafs-pocket/604.webp", "/assets/mushaf-hafs-1441-ready.json", "/assets/mushaf-hafs-1441.json.gz", "/assets/mushaf-hafs-1441/001.webp", "/assets/mushaf-hafs-1441/604.webp", "/css/quran-reader.css?v=phone-hafs-1",
@@ -137,3 +137,4 @@ self.addEventListener("notificationclick", event => {
     })
   );
 });
+

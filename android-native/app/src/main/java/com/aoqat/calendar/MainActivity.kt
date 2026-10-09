@@ -57,6 +57,7 @@ object IqamaPersistentNotification {
 
     // Only native prayer alarms may start a cycle. WebView text is never a clock source.
     fun startCycle(context: android.content.Context, prayerAt: Long, prayerId: String) {
+        if(FridaySchedule.suppress(context,prayerId,prayerAt))return
         val age = System.currentTimeMillis() - prayerAt
         if (!IqamaNativeScheduler.enabled(context) || prayerId.isBlank() || age < 0) return
         if (age >= IqamaNativeScheduler.durations(context, prayerId).totalMs) {
@@ -131,7 +132,7 @@ class IqamaNotificationService : android.app.Service() {
     private fun reconcile(force: Boolean = false) {
         if (prayerAt <= 0L) return
         val display = IqamaCycle.display(startRealtime, android.os.SystemClock.elapsedRealtime(), IqamaNativeScheduler.durations(this, prayerId))
-        if (!IqamaNativeScheduler.enabled(this) || display == null) {
+        if (FridaySchedule.suppress(this,prayerId,prayerAt) || !IqamaNativeScheduler.enabled(this) || display == null) {
             finishCycle(); return
         }
         if (force || publishedPhase != display.phase) {
@@ -210,8 +211,8 @@ class IqamaNotificationService : android.app.Service() {
 }
 
 object IqamaNotificationRenderer {
-    fun build(context: android.content.Context, display: IqamaCycle.Display): android.app.Notification {
-        val title = if (display.phase == IqamaCycle.Phase.ELAPSED) "مضى على الإقامة" else "باقي على الإقامة"
+    fun build(context: android.content.Context, display: IqamaCycle.Display, customTitle: String? = null): android.app.Notification {
+        val title = customTitle ?: if (display.phase == IqamaCycle.Phase.ELAPSED) "مضى على الإقامة" else "باقي على الإقامة"
         val open = PendingIntent.getActivity(context, 45220, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val view = android.widget.RemoteViews(context.packageName, R.layout.notification_iqama)
         view.setTextViewText(R.id.iqama_state, title)
@@ -614,7 +615,7 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
             try {
                 val settings=org.json.JSONObject(json)
-                if(settings.optBoolean("enabled") || settings.optBoolean("persistent")) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
+                if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true || settings.optBoolean("persistent")) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
                 if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
                     settings.put("afterSilent",0)
                     settings.optJSONObject("afterIqamaSilent")?.put("enabled",false)
@@ -625,8 +626,9 @@ class MainActivity : Activity() {
                     settings.put("screen",false)
                     startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))
                 }
+                if(settings.optJSONObject("friday")?.optBoolean("enabled")==true&&settings.optJSONObject("friday")?.optBoolean("quiet",true)==true&&!(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted){settings.getJSONObject("friday").put("quiet",false);startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS));webView.evaluateJavascript("window.aoqatAdhanStatus?.('امنح إذن الصامت ثم فعّل صامت الجمعة مرة أخرى')",null)}
                 AdhanSchedule.configure(this@MainActivity,settings.toString())
-                if(settings.optBoolean("enabled")) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
+                if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
                 if(settings.toString()!=org.json.JSONObject(json).toString())webView.evaluateJavascript("window.aoqatNativeAdhanSettings?.("+settings.toString()+")",null)
             } catch(e:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ إعدادات الأذان",Toast.LENGTH_LONG).show()}
         } }
@@ -841,3 +843,4 @@ class MainActivity : Activity() {
         private const val STORAGE_PERMISSION_REQUEST = 2002
     }
 }
+

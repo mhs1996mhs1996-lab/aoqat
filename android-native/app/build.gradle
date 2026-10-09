@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 74 // Repair independent prayer alarm delivery
-        versionName '1.39'
+        versionCode 75 // Dedicated Friday schedule
+        versionName '1.40'
     }
 
     compileOptions {
@@ -57,6 +57,7 @@ tasks.register('syncWebAssets', Sync) {
         include 'js/**'
         include 'data/**'
         include 'assets/**'
+        exclude 'assets/mushaf-hafs-*', 'assets/mushaf-hafs-*/**', 'assets/mushaf-phone-*', 'assets/mushaf-phone-*/**'
         include 'pages/**'
         include 'manifest.webmanifest'
     }

@@ -46,7 +46,7 @@ jobs:
           base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
       - name: Check prayer timing and web settings
-        run: node --test tests/quran-pages.test.cjs tests/adhan-core.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs
+        run: node --test tests/quran-pages.test.cjs tests/adhan-core.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs tests/friday-core.test.cjs
 
       - name: Preserve v1.38 Quran assets in this alarm-only release
         run: |
@@ -60,7 +60,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.39-build74
+          name: aoqat-android-v1.40-build75
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -76,6 +76,7 @@ jobs:
           npm install --no-save --package-lock=false playwright
           node tests/quran-reader-browser.cjs
           node tests/quran-offline-browser.cjs
+          node tests/friday-browser.cjs
           node tests/adhan-rollover-browser.cjs
           node tests/settings-subwindows-browser.cjs
           node tests/adhan-modal-browser.cjs

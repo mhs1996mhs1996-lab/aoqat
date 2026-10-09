@@ -41,7 +41,8 @@ object AdhanSchedule {
     fun delivered(c: Context, p: PrayerTimes.Prayer) = prefs(c).getLong(deliveryKey(p.id,p.at),0) == p.at
     @Synchronized fun claim(c: Context, id: String, at: Long): Boolean {
         val now=System.currentTimeMillis()
-        if (!enabled(c) || id !in PrayerTimes.ids || now-at !in 0L until 120000L || at < prefs(c).getLong("enabledAt",0)) return false
+        val special=id in listOf("fridayFirst","fridaySecond")
+        if (FridaySchedule.suppress(c,id,at) || (if(special)!FridaySchedule.enabled(c) else !enabled(c)) || id !in PrayerTimes.ids+listOf("fridayFirst","fridaySecond") || now-at !in 0L until 120000L || (!special && at < prefs(c).getLong("enabledAt",0))) return false
         val key=deliveryKey(id,at)
         if (prefs(c).getLong(key,0)==at) return false
         return prefs(c).edit().putLong(key,at).commit()
@@ -59,6 +60,8 @@ object AdhanSchedule {
         if (!s.optBoolean("enabled")) c.stopService(Intent(c, AdhanPlaybackService::class.java))
         if (!s.optBoolean("enabled") || (s.optInt("afterSilent",0)==0 && s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true)) AdhanPlaybackService.restoreRinger(c)
         schedule(c)
+        IqamaNativeScheduler.scheduleCached(c)
+        PrayerAlarm.schedule(c)
         if (s.optBoolean("persistent")) NextPrayerService.start(c) else c.stopService(Intent(c, NextPrayerService::class.java))
         PrayerWidget.update(c)
         Thread { IqamaNativeScheduler.refresh(c) }.start()
@@ -83,10 +86,11 @@ object AdhanSchedule {
         (c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pi); pi.cancel()
     }
     @Synchronized fun schedule(c: Context) {
+        FridaySchedule.schedule(c)
         val s = settings(c); val now = System.currentTimeMillis(); val events = PrayerTimes.events(c)
         // Fixed slots are replaced/cancelled on every settings edit, not accumulated.
         for (i in 0..39) { cancel(c, 60000 + i, "PLAY"); cancel(c, 60100 + i, "REMINDER"); cancel(c, 60200 + i, "SUHOOR"); cancel(c,60500+i,"IQAMA_QUIET") }
-        for ((i,p) in events.withIndex()) if (i < 40 && s.optBoolean("enabled", false)) {
+        for ((i,p) in events.withIndex()) if (i < 40 && s.optBoolean("enabled", false) && !FridaySchedule.suppress(c,p.id,p.at)) {
             AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let { (start,end) ->
                 if (end>now) alarm(c,60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
             }
@@ -101,7 +105,7 @@ object AdhanSchedule {
         cancel(c, 60300, "NEXT")
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
-        if (s.optBoolean("enabled") || s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        if (s.optBoolean("enabled") || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
 }
 class AdhanReceiver : BroadcastReceiver() {
@@ -115,7 +119,7 @@ class AdhanReceiver : BroadcastReceiver() {
                     catch (e: Exception) { AdhanSchedule.release(c,id,at); android.util.Log.e("AdhanReceiver","Unable to start scheduled adhan",e) }
                 }
             }
-            "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c)) {
+            "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c) && !FridaySchedule.suppress(c,intent.getStringExtra("prayerId")?:"",intent.getLongExtra("prayerAt",0))) {
                 val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 val s=AdhanSchedule.settings(c)
                 val override=s.optBoolean("overrideSilent");val screen=s.optBoolean("screen")
@@ -136,3 +140,4 @@ class AdhanReceiver : BroadcastReceiver() {
         }
     }
 }
+

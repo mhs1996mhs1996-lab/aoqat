@@ -45,7 +45,7 @@ const { spawn } = require('node:child_process');
     await openAdhan();
     await page.waitForFunction(() => document.getElementById('adTimes').textContent.includes('4:43'));
     assert.equal(await page.locator('#adTimes tr').count(), 6);
-    assert.equal(await page.locator('[data-ad-section]').count(), 3);
+    assert.equal(await page.locator('[data-ad-section]').count(), 4);
     for (const id of ['sound', 'notifications', 'modes']) {
       assert.equal(await page.locator(`[data-ad-section="${id}"]`).isDisabled(), true);
       assert.equal(await page.locator(`#adSection-${id}`).isVisible(), false);

@@ -22,10 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check timing and web settings
-        run: node --test tests/adhan-core.test.cjs tests/quran-pages.test.cjs tests/quran-responsive-pages.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs
+        run: node --test tests/adhan-core.test.cjs tests/quran-pages.test.cjs tests/quran-responsive-pages.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs tests/friday-core.test.cjs
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
+          node tests/friday-browser.cjs
           node tests/adhan-rollover-browser.cjs
           node tests/settings-subwindows-browser.cjs
           node tests/adhan-modal-browser.cjs
