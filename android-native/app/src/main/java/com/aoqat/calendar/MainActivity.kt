@@ -417,7 +417,16 @@ class MainActivity : Activity() {
 
         webView.addJavascriptInterface(AndroidBridge(), "AndroidNative")
 
+        val mushafStore = MushafAssetStore(this)
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, phoneBackCallback)
+        }
         webView.webViewClient = object : WebViewClient() {
+            override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? {
+                return if (request.method == "GET") mushafStore.response(request.url) else null
+            }
+
             override fun onPageCommitVisible(view: WebView, url: String) {
                 super.onPageCommitVisible(view, url)
                 applyAndroidCompatibilityFixes(view)
@@ -802,13 +811,27 @@ class MainActivity : Activity() {
         fileCallback = null
     }
 
+    private var backPending = false
+    private val phoneBackCallback by lazy { android.window.OnBackInvokedCallback { handlePhoneBack() } }
+
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
+    override fun onBackPressed() = handlePhoneBack()
+
+    private fun handlePhoneBack() {
+        if (backPending || isFinishing || isDestroyed) return
+        if (!::webView.isInitialized) { moveTaskToBack(true); return }
+        backPending = true
+        webView.evaluateJavascript("Boolean(window.aoqatHandleBack && window.aoqatHandleBack())") { handled ->
+            backPending = false
+            if (!isDestroyed && handled != "true") {
+                if (webView.canGoBack()) webView.goBack() else moveTaskToBack(true)
+            }
         }
+    }
+
+    override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.unregisterOnBackInvokedCallback(phoneBackCallback)
+        super.onDestroy()
     }
 
     private fun requestNotificationPermissionIfNeeded() {

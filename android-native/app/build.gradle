@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 75 // Dedicated Friday schedule
-        versionName '1.40'
+        versionCode 76 // Current Mushaf and Android back navigation
+        versionName '1.41'
     }
 
     compileOptions {
@@ -61,8 +61,14 @@ tasks.register('syncWebAssets', Sync) {
         include 'pages/**'
         include 'manifest.webmanifest'
     }
+    from(webSourceRoot) {
+        include 'assets/mushaf-phone-hafs-ready.json', 'assets/mushaf-phone-hafs.json.gz'
+        include 'assets/mushaf-hafs-pocket-ready.json', 'assets/mushaf-hafs-pocket.json.gz'
+        include 'assets/mushaf-phone-hafs/001.json.gz', 'assets/mushaf-phone-hafs/604.json.gz'
+        include 'assets/mushaf-hafs-pocket/001.webp', 'assets/mushaf-hafs-pocket/604.webp'
+    }
     from(apkOverrideRoot) {
-        include 'android-ui-fixes.js'
+        include 'android-ui-fixes.js', 'android-back-navigation.js'
         into 'js'
     }
     into(webAssetDir)
@@ -74,7 +80,7 @@ tasks.register('syncWebAssets', Sync) {
         def indexFile = file("$webAssetDir/index.html")
         if (indexFile.exists()) {
             def html = indexFile.getText('UTF-8')
-            def tag = '<script src="js/android-ui-fixes.js"></script>'
+            def tag = '<script src="js/android-ui-fixes.js"></script><script src="js/android-back-navigation.js"></script>'
             if (!html.contains(tag)) {
                 html = html.replace('</body>', "${tag}\n</body>")
                 indexFile.write(html, 'UTF-8')

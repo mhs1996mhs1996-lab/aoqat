@@ -48,20 +48,13 @@ jobs:
       - name: Check prayer timing and web settings
         run: node --test tests/quran-pages.test.cjs tests/adhan-core.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs tests/friday-core.test.cjs
 
-      - name: Preserve v1.38 Quran assets in this alarm-only release
-        run: |
-          git fetch --depth=1 origin d1ee8e14858ff3a16bc1e0c4c7e6806062e68bbb
-          git show d1ee8e1:js/quran-reader.js > js/quran-reader.js
-          git show d1ee8e1:css/quran-reader.css > css/quran-reader.css
-          rm -rf assets/qcf-preview
-
       - name: Build debug APK
         run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.40-build75
+          name: aoqat-android-v1.41-build76
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
