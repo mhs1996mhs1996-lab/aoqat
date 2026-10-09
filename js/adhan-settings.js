@@ -31,6 +31,7 @@
     audio,
     customURL,
     playing = false,
+    fridayAudio = false,
     lastTick = Date.now(),
     delivered = new Set(),
     audioUnlocked = false,
@@ -130,11 +131,11 @@
       audio.pause();
       audio.currentTime = 0;
     }
-    playing = false;
+    playing = false;fridayAudio=false;
     status("توقف الصوت");
   }
   async function play(preview = false, event) {
-    stop();
+    stop();fridayAudio=event?.customFriday===true;
     if (native) {
       window.AndroidNative.previewAdhan(
         JSON.stringify({ ...state, preview, prayerId: event?.id || "fajr" }),
@@ -476,10 +477,10 @@
     let iqama={};
     try{iqama=JSON.parse(localStorage.getItem("aoqatIqamaMinutesV1")||"{}");}catch(_){}
     quietWindow=C.fridayQuietWindow(rows,now,state)||C.afterIqamaSilentWindow(rows,now,state,iqama);
-    if(!native && audio && !playing)audio.muted=!!quietWindow;
+    if(!native && audio)audio.muted=!!quietWindow&&!fridayAudio;
     const quietStatus=$("adQuietStatus");
     if(quietStatus){quietStatus.hidden=!quietWindow;quietStatus.textContent=quietWindow
-      ? "الصامت بعد إقامة "+names[quietWindow.prayerId]+": "+Math.ceil((quietWindow.end-now)/60000)+" دقيقة متبقية" : "";}
+      ? (quietWindow.prayerId==='friday'?'الصامت لصلاة الجمعة':"الصامت بعد إقامة "+names[quietWindow.prayerId])+": "+Math.ceil((quietWindow.end-now)/60000)+" دقيقة متبقية" : "";}
     if (!native && (state.enabled||state.friday.enabled)) {
       for (const e of ev) {
         if(!e.customFriday&&!state.enabled)continue;
