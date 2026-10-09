@@ -35,7 +35,7 @@ const { spawn } = require('node:child_process');
       await page.waitForSelector('[data-drawer="adhanIqama"]', { state: 'attached' });
       await page.evaluate(() => document.body.classList.add('design-menu-open'));
       await page.locator('[data-drawer="adhanIqama"]').click();
-      await page.getByRole('button', { name: '🔊 الأذان والخدمات', exact: true }).click();
+      await page.getByRole('button', { name: '🔊 الأذان والتنبيه', exact: true }).click();
     }
     async function setMinutes(id, value) {
       const input = page.locator(`[data-silent-minutes="${id}"]`);

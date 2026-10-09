@@ -45,7 +45,7 @@ const { spawn } = require("node:child_process");
     await page.evaluate(() => document.body.classList.add("design-menu-open"));
     await page.locator('[data-drawer="adhanIqama"]').click();
     await page
-      .getByRole("button", { name: "🔊 الأذان والخدمات", exact: true })
+      .getByRole("button", { name: "🔊 الأذان والتنبيه", exact: true })
       .click();
     await assert.equal(
       await page.locator("#adEnable").getAttribute("aria-pressed"),
@@ -126,7 +126,7 @@ const { spawn } = require("node:child_process");
     await page.locator("#webDrawerSub .web-back").click();
     await page.locator('[data-drawer="adhanIqama"]').click();
     await page
-      .getByRole("button", { name: "🔊 الأذان والخدمات", exact: true })
+      .getByRole("button", { name: "🔊 الأذان والتنبيه", exact: true })
       .click();
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator("#adEnable").click();
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -173,7 +173,7 @@ const { spawn } = require("node:child_process");
     await phone.evaluate(() => document.body.classList.add("design-menu-open"));
     await phone.locator('[data-drawer="adhanIqama"]').click();
     await phone
-      .getByRole("button", { name: "🔊 الأذان والخدمات", exact: true })
+      .getByRole("button", { name: "🔊 الأذان والتنبيه", exact: true })
       .click();
     assert.equal(await phone.locator('[data-setting="screen"]').count(), 1);
     await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator("#adEnable").click();

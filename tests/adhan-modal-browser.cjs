@@ -21,7 +21,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await page.route('**/rest/v1/annual_prayer_times**',r=>r.fulfill({json:[]}));await page.goto('http://127.0.0.1:'+(native?8776:8775),{waitUntil:'domcontentloaded'});
    await page.waitForSelector('[data-drawer="adhanIqama"]',{state:'attached'});await page.waitForSelector('#paMaster',{state:'attached'});
    await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="adhanIqama"]').click();
-   await page.getByRole('button',{name:'🔊 الأذان والخدمات',exact:true}).click();
+   await page.getByRole('button',{name:'🔊 الأذان والتنبيه',exact:true}).click();
    assert.equal(await page.locator('#adhanServicesDialog').isVisible(),true);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>[...e.querySelectorAll('.design-popup-close')].some(b=>b.getClientRects().length)),false);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>e.closest('#adhanServicesDialog')!==null),true);
@@ -46,7 +46,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    const header=await page.locator('#adhanServicesBack').boundingBox();assert.ok(header.y>=0&&header.y+header.height<=80,JSON.stringify(header));
    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adhanServicesBack').click();assert.equal(await page.locator('#adhanServicesDialog').isVisible(),false);
    assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات الاذان والإقامة');assert.equal(await page.locator('aside.sidebar').evaluate(e=>e.inert),false);
-   await page.getByRole('button',{name:'🔊 الأذان والخدمات',exact:true}).click();
+   await page.getByRole('button',{name:'🔊 الأذان والتنبيه',exact:true}).click();
    if(await page.locator('#paMethodOpen').count()&&!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('#paOpen').click();await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDuration').inputValue(),'7');
    assert.equal(await page.locator('[data-setting="volume"]').inputValue(),'34');
    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.keyboard.press('Escape');assert.equal(await page.locator('#adhanServicesDialog').isVisible(),false);
