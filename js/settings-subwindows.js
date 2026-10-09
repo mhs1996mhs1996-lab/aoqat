@@ -12,12 +12,13 @@
  function mount(){
   const panel=document.getElementById('adhanPanel');if(!panel)return;
   panel.querySelectorAll('.ad-section').forEach(el=>{const id=el.id.replace('adSection-','');decorate(el,titles[id]||'الإعدادات',()=>panel.querySelector('[data-ad-section="'+id+'"]')?.click(),1);});
+  const alarm=panel.querySelector('#prayerAlarmPanel');if(alarm)decorate(alarm,'منبّه الصلاة',()=>panel.querySelector('#paOpen')?.click(),1);
   const quiet=panel.querySelector('#adSilentSettings');if(quiet)decorate(quiet,'الصامت بعد الإقامة',()=>panel.querySelector('#adSilentSettingsToggle')?.click(),2);
   const editor=panel.querySelector('#paEditor .pa-settings');if(editor)decorate(editor,editor.querySelector('h4')?.textContent||'تعديل المنبّه',()=>panel.querySelector('#paCancel')?.click(),3);
  }
  window.aoqatCloseSettingsLeaves=()=>{
   const p=document.getElementById('adhanPanel');if(!p)return;
-  for(const selector of ['#paEditor .pa-settings','#adSilentSettings','.ad-section:not([hidden])']){
+  for(const selector of ['#paEditor .pa-settings','#adSilentSettings','#prayerAlarmPanel','.ad-section:not([hidden])']){
    const el=p.querySelector(selector);if(el&&!el.hidden)el.querySelector('[data-subwindow-back]')?.click();
   }
  };
