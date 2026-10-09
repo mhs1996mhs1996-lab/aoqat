@@ -25,14 +25,16 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    assert.equal(await page.locator('#adhanServicesDialog').isVisible(),true);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>[...e.querySelectorAll('.design-popup-close')].some(b=>b.getClientRects().length)),false);
    assert.equal(await page.locator('#adhanPanel').evaluate(e=>e.closest('#adhanServicesDialog')!==null),true);
+   await page.locator('#paOpen').click();
    for(const id of ['adEnable','paMaster'])assert.equal(await page.locator('#'+id).evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(39, 128, 82)');
    await page.locator('#paMaster').click();assert.equal(await page.locator('#paMaster').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(133, 142, 139)');await page.locator('#paMaster').click();
+   await page.locator('#prayerAlarmPanel > .ad-leaf-head button').click();
    for(const size of [{width:320,height:640},{width:390,height:740},{width:430,height:860}]){
     await page.setViewportSize(size);
     const layout=await page.locator('#adhanServicesDialog').evaluate(e=>{const r=e.getBoundingClientRect(),p=document.getElementById('adhanPanel'),b=document.getElementById('adhanServicesBody');return {x:r.x,y:r.y,w:r.width,h:r.height,overflow:b.scrollWidth>b.clientWidth+1,panelOverflow:p.scrollWidth>p.clientWidth+1,font:getComputedStyle(document.getElementById('adEnable')).fontSize}});
     assert.deepEqual({x:layout.x,y:layout.y,w:layout.w,h:layout.h},{x:0,y:0,w:size.width,h:size.height});assert.equal(layout.overflow,false);assert.equal(layout.panelOverflow,false);assert.equal(layout.font,'15px');
    }
-   await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDays').isVisible(),false);assert.equal(await page.locator('#paDeleteRow').isVisible(),false);
+   await page.locator('#paOpen').click();await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDays').isVisible(),false);assert.equal(await page.locator('#paDeleteRow').isVisible(),false);
    await page.locator('#paRepeat').selectOption('days');assert.equal(await page.locator('#paDays').isVisible(),true);
    const days=await page.locator('#paDays').boundingBox();assert.ok(days.height<140,JSON.stringify(days));
    const focusedHeader=await page.locator('#adhanServicesBack').boundingBox();assert.ok(focusedHeader.y>=0&&focusedHeader.y+focusedHeader.height<=80,JSON.stringify(focusedHeader));
@@ -45,7 +47,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),asse
    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adhanServicesBack').click();assert.equal(await page.locator('#adhanServicesDialog').isVisible(),false);
    assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات الاذان والإقامة');assert.equal(await page.locator('aside.sidebar').evaluate(e=>e.inert),false);
    await page.getByRole('button',{name:'🔊 الأذان والخدمات',exact:true}).click();
-   await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDuration').inputValue(),'7');
+   await page.locator('#paOpen').click();await page.locator('[data-pa-edit="fajr"]').click();assert.equal(await page.locator('#paDuration').inputValue(),'7');
    assert.equal(await page.locator('[data-setting="volume"]').inputValue(),'34');
    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.keyboard.press('Escape');assert.equal(await page.locator('#adhanServicesDialog').isVisible(),false);
    await page.locator('.web-back').click();assert.equal(await page.locator('[data-drawer="datePrayer"]').isVisible(),true);
