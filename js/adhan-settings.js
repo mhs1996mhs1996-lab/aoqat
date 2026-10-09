@@ -267,7 +267,7 @@
    )}</select></label><button type="button" id="adChoose">اختيار صوت من الهاتف</button><span class="ad-note">${escape(localStorage.getItem("aoqatAudioName") || "")}</span><input type="file" id="adFile" accept="audio/*" hidden><label>مستوى الصوت <output id="adVolume">${state.volume}%</output><input type="range" min="0" max="100" value="${state.volume}" data-setting="volume"></label>${check("partial", "أذان جزئي — التكبيرات الأربع فقط")}${state.sound === "custom" ? number("customEnd", "نهاية التكبيرات الأربع في ملفك (ثانية)", 180) : ""}<button type="button" id="adPreview">▶ تجربة الصوت</button><button type="button" id="adStop">■ إيقاف</button></div>
  </section><section id="adSection-modes" class="ad-section" hidden><div class="ad-card"><h3>وضع الأذان لكل صلاة</h3><button type="button" data-global-mode="sound">🔊 عام للجميع</button><button type="button" data-global-mode="silent">🔇 صامت للجميع</button>${[
    ...C.ids,
-   "friday",
+   ...(native ? ["friday"] : []),
  ]
    .map(
      (id) =>
@@ -284,7 +284,7 @@
    )
    .join(
      "",
-   )}<p class="ad-note">إعداد الجمعة يُستخدم بدل الظهر يوم الجمعة. الشروق للعرض فقط ولا يُشغّل أذانًا.</p></div>
+   )}<p class="ad-note">${native ? "إعداد الجمعة يُستخدم بدل الظهر يوم الجمعة. " : ""}الشروق للعرض فقط ولا يُشغّل أذانًا.</p></div>
  </section><section id="adSection-notifications" class="ad-section" hidden><div class="ad-card"><h3>التنبيهات</h3>${check("vibrate", "اهتزاز مصاحب للأذان")}<label>نوع الاهتزاز<select data-setting="pattern">${[
    ["short", "قصير"],
    ["long", "طويل"],
