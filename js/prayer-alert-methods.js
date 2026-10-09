@@ -24,6 +24,14 @@
       const notices=leaf('pnPanel','إشعار مع صوت إشعار',2,()=>{noticeOpen=false;$('pnPanel').hidden=true;$('pnOpen').focus({preventScroll:true});});panel.append(notices);drawNotice();
     }
     root.hidden=!opened;$('paMethodOpen').setAttribute('aria-expanded',String(opened));$('pnPanel').hidden=!noticeOpen;
+    // Keep the existing controls and their handlers in one ordered web-only list.
+    panel.classList.add('pa-ordered-layout');
+    let menu=$('paAlertMenu');
+    if(!menu){menu=document.createElement('div');menu.id='paAlertMenu';menu.setAttribute('aria-label','إعدادات الأذان والتنبيه');panel.insertBefore(menu,$('adEnable').nextSibling);}
+    const enabled=$('adEnable')?.getAttribute('aria-pressed')==='true';
+    const sound=panel.querySelector('[data-ad-section="sound"]'),notifications=panel.querySelector('[data-ad-section="notifications"]'),friday=panel.querySelector('[data-ad-section="friday"]');
+    [$('paMethodOpen'),sound,notifications,friday].forEach((button,index)=>{if(button&&menu.children[index]!==button)menu.insertBefore(button,menu.children[index]||null);});
+    for(const button of [sound,notifications])if(button)button.disabled=!enabled;
     mode.disabled=$('adEnable')?.getAttribute('aria-pressed')!=='true';
     for(const id of ['prayerAlarmPanel','adSection-modes'])$(id)?.style.setProperty('--leaf-level',2);
     const phoneLabel=phone.querySelector('span:nth-child(2)'),modeLabel=mode.querySelector('span:nth-child(2)');if(phoneLabel.textContent!=='منبّه الهاتف')phoneLabel.textContent='منبّه الهاتف';if(modeLabel.textContent!=='صوت الأذان ووضعه لكل صلاة')modeLabel.textContent='صوت الأذان ووضعه لكل صلاة';

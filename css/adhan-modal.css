@@ -76,3 +76,9 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog #pnPanel fieldset{border:0!important;margin:0!important;padding:0!important;min-width:0!important}
 #adhanServicesDialog #pnPanel fieldset:disabled{opacity:.5!important}
 #adhanServicesDialog #adhanPanel .ad-card button{min-height:36px!important;padding:5px 9px!important;font-size:13px!important;border-radius:8px!important}
+
+/* One compact ordered list on the web; keep the prayer timetable above it. */
+#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu{display:flex!important;flex-direction:column!important;gap:7px!important;margin:8px 0!important}
+#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu>.ad-section-toggle{display:flex!important;align-items:center!important;gap:8px!important;width:100%!important;min-height:46px!important;height:46px!important;padding:7px 11px!important;margin:0!important;text-align:right!important;border-radius:9px!important;box-sizing:border-box!important}
+#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu>.ad-section-toggle>span:last-child{margin-inline-start:auto!important}
+#adhanServicesDialog #adhanPanel.pa-ordered-layout>.ad-options>.ad-section-menu{display:none!important}
