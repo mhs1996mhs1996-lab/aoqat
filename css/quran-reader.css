@@ -222,3 +222,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-loading{f
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-heading :is(.aq-surah-count,.aq-surah-kind){font-size:calc(clamp(14px,4.8vw,20px) * var(--native-zoom,1))!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-heading .aq-surah-name{font-size:calc(clamp(16px,5.3vw,21px) * var(--native-zoom,1))!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-bismillah{font-size:calc(clamp(24px,7vw,36px) * var(--native-zoom,1))!important}
+
+/* A compact save action uses the existing folio space without reflowing the page. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{position:absolute!important;inset-inline-end:12px!important;top:1px!important;height:27px!important;min-height:0!important;padding:0 9px!important;margin:0!important;border:1px solid var(--qr-line)!important;border-radius:14px!important;background:var(--qr-bg)!important;color:var(--qr-ink)!important;font:12px/25px Tahoma,Arial,sans-serif!important;width:auto!important;box-shadow:none!important;z-index:5!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-sheet,.aq-sheet *){user-select:none!important;-webkit-user-select:none!important;-webkit-touch-callout:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet :is(input,textarea){user-select:text!important;-webkit-user-select:text!important;-webkit-touch-callout:default!important}
