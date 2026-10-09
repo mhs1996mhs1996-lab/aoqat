@@ -11,7 +11,7 @@ import java.net.URL
 import java.security.MessageDigest
 
 /** Release-pinned Quran pages. Never return or cache an unverified network response. */
-class MushafAssetStore(private val context: Context) {
+class MushafAssetStore(private val context: Context, private val download: ((String) -> ByteArray)? = null) {
     private val hashes by lazy { JSONObject(context.assets.open("www/assets/mushaf-apk-sha256.json").bufferedReader().use { it.readText() }) }
     private val cache = File(context.filesDir, "mushaf-pages-v141")
     companion object {
@@ -26,6 +26,16 @@ class MushafAssetStore(private val context: Context) {
         }
         fun digest(bytes: ByteArray) = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
     }
+    private fun downloadPage(path: String): ByteArray {
+        val connection = URL("https://aoqat.vercel.app/$path").openConnection() as HttpURLConnection
+        connection.connectTimeout = 15000; connection.readTimeout = 30000
+        connection.instanceFollowRedirects = false
+        connection.setRequestProperty("Accept-Encoding", "identity")
+        return try {
+            if (connection.responseCode != 200) throw java.io.IOException("Page unavailable")
+            connection.inputStream.use { it.readBytes() }
+        } finally { connection.disconnect() }
+    }
     @Synchronized fun response(uri: Uri): WebResourceResponse? {
         val path = assetPath(uri) ?: return null
         return try {
@@ -35,14 +45,7 @@ class MushafAssetStore(private val context: Context) {
                 val cached = if (file.isFile) file.readBytes() else null
                 if (cached != null && digest(cached) == expected) cached else {
                     if (expected.isEmpty()) throw java.io.IOException("Missing release checksum")
-                    val connection = URL("https://aoqat.vercel.app/$path").openConnection() as HttpURLConnection
-                    connection.connectTimeout = 15000; connection.readTimeout = 30000
-                    connection.instanceFollowRedirects = false
-                    connection.setRequestProperty("Accept-Encoding", "identity")
-                    val downloaded = try {
-                        if (connection.responseCode != 200) throw java.io.IOException("Page unavailable")
-                        connection.inputStream.use { it.readBytes() }
-                    } finally { connection.disconnect() }
+                    val downloaded = download?.invoke(path) ?: downloadPage(path)
                     if (digest(downloaded) != expected) throw java.io.IOException("Page checksum mismatch")
                     file.parentFile?.mkdirs()
                     val temporary = File(file.parentFile, file.name + ".tmp")

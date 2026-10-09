@@ -18,6 +18,7 @@ transform('quran-reader.js',[
  ('  if (window.AndroidNative?.configureAdhan) return;',''),
  ('  async function compressed(url)', '  const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;\n  async function compressed(url)'),
  ('fetch(url)', 'fetch(mushafUrl(url))'),
+ ("$('aqSharePage').onclick=async()=>{const url=new URL(location.href);", "$('aqSharePage').onclick=async()=>{const url=new URL('https://aoqat.vercel.app/');"),
  ("fetch('assets/mushaf-phone-hafs-ready.json')", "fetch(mushafUrl('assets/mushaf-phone-hafs-ready.json'))"),
  ("fetch('assets/mushaf-hafs-pocket-ready.json')", "fetch(mushafUrl('assets/mushaf-hafs-pocket-ready.json'))"),
  ("fetch(prefix+'-ready.json')", "fetch(mushafUrl(prefix+'-ready.json'))"),

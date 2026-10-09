@@ -12,6 +12,9 @@
       const button = leaf.querySelector(':scope > .ad-leaf-header [data-subwindow-back], [data-subwindow-back]');
       if (button) { button.click(); return true; }
     }
+    if (visible(document.getElementById('adhanServicesDialog'))) {
+      document.getElementById('adhanServicesBack').click(); return true;
+    }
     const sub = document.querySelector('#webDrawerSub.open');
     if (sub && visible(document.getElementById('settingsContentDialog'))) {
       const button = sub.querySelector('.web-back');

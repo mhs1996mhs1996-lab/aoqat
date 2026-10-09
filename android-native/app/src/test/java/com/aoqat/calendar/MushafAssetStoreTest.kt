@@ -22,6 +22,25 @@ class MushafAssetStoreTest {
         }
         assertNull(store.response(Uri.parse("https://aoqat.vercel.app/js/app.js")))
     }
+    @Test fun downloadedPageSurvivesRestartAndRejectsCorruption() {
+        val context = RuntimeEnvironment.getApplication()
+        val uri = Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/003.json.gz")
+        val source = generateSequence(java.io.File(System.getProperty("user.dir"))) { it.parentFile }
+            .map { java.io.File(it, "assets/mushaf-phone-hafs/003.json.gz") }.first { it.isFile }.readBytes()
+        val cached = java.io.File(context.filesDir, "mushaf-pages-v141/mushaf-phone-hafs/003.json.gz")
+        cached.delete()
+        var calls = 0
+        val first = MushafAssetStore(context) { calls++; source }
+        assertEquals(200, first.response(uri)!!.statusCode)
+        assertEquals(1, calls)
+        val offline = MushafAssetStore(context) { throw java.io.IOException("Offline") }
+        assertArrayEquals(source, offline.response(uri)!!.data.use { it.readBytes() })
+        cached.writeBytes(byteArrayOf(1,2,3))
+        assertEquals(503, offline.response(uri)!!.statusCode)
+        cached.delete()
+        assertEquals(503, MushafAssetStore(context) { byteArrayOf(1,2,3) }.response(uri)!!.statusCode)
+        assertFalse(cached.exists())
+    }
     @Test fun checksumsDistinguishCorruptedPages() {
         assertNotEquals(MushafAssetStore.digest(byteArrayOf(1,2,3)), MushafAssetStore.digest(byteArrayOf(1,2,4)))
     }
