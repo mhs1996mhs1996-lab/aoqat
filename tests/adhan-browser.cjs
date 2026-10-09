@@ -62,7 +62,7 @@ const { spawn } = require("node:child_process");
       await page.locator("#adEnable").getAttribute("aria-pressed"),
       "true",
     );
-    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="modes"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="modes"]').click();
     await page.locator('[data-prayer="fajr"][data-mode="silent"]').click();
     assert.equal(
       await page.evaluate(

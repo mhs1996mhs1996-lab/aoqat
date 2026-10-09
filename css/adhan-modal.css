@@ -64,3 +64,15 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog #adhanPanel .ad-leaf-body{flex:1!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain!important;touch-action:pan-y!important;padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px))!important}
 #adhanServicesDialog #adhanPanel .ad-leaf-body>.ad-card{max-width:760px!important;margin:0 auto!important}
 #adhanServicesDialog #adhanPanel .ad-leaf-window[hidden]{display:none!important}
+
+/* Compact prayer alert choices, scoped to the services dialog. */
+#adhanServicesDialog #adhanPanel .ad-section-toggle,#adhanServicesDialog #adhanPanel .ad-master{min-height:38px!important;padding:6px 9px!important;margin:3px 0!important;font-size:13px!important;border-radius:8px!important}
+#adhanServicesDialog #adhanPanel #paMethodOpen{width:100%!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:7px!important}
+#adhanServicesDialog #adhanPanel .pa-method-choices{display:flex!important;flex-direction:column!important;gap:6px!important}
+#adhanServicesDialog #adhanPanel .pa-method-choices>.ad-section-toggle{width:100%!important;min-height:40px!important;text-align:right!important}
+#adhanServicesDialog #pnPanel #pnEnable{width:auto!important;min-height:34px!important;padding:5px 11px!important;background:#858e8b!important;font-size:13px!important}
+#adhanServicesDialog #pnPanel #pnEnable.pa-on{background:#278052!important}
+#adhanServicesDialog #pnPanel .pa-master-row{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important}
+#adhanServicesDialog #pnPanel fieldset{border:0!important;margin:0!important;padding:0!important;min-width:0!important}
+#adhanServicesDialog #pnPanel fieldset:disabled{opacity:.5!important}
+#adhanServicesDialog #adhanPanel .ad-card button{min-height:36px!important;padding:5px 9px!important;font-size:13px!important;border-radius:8px!important}

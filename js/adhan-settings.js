@@ -135,6 +135,7 @@
     status("توقف الصوت");
   }
   async function play(preview = false, event) {
+    if (!native && !preview && !event?.customFriday && window.aoqatPrayerNotificationSelected?.(event?.id)) return;
     stop();fridayAudio=event?.customFriday===true;
     if (native) {
       window.AndroidNative.previewAdhan(
