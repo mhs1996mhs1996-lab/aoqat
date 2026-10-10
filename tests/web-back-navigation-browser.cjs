@@ -1,0 +1,46 @@
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+const assert=require('node:assert/strict');
+(async()=>{
+ const server=spawn('python3',['-m','http.server','8787'],{stdio:'ignore'});let browser;
+ try {
+  await new Promise(r=>setTimeout(r,600));
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:390,height:740},hasTouch:true,serviceWorkers:'block'});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{if(!localStorage.aoqatAdhanV1)localStorage.aoqatAdhanV1=JSON.stringify({enabled:true,volume:34,sound:'4'});});
+  await page.route('**/rest/v1/**',r=>r.abort());
+  await page.goto('http://127.0.0.1:8787/?before=1',{waitUntil:'domcontentloaded'});
+  await page.goto('http://127.0.0.1:8787/',{waitUntil:'domcontentloaded'});
+  await page.waitForSelector('#designSideMenuBtn');await page.locator('#designSideMenuBtn').click();
+  await page.locator('[data-drawer="adhanIqama"]').click();
+  await page.getByRole('button',{name:'🔊 الأذان والتنبيه',exact:true}).click();
+  await page.locator('#paMethodOpen').click();await page.locator('#adSilentSettingsToggle').click();
+  await page.locator('#adSilentAfterEnabled').check();
+  const goBack=async()=>{await page.evaluate(()=>history.back());};
+  await goBack();await page.waitForFunction(()=>document.getElementById('adSilentSettings').hidden);
+  assert.equal(await page.locator('#paMethodPanel').isVisible(),true);
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.aoqatAdhanV1).afterIqamaSilent.enabled),true);
+  await page.locator('[data-ad-section="notifications"]').click();
+  await goBack();await page.waitForFunction(()=>document.getElementById('adSection-notifications').hidden);
+  assert.equal(await page.locator('#paMethodPanel').isVisible(),true);
+  await page.locator('#paMethodPanel > header button').click();
+  await page.waitForFunction(()=>history.state.aoqatWebBack.index===3);
+  await goBack();await page.waitForFunction(()=>document.getElementById('adhanServicesDialog').hidden);
+  assert.equal(await page.locator('#settingsContentDialog').isVisible(),true);
+  await goBack();await page.waitForFunction(()=>document.getElementById('settingsContentDialog').hidden);
+  await page.locator('[data-drawer="settings"]').click();
+  await page.locator('[data-panel="fontPanel"]').click();
+  await goBack();await page.waitForFunction(()=>document.getElementById('webSubTitle').textContent==='إعدادت التصميم');
+  await goBack();await page.waitForFunction(()=>document.getElementById('settingsContentDialog').hidden);
+  await page.locator('[data-drawer="quran"]').click();await page.waitForSelector('#aqReader[data-page]');
+  await page.locator('[data-qr-panel="profile"]').click();
+  await goBack();await page.waitForFunction(()=>document.getElementById('aqSheet').hidden);
+  assert.equal(await page.locator('#aqReader').isVisible(),true);
+  await goBack();await page.waitForFunction(()=>!document.body.classList.contains('quran-reader-open'));
+  await goBack();await page.waitForFunction(()=>!document.body.classList.contains('design-menu-open'));
+  await goBack();await page.waitForURL('**/?before=1');
+  assert.deepEqual(errors,[]);
+  console.log('Browser back: nested menus, silent preferences, on-screen back synchronization, Quran sheet/reader and normal exit passed');
+ } finally {await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1});
