@@ -29,7 +29,8 @@ class MushafAssetStore(private val context: Context) {
         val path = assetPath(uri) ?: return null
         return try {
             val expected = hashes.optString(path)
-            val original = context.assets.open("www/$path").use { it.readBytes() }
+            val packagedPath = if (path.endsWith(".gz")) "$path.bin" else path
+            val original = context.assets.open("www/$packagedPath").use { it.readBytes() }
             if (expected.isEmpty() || digest(original) != expected) throw java.io.IOException("Packaged checksum mismatch")
             val bytes = if (path.endsWith(".gz")) decode(original) else original
             val mime = if (path.endsWith(".webp")) "image/webp" else "application/json"

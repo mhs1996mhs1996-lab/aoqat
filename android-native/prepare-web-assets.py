@@ -46,7 +46,9 @@ transform('adhan-settings.js',[
 # Test fixtures omit large source assets; materialize the same package with hard links.
 manifest={}
 for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-phone-hafs.json.gz',root/'assets/mushaf-hafs-pocket-ready.json',root/'assets/mushaf-hafs-pocket.json.gz'] + sorted((root/'assets/mushaf-phone-hafs').glob('*.json.gz')) + sorted((root/'assets/mushaf-hafs-pocket').glob('*.webp')):
-    relative=source.relative_to(root);destination=target/relative
+    relative=source.relative_to(root);destination=target/(str(relative)+".bin" if source.name.endswith(".gz") else str(relative))
+    # AAPT treats .gz names specially; retain compressed bytes under a neutral suffix.
+    if source.name.endswith(".gz") and (target/relative).exists(): (target/relative).unlink()
     destination.parent.mkdir(parents=True,exist_ok=True)
     if not destination.exists():
         try: os.link(source,destination)
