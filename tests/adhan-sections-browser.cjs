@@ -60,7 +60,7 @@ const { spawn } = require('node:child_process');
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="sound"]').click();
     assert.equal(await page.locator('[data-setting="sound"]').inputValue(), '4');
     assert.equal(await page.locator('[data-setting="volume"]').inputValue(), '52');
-    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="notifications"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(await page.locator('#paMethodOpen').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="notifications"]').click();
     assert.equal(await page.locator('#adSection-sound').isVisible(), false);
     await page.locator('#adSilentSettingsToggle').click();
     assert.equal(await page.locator('[data-silent-minutes="asr"]').isDisabled(), true);
@@ -114,7 +114,7 @@ const { spawn } = require('node:child_process');
       { fajr: 25, dhuhr: 10, asr: 15, maghrib: 5, isha: 20, friday: 15 });
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.aoqatAfterIqamaMinutesV1)),
       { fajr: 10, dhuhr: 20, asr: 30, maghrib: 5, isha: 25 });
-    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="notifications"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(await page.locator('#paMethodOpen').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="notifications"]').click();
     await page.locator('#adSilentSettingsToggle').click();
     assert.equal(await page.locator('[data-silent-minutes="asr"]').inputValue(), '7');
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adEnable').click();

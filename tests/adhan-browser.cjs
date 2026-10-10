@@ -178,7 +178,7 @@ const { spawn } = require("node:child_process");
       .click();
     assert.equal(await phone.locator('[data-setting="screen"]').count(), 1);
     await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator("#adEnable").click();
-    await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator('[data-ad-section="notifications"]').click();
+    await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(await phone.locator('#paMethodOpen').isVisible())await phone.locator('#paMethodOpen').click();await phone.locator('[data-ad-section="notifications"]').click();
     await phone.locator('[data-setting="screen"]').check();
     await phone.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await phone.locator('[data-ad-section="services"]').click();
     await phone.locator('[data-service="widget"]').click();
