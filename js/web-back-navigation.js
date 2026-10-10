@@ -53,15 +53,16 @@
   window.addEventListener('popstate', event => {
     const target = event.state?.[key];
     if (target?.session !== session || !screens[target.index]) { moving = false; return; }
+    const fromButton = moving;
     moving = true;
-    // One gesture closes the current screen. Nested on-screen back actions can
-    // remove more than one level; use their exact resulting screen as the target.
-    for (let attempts = 0; screen() !== screens[target.index] && attempts < 16; attempts++) {
-      if (target.index > index || !back()) break;
-    }
+    // UI buttons have already performed their cleanup. A browser back gesture
+    // performs one cleanup only; never close a newly opened screen during an
+    // asynchronous history update from an on-screen back button.
+    if (!fromButton && target.index < index && screen() !== screens[target.index]) back();
     index = target.index;
-    screens[index] = screen();
+    if (!fromButton) screens[index] = screen();
     history.replaceState(state(index), '');
     moving = false;
+    reconcile();
   });
 })();
