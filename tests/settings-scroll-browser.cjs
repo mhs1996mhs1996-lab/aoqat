@@ -5,6 +5,8 @@ await page.addInitScript(()=>{const D=Date;window.Date=class extends D{construct
 await page.route('**/rest/v1/annual_prayer_times**',r=>offline?r.abort():r.fulfill({json:prayerFixture(r,[row])}));await page.goto('http://127.0.0.1:8772',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>document.getElementById('fajr').value==='4:48'&&document.getElementById('webDrawerMain')&&document.getElementById('designRef'));await page.waitForTimeout(1800);
 assert.equal(await page.locator('#designRef [data-field="fajr"]').textContent(),'4:48');const originalScroll=await page.evaluate(()=>{document.body.style.minHeight='1800px';window.scrollTo(0,150);return window.scrollY;});assert.ok(originalScroll>0);
 await page.locator('#designSideMenuBtn').click();await page.waitForFunction(()=>document.documentElement.classList.contains('design-menu-scroll-locked'));
+// Wait for the drawer's 240ms entrance transition before a coordinate-based touch gesture.
+await page.waitForTimeout(350);
 const background=await page.locator('#designRef').boundingBox();
 const cdp=await page.context().newCDPSession(page);
 async function swipe(x,y,endY){
