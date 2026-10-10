@@ -66,29 +66,44 @@
       });
     }
 
-    // Fixed-body locking also prevents iOS scroll chaining through the drawer.
-    // Restore the exact document position and inline styles when it closes.
-    let scrollLock = null;
+    // Lock only background gestures; retain native scrolling inside each menu.
+    let scrollLock=null,touchPoint=null;
+    const overlaySelector='.sidebar,#settingsContentDialog,#adhanServicesDialog';
     function syncScrollLock(){
       const open=document.body.classList.contains('design-menu-open');
       if(open&&!scrollLock){
-        const props=['position','top','left','right','width','overflow'];
-        scrollLock={x:window.scrollX,y:window.scrollY,styles:props.map(name=>[name,document.body.style.getPropertyValue(name),document.body.style.getPropertyPriority(name)])};
+        scrollLock={x:window.scrollX,y:window.scrollY};
         document.documentElement.classList.add('design-menu-scroll-locked');
-        for(const [name,value] of Object.entries({position:'fixed',top:-scrollLock.y+'px',left:-scrollLock.x+'px',right:'0',width:'100%',overflow:'hidden'}))
-          document.body.style.setProperty(name,value,'important');
       }else if(!open&&scrollLock){
-        const saved=scrollLock;scrollLock=null;
-        for(const [name,value,priority] of saved.styles){
-          if(value)document.body.style.setProperty(name,value,priority);else document.body.style.removeProperty(name);
-        }
+        const saved=scrollLock;scrollLock=null;touchPoint=null;
         document.documentElement.classList.remove('design-menu-scroll-locked');
-        const root=document.documentElement.style,value=root.getPropertyValue('scroll-behavior'),priority=root.getPropertyPriority('scroll-behavior');
-        root.setProperty('scroll-behavior','auto','important');
         window.scrollTo(saved.x,saved.y);
-        if(value)root.setProperty('scroll-behavior',value,priority);else root.removeProperty('scroll-behavior');
       }
     }
+    window.addEventListener('touchstart',e=>{
+      if(scrollLock&&e.touches.length===1)touchPoint={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    },{capture:true,passive:true});
+    window.addEventListener('touchmove',e=>{
+      if(!scrollLock)return;
+      const inside=e.target.closest?.(overlaySelector);
+      if(!inside){if(e.cancelable)e.preventDefault();e.stopPropagation();return;}
+      if(e.touches.length!==1||!touchPoint)return;
+      const next={x:e.touches[0].clientX,y:e.touches[0].clientY},dy=touchPoint.y-next.y,dx=touchPoint.x-next.x;
+      touchPoint=next;
+      // Horizontal reader gestures and zoom retain their existing behavior.
+      if(Math.abs(dx)>Math.abs(dy))return;
+      let canScroll=false;
+      for(let el=e.target;el instanceof Element&&inside.contains(el);el=el.parentElement){
+        const style=getComputedStyle(el);
+        if(/auto|scroll/.test(style.overflowY)&&el.scrollHeight>el.clientHeight+1&&
+          ((dy>0&&el.scrollTop<el.scrollHeight-el.clientHeight-1)||(dy<0&&el.scrollTop>0))){canScroll=true;break;}
+      }
+      if(!canScroll&&e.cancelable)e.preventDefault();
+      // A menu gesture must not reach the design's global drag handlers.
+      e.stopPropagation();
+    },{capture:true,passive:false});
+    window.addEventListener('touchend',()=>{touchPoint=null;},{capture:true,passive:true});
+    window.addEventListener('touchcancel',()=>{touchPoint=null;},{capture:true,passive:true});
     new MutationObserver(syncScrollLock).observe(document.body,{attributes:true,attributeFilter:['class']});
     syncScrollLock();
 
