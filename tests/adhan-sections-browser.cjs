@@ -57,7 +57,7 @@ const { spawn } = require('node:child_process');
     for (const id of ['sound', 'notifications', 'modes'])
       assert.equal(await page.locator(`[data-ad-section="${id}"]`).isEnabled(), true);
     await page.screenshot({ path: '/tmp/aoqat-adhan-sections-home.png', fullPage: true });
-    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="sound"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="modes"]').click();await page.locator('[data-ad-section="sound"]').click();
     assert.equal(await page.locator('[data-setting="sound"]').inputValue(), '4');
     assert.equal(await page.locator('[data-setting="volume"]').inputValue(), '52');
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(await page.locator('#paMethodOpen').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="notifications"]').click();
@@ -91,7 +91,7 @@ const { spawn } = require('node:child_process');
     assert.equal(await page.locator('#adSurah').inputValue(), '114');
     await page.locator('#aqCloseSheet').click();
     await page.locator(".web-back").click(); await openAdhan();
-    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="sound"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="modes"]').click();await page.locator('[data-ad-section="sound"]').click();
     await page.locator('#adPreview').click();
     await page.waitForFunction(() => window.__adhanTestAudio?.readyState >= 2 && !window.__adhanTestAudio.paused);
     assert.equal(await page.evaluate(() => window.__adhanTestAudio.muted), false);

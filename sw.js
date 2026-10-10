@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v43";
+const CACHE_NAME = "aoqat-pwa-v44";
 const APP_SHELL = [
   "/js/web-back-navigation.js",
   "/data/prayer-times-offline.js",

@@ -30,16 +30,29 @@
     if(!menu){menu=document.createElement('div');menu.id='paAlertMenu';menu.setAttribute('aria-label','إعدادات الأذان والتنبيه');panel.insertBefore(menu,$('adEnable').nextSibling);}
     const enabled=$('adEnable')?.getAttribute('aria-pressed')==='true';
     const sound=panel.querySelector('[data-ad-section="sound"]'),notifications=panel.querySelector('[data-ad-section="notifications"]'),friday=panel.querySelector('[data-ad-section="friday"]');
-    const choices=root.querySelector('.ad-leaf-body');if(sound&&sound.parentElement!==choices)choices.appendChild(sound);if(notifications&&notifications.parentElement!==choices)choices.appendChild(notifications);
+    const choices=root.querySelector('.ad-leaf-body');if(notifications&&notifications.parentElement!==choices)choices.appendChild(notifications);
     const quietButton=$('adSilentSettingsToggle'),quietPanel=$('adSilentSettings');
     if(quietButton&&quietButton.parentElement!==choices)choices.appendChild(quietButton);
     if(quietPanel&&quietPanel.parentElement!==panel)panel.appendChild(quietPanel);
     if(quietButton)quietButton.disabled=!enabled;
-    [phone,mode,$('pnOpen'),sound,notifications,quietButton].filter(Boolean).forEach((button,index)=>{if(choices.children[index]!==button)choices.insertBefore(button,choices.children[index]||null);});
+    [phone,mode,$('pnOpen'),notifications,quietButton].filter(Boolean).forEach((button,index)=>{if(choices.children[index]!==button)choices.insertBefore(button,choices.children[index]||null);});
+    for(const [button,icon,title] of [[$('pnOpen'),'🔔','إشعار أوقات الصلاة'],[quietButton,'🤫','تفعيل وضع صامت بعد الإقامة']])if(button){
+      if(!button.querySelector('span'))button.innerHTML='<span aria-hidden="true">'+icon+'</span><span>'+title+'</span><span aria-hidden="true">‹</span>';
+      button.style.display='flex';button.style.alignItems='center';button.style.gap='8px';button.style.textAlign='right';
+      const label=button.children[1];label.style.flex='1';label.style.textAlign='right';
+    }
+    const modeBody=$('adSection-modes')?.querySelector(':scope > .ad-leaf-body'),soundPanel=$('adSection-sound');
+    if(sound&&modeBody&&sound.parentElement!==modeBody)modeBody.prepend(sound);
+    if(soundPanel){
+      const back=()=>{if(!soundPanel.hidden)sound.click();if($('adSection-modes')?.hidden)mode.click();sound.focus({preventScroll:true});};
+      const backButton=soundPanel.querySelector(':scope > header button');if(backButton)backButton.onclick=back;
+      if(!soundPanel.dataset.methodSoundBack){soundPanel.dataset.methodSoundBack='true';soundPanel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();back();}},true);}
+    }
     [$('paMethodOpen'),friday].forEach((button,index)=>{if(button&&menu.children[index]!==button)menu.insertBefore(button,menu.children[index]||null);});
     for(const button of [sound,notifications])if(button)button.disabled=!enabled;
     mode.disabled=$('adEnable')?.getAttribute('aria-pressed')!=='true';
     for(const id of ['prayerAlarmPanel','adSection-modes','adSection-sound','adSection-notifications'])$(id)?.style.setProperty('--leaf-level',2);
+    $('adSection-sound')?.style.setProperty('--leaf-level',3);
     $('adSilentSettings')?.style.setProperty('--leaf-level',2);
     const phoneLabel=phone.querySelector('span:nth-child(2)'),modeLabel=mode.querySelector('span:nth-child(2)');if(phoneLabel.textContent!=='منبه أوقات الصلاة')phoneLabel.textContent='منبه أوقات الصلاة';if(modeLabel.textContent!=='أذان أوقات الصلاة')modeLabel.textContent='أذان أوقات الصلاة';for(const [id,title] of [['prayerAlarmPanel','منبه أوقات الصلاة'],['adSection-modes','أذان أوقات الصلاة']]){const h=$(id)?.querySelector(':scope > header h3');if(h&&h.textContent!==title)h.textContent=title;}
   }
