@@ -17,7 +17,7 @@ class MushafAssetStoreTest {
         val store = MushafAssetStore(RuntimeEnvironment.getApplication())
         for (name in listOf("mushaf-phone-hafs/001.json.gz", "mushaf-phone-hafs/604.json.gz", "mushaf-hafs-pocket/001.webp", "mushaf-hafs-pocket/604.webp")) {
             val response = store.response(Uri.parse("https://aoqat.vercel.app/assets/$name"))!!
-            assertEquals(200, response.statusCode)
+            assertEquals(org.robolectric.shadows.ShadowLog.getLogs().joinToString { it.msg+" "+it.throwable },200, response.statusCode)
             assertTrue(response.data.use { it.readBytes().size } > 100)
         }
         assertNull(store.response(Uri.parse("https://aoqat.vercel.app/js/app.js")))
@@ -29,7 +29,7 @@ class MushafAssetStoreTest {
         val store=MushafAssetStore(context)
         for (page in listOf(3,245,499,604)) {
             val response=store.response(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/${page.toString().padStart(3,'0')}.json.gz"))!!
-            assertEquals(200,response.statusCode)
+            assertEquals(org.robolectric.shadows.ShadowLog.getLogs().joinToString { it.msg+" "+it.throwable },200,response.statusCode)
             assertEquals("application/json",response.mimeType)
             val json=org.json.JSONObject(response.data.bufferedReader().use { it.readText() })
             assertEquals(page,json.getInt("page"))
