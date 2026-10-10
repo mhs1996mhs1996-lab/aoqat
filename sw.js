@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v35";
+const CACHE_NAME = "aoqat-pwa-v36";
 const APP_SHELL = [
   "/data/prayer-times-offline.js",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",

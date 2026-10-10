@@ -62,6 +62,7 @@ const { spawn } = require('node:child_process');
     assert.equal(await page.locator('[data-setting="volume"]').inputValue(), '52');
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(await page.locator('#paMethodOpen').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="notifications"]').click();
     assert.equal(await page.locator('#adSection-sound').isVisible(), false);
+    await page.locator('#adSection-notifications > header button').click();
     await page.locator('#adSilentSettingsToggle').click();
     assert.equal(await page.locator('[data-silent-minutes="asr"]').isDisabled(), true);
     await page.locator('#adSilentAfterEnabled').check();
@@ -115,6 +116,7 @@ const { spawn } = require('node:child_process');
     assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.aoqatAfterIqamaMinutesV1)),
       { fajr: 10, dhuhr: 20, asr: 30, maghrib: 5, isha: 25 });
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(await page.locator('#paMethodOpen').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="notifications"]').click();
+    await page.locator('#adSection-notifications > header button').click();
     await page.locator('#adSilentSettingsToggle').click();
     assert.equal(await page.locator('[data-silent-minutes="asr"]').inputValue(), '7');
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('#adEnable').click();
