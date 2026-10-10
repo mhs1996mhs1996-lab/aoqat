@@ -18,6 +18,16 @@ transform('web-menu-order.js',[
  ('["quran","qibla","azkar"].includes(id)','["quran","qibla","azkar","widget"].includes(id)')])
 transform('quran-reader.js',[
  ('  if (window.AndroidNative?.configureAdhan) return;',''),
+ ('state.layout=state.layout===\'print\'?\'print\':\'phone\';', "state.layout='phone';"),
+ ('loadOfficial(),loadPhone()', 'Promise.resolve(null),loadPhone()'),
+ ('official=o;phone=f;', "official=o;phone=f;if(!phone)throw Error('Packaged full-page Mushaf unavailable');"),
+ ('${phone?\'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option><option value="print">صفحة المصحف المصوّرة</option></select></label>\':\'\'}', ''),
+ ("    if(phone){$('aqLayout').value=state.layout;$('aqLayout').onchange=e=>setLayout(e.target.value);}", ''),
+ ("state.layout=url.searchParams.get('quranLayout');", "state.layout='phone';"),
+ ("${official?'تكبير القراءة':'حجم الخط'}", "تكبير القراءة"),
+ ('${official?44:22}', '44'),
+ ('${official?80:46}', '80'),
+ ('تعذر تحميل الصفحة؛ اتصل بالإنترنت أو اختر الصفحة المصوّرة من الإعدادات.', 'تعذر فتح الصفحة المحفوظة داخل التطبيق؛ أعد المحاولة.'),
  ("تعذر تحميل المصحف. اتصل بالإنترنت لأول تحميل.","تعذر فتح ملفات المصحف المحفوظة داخل التطبيق. أعد المحاولة؛ إذا استمرت المشكلة يلزم تحديث التطبيق."),
  ('  async function compressed(url)', '  const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;\n  async function compressed(url)'),
  ('fetch(url)', 'fetch(mushafUrl(url))'),
@@ -45,7 +55,12 @@ transform('adhan-settings.js',[
 # The reader is complete at first install, including metadata and every page.
 # Test fixtures omit large source assets; materialize the same package with hard links.
 manifest={}
-for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-phone-hafs.json.gz',root/'assets/mushaf-hafs-pocket-ready.json',root/'assets/mushaf-hafs-pocket.json.gz'] + sorted((root/'assets/mushaf-phone-hafs').glob('*.json.gz')) + sorted((root/'assets/mushaf-hafs-pocket').glob('*.webp')):
+# Keep only the full-page phone edition. Hosted web editions remain untouched.
+# Remove an earlier package's photo edition when reusing the staging directory.
+for obsolete in (target/'assets').glob('mushaf-hafs-*'):
+    if obsolete.is_dir(): shutil.rmtree(obsolete)
+    else: obsolete.unlink()
+for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-phone-hafs.json.gz'] + sorted((root/'assets/mushaf-phone-hafs').glob('*.json.gz')):
     relative=source.relative_to(root);destination=target/(str(relative)+".bin" if source.name.endswith(".gz") else str(relative))
     # AAPT treats .gz names specially; retain compressed bytes under a neutral suffix.
     if source.name.endswith(".gz") and (target/relative).exists(): (target/relative).unlink()
@@ -54,7 +69,7 @@ for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-ph
         try: os.link(source,destination)
         except OSError: shutil.copyfile(source,destination)
     manifest[str(relative)]=hashlib.sha256(source.read_bytes()).hexdigest()
-for prefix,extension in [('mushaf-phone-hafs','json.gz'),('mushaf-hafs-pocket','webp')]:
+for prefix,extension in [('mushaf-phone-hafs','json.gz')]:
     for page in range(1,605):
         name=f'assets/{prefix}/{page:03d}.{extension}'
         manifest[name]=hashlib.sha256((root/name).read_bytes()).hexdigest()

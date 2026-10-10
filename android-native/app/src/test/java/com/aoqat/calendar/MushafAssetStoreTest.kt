@@ -15,7 +15,7 @@ class MushafAssetStoreTest {
     }
     @Test fun packagedSeedsWorkWithoutNetworkAndMatchReleaseChecksums() {
         val store = MushafAssetStore(RuntimeEnvironment.getApplication())
-        for (name in listOf("mushaf-phone-hafs/001.json.gz", "mushaf-phone-hafs/604.json.gz", "mushaf-hafs-pocket/001.webp", "mushaf-hafs-pocket/604.webp")) {
+        for (name in listOf("mushaf-phone-hafs/001.json.gz", "mushaf-phone-hafs/604.json.gz")) {
             val response = store.response(Uri.parse("https://aoqat.vercel.app/assets/$name"))!!
             assertEquals(org.robolectric.shadows.ShadowLog.getLogs().joinToString { it.msg+" "+it.throwable },200, response.statusCode)
             assertTrue(response.data.use { it.readBytes().size } > 100)
@@ -25,7 +25,8 @@ class MushafAssetStoreTest {
     @Test fun completeMushafAndMetadataOpenOfflineAsDecodedJson() {
         val context=RuntimeEnvironment.getApplication()
         assertEquals(604,context.assets.list("www/assets/mushaf-phone-hafs")!!.size)
-        assertEquals(604,context.assets.list("www/assets/mushaf-hafs-pocket")!!.size)
+        assertEquals(0,context.assets.list("www/assets/mushaf-hafs-pocket")!!.size)
+        assertFalse(context.assets.list("www/assets")!!.any { it.startsWith("mushaf-hafs-") })
         val store=MushafAssetStore(context)
         for (page in listOf(3,245,499,604)) {
             val response=store.response(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/${page.toString().padStart(3,'0')}.json.gz"))!!
