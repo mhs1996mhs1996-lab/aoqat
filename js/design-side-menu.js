@@ -16,7 +16,10 @@
       .drag-info{display:none!important}body.design-menu-open .previewBox::before,body.design-menu-open .previewBox::after,body.design-menu-open .workspace::before,body.design-menu-open .workspace::after{display:none!important;content:none!important}
       .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(74vw,312px)!important;max-width:312px!important;height:auto!important;min-height:0!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:transparent!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:none!important}
       body.design-menu-open .sidebar{transform:none!important;overflow:visible!important;max-height:none!important;padding:0!important}
+      html.design-menu-scroll-locked{overflow:hidden!important;overscroll-behavior:none!important}
       body.design-menu-open{overflow:hidden!important}
+      body.design-menu-open .workspace{pointer-events:none!important}
+      body.design-menu-open .sidebar,body.design-menu-open .web-sub-body{overscroll-behavior:contain!important}
       body.design-menu-open .sidebar>.panel:not(.main-panel){display:none!important}
       body.design-menu-open .sidebar .main-panel{width:max-content!important;max-width:calc(100% - 6px)!important;margin:28px 3px 0 auto!important;padding:3px!important;height:auto!important;min-height:0!important}
       body.design-menu-open .sidebar .main-panel>h2{margin:0 0 2px!important;font-size:14px!important;line-height:1!important}
@@ -63,7 +66,33 @@
       });
     }
 
-    function setOpen(open){document.body.classList.toggle('design-menu-open',open);btn.setAttribute('aria-expanded',String(open));btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';if(open)setTimeout(()=>{syncActionWidth();hideEmptyStrips();const drag=sidebar.querySelector(':scope > .drag-info');if(drag){drag.hidden=true;drag.style.setProperty('display','none','important');}},30);else{const drag=sidebar.querySelector(':scope > .drag-info');if(drag)drag.hidden=false;}}
+    // Fixed-body locking also prevents iOS scroll chaining through the drawer.
+    // Restore the exact document position and inline styles when it closes.
+    let scrollLock = null;
+    function syncScrollLock(){
+      const open=document.body.classList.contains('design-menu-open');
+      if(open&&!scrollLock){
+        const props=['position','top','left','right','width','overflow'];
+        scrollLock={x:window.scrollX,y:window.scrollY,styles:props.map(name=>[name,document.body.style.getPropertyValue(name),document.body.style.getPropertyPriority(name)])};
+        document.documentElement.classList.add('design-menu-scroll-locked');
+        for(const [name,value] of Object.entries({position:'fixed',top:-scrollLock.y+'px',left:-scrollLock.x+'px',right:'0',width:'100%',overflow:'hidden'}))
+          document.body.style.setProperty(name,value,'important');
+      }else if(!open&&scrollLock){
+        const saved=scrollLock;scrollLock=null;
+        for(const [name,value,priority] of saved.styles){
+          if(value)document.body.style.setProperty(name,value,priority);else document.body.style.removeProperty(name);
+        }
+        document.documentElement.classList.remove('design-menu-scroll-locked');
+        const root=document.documentElement.style,value=root.getPropertyValue('scroll-behavior'),priority=root.getPropertyPriority('scroll-behavior');
+        root.setProperty('scroll-behavior','auto','important');
+        window.scrollTo(saved.x,saved.y);
+        if(value)root.setProperty('scroll-behavior',value,priority);else root.removeProperty('scroll-behavior');
+      }
+    }
+    new MutationObserver(syncScrollLock).observe(document.body,{attributes:true,attributeFilter:['class']});
+    syncScrollLock();
+
+    function setOpen(open){document.body.classList.toggle('design-menu-open',open);syncScrollLock();btn.setAttribute('aria-expanded',String(open));btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';if(open)setTimeout(()=>{syncActionWidth();hideEmptyStrips();const drag=sidebar.querySelector(':scope > .drag-info');if(drag){drag.hidden=true;drag.style.setProperty('display','none','important');}},30);else{const drag=sidebar.querySelector(':scope > .drag-info');if(drag)drag.hidden=false;}}
     btn.addEventListener('click',()=>setOpen(!document.body.classList.contains('design-menu-open')));
     backdrop.addEventListener('click',()=>setOpen(false));
     document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
