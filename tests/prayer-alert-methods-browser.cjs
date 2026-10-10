@@ -9,7 +9,9 @@ assert.match(await page.locator('#paOpen').textContent(),/منبه أوقات ا
 await page.waitForTimeout(300);
 const diagnostic=await page.evaluate(()=>({sent,rows:JSON.parse(localStorage.aoqatAdhanRows).filter(r=>r.gregorian_day===12&&r.gregorian_month===10),ad:JSON.parse(localStorage.aoqatAdhanV1),now:new Date().toISOString(),toast:document.getElementById('prayerDueNotice')?.textContent,status:document.getElementById('adStatus')?.textContent}));
 assert.equal(await page.evaluate(()=>sent.length),2,JSON.stringify(diagnostic));assert.equal(await page.evaluate(()=>sent[1].title),'حان موعد صلاة العصر');assert.equal(await page.locator('#prayerDueNotice span').textContent(),'حان موعد صلاة العصر');
-await page.evaluate(()=>{document.querySelector('[data-prayer="maghrib"][data-mode="silent"]').click();document.querySelector('[data-pa-toggle="maghrib"]').click();});
+await page.evaluate(()=>document.querySelector('[data-prayer="maghrib"][data-mode="silent"]').click());
+await page.waitForSelector('[data-pa-toggle="maghrib"]',{state:'attached'});
+await page.evaluate(()=>document.querySelector('[data-pa-toggle="maghrib"]').click());
 await page.clock.setSystemTime(new Date('2026-10-12T17:39:59+03:00'));await page.clock.runFor(1500);
 await page.waitForTimeout(300);assert.equal(await page.locator('#paRinging').count(),1);assert.equal(await page.evaluate(()=>sent.length),3);assert.equal(await page.evaluate(()=>sent[2].title),'حان موعد صلاة المغرب');assert.equal(await page.locator('#prayerDueNotice span').textContent(),'حان موعد صلاة المغرب');
 await page.clock.runFor(4000);assert.equal(await page.evaluate(()=>sent.length),3);
