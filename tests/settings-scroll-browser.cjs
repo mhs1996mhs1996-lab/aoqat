@@ -8,9 +8,8 @@ await page.locator('#designSideMenuBtn').click();await page.waitForFunction(()=>
 const background=await page.locator('#designRef').boundingBox();
 const cdp=await page.context().newCDPSession(page);
 async function swipe(x,y,endY){
- await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
- for(let i=1;i<=8;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y+(endY-y)*i/8}]});await page.waitForTimeout(30);}
- await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await page.waitForTimeout(300);
+ await cdp.send('Input.synthesizeScrollGesture',{x,y,yDistance:endY-y,xDistance:0,gestureSourceType:'touch',preventFling:true,speed:600});
+ await page.waitForTimeout(300);
 }
 await page.locator('#webDrawerMain').evaluate(e=>e.scrollTop=0);
 await swipe(280,540,160);
