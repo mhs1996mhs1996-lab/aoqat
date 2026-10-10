@@ -69,7 +69,8 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
-  if (url.origin === self.location.origin && APP_SHELL.includes(url.pathname + url.search)) {
+  if (url.pathname === "/rest/v1/annual_prayer_times") return;
+  if (url.origin === self.location.origin && (APP_SHELL.includes(url.pathname + url.search) || /^\/(js|css|data)\//.test(url.pathname))) {
     event.respondWith(caches.open(CACHE_NAME).then(async cache => {
       const cached = await cache.match(event.request);
       if (cached) return cached;
