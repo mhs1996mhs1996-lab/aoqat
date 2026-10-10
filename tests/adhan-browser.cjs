@@ -71,7 +71,7 @@ const { spawn } = require("node:child_process");
       ),
       "silent",
     );
-    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator('[data-ad-section="sound"]').click();
+    await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());if(!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="sound"]').click();
     await page.locator('[data-setting="sound"]').selectOption("3");
     await page.locator('[data-setting="partial"]').check();
     assert.equal(

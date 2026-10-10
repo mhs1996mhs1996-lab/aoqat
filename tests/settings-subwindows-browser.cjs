@@ -12,7 +12,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await full('#settingsContentDialog');await page.locator('.web-settings-list [data-panel="fontPanel"]').click();assert.equal(await page.locator('#fontPanel').isVisible(),true);await full('#settingsContentDialog');assert.ok((await page.locator('.web-back').boundingBox()).height<=40);
  await page.locator('.web-back').click();await page.locator('.web-back').click();assert.equal(await page.locator('#settingsContentDialog').isVisible(),false);
  await page.locator('[data-drawer="adhanIqama"]').click();await full('#settingsContentDialog');await page.getByRole('button',{name:'🔊 الأذان والتنبيه',exact:true}).click();await full('#adhanServicesDialog');
- for(const id of ['sound','notifications','modes']){if(['notifications','modes'].includes(id)&&!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="'+id+'"]').click();await page.waitForSelector('#adSection-'+id+'[data-subwindow]');await full('#adSection-'+id);assert.ok((await page.locator('#adSection-'+id+' > .ad-leaf-head button').boundingBox()).height<=40);
+ for(const id of ['sound','notifications','modes']){if(['sound','notifications','modes'].includes(id)&&!await page.locator('#paMethodPanel').isVisible())await page.locator('#paMethodOpen').click();await page.locator('[data-ad-section="'+id+'"]').click();await page.waitForSelector('#adSection-'+id+'[data-subwindow]');await full('#adSection-'+id);assert.ok((await page.locator('#adSection-'+id+' > .ad-leaf-head button').boundingBox()).height<=40);
 
   await page.locator('#adSection-'+id+' > .ad-leaf-head button').click();assert.equal(await page.locator('#adSection-'+id).isVisible(),false);
  }

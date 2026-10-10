@@ -155,6 +155,7 @@
       ? event.customFriday ? (state.friday[event.id==='fridayFirst'?'firstSound':'secondSound']?'sound':'silent') : state.modes[event.friday ? "friday" : event.id]
       : "sound";
     if (mode === "silent") { activePrayer = null; return; }
+    if (!native && !preview && event) window.aoqatPrayerDueNotification?.(event.customFriday ? (event.id === 'fridaySecond' ? 'friday' : null) : event.friday ? 'friday' : event.id,event.at);
     if (!quietWindow && (mode === "vibrate" || state.vibrate) && navigator.vibrate)
       navigator.vibrate(
         state.pattern === "pulse"
