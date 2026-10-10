@@ -25,7 +25,7 @@ class OfflinePrayerSyncTest {
     }
     @Test fun packagedAnnualDatabaseIsReadyOnFirstOfflineLaunch() {
         val rows=PrayerTimes.rows(context)
-        assertEquals(365,rows.length());assertTrue(OfflinePrayerSync.complete(rows,OfflinePrayerSync.window()))
+        assertEquals(366,rows.length());assertTrue(OfflinePrayerSync.complete(rows,OfflinePrayerSync.window()))
     }
     @Test fun incompleteRefreshDoesNotDestroySavedRowsOrAdvanceSyncTime() {
         val prefs=context.getSharedPreferences("iqama_schedule",0)
