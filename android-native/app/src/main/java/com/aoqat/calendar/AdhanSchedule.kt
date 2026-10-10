@@ -20,7 +20,7 @@ object PrayerTimes {
         return h * 60 + n
     }
     data class Prayer(val id: String, val at: Long, val friday: Boolean)
-    fun rows(c: Context): JSONArray = try { JSONArray(c.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
+    fun rows(c: Context): JSONArray = OfflinePrayerSync.rows(c)
     fun events(c: Context, today: LocalDate = LocalDate.now()): List<Prayer> {
         val rows = rows(c); val out = mutableListOf<Prayer>()
         for (offset in 0L..7L) {
@@ -67,7 +67,7 @@ object AdhanSchedule {
         Thread { IqamaNativeScheduler.refresh(c) }.start()
     }
     fun storeRows(c: Context, value: String) {
-        try { val a = JSONArray(value); if (a.length() > 0) c.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit().putString("rows", a.toString()).commit() } catch (_: Exception) { return }
+        try { val a = JSONArray(value); if (a.length() > 0) c.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit().putString("rows", OfflinePrayerSync.merge(PrayerTimes.rows(c), a).toString()).commit() } catch (_: Exception) { return }
         schedule(c); IqamaNativeScheduler.scheduleCached(c); PrayerAlarm.schedule(c); PrayerWidget.update(c)
     }
     fun alarm(c: Context, id: Int, action: String, at: Long, prayer: PrayerTimes.Prayer? = null) {

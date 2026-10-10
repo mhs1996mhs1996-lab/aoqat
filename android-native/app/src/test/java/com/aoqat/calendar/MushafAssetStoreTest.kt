@@ -22,24 +22,29 @@ class MushafAssetStoreTest {
         }
         assertNull(store.response(Uri.parse("https://aoqat.vercel.app/js/app.js")))
     }
-    @Test fun downloadedPageSurvivesRestartAndRejectsCorruption() {
-        val context = RuntimeEnvironment.getApplication()
-        val uri = Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/003.json.gz")
-        val source = generateSequence(java.io.File(System.getProperty("user.dir"))) { it.parentFile }
-            .map { java.io.File(it, "assets/mushaf-phone-hafs/003.json.gz") }.first { it.isFile }.readBytes()
-        val cached = java.io.File(context.filesDir, "mushaf-pages-v141/mushaf-phone-hafs/003.json.gz")
-        cached.delete()
-        var calls = 0
-        val first = MushafAssetStore(context) { calls++; source }
-        assertEquals(200, first.response(uri)!!.statusCode)
-        assertEquals(1, calls)
-        val offline = MushafAssetStore(context) { throw java.io.IOException("Offline") }
-        assertArrayEquals(source, offline.response(uri)!!.data.use { it.readBytes() })
-        cached.writeBytes(byteArrayOf(1,2,3))
-        assertEquals(503, offline.response(uri)!!.statusCode)
-        cached.delete()
-        assertEquals(503, MushafAssetStore(context) { byteArrayOf(1,2,3) }.response(uri)!!.statusCode)
-        assertFalse(cached.exists())
+    @Test fun completeMushafAndMetadataOpenOfflineAsDecodedJson() {
+        val context=RuntimeEnvironment.getApplication()
+        assertEquals(604,context.assets.list("www/assets/mushaf-phone-hafs")!!.size)
+        assertEquals(604,context.assets.list("www/assets/mushaf-hafs-pocket")!!.size)
+        val store=MushafAssetStore(context)
+        for (page in listOf(3,245,499,604)) {
+            val response=store.response(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/${page.toString().padStart(3,'0')}.json.gz"))!!
+            assertEquals(200,response.statusCode)
+            assertEquals("application/json",response.mimeType)
+            val json=org.json.JSONObject(response.data.bufferedReader().use { it.readText() })
+            assertEquals(page,json.getInt("page"))
+            assertTrue(json.getJSONArray("lines").length()>0)
+        }
+        val metadata=store.response(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs.json.gz"))!!
+        assertEquals(604,org.json.JSONObject(metadata.data.bufferedReader().use {it.readText()}).getJSONArray("pages").length())
+    }
+    @Test fun nativeGzipDecoderPreservesBytesAndRejectsCorruption() {
+        val bytes="{\"page\":1}".toByteArray()
+        val out=java.io.ByteArrayOutputStream()
+        java.util.zip.GZIPOutputStream(out).use {it.write(bytes)}
+        assertArrayEquals(bytes,MushafAssetStore.decode(out.toByteArray()))
+        assertArrayEquals(bytes,MushafAssetStore.decode(bytes))
+        try { MushafAssetStore.decode(byteArrayOf(31,139.toByte(),0));fail("Invalid gzip accepted") } catch (_:java.io.IOException) {}
     }
     @Test fun checksumsDistinguishCorruptedPages() {
         assertNotEquals(MushafAssetStore.digest(byteArrayOf(1,2,3)), MushafAssetStore.digest(byteArrayOf(1,2,4)))

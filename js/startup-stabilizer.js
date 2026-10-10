@@ -105,6 +105,7 @@
     cleanLegacyExportUi();
     document.body.classList.remove('aoqat-booting');
     document.body.classList.add('aoqat-ready');
+    window.aoqatUIReady=true;
   }
 
   function init(){
@@ -113,22 +114,19 @@
     document.body.classList.add('aoqat-booting');
     cleanLegacyExportUi();
 
-    let tries=0;
+    let tries=0,modulesReady=false;
+    window.addEventListener("aoqatModulesReady",()=>{modulesReady=true;if(prayerDataReady())finish();},{once:true});
     const timer=setInterval(()=>{
       tries++;
       cleanLegacyExportUi();
       const designsOk=currentSlides().length===REQUIRED_DESIGNS.length;
-      if((designsOk&&prayerDataReady())||tries>=80){
+      if((modulesReady&&designsOk&&prayerDataReady())||tries>=40){
         clearInterval(timer);
         finish();
       }
     },100);
 
-    // إعادة تثبيت بسيطة بعد اكتمال كل سكربتات الواجهة فقط، لمنع أي سباق تحميل متأخر.
-    window.addEventListener('load',()=>{
-      setTimeout(finish,1600);
-      setTimeout(finish,3000);
-    },{once:true});
+
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});

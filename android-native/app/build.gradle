@@ -64,8 +64,8 @@ tasks.register('syncWebAssets', Sync) {
     from(webSourceRoot) {
         include 'assets/mushaf-phone-hafs-ready.json', 'assets/mushaf-phone-hafs.json.gz'
         include 'assets/mushaf-hafs-pocket-ready.json', 'assets/mushaf-hafs-pocket.json.gz'
-        include 'assets/mushaf-phone-hafs/001.json.gz', 'assets/mushaf-phone-hafs/604.json.gz'
-        include 'assets/mushaf-hafs-pocket/001.webp', 'assets/mushaf-hafs-pocket/604.webp'
+        include 'assets/mushaf-phone-hafs/**'
+        include 'assets/mushaf-hafs-pocket/**'
     }
     from(apkOverrideRoot) {
         include 'android-ui-fixes.js', 'android-back-navigation.js'

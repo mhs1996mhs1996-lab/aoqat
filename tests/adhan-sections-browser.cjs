@@ -1,3 +1,4 @@
+const prayerFixture=require('./prayer-db-fixture.cjs');
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
@@ -29,8 +30,8 @@ const { spawn } = require('node:child_process');
         localStorage.setItem('adhanSectionsSeeded', '1');
       }
     });
-    await page.route('**/rest/v1/annual_prayer_times**', r => r.fulfill({ json: [{ gregorian_month: 10, gregorian_day: 2,
-      fajr: '4:43', sunrise: '6:04', dhuhr: '11:59', asr: '3:22', maghrib: '5:53', isha: '7:13' }] }));
+    await page.route('**/rest/v1/annual_prayer_times**', r => r.fulfill({ json: prayerFixture(r,[{ gregorian_month: 10, gregorian_day: 2,
+      fajr: '4:43', sunrise: '6:04', dhuhr: '11:59', asr: '3:22', maghrib: '5:53', isha: '7:13' }] )}));
     async function openAdhan() {
       await page.waitForSelector('[data-drawer="adhanIqama"]', { state: 'attached' });
       await page.evaluate(() => document.body.classList.add('design-menu-open'));

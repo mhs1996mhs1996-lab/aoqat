@@ -26,6 +26,7 @@ jobs:
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
+          node tests/offline-startup-browser.cjs
           node tests/friday-browser.cjs
           node tests/adhan-rollover-browser.cjs
           node tests/settings-subwindows-browser.cjs

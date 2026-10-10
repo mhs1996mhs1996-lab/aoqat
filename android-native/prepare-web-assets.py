@@ -3,6 +3,8 @@ from pathlib import Path
 import sys
 import hashlib
 import json
+import os
+import shutil
 root=Path(__file__).resolve().parent.parent
 target=Path(sys.argv[1])
 def transform(name,changes):
@@ -16,6 +18,7 @@ transform('web-menu-order.js',[
  ('["quran","qibla","azkar"].includes(id)','["quran","qibla","azkar","widget"].includes(id)')])
 transform('quran-reader.js',[
  ('  if (window.AndroidNative?.configureAdhan) return;',''),
+ ("تعذر تحميل المصحف. اتصل بالإنترنت لأول تحميل.","تعذر فتح ملفات المصحف المحفوظة داخل التطبيق. أعد المحاولة؛ إذا استمرت المشكلة يلزم تحديث التطبيق."),
  ('  async function compressed(url)', '  const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;\n  async function compressed(url)'),
  ('fetch(url)', 'fetch(mushafUrl(url))'),
  ("$('aqSharePage').onclick=async()=>{const url=new URL(location.href);", "$('aqSharePage').onclick=async()=>{const url=new URL('https://aoqat.vercel.app/');"),
@@ -39,7 +42,16 @@ transform('adhan-settings.js',[
  ('على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.', 'يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.')])
 
 # Pin every downloadable page to this release; cached bytes must match the original assets.
+# The reader is complete at first install, including metadata and every page.
+# Test fixtures omit large source assets; materialize the same package with hard links.
 manifest={}
+for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-phone-hafs.json.gz',root/'assets/mushaf-hafs-pocket-ready.json',root/'assets/mushaf-hafs-pocket.json.gz'] + sorted((root/'assets/mushaf-phone-hafs').glob('*.json.gz')) + sorted((root/'assets/mushaf-hafs-pocket').glob('*.webp')):
+    relative=source.relative_to(root);destination=target/relative
+    destination.parent.mkdir(parents=True,exist_ok=True)
+    if not destination.exists():
+        try: os.link(source,destination)
+        except OSError: shutil.copyfile(source,destination)
+    manifest[str(relative)]=hashlib.sha256(source.read_bytes()).hexdigest()
 for prefix,extension in [('mushaf-phone-hafs','json.gz'),('mushaf-hafs-pocket','webp')]:
     for page in range(1,605):
         name=f'assets/{prefix}/{page:03d}.{extension}'

@@ -1,3 +1,4 @@
+const prayerFixture=require('./prayer-db-fixture.cjs');
 const { chromium } = require("playwright");
 const assert = require("node:assert/strict");
 const { spawn } = require("node:child_process");
@@ -36,7 +37,7 @@ const { spawn } = require("node:child_process");
       isha: "7:13",
     };
     await page.route("**/rest/v1/annual_prayer_times**", (r) =>
-      r.fulfill({ json: [row] }),
+      r.fulfill({ json: prayerFixture(r,[row] )}),
     );
     await page.goto("http://127.0.0.1:8765", { waitUntil: "domcontentloaded" });
     await page.waitForSelector('[data-drawer="adhanIqama"]', {
@@ -162,7 +163,7 @@ const { spawn } = require("node:child_process");
     });
     phone.on("pageerror", (e) => errors.push(e.stack));
     await phone.route("**/rest/v1/annual_prayer_times**", (r) =>
-      r.fulfill({ json: [row] }),
+      r.fulfill({ json: prayerFixture(r,[row] )}),
     );
     await phone.goto("http://127.0.0.1:8765", {
       waitUntil: "domcontentloaded",

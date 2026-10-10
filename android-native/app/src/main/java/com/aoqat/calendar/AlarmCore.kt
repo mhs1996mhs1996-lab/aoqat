@@ -38,10 +38,10 @@ object AlarmScheduler {
         Thread {
             try {
                 var date = LocalDate.now()
-                var target = targetForDate(date)
+                var target = targetForDate(context, date)
                 if (target != null && target.isBefore(LocalDateTime.now().plusSeconds(5))) {
                     date = date.plusDays(1)
-                    target = targetForDate(date)
+                    target = targetForDate(context, date)
                 }
                 if (target != null) scheduleExact(context, target)
             } catch (_: Exception) { }
@@ -63,34 +63,15 @@ object AlarmScheduler {
         scheduleExactMillis(context, System.currentTimeMillis() + minutes * 60_000L)
     }
 
-    private fun targetForDate(date: LocalDate): LocalDateTime? {
-        val isha = fetchIsha(date) ?: return null
+    private fun targetForDate(context: Context, date: LocalDate): LocalDateTime? {
+        val rows = PrayerTimes.rows(context)
+        val isha = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }.firstOrNull { it.optInt("gregorian_month") == date.monthValue && it.optInt("gregorian_day") == date.dayOfMonth }?.optString("isha")?.takeIf { it.isNotBlank() } ?: return null
         val parts = isha.split(":")
         if (parts.size < 2) return null
         var hour = parts[0].toIntOrNull() ?: return null
         val minute = parts[1].take(2).toIntOrNull() ?: return null
         if (hour < 12) hour += 12
         return date.atTime(hour, minute).plusMinutes(DELAY_MINUTES)
-    }
-
-    private fun fetchIsha(date: LocalDate): String? {
-        val loc = URLEncoder.encode(LOCATION, "UTF-8")
-        val url = URL("$SUPABASE_URL/rest/v1/annual_prayer_times?select=isha&location_name=eq.$loc&gregorian_month=eq.${date.monthValue}&gregorian_day=eq.${date.dayOfMonth}&limit=1")
-        val conn = (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 8000
-            readTimeout = 8000
-            requestMethod = "GET"
-            setRequestProperty("apikey", API_KEY)
-            setRequestProperty("Authorization", "Bearer $API_KEY")
-        }
-        return try {
-            if (conn.responseCode !in 200..299) return null
-            val body = conn.inputStream.bufferedReader().use { it.readText() }
-            val arr = JSONArray(body)
-            if (arr.length() == 0) null else arr.getJSONObject(0).optString("isha").ifBlank { null }
-        } finally {
-            conn.disconnect()
-        }
     }
 
     private fun scheduleExact(context: Context, target: LocalDateTime) {
@@ -151,21 +132,8 @@ object IqamaNativeScheduler {
     }
 
     fun refresh(context: Context) {
-        try {
-            val location = URLEncoder.encode("الحويجة وضواحيها", "UTF-8")
-            val fields = "gregorian_month,gregorian_day,sunrise," + prayers.joinToString(",") { it.first }
-            val url = URL("https://ytdvhiijxxaqofduorwm.supabase.co/rest/v1/annual_prayer_times?select=$fields&location_name=eq.$location&limit=400")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 3000; readTimeout = 3000
-                setRequestProperty("apikey", "sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1")
-            }
-            try {
-                if (conn.responseCode in 200..299) {
-                    val rows = JSONArray(conn.inputStream.bufferedReader().use { it.readText() })
-                    if (rows.length() > 0) prefs(context).edit().putString("rows", rows.toString()).commit()
-                }
-            } finally { conn.disconnect() }
-        } catch (e: Exception) { android.util.Log.w("IqamaScheduler", "Using cached prayer times", e) }
+        OfflinePrayerSync.install(context)
+        OfflinePrayerSync.refresh(context)
         scheduleCached(context)
         AdhanSchedule.schedule(context)
         PrayerAlarm.schedule(context)
@@ -174,10 +142,10 @@ object IqamaNativeScheduler {
 
     @Synchronized fun scheduleCached(context: Context, recoverActive: Boolean = true) {
         if (!enabled(context)) return
-        val rows = try { JSONArray(prefs(context).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
+        val rows = PrayerTimes.rows(context)
         val today = LocalDate.now()
         val now = System.currentTimeMillis()
-        for (offset in 0L..6L) {
+        for (offset in 0L..7L) {
             val date = today.plusDays(offset)
             val row = (0 until rows.length()).map { rows.getJSONObject(it) }.firstOrNull {
                 it.optInt("gregorian_month") == date.monthValue && it.optInt("gregorian_day") == date.dayOfMonth
@@ -253,6 +221,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED || intent?.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             AlarmScheduler.scheduleFromDatabase(context)
         }
+        OfflinePrayerSync.install(context)
         IqamaNativeScheduler.scheduleCached(context)
         AdhanSchedule.schedule(context)
         PrayerAlarm.schedule(context)

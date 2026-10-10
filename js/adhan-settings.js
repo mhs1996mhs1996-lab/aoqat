@@ -184,32 +184,14 @@
     }
   }
   async function loadRows() {
-    try {
-      const url =
-        SUPABASE_URL +
-        "/rest/v1/annual_prayer_times?select=gregorian_month,gregorian_day,fajr,sunrise,dhuhr,asr,maghrib,isha&location_name=eq." +
-        encodeURIComponent("الحويجة وضواحيها") +
-        "&limit=400";
-      const response = await fetch(url, { headers: dbHeaders() });
-      if (!response.ok) throw Error("تعذر تحميل المواقيت");
-      const result = await response.json();
-      if (result.length) {
-        rows = result;
-        localStorage.setItem("aoqatAdhanRows", JSON.stringify(rows));
-        if (native) window.AndroidNative.cachePrayerRows(JSON.stringify(rows));
-      }
-    } catch (e) {
-      try {
-        rows = JSON.parse(localStorage.getItem("aoqatAdhanRows") || "[]");
-      } catch (_) {}
-      status(
-        rows.length
-          ? "تُستخدم المواقيت المحفوظة دون اتصال"
-          : "تعذر تحميل المواقيت، أعد المحاولة عند توفر الاتصال",
-      );
-    }
+    rows = availablePrayerRows();
+    if (rows.length) tick();
+    await syncPrayerWindow();
+    rows = availablePrayerRows();
+    if (!rows.length) status("لا توجد مواقيت محفوظة؛ أعد المحاولة عند توفر الاتصال");
     tick();
   }
+  window.addEventListener("aoqatPrayerRowsUpdated",()=>{rows=availablePrayerRows();if(panel)tick();});
   function check(key, label) {
     return `<label>${label}<input type="checkbox" data-setting="${key}" ${state[key] ? "checked" : ""}></label>`;
   }

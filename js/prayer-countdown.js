@@ -100,6 +100,7 @@
     showIqamaNotification(text+" "+clock);
   }
 
+  window.addEventListener("aoqatPrayerRowsUpdated",()=>{todayKey="";tomorrowKey="";loadToday().then(tick);});
   function init(){hydrateNativeIqama();syncNativeIqama();css();createDisplay();createPanel();createAfterPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(loadToday,60000);window.addEventListener("focus",refreshIqamaNotifyButton);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

@@ -313,6 +313,7 @@ class MainActivity : Activity() {
 
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
+        OfflinePrayerSync.install(this)
         protectDisplayColors()
         requestNotificationPermissionIfNeeded()
         requestExactAlarmAccessIfNeeded()
@@ -340,7 +341,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        if (::webView.isInitialized) protectDisplayColors()
+        if (::webView.isInitialized) { protectDisplayColors(); webView.evaluateJavascript("window.aoqatRefreshNativePrayerRows?.()", null) }
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
         PrayerAlarm.schedule(this)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerAlarmNativeSettings?.("+PrayerAlarm.settings(this).toString()+")",null)
@@ -475,7 +476,7 @@ class MainActivity : Activity() {
         val js = """
             (function () {
                 function makeReady() {
-                    if (!document.body) return;
+                    if (!document.body || !window.aoqatUIReady) return;
                     document.body.classList.remove('aoqat-booting');
                     document.body.classList.add('aoqat-ready');
                     var app = document.querySelector('.app');

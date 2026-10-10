@@ -10,8 +10,9 @@
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/adhan.css?v=2">
 <link rel="stylesheet" href="css/adhan-modal.css?v=1">
+<style>body.aoqat-booting .app{opacity:0!important;pointer-events:none!important}</style>
 </head>
-<body>
+<body class="aoqat-booting">
 <header class="topbar">
     <button id="exportBtn" class="top-export">حفظ PNG <span>⬇</span></button>
 </header>
@@ -54,6 +55,7 @@
 <div class="export-buttons"><button data-export-format="png" class="export png">تصدير PNG 📄</button><button data-export-format="jpg" class="export jpg">تصدير JPG 📄</button><button data-export-format="webp" class="export webp">تصدير WEBP 📄</button></div><div class="drag-info"><span>✥ يمكنك سحب وإفلات أي عنصر داخل التصميم</span><button id="resetPositions">↻ إعادة ضبط المواضع</button></div>
 </section></main>
 <script src="data/prayer-times.js?v=5"></script>
+<script src="data/prayer-times-offline.js"></script>
 <script src="js/supabase-db.js"></script>
 <script src="js/script.js?v=4"></script>
 <script src="js/export-toolbar.js?v=2"></script>
