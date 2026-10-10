@@ -18,12 +18,10 @@ transform('web-menu-order.js',[
  ('["quran","qibla","azkar"].includes(id)','["quran","qibla","azkar","widget"].includes(id)')])
 transform('quran-reader.js',[
  ('  if (window.AndroidNative?.configureAdhan) return;',''),
- ('state.layout=state.layout===\'print\'?\'print\':\'phone\';', "state.layout='phone';"),
  ('loadOfficial(),loadPhone()', 'Promise.resolve(null),loadPhone()'),
  ('official=o;phone=f;', "official=o;phone=f;if(!phone)throw Error('Packaged full-page Mushaf unavailable');"),
- ('${phone?\'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option><option value="print">صفحة المصحف المصوّرة</option></select></label>\':\'\'}', ''),
+ ('${phone?\'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option></select></label>\':\'\'}', ''),
  ("    if(phone){$('aqLayout').value=state.layout;$('aqLayout').onchange=e=>setLayout(e.target.value);}", ''),
- ("state.layout=url.searchParams.get('quranLayout');", "state.layout='phone';"),
  ("${official?'تكبير القراءة':'حجم الخط'}", "تكبير القراءة"),
  ('${official?44:22}', '44'),
  ('${official?80:46}', '80'),
