@@ -1,5 +1,6 @@
-const CACHE_NAME = "aoqat-pwa-v32";
+const CACHE_NAME = "aoqat-pwa-v33";
 const APP_SHELL = [
+  "/data/prayer-times-offline.js",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
   "/assets/mushaf-hafs-pocket-ready.json", "/assets/mushaf-hafs-pocket.json.gz", "/assets/mushaf-hafs-pocket/001.webp", "/assets/mushaf-hafs-pocket/604.webp", "/assets/mushaf-hafs-1441-ready.json", "/assets/mushaf-hafs-1441.json.gz", "/assets/mushaf-hafs-1441/001.webp", "/assets/mushaf-hafs-1441/604.webp", "/css/quran-reader.css?v=phone-hafs-1",
   "/assets/qcf-preview/data.json", "/assets/qcf-preview/p498.woff2", "/assets/qcf-preview/p499.woff2",
@@ -67,6 +68,17 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (url.origin === self.location.origin && APP_SHELL.includes(url.pathname + url.search)) {
+    event.respondWith(caches.open(CACHE_NAME).then(async cache => {
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+      const response = await fetch(event.request);
+      if (response.ok) await cache.put(event.request, response.clone());
+      return response;
+    }));
+    return;
+  }
   event.respondWith(
     fetch(event.request)
       .then(response => {
