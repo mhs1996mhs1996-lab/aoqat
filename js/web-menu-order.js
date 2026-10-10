@@ -4,7 +4,7 @@
   // أزيلت عناصر (الحويجة/اللغة/الصوت) لأنها كانت مجرد اختصارات شكلية مرتبطة بلوحات غير صحيحة.
   const ROWS=[
     ["settings","⚙️","إعدادت التصميم"],["notifications","🔔","الإشعارات"],["appearance","🎨","شكل التطبيق"],
-    ["night","🌙","الوضع الليلي"],["savePhone","📱","حفظ على الهاتف"],
+    ["savePhone","📱","حفظ على الهاتف"],
     ["datePrayer","📅","بيانات التاريخ و الصلاة"],["adhanIqama","🕌","بيانات الاذان والإقامة"],
     ...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])
   ];
@@ -165,7 +165,6 @@
       if(id==="adhanIqama"){adhanIqamaView();return;}
       if(id==="notifications"){openPanel("الإشعارات","switchPanel");return;}
       if(id==="appearance"){themeView();return;}
-      if(id==="night"){if(typeof window.applyWebTheme==="function"){const dark=document.body.dataset.webTheme==="dark-night";window.applyWebTheme(dark?"cream-blue":"dark-night");}return;}
       if(id==="savePhone")savePhone();
     });
     try{mainList.querySelector('[data-drawer="adhanIqama"]').classList.toggle("adhan-on",JSON.parse(localStorage.getItem("aoqatAdhanV1")||"{}").enabled===true);}catch(_){}
