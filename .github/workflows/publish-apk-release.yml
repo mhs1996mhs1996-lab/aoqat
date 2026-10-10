@@ -25,7 +25,7 @@ jobs:
       - name: Verify release bytes and signing certificate
         run: |
           echo '8af4a9c2a2953b0f97f3974825b4ad6a10245e3fabac4d3671cd5141a71c5a54  release/aoqat-v1.43.apk' | sha256sum --check
-          signer=$(rg --files "$ANDROID_HOME/build-tools" | rg '/apksigner$' | sort | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
           "$signer" verify --print-certs release/aoqat-v1.43.apk > release/signature.txt
           grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' release/signature.txt
       - name: Publish installation file
