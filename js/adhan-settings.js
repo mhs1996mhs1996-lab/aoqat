@@ -31,6 +31,8 @@
     audio,
     customURL,
     playing = false,
+    playbackGeneration = 0,
+    activePrayer = null,
     fridayAudio = false,
     lastTick = Date.now(),
     delivered = new Set(),
@@ -110,22 +112,23 @@
     customURL = URL.createObjectURL(blob);
     return customURL;
   }
-  // Unlock the same audio element during a real tap, for later scheduled playback.
+  // Prime the scheduled audio element with actual silence, even when a mobile
+  // browser ignores programmatic volume changes.
   function unlockAudio() {
-    if (native || (!state.enabled && !state.friday.enabled) || playing || audioUnlocked || audioUnlocking) return;
-    const src = state.sound === "custom" ? customURL
-      : `assets/audio/adhan-v124-${state.sound}${state.partial ? "-short" : ""}.mp3`;
-    if (!src) return;
-    if (!audio) audio = new Audio(src);
+    if (native || (!state.enabled && !state.friday.enabled) || playing || activePrayer || audioUnlocked || audioUnlocking) return;
+    if (!audio) audio = new Audio();
+    const target = audio, generation = playbackGeneration;
+    target.src = "data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA";
     audioUnlocking = true;
-    audio.volume = 0;
-    audio.play().then(() => {
+    target.play().then(() => {
       audioUnlocked = true;
-      if (!playing) { audio.pause(); audio.currentTime = 0; audio.volume = state.volume / 100; }
+      if (generation === playbackGeneration) { target.pause(); target.currentTime = 0; }
     }).catch(() => {}).finally(() => { audioUnlocking = false; });
   }
   document.addEventListener("pointerdown", unlockAudio);
   function stop() {
+    playbackGeneration++;
+    activePrayer = null;
     if (native) window.AndroidNative.stopAdhan();
     if (audio) {
       audio.pause();
@@ -136,7 +139,10 @@
   }
   async function play(preview = false, event) {
     if (!native && !preview && !event?.customFriday && window.aoqatPrayerNotificationSelected?.(event?.id)) return;
-    stop();fridayAudio=event?.customFriday===true;
+    stop();
+    const generation = playbackGeneration;
+    activePrayer = event ? (event.customFriday ? event.id : event.friday ? "friday" : event.id) : "preview";
+    fridayAudio=event?.customFriday===true;
     if (native) {
       window.AndroidNative.previewAdhan(
         JSON.stringify({ ...state, preview, prayerId: event?.id || "fajr" }),
@@ -148,7 +154,7 @@
     const mode = event
       ? event.customFriday ? (state.friday[event.id==='fridayFirst'?'firstSound':'secondSound']?'sound':'silent') : state.modes[event.friday ? "friday" : event.id]
       : "sound";
-    if (mode === "silent") return;
+    if (mode === "silent") { activePrayer = null; return; }
     if (!quietWindow && (mode === "vibrate" || state.vibrate) && navigator.vibrate)
       navigator.vibrate(
         state.pattern === "pulse"
@@ -157,15 +163,17 @@
             ? 1000
             : 250,
       );
-    if (mode === "vibrate") return;
+    if (mode === "vibrate") { activePrayer = null; return; }
     try {
       const src = await source();
+      if (generation !== playbackGeneration) return;
       if (!audio) audio = new Audio();
       if (audio.getAttribute("src") !== src) audio.src = src;
       audio.volume = state.volume / 100;
       audio.muted = !!quietWindow && !event?.customFriday;
       audio.onended = () => {
         playing = false;
+        activePrayer = null;
         status("انتهى الأذان");
       };
       audio.ontimeupdate = () => {
@@ -177,9 +185,12 @@
           stop();
       };
       await audio.play();
+      if (generation !== playbackGeneration) return;
       playing = true;
       status("تشغيل الصوت المختار");
     } catch (e) {
+      if (generation !== playbackGeneration) return;
+      activePrayer = null;
       status("تعذر تشغيل الصوت: " + e.message);
     }
   }
@@ -385,6 +396,7 @@
         (b.onclick = () => {
           for (const id of [...C.ids, "friday"])
             state.modes[id] = b.dataset.globalMode;
+          if (!native && b.dataset.globalMode !== "sound") stop();
           persist();
           render();
         }),
@@ -393,6 +405,7 @@
       (b) =>
         (b.onclick = () => {
           state.modes[b.dataset.prayer] = b.dataset.mode;
+          if (!native && b.dataset.mode !== "sound" && (activePrayer === b.dataset.prayer || activePrayer === "preview")) stop();
           persist();
           render();
         }),
