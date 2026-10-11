@@ -14,6 +14,22 @@ function dbStatus(message, type = "") {
 }
 function dbHeaders(extra = {}) { return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,"Content-Type":"application/json",...extra}; }
 function setSelectValue(id,value){const el=document.getElementById(id);if(!el)return false;const wanted=String(value);const exists=Array.from(el.options||[]).some(o=>o.value===wanted);if(exists){el.value=wanted;return true;}return false;}
+function updateDateFromGregorian(){
+    const year=Number(document.getElementById("gregorianYear")?.value),monthIndex=GREGORIAN_MONTHS.indexOf(document.getElementById("gregorianMonth")?.value);
+    const daySelect=document.getElementById("gregorianDay");if(!year||monthIndex<0||!daySelect)return null;
+    const lastDay=new Date(year,monthIndex+1,0,12).getDate(),day=Math.max(1,Math.min(lastDay,Number(daySelect.value)||1));
+    for(const option of daySelect.options)option.disabled=Number(option.value)>lastDay;
+    setSelectValue("gregorianDay",day);
+    const selected=new Date(year,monthIndex,day,12),dayName=ARABIC_DAY_NAMES[selected.getDay()];
+    setSelectValue("dayName",dayName);
+    try{
+        const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
+        const parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{year:"numeric",month:"numeric",day:"numeric"}).formatToParts(selected),h={};for(const part of parts)h[part.type]=part.value;
+        const values={hijriDay:h.day,hijriMonth:months[Number(h.month)-1],hijriYear:h.year};
+        for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el&&!Array.from(el.options).some(o=>o.value===String(value)))el.add(new Option(String(value),String(value)));setSelectValue(id,value);}
+    }catch(error){console.warn("Hijri date conversion unavailable",error);}
+    if(typeof updateAll==="function")updateAll();return {year,month:monthIndex+1,day,dayName};
+}
 function setTodayDateAutomatically(){const now=new Date();const day=now.getDate(),monthIndex=now.getMonth(),year=now.getFullYear(),dayName=ARABIC_DAY_NAMES[now.getDay()];setSelectValue("gregorianDay",day);setSelectValue("gregorianMonth",GREGORIAN_MONTHS[monthIndex]);setSelectValue("gregorianYear",year);setSelectValue("dayName",dayName);try{const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"],parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{year:"numeric",month:"numeric",day:"numeric"}).formatToParts(new Date(year,monthIndex,day,12)),h={};for(const p of parts)h[p.type]=p.value;setSelectValue("hijriDay",h.day);setSelectValue("hijriMonth",months[Number(h.month)-1]);setSelectValue("hijriYear",h.year);}catch(_){}if(typeof updateAll==="function")updateAll();return{day,month:monthIndex+1,year,dayName};}
 /* Local database rows first; network refresh never blocks an available row. */
 const PRAYER_FIELDS=["fajr","sunrise","dhuhr","asr","maghrib","isha"];
@@ -78,7 +94,20 @@ let prayerLoadRequest=0;
 async function loadPrayerFromDatabase(silent=false){try{if(!silent)dbStatus("جاري تحميل مواقيت اليوم...");const monthName=document.getElementById("gregorianMonth")?.value;const month=GREGORIAN_MONTHS.indexOf(monthName)+1;const day=Number(document.getElementById("gregorianDay")?.value);if(!month||!day)throw new Error("التاريخ الميلادي غير مكتمل");const request=++prayerLoadRequest;const row=await readAnnualPrayer(month,day,!silent);if(request!==prayerLoadRequest)return false;if(!row){dbStatus("لا توجد مواقيت محفوظة لهذا التاريخ؛ اتصل بالإنترنت","error");return false;}const values=window.AoqatPrayerTimeChoice?.applyRow(row)||row;Object.entries(values).forEach(([id,value])=>{const el=document.getElementById(id);if(el&&value!=null){if(!Array.from(el.options).some(o=>o.value===String(value)))el.add(new Option(String(value),String(value)));el.value=String(value);}});if(typeof updateAll==="function")updateAll();dbStatus("تم تحميل مواقيت تاريخ اليوم تلقائياً ✓","success");return true;}catch(error){console.error(error);dbStatus("تعذر تحميل مواقيت اليوم","error");if(!silent)alert("تعذر تحميل المواقيت من قاعدة البيانات. تحقق من اتصال الإنترنت.");return false;}}
 function currentAnnualPrayerRecord(){const monthName=document.getElementById("gregorianMonth").value;return{gregorian_day:Number(document.getElementById("gregorianDay").value),gregorian_month:GREGORIAN_MONTHS.indexOf(monthName)+1,fajr:document.getElementById("fajr").value,sunrise:document.getElementById("sunrise").value,dhuhr:document.getElementById("dhuhr").value,asr:document.getElementById("asr").value,maghrib:document.getElementById("maghrib").value,isha:document.getElementById("isha").value};}
 async function savePrayerToDatabase(){try{dbStatus("جاري الحفظ...");const record=window.AoqatPrayerTimeChoice?.unapplyRow(currentAnnualPrayerRecord())||currentAnnualPrayerRecord();const response=await fetch(`${SUPABASE_URL}/rest/v1/annual_prayer_times?on_conflict=gregorian_month,gregorian_day`,{method:"POST",headers:dbHeaders({Prefer:"resolution=merge-duplicates,return=representation"}),body:JSON.stringify(record)});if(!response.ok)throw new Error(await response.text());dbStatus("تم حفظ المواقيت في قاعدة البيانات ✓","success");}catch(error){console.error(error);dbStatus("تعذر الحفظ","error");alert("تعذر الحفظ في قاعدة البيانات.");}}
-function setupAutomaticDateChangeLoading(){document.getElementById("gregorianDay")?.addEventListener("change",()=>loadPrayerFromDatabase(true));document.getElementById("gregorianMonth")?.addEventListener("change",()=>loadPrayerFromDatabase(true));}
+function setupAutomaticDateChangeLoading(){
+    if(window.AndroidNative?.configureAdhan){
+        document.getElementById("gregorianDay")?.addEventListener("change",()=>loadPrayerFromDatabase(true));
+        document.getElementById("gregorianMonth")?.addEventListener("change",()=>loadPrayerFromDatabase(true));return;
+    }
+    const changed=()=>{updateDateFromGregorian();loadPrayerFromDatabase(true);};
+    for(const id of ["gregorianDay","gregorianMonth","gregorianYear"])document.getElementById(id)?.addEventListener("change",changed);
+    const panel=document.getElementById("datePanel");
+    if(panel&&!document.getElementById("returnDateToToday")){
+        const button=document.createElement("button");button.id="returnDateToToday";button.type="button";button.className="main-action";button.textContent="إرجاع التاريخ إلى اليوم";
+        button.style.cssText="margin-top:14px;min-height:42px;border:0;border-radius:12px;background:#147c89;color:#fff;font-family:inherit;font-size:15px;padding:10px 14px;cursor:pointer";
+        button.addEventListener("click",()=>{setTodayDateAutomatically();updateDateFromGregorian();loadPrayerFromDatabase(true);});panel.appendChild(button);
+    }
+}
 
 /* عرض الهاتف: نستخدم zoom بدل transform حتى تبقى المعاينة ظاهرة ومكانها صحيح */
 function setupMobileResponsiveView(){

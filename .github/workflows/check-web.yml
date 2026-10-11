@@ -26,6 +26,7 @@ jobs:
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
+          node tests/date-selection-browser.cjs
           node tests/prayer-time-choice-browser.cjs
           node tests/settings-scroll-browser.cjs
           node tests/offline-startup-browser.cjs
