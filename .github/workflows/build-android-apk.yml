@@ -142,33 +142,3 @@ jobs:
             /tmp/aoqat-design-*.png
           if-no-files-found: ignore
 
-  backup-cleanup:
-    needs: [build-apk, web-check]
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-    steps:
-      - name: Keep the verified current backup and remove earlier project backups
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          python3 - <<'PYCODE'
-          import os,json,re,urllib.request,urllib.parse
-          repo=os.environ['GH_REPO'];base='https://api.github.com/repos/'+repo
-          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}
-          def api(path,method='GET'):
-              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers,method=method)) as r:
-                  return json.loads(r.read()) if r.status!=204 else None
-          keep='refs/heads/backup/current-before-apk-v144-20261011'
-          preserved=api('/git/ref/heads/backup/current-before-apk-v144-20261011')
-          assert preserved['object']['sha']=='dadfb437a5b09bca32a9097a1db58460dc214b4c', 'Current backup must be confirmed before cleanup'
-          for family in ['heads','tags']:
-              for entry in api('/git/matching-refs/'+family+'/'):
-                  ref=entry['ref'];name=ref.split('/',2)[2]
-                  if ref!=keep and re.match(r'^(backup(?:/|-)|checkpoint(?:/|-)|reference-stable-|stable-menu-)',name):
-                      api('/git/refs/'+urllib.parse.quote(ref.removeprefix('refs/'),safe='/'),'DELETE')
-                      print('Removed old backup:',ref)
-          assert api('/git/ref/heads/backup/current-before-apk-v144-20261011')['object']['sha']==preserved['object']['sha']
-          print('Verified current backup retained.')
-          PYCODE
