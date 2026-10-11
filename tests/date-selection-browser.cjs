@@ -2,7 +2,7 @@ const fixture=require('./prayer-db-fixture.cjs'),{chromium}=require('playwright'
 (async()=>{const server=spawn('python3',['-m','http.server','8784'],{stdio:'ignore'});let browser;try{
 await new Promise(r=>setTimeout(r,500));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
 const page=await browser.newPage({viewport:{width:390,height:844},timezoneId:'Asia/Baghdad',serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
-await page.clock.install({time:new Date('2026-10-11T21:58:00+03:00')});await page.addInitScript(()=>localStorage.setItem('aoqatPrayerTimeChoiceV1',JSON.stringify({mode:'custom',offsets:{fajr:-1,asr:5}})));
+await page.clock.install({time:new Date('2026-10-11T21:58:00+03:00')});await page.addInitScript(()=>{localStorage.setItem('aoqatPrayerTimeChoiceV1',JSON.stringify({mode:'custom',offsets:{fajr:-1,asr:5}}));localStorage.setItem('aoqatAnnualPrayerRowsV1',JSON.stringify([{gregorian_month:1,gregorian_day:1,fajr:'5:58',sunrise:'7:14',dhuhr:'12:12',asr:'2:48',maghrib:'5:06',isha:'6:26'}]));});
 await page.route('**/rest/v1/annual_prayer_times**',r=>r.fulfill({json:fixture(r,[{gregorian_month:1,gregorian_day:1,fajr:'5:58',sunrise:'7:14',dhuhr:'12:12',asr:'2:48',maghrib:'5:06',isha:'6:26'},{gregorian_month:10,gregorian_day:11,fajr:'4:55',sunrise:'6:10',dhuhr:'11:56',asr:'3:13',maghrib:'5:40',isha:'7:00'}])}));
 await page.goto('http://127.0.0.1:8784',{waitUntil:'domcontentloaded'});await page.waitForSelector('[data-drawer="datePrayer"]',{state:'attached'});
 await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="datePrayer"]').click();await page.locator('[data-panel="datePanel"]').click();
