@@ -22,10 +22,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check timing and web settings
-        run: node --test tests/adhan-core.test.cjs tests/quran-pages.test.cjs tests/quran-responsive-pages.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs tests/friday-core.test.cjs
+        run: node --test tests/adhan-core.test.cjs tests/quran-pages.test.cjs tests/quran-responsive-pages.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs tests/friday-core.test.cjs tests/prayer-time-choice.test.cjs
       - name: Check web controls in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
+          node tests/prayer-time-choice-browser.cjs
           node tests/settings-scroll-browser.cjs
           node tests/offline-startup-browser.cjs
           node tests/web-back-navigation-browser.cjs
@@ -51,3 +52,4 @@ jobs:
             /tmp/aoqat-adhan-*.png
             /tmp/aoqat-design-*.png
           if-no-files-found: ignore
+

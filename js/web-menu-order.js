@@ -5,7 +5,8 @@
   const ROWS=[
     ["settings","⚙️","إعدادت التصميم"],["notifications","🔔","الإشعارات"],["appearance","🎨","شكل التطبيق"],
     ["savePhone","📱","حفظ على الهاتف"],
-    ["datePrayer","📅","بيانات التاريخ و الصلاة"],["adhanIqama","🕌","بيانات الاذان والإقامة"],
+    ["datePrayer","📅","بيانات التاريخ و الصلاة"],
+    ...(!window.AndroidNative?.configureAdhan ? [["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"]] : []),["adhanIqama","🕌","بيانات الاذان والإقامة"],
     ...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])
   ];
   const SETTINGS=[
@@ -161,6 +162,7 @@
         openPanel(title,"prayerServicePanel");window.aoqatOpenService?.(id);return;
       }
       if(id==="settings"){settingsView();return;}
+      if(id==="prayerTimeChoice"){openSub("طريقة اختيار أوقات الصلاة",window.aoqatPrayerTimeChoiceView(),"main");return;}
       if(id==="datePrayer"){datePrayerView();return;}
       if(id==="adhanIqama"){adhanIqamaView();return;}
       if(id==="notifications"){openPanel("الإشعارات","switchPanel");return;}
@@ -180,3 +182,4 @@
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
+

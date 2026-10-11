@@ -1,5 +1,6 @@
-const CACHE_NAME = "aoqat-pwa-v44";
+const CACHE_NAME = "aoqat-pwa-v45";
 const APP_SHELL = [
+  "/js/prayer-time-choice.js",
   "/js/web-back-navigation.js",
   "/data/prayer-times-offline.js",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
@@ -44,10 +45,10 @@ const APP_SHELL = [
   "/js/push-notifications.js?v=9",
   "/js/quran-reader.js",
   "/js/iqama-timing.js?v=1",
-  "/js/prayer-countdown.js?v=15",
+  "/js/prayer-countdown.js?v=16",
   "/js/compact-design-menu.js?v=12",
   "/js/web-theme-settings.js?v=4",
-  "/js/web-menu-order.js?v=24",
+  "/js/web-menu-order.js?v=25",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
@@ -151,4 +152,5 @@ self.addEventListener("notificationclick", event => {
     })
   );
 });
+
 

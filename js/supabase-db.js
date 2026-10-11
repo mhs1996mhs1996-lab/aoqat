@@ -29,17 +29,17 @@ function cachedAnnualPrayer(month,day){
     for(const rows of sources){const row=Array.isArray(rows)&&rows.find(r=>Number(r.gregorian_month)===month&&Number(r.gregorian_day)===day&&validPrayerRow(r));if(row)return row;}
     return null;
 }
-function availablePrayerRows(){
+function availablePrayerRows(applyChoice=true){
     const merged=new Map((window.AoqatPrayerBackupRows||[]).filter(validPrayerRow).map(r=>[`${r.gregorian_month}-${r.gregorian_day}`,r]));
     try{const native=JSON.parse(window.AndroidNative?.readPrayerRows?.()||"[]");for(const r of native)if(validPrayerRow(r))merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);}catch(_){}
     try{for(const r of JSON.parse(localStorage.getItem("aoqatAdhanRows")||"[]"))if(validPrayerRow(r))merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);}catch(_){}
     for(const r of savedPrayerRows())merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);
-    return [...merged.values()];
+    return applyChoice&&window.AoqatPrayerTimeChoice ? [...merged.values()].map(window.AoqatPrayerTimeChoice.applyRow) : [...merged.values()];
 }
 function storePrayerRows(rows){
     const merged=new Map(savedPrayerRows().map(r=>[`${r.gregorian_month}-${r.gregorian_day}`,r]));
     for(const r of rows)if(validPrayerRow(r))merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);
-    const value=JSON.stringify([...merged.values()]);localStorage.setItem("aoqatAnnualPrayerRowsV1",value);localStorage.setItem("aoqatAdhanRows",JSON.stringify(availablePrayerRows()));
+    const value=JSON.stringify([...merged.values()]);localStorage.setItem("aoqatAnnualPrayerRowsV1",value);localStorage.setItem("aoqatAdhanRows",JSON.stringify(availablePrayerRows(false)));
     window.AndroidNative?.cachePrayerRows?.(value);
     if(typeof Event!=="undefined")window.dispatchEvent?.(new Event("aoqatPrayerRowsUpdated"));
 }
@@ -75,9 +75,9 @@ function setupPrayerBackgroundSync(){
 }
 
 let prayerLoadRequest=0;
-async function loadPrayerFromDatabase(silent=false){try{if(!silent)dbStatus("جاري تحميل مواقيت اليوم...");const monthName=document.getElementById("gregorianMonth")?.value;const month=GREGORIAN_MONTHS.indexOf(monthName)+1;const day=Number(document.getElementById("gregorianDay")?.value);if(!month||!day)throw new Error("التاريخ الميلادي غير مكتمل");const request=++prayerLoadRequest;const row=await readAnnualPrayer(month,day,!silent);if(request!==prayerLoadRequest)return false;if(!row){dbStatus("لا توجد مواقيت محفوظة لهذا التاريخ؛ اتصل بالإنترنت","error");return false;}const values={fajr:row.fajr,sunrise:row.sunrise,dhuhr:row.dhuhr,asr:row.asr,maghrib:row.maghrib,isha:row.isha};Object.entries(values).forEach(([id,value])=>{const el=document.getElementById(id);if(el&&value!=null)el.value=String(value);});if(typeof updateAll==="function")updateAll();dbStatus("تم تحميل مواقيت تاريخ اليوم تلقائياً ✓","success");return true;}catch(error){console.error(error);dbStatus("تعذر تحميل مواقيت اليوم","error");if(!silent)alert("تعذر تحميل المواقيت من قاعدة البيانات. تحقق من اتصال الإنترنت.");return false;}}
+async function loadPrayerFromDatabase(silent=false){try{if(!silent)dbStatus("جاري تحميل مواقيت اليوم...");const monthName=document.getElementById("gregorianMonth")?.value;const month=GREGORIAN_MONTHS.indexOf(monthName)+1;const day=Number(document.getElementById("gregorianDay")?.value);if(!month||!day)throw new Error("التاريخ الميلادي غير مكتمل");const request=++prayerLoadRequest;const row=await readAnnualPrayer(month,day,!silent);if(request!==prayerLoadRequest)return false;if(!row){dbStatus("لا توجد مواقيت محفوظة لهذا التاريخ؛ اتصل بالإنترنت","error");return false;}const values=window.AoqatPrayerTimeChoice?.applyRow(row)||row;Object.entries(values).forEach(([id,value])=>{const el=document.getElementById(id);if(el&&value!=null){if(!Array.from(el.options).some(o=>o.value===String(value)))el.add(new Option(String(value),String(value)));el.value=String(value);}});if(typeof updateAll==="function")updateAll();dbStatus("تم تحميل مواقيت تاريخ اليوم تلقائياً ✓","success");return true;}catch(error){console.error(error);dbStatus("تعذر تحميل مواقيت اليوم","error");if(!silent)alert("تعذر تحميل المواقيت من قاعدة البيانات. تحقق من اتصال الإنترنت.");return false;}}
 function currentAnnualPrayerRecord(){const monthName=document.getElementById("gregorianMonth").value;return{gregorian_day:Number(document.getElementById("gregorianDay").value),gregorian_month:GREGORIAN_MONTHS.indexOf(monthName)+1,fajr:document.getElementById("fajr").value,sunrise:document.getElementById("sunrise").value,dhuhr:document.getElementById("dhuhr").value,asr:document.getElementById("asr").value,maghrib:document.getElementById("maghrib").value,isha:document.getElementById("isha").value};}
-async function savePrayerToDatabase(){try{dbStatus("جاري الحفظ...");const record=currentAnnualPrayerRecord();const response=await fetch(`${SUPABASE_URL}/rest/v1/annual_prayer_times?on_conflict=gregorian_month,gregorian_day`,{method:"POST",headers:dbHeaders({Prefer:"resolution=merge-duplicates,return=representation"}),body:JSON.stringify(record)});if(!response.ok)throw new Error(await response.text());dbStatus("تم حفظ المواقيت في قاعدة البيانات ✓","success");}catch(error){console.error(error);dbStatus("تعذر الحفظ","error");alert("تعذر الحفظ في قاعدة البيانات.");}}
+async function savePrayerToDatabase(){try{dbStatus("جاري الحفظ...");const record=window.AoqatPrayerTimeChoice?.unapplyRow(currentAnnualPrayerRecord())||currentAnnualPrayerRecord();const response=await fetch(`${SUPABASE_URL}/rest/v1/annual_prayer_times?on_conflict=gregorian_month,gregorian_day`,{method:"POST",headers:dbHeaders({Prefer:"resolution=merge-duplicates,return=representation"}),body:JSON.stringify(record)});if(!response.ok)throw new Error(await response.text());dbStatus("تم حفظ المواقيت في قاعدة البيانات ✓","success");}catch(error){console.error(error);dbStatus("تعذر الحفظ","error");alert("تعذر الحفظ في قاعدة البيانات.");}}
 function setupAutomaticDateChangeLoading(){document.getElementById("gregorianDay")?.addEventListener("change",()=>loadPrayerFromDatabase(true));document.getElementById("gregorianMonth")?.addEventListener("change",()=>loadPrayerFromDatabase(true));}
 
 /* عرض الهاتف: نستخدم zoom بدل transform حتى تبقى المعاينة ظاهرة ومكانها صحيح */
@@ -270,3 +270,4 @@ function setupDesignSaveSystem(){
 }
 
 async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setupPWAInstallation();setupDesignSaveSystem();setTodayDateAutomatically();await loadPrayerFromDatabase(true);setupPrayerBackgroundSync();}
+
