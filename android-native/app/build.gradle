@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 78 // Offline prayer database, background sync and complete Quran
-        versionName '1.43'
+        versionCode 79 // Current web features, native prayer notices and full-page offline Quran
+        versionName '1.44'
     }
 
     compileOptions {

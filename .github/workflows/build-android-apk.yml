@@ -52,17 +52,42 @@ jobs:
       - name: Build debug APK
         run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
 
+      - name: Verify installation file and complete offline package
+        run: |
+          python3 - <<'PYCODE'
+          import zipfile,json,hashlib,pathlib
+          apk=pathlib.Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
+          with zipfile.ZipFile(apk) as z:
+              prefix='assets/www/'
+              pages=[n for n in z.namelist() if n.startswith(prefix+'assets/mushaf-phone-hafs/') and n.endswith('.json.gz.bin')]
+              assert len(pages)==604, f'Missing full-page Mushaf: {len(pages)}'
+              assert not any(n.startswith(prefix+'assets/mushaf-hafs-') for n in z.namelist()), 'Duplicate photo edition packaged'
+              hashes=json.loads(z.read(prefix+'assets/mushaf-apk-sha256.json'))
+              for path,digest in hashes.items():
+                  packaged=prefix+path+('.bin' if path.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(packaged)).hexdigest()==digest, path
+              rows=json.loads(z.read(prefix+'data/prayer-times-offline.json'))
+              assert len(rows)==366
+              row=next(r for r in rows if r['gregorian_month']==12 and r['gregorian_day']==30)
+              assert [row[k] for k in ['fajr','sunrise','dhuhr','asr','maghrib','isha']]==['5:58','7:14','12:12','2:48','5:06','6:26']
+              assert 'configurePrayerNotifications' in z.read(prefix+'js/prayer-alert-methods.js').decode()
+              assert 'native)return;const now' in z.read(prefix+'js/prayer-alert-methods.js').decode()
+          print('Verified: 604 unchanged Quran pages, annual offline database, native notification UI; APK bytes:',apk.stat().st_size)
+          PYCODE
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
+          "$signer" verify --print-certs android-native/app/build/outputs/apk/debug/app-debug.apk
+
       - name: Prepare downloadable APK parts
         run: |
           mkdir -p android-native/app/build/apk-transfer
-          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.43.apk.part-
-          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.43.sha256
+          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.44.apk.part-
+          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.44.sha256
 
       - name: Upload APK transfer part 1
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.43-part-1
-          path: android-native/app/build/apk-transfer/aoqat-v1.43.apk.part-aa
+          name: aoqat-v1.44-part-1
+          path: android-native/app/build/apk-transfer/aoqat-v1.44.apk.part-aa
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -70,10 +95,10 @@ jobs:
       - name: Upload APK transfer part 2
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.43-part-2
+          name: aoqat-v1.44-part-2
           path: |
-            android-native/app/build/apk-transfer/aoqat-v1.43.apk.part-ab
-            android-native/app/build/apk-transfer/aoqat-v1.43.sha256
+            android-native/app/build/apk-transfer/aoqat-v1.44.apk.part-ab
+            android-native/app/build/apk-transfer/aoqat-v1.44.sha256
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -81,7 +106,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.43-build78
+          name: aoqat-android-v1.44-build79
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -116,3 +141,34 @@ jobs:
             /tmp/aoqat-adhan-*.png
             /tmp/aoqat-design-*.png
           if-no-files-found: ignore
+
+  backup-cleanup:
+    needs: [build-apk, web-check]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Keep the verified current backup and remove earlier project backups
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 - <<'PYCODE'
+          import os,json,re,urllib.request,urllib.parse
+          repo=os.environ['GH_REPO'];base='https://api.github.com/repos/'+repo
+          headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'}
+          def api(path,method='GET'):
+              with urllib.request.urlopen(urllib.request.Request(base+path,headers=headers,method=method)) as r:
+                  return json.loads(r.read()) if r.status!=204 else None
+          keep='refs/heads/backup/current-before-apk-v144-20261011'
+          preserved=api('/git/ref/heads/backup/current-before-apk-v144-20261011')
+          assert preserved['object']['sha']=='dadfb437a5b09bca32a9097a1db58460dc214b4c', 'Current backup must be confirmed before cleanup'
+          for family in ['heads','tags']:
+              for entry in api('/git/matching-refs/'+family+'/'):
+                  ref=entry['ref'];name=ref.split('/',2)[2]
+                  if ref!=keep and re.match(r'^(backup(?:/|-)|checkpoint(?:/|-)|reference-stable-|stable-menu-)',name):
+                      api('/git/refs/'+urllib.parse.quote(ref.removeprefix('refs/'),safe='/'),'DELETE')
+                      print('Removed old backup:',ref)
+          assert api('/git/ref/heads/backup/current-before-apk-v144-20261011')['object']['sha']==preserved['object']['sha']
+          print('Verified current backup retained.')
+          PYCODE

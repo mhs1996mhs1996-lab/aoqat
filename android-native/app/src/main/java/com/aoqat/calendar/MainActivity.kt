@@ -14,6 +14,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.os.Environment
 import android.provider.MediaStore
 import android.provider.Settings
@@ -344,6 +345,7 @@ class MainActivity : Activity() {
         if (::webView.isInitialized) { protectDisplayColors(); webView.evaluateJavascript("window.aoqatRefreshNativePrayerRows?.()", null) }
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
         PrayerAlarm.schedule(this)
+        if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerNotificationNativeSettings?.("+PrayerNotifications.settings(this).toString()+")",null)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerAlarmNativeSettings?.("+PrayerAlarm.settings(this).toString()+")",null)
         AlarmScheduler.scheduleFromDatabase(this)
         IqamaNativeScheduler.schedule(this)
@@ -616,6 +618,20 @@ class MainActivity : Activity() {
             if(PrayerAlarm.events(this@MainActivity).none{it.at>System.currentTimeMillis()})return "المواقيت غير متوفرة: اتصل بالإنترنت مرة لتحديثها"
             return "الرنين يعمل بالخلفية حسب المواقيت المحفوظة"
         }
+        @JavascriptInterface fun readPrayerNotificationSettings():String = PrayerNotifications.settings(this@MainActivity).toString()
+        @JavascriptInterface fun configurePrayerNotifications(json:String){runOnUiThread{PrayerNotifications.configure(this@MainActivity,json);if(PrayerNotifications.settings(this@MainActivity).optBoolean("enabled"))requestPrayerNoticeAccess()}}
+        @JavascriptInterface fun previewPrayerNotification(){runOnUiThread{requestNotificationPermissionIfNeeded();PrayerNotifications.start(this@MainActivity,"fajr",preview=true)}}
+        @JavascriptInterface fun prayerNotificationPermissions(){runOnUiThread{requestPrayerNoticeAccess(force=true)}}
+        @JavascriptInterface fun prayerNotificationReadiness():String {
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val am=getSystemService(ALARM_SERVICE) as AlarmManager
+            return when {
+                !nm.areNotificationsEnabled()->"فعّل إذن الإشعارات من إعدادات الهاتف."
+                Build.VERSION.SDK_INT>=31&&!am.canScheduleExactAlarms()->"فعّل إذن المنبّهات الدقيقة لعرض الإشعار بوقته."
+                !(getSystemService(POWER_SERVICE) as PowerManager).isIgnoringBatteryOptimizations(packageName)->"اسمح بالعمل في الخلفية دون تقييد البطارية لضمان التنبيه."
+                else->"الإشعارات تعمل من المواقيت المحفوظة، دون إنترنت وبالخلفية."
+            }
+        }
         @JavascriptInterface fun readPrayerAlarmSettings():String = PrayerAlarm.settings(this@MainActivity).toString()
         @JavascriptInterface fun configurePrayerAlarm(json:String){runOnUiThread{try{val s=org.json.JSONObject(json);PrayerAlarm.configure(this@MainActivity,json);if(s.optBoolean("enabled")){requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();requestIqamaBackgroundAccessIfNeeded(forAdhan=true);if(Build.VERSION.SDK_INT>=34&&!(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))};}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ المنبّه",Toast.LENGTH_LONG).show()}}}
         @JavascriptInterface fun previewPrayerAlarm(id:String){runOnUiThread{if(id in PrayerAlarm.ids){requestNotificationPermissionIfNeeded();PrayerAlarm.start(this@MainActivity,id,preview=true)}}}
@@ -833,6 +849,14 @@ class MainActivity : Activity() {
     override fun onDestroy() {
         if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.unregisterOnBackInvokedCallback(phoneBackCallback)
         super.onDestroy()
+    }
+
+    private fun requestPrayerNoticeAccess(force:Boolean=false) {
+        requestNotificationPermissionIfNeeded()
+        requestExactAlarmAccessIfNeeded()
+        requestIqamaBackgroundAccessIfNeeded(force=force,forAdhan=true)
+        val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        if(!nm.areNotificationsEnabled()&&(Build.VERSION.SDK_INT<33||checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED))startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
     }
 
     private fun requestNotificationPermissionIfNeeded() {

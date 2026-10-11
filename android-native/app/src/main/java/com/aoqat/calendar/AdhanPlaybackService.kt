@@ -14,6 +14,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     companion object {
         @Volatile var running=false
             private set
+        @Volatile var activePrayerId=""
+            private set
         fun restoreVolume(c: Context) {
             val p=c.getSharedPreferences("adhan_audio_volume",Context.MODE_PRIVATE)
             if(!p.contains("previous"))return
@@ -58,15 +60,17 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         config=if(intent?.hasExtra("settings")==true)try{JSONObject(intent.getStringExtra("settings")?:"{}")}catch(_:Exception){JSONObject()} else AdhanSchedule.settings(this)
         preview=intent?.getBooleanExtra("preview",false)==true
         val prayer=intent?.getStringExtra("prayerId")?:"fajr"
+        activePrayerId=prayer
+        if(!preview&&PrayerNotifications.selected(this,prayer)){stopSelf();return START_NOT_STICKY}
         val special=prayer in listOf("fridayFirst","fridaySecond")
         if(!preview&&FridaySchedule.suppress(this,prayer,intent?.getLongExtra("prayerAt",0)?:0)){stopSelf();return START_NOT_STICKY}
         if(special&&!preview){val f=config.optJSONObject("friday")?:JSONObject();config.put("enabled",f.optBoolean("enabled")&&f.optBoolean(if(prayer=="fridayFirst")"firstSound" else "secondSound",true));config.put("modes",JSONObject().put("friday","sound"));config.put("afterSilent",0);config.put("overrideSilent",true);config.put("vibrate",false);config.put("screen",false);config.put("flip",false)}
-        val mode=if(preview)"sound" else config.optJSONObject("modes")?.optString(if(intent?.getBooleanExtra("friday",false)==true)"friday" else prayer,"sound")?:"sound"
+        val mode=if(preview)"sound" else config.optJSONObject("modes")?.optString(if(special)"friday" else prayer,"sound")?:"sound"
         if(!preview && (!config.optBoolean("enabled") || mode=="silent")){stopSelf();return START_NOT_STICKY}
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val builder=Notification.Builder(this,"adhan_playback").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview)"تجربة صوت الأذان" else "حان أذان ${(if(prayer=="fridayFirst")"الجمعة الأول" else if(prayer=="fridaySecond")"الجمعة الثاني" else PrayerTimes.names[prayer])?:"الصلاة"}").setContentText("اضغط إيقاف لإنهاء الأذان").setOngoing(true).setVisibility(Notification.VISIBILITY_PUBLIC).addAction(Notification.Action.Builder(null,"إيقاف",stop).build()).setContentIntent(PendingIntent.getActivity(this,60411,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
+        val builder=Notification.Builder(this,"adhan_playback").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")"حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true)).setContentText("اضغط إيقاف لإنهاء الأذان").setOngoing(true).setVisibility(Notification.VISIBILITY_PUBLIC).addAction(Notification.Action.Builder(null,"إيقاف",stop).build()).setContentIntent(PendingIntent.getActivity(this,60411,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
         if(config.optBoolean("screen")&&!preview){val show=PendingIntent.getActivity(this,60412,Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT);builder.setFullScreenIntent(show,true)}
         startForeground(60400,builder.build())
         wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:adhan").apply{acquire(10*60*1000L)}
@@ -102,7 +106,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         restoreVolume(this)
         previousVolume=null;appliedVolume=null
         handler.removeCallbacksAndMessages(null);sensors.unregisterListener(this);player?.release();player=null;vibrator?.cancel();focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};focus=null;if(wake?.isHeld==true)wake?.release();wake=null}
-    override fun onDestroy(){cleanup();running=false;if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(duration>0&&nm.isNotificationPolicyAccessGranted){val am=getSystemService(AUDIO_SERVICE) as AudioManager;val p=getSharedPreferences("adhan_ringer",MODE_PRIVATE);val old=if(p.getBoolean("changed",false))p.getInt("previous",2) else am.ringerMode;val end=System.currentTimeMillis()+duration*60000L;try{am.ringerMode=AudioManager.RINGER_MODE_SILENT;p.edit().putBoolean("changed",true).putInt("previous",old).putLong("end",end).commit();AdhanSchedule.alarm(this,60403,"RESTORE_SOUND",end)}catch(_:SecurityException){}}};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){cleanup();running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(duration>0&&nm.isNotificationPolicyAccessGranted){val am=getSystemService(AUDIO_SERVICE) as AudioManager;val p=getSharedPreferences("adhan_ringer",MODE_PRIVATE);val old=if(p.getBoolean("changed",false))p.getInt("previous",2) else am.ringerMode;val end=System.currentTimeMillis()+duration*60000L;try{am.ringerMode=AudioManager.RINGER_MODE_SILENT;p.edit().putBoolean("changed",true).putInt("previous",old).putLong("end",end).commit();AdhanSchedule.alarm(this,60403,"RESTORE_SOUND",end)}catch(_:SecurityException){}}};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
     override fun onSensorChanged(e:SensorEvent){if(e.values[2]>-5)flipArmed=true;if(flipArmed && e.values[2]<-7 && SystemClock.elapsedRealtime()-started>1500)stopSelf()}
     override fun onAccuracyChanged(s:Sensor?,a:Int){}
 }

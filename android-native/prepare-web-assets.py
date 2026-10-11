@@ -43,11 +43,15 @@ transform('adhan-settings.js',[
  ('panel.querySelectorAll("[data-setting]")', 'document.querySelectorAll("#adhanPanel [data-setting], #prayerServicePanel [data-setting]")'),
  ('if (!native) { $("adServiceMenu").hidden=true;', 'if (servicePanel) { $("adServiceMenu").hidden=true;'),
  ('...(native ? [["services", "✨", "الخدمات"]] : [])','...[]'),
+ ('...(native ? ["friday"] : [])', '...[]'),
  ('if (!native && servicePanel)', 'if (servicePanel)'),
  ('if (native || !["quran","qibla","azkar"].includes(kind)) return;', 'if (!["quran","qibla","azkar","widget"].includes(kind)) return;'),
  ('if (kind === "quran" && !native)', 'if (kind === "quran")'),
  ('    if (!native) {\n      servicePanel = document.createElement("section");','    {\n      servicePanel = document.createElement("section");'),
  ('على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.', 'يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.')])
+
+# Use the current web menu with durable Android notification delivery.
+transform('prayer-alert-methods.js',[('  if(window.AndroidNative?.configureAdhan)return;', '  const N=window.AndroidNative,native=!!N?.configurePrayerNotifications;'), ("JSON.parse(localStorage.getItem(KEY)||'{}')", "JSON.parse(native?N.readPrayerNotificationSettings():localStorage.getItem(KEY)||'{}')"), ('function save(){localStorage.setItem(KEY,JSON.stringify(settings));}', 'function save(){localStorage.setItem(KEY,JSON.stringify(settings));if(native)N.configurePrayerNotifications(JSON.stringify(settings));}'), ('function unlock(){try{', 'function unlock(){if(native)return;try{'), ('function chime(){if(!audio', 'function chime(){if(native){N.previewPrayerNotification();return;}if(!audio'), ('تنبيه الويب يعمل أثناء فتح الصفحة؛ اسمح بالإشعارات حتى تظهر في قائمة إشعارات الهاتف.', 'الإشعارات تعمل من المواقيت المحفوظة، دون إنترنت وبالخلفية بعد منح الأذونات.'), ('<p id="pnStatus" role="status"></p>', '${native?\'<button type="button" id="pnPermissions">أذونات الإشعارات والعمل بالخلفية</button><p class="ad-note">\'+N.prayerNotificationReadiness()+\'</p>\':\'\'}<p id="pnStatus" role="status"></p>'), ("if(settings.enabled&&'Notification' in window", "if(!native&&settings.enabled&&'Notification' in window"), ("if(settings.enabled&&(!('Notification'", "if(!native&&settings.enabled&&(!('Notification'"), ("$('pnPreview').onclick=()=>{unlock();chime();};", "$('pnPreview').onclick=()=>{unlock();chime();};if(native)$('pnPermissions').onclick=()=>N.prayerNotificationPermissions();"), ('  function tick(){const now=', '  function tick(){if(native)return;const now='), ("  document.addEventListener('pointerdown'", "  window.aoqatPrayerNotificationNativeSettings=value=>{if(!native)return;settings={...settings,...value};drawNotice();};\n  document.addEventListener('pointerdown'")])
 
 # Pin every downloadable page to this release; cached bytes must match the original assets.
 # The reader is complete at first install, including metadata and every page.

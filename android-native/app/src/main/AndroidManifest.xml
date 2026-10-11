@@ -41,6 +41,9 @@
             android:showWhenLocked="true"
             android:turnScreenOn="true" />
 
+        <service android:name=".PrayerNotificationSoundService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
+        <receiver android:name=".PrayerNotificationReceiver" android:exported="false" />
+
         <service android:name=".PrayerAlarmService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".PrayerAlarmReceiver" android:exported="false" />
         <receiver android:name=".PrayerAlarmActionReceiver" android:exported="false" />
