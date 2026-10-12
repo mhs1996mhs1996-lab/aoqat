@@ -63,7 +63,7 @@ transform('modal-panels.js', [
  ('if(el&&row[id]!=null) el.value=String(row[id]);', 'if(el&&row[id]!=null){const value=String(row[id]);if(!Array.from(el.options).some(o=>o.value===value))el.add(new Option(value,value));el.value=value;}'),
  ('if(autoEnabled()) setTimeout(()=>evaluateAutoSwitch(true),1400);', 'if(autoEnabled()) evaluateAutoSwitch(true);')])
 # Complete local rows are applied synchronously, before the startup preview is shown.
-p=target/'js/supabase-db.js';text=p.read_text();text=text.replace('const row=await readAnnualPrayer(month,day,!silent);','const row=cachedAnnualPrayer(month,day)||await readAnnualPrayer(month,day,!silent);');p.write_text(text)
+p=target/'js/supabase-db.js';text=p.read_text();text=text.replace('const row=await readAnnualPrayer(month,day,!silent);','const row=(silent&&cachedAnnualPrayer(month,day))||await readAnnualPrayer(month,day,!silent);');p.write_text(text)
 transform('prayer-time-choice.js',[
  ("s.mode!=='custom'||window.AndroidNative?.configureAdhan", "s.mode!=='custom'"),
  ("function read(){try{return normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}", "let nativeChoice;function read(){try{if(window.AndroidNative?.readPrayerTimeChoice){if(!nativeChoice)nativeChoice=normalize(JSON.parse(window.AndroidNative.readPrayerTimeChoice()));return nativeChoice;}return normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}"),
