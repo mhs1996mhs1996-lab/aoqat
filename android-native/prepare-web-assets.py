@@ -81,12 +81,26 @@ function initPrayerTimes(){
 (target/'js/script.js').write_text(script)
 
 # Pack local UI modules in dependency order. No window.load or serial file request chain.
+# The original web carousel initializes after fixed timers. Packaged dependencies
+# are already ordered, so build the four templates and navigation synchronously.
+transform('second-design.js', [('setTimeout(initSecondDesign,900)', 'initSecondDesign()')])
+transform('additional-designs.js', [('function init(){injectStyles();let tries=0;', 'function init(){injectStyles();if(rebuild()){setupSync();setupExport();sync();resize();window.addEventListener("resize",resize,{passive:true});window.addEventListener("orientationchange",()=>setTimeout(resize,150),{passive:true});return;}let tries=0;')])
+transform('design-order.js', [('  let tries=0;', '  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",applyPreferredDesignOrder,{once:true});else applyPreferredDesignOrder();\n  let tries=0;')])
+transform('carousel-unified-fix.js', [('function init(){let tries=0;', 'function init(){install();let tries=0;')])
+
+# Clock and menu text mutations do not change the editable element tree.
+# Avoid walking every design on every unrelated DOM mutation.
+transform('universal-preview-editor.js', [('const obs=new MutationObserver(()=>{markMovables();bindSave();});obs.observe(document.body,{childList:true,subtree:true});', 'let queued=false;const obs=new MutationObserver(records=>{if(queued||!records.some(r=>[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1)))return;queued=true;requestAnimationFrame(()=>{queued=false;markMovables();bindSave();});});const preview=document.querySelector(".previewBox");if(preview)obs.observe(preview,{childList:true,subtree:true});')])
+transform('adaptive-design-boxes.js', [('  function schedule(root){requestAnimationFrame(()=>requestAnimationFrame(()=>fitRoot(root||document)));}', '  let fitQueued=false;const fitRoots=new Set();function schedule(root){fitRoots.add(root||document);if(fitQueued)return;fitQueued=true;requestAnimationFrame(()=>{fitQueued=false;for(const node of fitRoots)fitRoot(node);fitRoots.clear();});}'), ('if(m.some(x=>x.type===\'childList\'))schedule(document);', 'if(m.some(x=>x.target.closest?.(CARD_SELECTORS)||[...x.addedNodes,...x.removedNodes].some(n=>n.nodeType===1)))schedule(document.querySelector(".previewBox"));'), ('}).observe(document.body,{subtree:true,childList:true});', '}).observe(document.querySelector(".previewBox")||document.body,{subtree:true,childList:true});')])
 html=(target/'index.html').read_text()
 static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
 dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())
 paths=['js/startup-stabilizer.js','js/design-side-menu.js']+[src.split('?')[0] for src in static if not src.startswith('data/prayer-times.js')]+[src.split('?')[0] for src in dynamic]
 seen=set();chunks=['const prayerTimes=[];']
 for relative in paths:
+    # This old compatibility module repeatedly unhides all slides, conflicting
+    # with the unified carousel. Visibility is now owned by its saved settings.
+    if relative=='js/five-new-designs.js':continue
     if relative in seen:continue
     seen.add(relative)
     path=target/relative
@@ -122,4 +136,5 @@ for prefix,extension in [('mushaf-phone-hafs','json.gz')]:
         manifest[name]=hashlib.sha256((root/name).read_bytes()).hexdigest()
 (target/'assets').mkdir(parents=True,exist_ok=True)
 (target/'assets/mushaf-apk-sha256.json').write_text(json.dumps(manifest,separators=(',',':')))
+
 

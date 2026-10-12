@@ -161,11 +161,11 @@
         const data=(el.getAttribute?.('data-field')||el.getAttribute?.('data-f')||'');
         const txt=(el.textContent||'').trim();
         const looksTime=/time|clock/i.test(cls)||data===role||/^\d{1,2}:\d{2}$/.test(txt);
-        if(looksTime&&!txt.includes(arabicPrayer[role])) el.textContent=value;
+        if(looksTime&&!txt.includes(arabicPrayer[role])&&el.textContent!==value) el.textContent=value;
       });
       return;
     }
-    targets.forEach(el=>{if(el.children.length===0||el.matches('[data-field],[data-f]')) el.textContent=value;});
+    targets.forEach(el=>{if((el.children.length===0||el.matches('[data-field],[data-f]'))&&el.textContent!==value) el.textContent=value;});
   }
 
   function syncDataToRoot(root){
@@ -225,15 +225,12 @@
   }
 
   function watchAndroidDesignSlides(){
-    const root=document.querySelector('.design-carousel-track')||document.body;
-    let lastCount=-1;
-    const refresh=()=>{
-      const count=document.querySelectorAll('.design-carousel-track > .design-slide').length;
-      if(count!==lastCount){lastCount=count;setTimeout(refreshAndroidDesignVisibility,40);}
-    };
-    refresh();
-    new MutationObserver(refresh).observe(root,{childList:true,subtree:true});
-    [350,800,1400,2400].forEach(ms=>setTimeout(refreshAndroidDesignVisibility,ms));
+    let done=false,scheduled=false;
+    const obs=new MutationObserver(records=>{if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1)))refresh();});
+    function refresh(){if(done||scheduled)return;scheduled=true;requestAnimationFrame(()=>{scheduled=false;
+      if(['designRef','design2','design3','design4'].every(id=>document.getElementById(id))){done=true;obs.disconnect();refreshAndroidDesignVisibility();}
+    });}
+    obs.observe(document.querySelector('.previewBox')||document.body,{childList:true,subtree:true});refresh();
   }
 
   function fixAndroidColorSwatches(){
@@ -368,3 +365,4 @@
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true}); else init();
 })();
+

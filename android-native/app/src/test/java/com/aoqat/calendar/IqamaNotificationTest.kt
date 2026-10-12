@@ -1,5 +1,7 @@
 package com.aoqat.calendar
 
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -37,6 +39,9 @@ class IqamaNotificationTest {
             assertNotNull(surface)
             val root = surface.apply(context, null)
             val clock = root.findViewById<Chronometer>(R.id.iqama_chronometer)
+            assertEquals(Color.rgb(23,55,71), clock.currentTextColor)
+            assertEquals(Color.rgb(23,55,71),root.findViewById<TextView>(R.id.iqama_state).currentTextColor)
+            assertEquals(Color.WHITE,(root.background as ColorDrawable).color)
             assertEquals(base, clock.base)
             assertEquals(countdown, clock.isCountDown)
             assertEquals(title, root.findViewById<TextView>(R.id.iqama_state).text.toString())
@@ -140,3 +145,4 @@ class IqamaNotificationTest {
         assertEquals(IqamaCycle.Durations(10,10), IqamaNativeScheduler.durations(context,"asr"))
     }
 }
+
