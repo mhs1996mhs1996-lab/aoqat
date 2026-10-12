@@ -41,7 +41,7 @@ class IqamaNotificationTest {
             val clock = root.findViewById<Chronometer>(R.id.iqama_chronometer)
             assertEquals(Color.rgb(23,55,71), clock.currentTextColor)
             assertEquals(Color.rgb(23,55,71),root.findViewById<TextView>(R.id.iqama_state).currentTextColor)
-            assertEquals(Color.WHITE,(root.background as ColorDrawable).color)
+            assertEquals(Color.WHITE,(root.findViewById<android.view.View>(R.id.iqama_root).background as ColorDrawable).color)
             assertEquals(base, clock.base)
             assertEquals(countdown, clock.isCountDown)
             assertEquals(title, root.findViewById<TextView>(R.id.iqama_state).text.toString())
