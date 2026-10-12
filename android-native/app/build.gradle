@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 79 // Current web features, native prayer notices and full-page offline Quran
-        versionName '1.44'
+        versionCode 80 // Offline-first startup, stable designs and custom prayer minutes
+        versionName '1.45'
     }
 
     compileOptions {
@@ -94,3 +94,4 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'
 }
+

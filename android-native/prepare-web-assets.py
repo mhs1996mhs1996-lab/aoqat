@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import shutil
+import re
 root=Path(__file__).resolve().parent.parent
 target=Path(sys.argv[1])
 def transform(name,changes):
@@ -14,6 +15,7 @@ def transform(name,changes):
         text=text.replace(old,new)
     path=target/'js'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text)
 transform('web-menu-order.js',[
+ ('...(!window.AndroidNative?.configureAdhan ? [["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"]] : [])', '...[ ["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"] ]'),
  ('...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])','["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]'),
  ('["quran","qibla","azkar"].includes(id)','["quran","qibla","azkar","widget"].includes(id)')])
 transform('quran-reader.js',[
@@ -53,6 +55,49 @@ transform('adhan-settings.js',[
 # Use the current web menu with durable Android notification delivery.
 transform('prayer-alert-methods.js',[('  if(window.AndroidNative?.configureAdhan)return;', '  const N=window.AndroidNative,native=!!N?.configurePrayerNotifications;'), ("JSON.parse(localStorage.getItem(KEY)||'{}')", "JSON.parse(native?N.readPrayerNotificationSettings():localStorage.getItem(KEY)||'{}')"), ('function save(){localStorage.setItem(KEY,JSON.stringify(settings));}', 'function save(){localStorage.setItem(KEY,JSON.stringify(settings));if(native)N.configurePrayerNotifications(JSON.stringify(settings));}'), ('function unlock(){try{', 'function unlock(){if(native)return;try{'), ('function chime(){if(!audio', 'function chime(){if(native){N.previewPrayerNotification();return;}if(!audio'), ('تنبيه الويب يعمل أثناء فتح الصفحة؛ اسمح بالإشعارات حتى تظهر في قائمة إشعارات الهاتف.', 'الإشعارات تعمل من المواقيت المحفوظة، دون إنترنت وبالخلفية بعد منح الأذونات.'), ('<p id="pnStatus" role="status"></p>', '${native?\'<button type="button" id="pnPermissions">أذونات الإشعارات والعمل بالخلفية</button><p class="ad-note">\'+N.prayerNotificationReadiness()+\'</p>\':\'\'}<p id="pnStatus" role="status"></p>'), ("if(settings.enabled&&'Notification' in window", "if(!native&&settings.enabled&&'Notification' in window"), ("if(settings.enabled&&(!('Notification'", "if(!native&&settings.enabled&&(!('Notification'"), ("$('pnPreview').onclick=()=>{unlock();chime();};", "$('pnPreview').onclick=()=>{unlock();chime();};if(native)$('pnPermissions').onclick=()=>N.prayerNotificationPermissions();"), ('  function tick(){const now=', '  function tick(){if(native)return;const now='), ("  document.addEventListener('pointerdown'", "  window.aoqatPrayerNotificationNativeSettings=value=>{if(!native)return;settings={...settings,...value};drawNotice();};\n  document.addEventListener('pointerdown'")])
 
+# Native settings also feed browser previews; raw database cache is never adjusted.
+transform('supabase-db.js',[("    if(window.AndroidNative?.configureAdhan){\n        document.getElementById(\"gregorianDay\")?.addEventListener(\"change\",()=>loadPrayerFromDatabase(true));\n        document.getElementById(\"gregorianMonth\")?.addEventListener(\"change\",()=>loadPrayerFromDatabase(true));return;\n    }", "")])
+transform('prayer-time-choice.js',[
+ ("s.mode!=='custom'||window.AndroidNative?.configureAdhan", "s.mode!=='custom'"),
+ ("function read(){try{return normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}", "function read(){try{return normalize(JSON.parse(window.AndroidNative?.readPrayerTimeChoice?window.AndroidNative.readPrayerTimeChoice():localStorage.getItem(KEY)||'{}'));}"),
+ ("localStorage.setItem(KEY,JSON.stringify(s));window.dispatchEvent", "localStorage.setItem(KEY,JSON.stringify(s));window.AndroidNative?.configurePrayerTimeChoice?.(JSON.stringify(s));window.dispatchEvent")])
+
+# Build full minute pickers when opened, rather than 8640 option nodes on startup.
+script=(root/'js/script.js').read_text()
+start=script.index('function initPrayerTimes()')
+end=script.index('function updateDatePreview()',start)
+script=script[:start]+'''
+function initPrayerTimes(){
+  const ids=['fajr','sunrise','dhuhr','asr','maghrib','isha'];
+  for(const id of ids){const el=document.getElementById(id);el.replaceChildren(new Option('--:--',''));}
+  function populate(el){if(el.dataset.apkTimesReady)return;const selected=el.value,fragment=document.createDocumentFragment();
+    for(let hour=1;hour<=12;hour++)for(let minute=0;minute<60;minute++){const value=hour+':'+String(minute).padStart(2,'0');fragment.appendChild(new Option(value,value));}
+    el.appendChild(fragment);el.value=selected;el.dataset.apkTimesReady='1';
+  }
+  document.addEventListener('focusin',e=>{if(ids.includes(e.target.id))populate(e.target);});
+  document.addEventListener('pointerdown',e=>{if(ids.includes(e.target.id))populate(e.target);},{capture:true,passive:true});
+}
+'''+script[end:]
+(target/'js/script.js').write_text(script)
+
+# Pack local UI modules in dependency order. No window.load or serial file request chain.
+html=(target/'index.html').read_text()
+static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
+dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())
+paths=['js/startup-stabilizer.js','js/design-side-menu.js']+[src.split('?')[0] for src in static if not src.startswith('data/prayer-times.js')]+[src.split('?')[0] for src in dynamic]
+seen=set();chunks=['const prayerTimes=[];']
+for relative in paths:
+    if relative in seen:continue
+    seen.add(relative)
+    path=target/relative
+    if not path.exists():path=root/relative
+    chunks.append('\n/* '+relative+' */\n'+path.read_text()+'\n;')
+chunks.append("document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('aoqatModulesReady'))),{once:true});")
+(target/'js/apk-startup-bundle.js').write_text('\n'.join(chunks))
+html=re.sub(r'<script\b[^>]*src="[^"]+"[^>]*></script>','',html)
+html=html.replace('</body>','<script src="js/apk-startup-bundle.js"></script>\n</body>')
+(target/'index.html').write_text(html)
+
 # Pin every downloadable page to this release; cached bytes must match the original assets.
 # The reader is complete at first install, including metadata and every page.
 # Test fixtures omit large source assets; materialize the same package with hard links.
@@ -77,3 +122,4 @@ for prefix,extension in [('mushaf-phone-hafs','json.gz')]:
         manifest[name]=hashlib.sha256((root/name).read_bytes()).hexdigest()
 (target/'assets').mkdir(parents=True,exist_ok=True)
 (target/'assets/mushaf-apk-sha256.json').write_text(json.dumps(manifest,separators=(',',':')))
+

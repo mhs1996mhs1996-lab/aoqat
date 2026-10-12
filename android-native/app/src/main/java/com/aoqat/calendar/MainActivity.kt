@@ -293,6 +293,7 @@ class MainActivity : Activity() {
     }
 
 
+    private var firstResume = true
     private lateinit var webView: WebView
     private val ADHAN_AUDIO_REQUEST = 812
     private var fileCallback: ValueCallback<Array<Uri>>? = null
@@ -314,21 +315,18 @@ class MainActivity : Activity() {
 
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
-        OfflinePrayerSync.install(this)
         protectDisplayColors()
         requestNotificationPermissionIfNeeded()
         requestExactAlarmAccessIfNeeded()
-        AlarmScheduler.scheduleFromDatabase(this)
-        IqamaNativeScheduler.schedule(this)
-        AdhanSchedule.schedule(this)
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
-        restoreIqamaServiceIfActive()
         if (AdhanSchedule.enabled(this)) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
         else if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
         webView.loadUrl("file:///android_asset/www/index.html")
+        PrayerStartup.refresh(this)
+        restoreIqamaServiceIfActive()
 
         // Android-only startup assistance. We do not modify the original web project.
         listOf(250L, 700L, 1400L, 2500L, 4500L).forEach { delay ->
@@ -344,12 +342,9 @@ class MainActivity : Activity() {
         super.onResume()
         if (::webView.isInitialized) { protectDisplayColors(); webView.evaluateJavascript("window.aoqatRefreshNativePrayerRows?.()", null) }
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
-        PrayerAlarm.schedule(this)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerNotificationNativeSettings?.("+PrayerNotifications.settings(this).toString()+")",null)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerAlarmNativeSettings?.("+PrayerAlarm.settings(this).toString()+")",null)
-        AlarmScheduler.scheduleFromDatabase(this)
-        IqamaNativeScheduler.schedule(this)
-        AdhanSchedule.schedule(this)
+        if(firstResume)firstResume=false else PrayerStartup.refresh(this)
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
@@ -662,7 +657,9 @@ class MainActivity : Activity() {
             if (name !in listOf("quran.json", "quran-pages.json")) return "null"
             return assets.open("www/assets/$name").bufferedReader().use { it.readText() }
         }
-        @JavascriptInterface fun readPrayerRows():String = PrayerTimes.rows(this@MainActivity).toString()
+        @JavascriptInterface fun readPrayerRows():String = OfflinePrayerSync.rows(this@MainActivity).toString()
+        @JavascriptInterface fun readPrayerTimeChoice():String = PrayerTimeChoice.settings(this@MainActivity).toString()
+        @JavascriptInterface fun configurePrayerTimeChoice(json:String):String = PrayerTimeChoice.configure(this@MainActivity,json)
         @JavascriptInterface fun cachePrayerRows(json:String){AdhanSchedule.storeRows(this@MainActivity,json)}
         @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}
         @JavascriptInterface fun stopAdhan(){stopService(Intent(this@MainActivity,AdhanPlaybackService::class.java))}
@@ -891,4 +888,5 @@ class MainActivity : Activity() {
         private const val STORAGE_PERMISSION_REQUEST = 2002
     }
 }
+
 

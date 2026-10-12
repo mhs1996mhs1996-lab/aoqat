@@ -38,10 +38,19 @@ object OfflinePrayerSync {
         }
         return JSONArray(rows.values.toList())
     }
-    fun rows(c: Context): JSONArray {
-        val backup = try { JSONArray(c.assets.open("www/data/prayer-times-offline.json").bufferedReader().use { it.readText() }) } catch (_: Exception) { JSONArray() }
-        val saved = try { JSONArray(prefs(c).getString("rows", "[]")) } catch (_: Exception) { JSONArray() }
-        return merge(backup, saved)
+    private var cacheContext: Context? = null
+    private var cachedBackup: JSONArray? = null
+    private var cachedSaved: String? = null
+    private var cachedRows: JSONArray? = null
+    @Synchronized fun rows(c: Context): JSONArray {
+        val app=c.applicationContext
+        if(cacheContext!==app){cacheContext=app;cachedBackup=null;cachedRows=null;cachedSaved=null}
+        if(cachedBackup==null)cachedBackup=try{JSONArray(c.assets.open("www/data/prayer-times-offline.json").bufferedReader().use{it.readText()})}catch(_:Exception){JSONArray()}
+        val saved=prefs(c).getString("rows","[]") ?: "[]"
+        if(cachedRows==null||cachedSaved!=saved){
+            cachedRows=merge(cachedBackup!!,try{JSONArray(saved)}catch(_:Exception){JSONArray()});cachedSaved=saved
+        }
+        return cachedRows!!
     }
     fun window(today: LocalDate = LocalDate.now()) = (0L..7L).map { today.plusDays(it) }
     fun complete(rows: JSONArray, dates: List<LocalDate>): Boolean = dates.all { date ->
@@ -97,3 +106,4 @@ class PrayerSyncJob : JobService() {
     }
     override fun onStopJob(params: JobParameters): Boolean = true
 }
+
