@@ -250,7 +250,7 @@
       closeGroups();closePanels(panel);addClose(panel);document.body.classList.add('design-detail-open');
     },true);
   }
-  function init(){let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{arrange();installExclusivePopupBehavior();},50));}
+  function init(){window.addEventListener('prayerDesignChanged',()=>{if(document.querySelectorAll('.design-visibility-btn').length!==4)addDesignVisibilityControls();});let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>setTimeout(()=>{arrange();installExclusivePopupBehavior();},50));}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
 
