@@ -22,7 +22,7 @@ object PrayerTimeChoice {
     }
     fun apply(raw: JSONArray,settings: JSONObject): JSONArray {
         if(settings.optString("mode")!="custom")return raw
-        val out=JSONArray(raw.toString()),offsets=settings.optJSONObject("offsets") ?: JSONObject()
+        val out=JSONArray(raw.toString());val offsets=settings.optJSONObject("offsets") ?: JSONObject()
         for(i in 0 until out.length()){val row=out.getJSONObject(i);for(id in PrayerTimes.ids){val delta=offsets.optInt(id,0);if(delta==0)continue
             val base=PrayerTimes.minutes(row.optString(id),id) ?: continue
             val minutes=((base+delta)%1440+1440)%1440;var hour=minutes/60
