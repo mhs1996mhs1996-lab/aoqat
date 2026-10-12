@@ -25,7 +25,9 @@ class PrayerTimeChoiceTest {
         assertEquals("4:55",original.getString("fajr"));assertEquals("3:13",original.getString("asr"))
         val events=PrayerTimes.events(c,LocalDate.of(2027,1,1));assertEquals(18,java.time.Instant.ofEpochMilli(events.first{it.id=="asr"}.at).atZone(java.time.ZoneId.systemDefault()).minute)
         c.getSharedPreferences("prayer_time_choice_v1",0).edit().putString("settings","{}").commit()
-        assertEquals("3:13",PrayerTimes.rows(c).let{rows->(0 until rows.length()).map{rows.getJSONObject(it)}.first{it.optInt("gregorian_month")==1&&it.optInt("gregorian_day")==1}.getString("asr"))
+        val restored=PrayerTimes.rows(c)
+        val restoredRow=(0 until restored.length()).map{restored.getJSONObject(it)}.first{it.optInt("gregorian_month")==1&&it.optInt("gregorian_day")==1}
+        assertEquals("3:13",restoredRow.getString("asr"))
     }
     @Test fun boundsMinuteCarryAndStableCachedSnapshot(){
         val normalized=PrayerTimeChoice.normalize(JSONObject("{\"mode\":\"custom\",\"offsets\":{\"fajr\":-40,\"asr\":40,\"isha\":41}}"))
