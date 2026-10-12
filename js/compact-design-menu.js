@@ -222,7 +222,9 @@
     let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
     const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(slide=>!slide.dataset.legacySlide&&!slide.querySelector('#design')&&!slide.classList.contains('removed-design-storage')&&!slide.closest('.removed-design-storage'));
     if(!slides.length)return false;
-    slides.forEach((slide,i)=>{if(!slide.dataset.visibilityKey)slide.dataset.visibilityKey='design-'+(i+1);});
+    const canonical=['designRef','design2','design3','design4'];
+    slides.sort((a,b)=>canonical.indexOf(a.firstElementChild?.id)-canonical.indexOf(b.firstElementChild?.id));
+    slides.forEach((slide,i)=>{slide.dataset.visibilityKey=slide.firstElementChild?.id||'design-'+(i+1);const key=slide.dataset.visibilityKey;if(!(key in state)&&('design-'+(i+1)) in state)state[key]=state['design-'+(i+1)];});
     const enabledSlides=()=>slides.filter(slide=>state[slide.dataset.visibilityKey]!==false);
     const apply=()=>{
       if(!enabledSlides().length){state[slides[0].dataset.visibilityKey]=true;localStorage.setItem(KEY,JSON.stringify(state));}

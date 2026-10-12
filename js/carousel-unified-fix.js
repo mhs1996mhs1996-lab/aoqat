@@ -1,7 +1,9 @@
 "use strict";
 (function(){
   const W=1024,H=1448;
-  let active=0,busy=false,firstInstall=true;
+  const ACTIVE_KEY='aoqatActiveDesignIdV1';
+  let savedDesignId='';try{savedDesignId=localStorage.getItem(ACTIVE_KEY)||'';}catch(_){}
+  let active=0,busy=false,firstInstall=true,activeDesignId=savedDesignId;
 
   function styles(){
     if(document.getElementById('compactCarouselNavStyles'))return;
@@ -29,14 +31,15 @@
     if(busy)return false;busy=true;
     try{
       styles();const track=document.querySelector('.design-carousel-track'),car=document.querySelector('.design-carousel');if(!track||!car)return false;
-      if(firstInstall&&track.firstElementChild?.firstElementChild?.id!=='designRef')return false;
+      if(firstInstall&&(['designRef','design2','design3','design4'].some(id=>!document.getElementById(id)?.closest('.design-slide'))||track.firstElementChild?.firstElementChild?.id!=='designRef'))return false;
       compactParent(car);const slides=allSlides(track);if(!slides.length)return false;const parent=car.parentElement;
       parent.querySelectorAll('.design-carousel-controls,.design-carousel-dots,.night-carousel-controls,.night-carousel-dots,.ornate-carousel-controls,.ornate-carousel-dots,.final-carousel-controls,.final-carousel-dots').forEach(el=>{if(!el.classList.contains('unified-preview-controls')&&!el.classList.contains('unified-preview-dots'))el.remove();});
       let controls=parent.querySelector('.unified-preview-controls'),dots=parent.querySelector('.unified-preview-dots');
       if(!controls){controls=document.createElement('div');controls.className='design-carousel-controls unified-preview-controls';controls.innerHTML='<button class="design-carousel-btn" type="button" data-unified-prev>‹</button><span class="design-carousel-status"></span><button class="design-carousel-btn" type="button" data-unified-next>›</button>';dots=document.createElement('div');dots.className='design-carousel-dots unified-preview-dots';parent.append(controls,dots);}
       dots.innerHTML=slides.map((_,i)=>`<button class="design-carousel-dot" type="button" data-unified-dot="${i}"></button>`).join('');
-      if(firstInstall){active=0;firstInstall=false;}else{const oldElement=window.__prayerActiveDesignElement,byElement=oldElement?slides.findIndex(s=>s.firstElementChild===oldElement):-1;if(byElement>=0)active=byElement;else active=Math.max(0,Math.min(active,slides.length-1));}
-      function render(){const current=allSlides(track);if(!current.length)return;active=((active%current.length)+current.length)%current.length;Array.from(track.querySelectorAll(':scope > .design-slide')).forEach(slide=>{slide.style.setProperty('display','none','important');slide.hidden=true;slide.setAttribute('aria-hidden','true');});current.forEach((slide,i)=>{if(i===active){slide.style.setProperty('display','flex','important');slide.hidden=false;slide.setAttribute('aria-hidden','false');}});track.style.setProperty('transform','none','important');window.__prayerActiveDesignIndex=active;window.__prayerActiveVisibleIndex=active;window.__prayerActiveDesignElement=current[active]?.firstElementChild||null;controls.querySelector('.design-carousel-status').textContent=`التصميم ${active+1} من ${current.length}`;dots.querySelectorAll('[data-unified-dot]').forEach((b,i)=>b.classList.toggle('active',i===active));resize(car);compactParent(car);window.dispatchEvent(new CustomEvent('prayerDesignChanged',{detail:{index:active,domIndex:active,design:window.__prayerActiveDesignElement}}));}
+      const byId=slides.findIndex(s=>s.firstElementChild?.id===activeDesignId);
+      active=byId>=0?byId:Math.max(0,Math.min(firstInstall?0:active,slides.length-1));firstInstall=false;
+      function render(){const current=allSlides(track);if(!current.length)return;active=((active%current.length)+current.length)%current.length;Array.from(track.querySelectorAll(':scope > .design-slide')).forEach(slide=>{slide.style.setProperty('display','none','important');slide.hidden=true;slide.setAttribute('aria-hidden','true');});current.forEach((slide,i)=>{if(i===active){slide.style.setProperty('display','flex','important');slide.hidden=false;slide.setAttribute('aria-hidden','false');}});track.style.setProperty('transform','none','important');window.__prayerActiveDesignIndex=active;window.__prayerActiveVisibleIndex=active;window.__prayerActiveDesignElement=current[active]?.firstElementChild||null;activeDesignId=window.__prayerActiveDesignElement?.id||'';if(activeDesignId){try{localStorage.setItem(ACTIVE_KEY,activeDesignId);}catch(_){}}controls.querySelector('.design-carousel-status').textContent=`التصميم ${active+1} من ${current.length}`;dots.querySelectorAll('[data-unified-dot]').forEach((b,i)=>b.classList.toggle('active',i===active));resize(car);compactParent(car);window.dispatchEvent(new CustomEvent('prayerDesignChanged',{detail:{index:active,domIndex:active,design:window.__prayerActiveDesignElement}}));}
       controls.querySelector('[data-unified-prev]').onclick=e=>{e.preventDefault();e.stopPropagation();active--;render();};controls.querySelector('[data-unified-next]').onclick=e=>{e.preventDefault();e.stopPropagation();active++;render();};dots.querySelectorAll('[data-unified-dot]').forEach(b=>b.onclick=e=>{e.preventDefault();e.stopPropagation();active=Number(b.dataset.unifiedDot)||0;render();});render();return true;
     }finally{busy=false;}
   }
