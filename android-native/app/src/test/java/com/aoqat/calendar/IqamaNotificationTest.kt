@@ -24,7 +24,7 @@ import org.robolectric.shadows.ShadowSystemClock
 import java.time.Duration
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [28, 34])
+@Config(sdk = [26, 28, 34])
 @LooperMode(LooperMode.Mode.PAUSED)
 class IqamaNotificationTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
@@ -55,6 +55,13 @@ class IqamaNotificationTest {
         val display = IqamaCycle.display(start, SystemClock.elapsedRealtime())!!
         assertSurfaces(IqamaNotificationRenderer.build(context, display),
             start + 600_000L, true, "باقي على الإقامة")
+    }
+
+    @Test @Config(qualifiers = "night") fun darkSystemThemeStillHasOpaqueHighContrastClock() {
+        val start = SystemClock.elapsedRealtime() - 91_000L
+        val display = IqamaCycle.display(start, SystemClock.elapsedRealtime())!!
+        assertSurfaces(IqamaNotificationRenderer.build(context, display),
+            display.baseRealtime, display.countDown, "باقي على الإقامة")
     }
 
     @Test fun backgroundCyclePermissionsAreDeclared() {
