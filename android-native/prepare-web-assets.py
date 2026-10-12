@@ -59,8 +59,8 @@ transform('prayer-alert-methods.js',[('  if(window.AndroidNative?.configureAdhan
 transform('supabase-db.js',[("    if(window.AndroidNative?.configureAdhan){\n        document.getElementById(\"gregorianDay\")?.addEventListener(\"change\",()=>loadPrayerFromDatabase(true));\n        document.getElementById(\"gregorianMonth\")?.addEventListener(\"change\",()=>loadPrayerFromDatabase(true));return;\n    }", "")])
 transform('prayer-time-choice.js',[
  ("s.mode!=='custom'||window.AndroidNative?.configureAdhan", "s.mode!=='custom'"),
- ("function read(){try{return normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}", "function read(){try{return normalize(JSON.parse(window.AndroidNative?.readPrayerTimeChoice?window.AndroidNative.readPrayerTimeChoice():localStorage.getItem(KEY)||'{}'));}"),
- ("localStorage.setItem(KEY,JSON.stringify(s));window.dispatchEvent", "localStorage.setItem(KEY,JSON.stringify(s));window.AndroidNative?.configurePrayerTimeChoice?.(JSON.stringify(s));window.dispatchEvent")])
+ ("function read(){try{return normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}", "let nativeChoice;function read(){try{if(window.AndroidNative?.readPrayerTimeChoice){if(!nativeChoice)nativeChoice=normalize(JSON.parse(window.AndroidNative.readPrayerTimeChoice()));return nativeChoice;}return normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}"),
+ ("localStorage.setItem(KEY,JSON.stringify(s));window.dispatchEvent", "localStorage.setItem(KEY,JSON.stringify(s));window.AndroidNative?.configurePrayerTimeChoice?.(JSON.stringify(s));nativeChoice=s;window.dispatchEvent")])
 
 # Build full minute pickers when opened, rather than 8640 option nodes on startup.
 script=(root/'js/script.js').read_text()
