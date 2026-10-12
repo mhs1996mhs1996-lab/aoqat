@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 81 // Offline-first startup, stable designs and custom prayer minutes
-        versionName '1.46'
+        versionCode 82 // Offline-first startup, stable designs and custom prayer minutes
+        versionName '1.47'
     }
 
     compileOptions {

@@ -80,14 +80,14 @@ jobs:
       - name: Prepare downloadable APK parts
         run: |
           mkdir -p android-native/app/build/apk-transfer
-          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.46.apk.part-
-          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.46.sha256
+          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.47.apk.part-
+          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.47.sha256
 
       - name: Upload APK transfer part 1
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.46-part-1
-          path: android-native/app/build/apk-transfer/aoqat-v1.46.apk.part-aa
+          name: aoqat-v1.47-part-1
+          path: android-native/app/build/apk-transfer/aoqat-v1.47.apk.part-aa
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -95,10 +95,10 @@ jobs:
       - name: Upload APK transfer part 2
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.46-part-2
+          name: aoqat-v1.47-part-2
           path: |
-            android-native/app/build/apk-transfer/aoqat-v1.46.apk.part-ab
-            android-native/app/build/apk-transfer/aoqat-v1.46.sha256
+            android-native/app/build/apk-transfer/aoqat-v1.47.apk.part-ab
+            android-native/app/build/apk-transfer/aoqat-v1.47.sha256
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -106,7 +106,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.46-build81
+          name: aoqat-android-v1.47-build82
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
@@ -128,6 +128,7 @@ jobs:
           node tests/adhan-modal-browser.cjs
           node tests/prayer-alarm-browser.cjs
           node tests/apk-services-browser.cjs
+          node tests/apk-day-rollover-browser.cjs
           node tests/adhan-browser.cjs
           node tests/adhan-scheduled-browser.cjs
           node tests/iqama-native-browser.cjs

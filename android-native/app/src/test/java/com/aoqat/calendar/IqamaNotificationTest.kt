@@ -39,9 +39,9 @@ class IqamaNotificationTest {
             assertNotNull(surface)
             val root = surface.apply(context, null)
             val clock = root.findViewById<Chronometer>(R.id.iqama_chronometer)
-            assertEquals(Color.rgb(23,55,71), clock.currentTextColor)
-            assertEquals(Color.rgb(23,55,71),root.findViewById<TextView>(R.id.iqama_state).currentTextColor)
-            assertEquals(Color.WHITE,(root.findViewById<android.view.View>(R.id.iqama_root).background as ColorDrawable).color)
+            assertEquals(IqamaAppearance.colors(context).second, clock.currentTextColor)
+            assertEquals(IqamaAppearance.colors(context).second,root.findViewById<TextView>(R.id.iqama_state).currentTextColor)
+            assertEquals(IqamaAppearance.colors(context).first,(root.findViewById<android.view.View>(R.id.iqama_root).background as ColorDrawable).color)
             assertEquals(base, clock.base)
             assertEquals(countdown, clock.isCountDown)
             assertEquals(title, root.findViewById<TextView>(R.id.iqama_state).text.toString())
@@ -62,6 +62,20 @@ class IqamaNotificationTest {
         val display = IqamaCycle.display(start, SystemClock.elapsedRealtime())!!
         assertSurfaces(IqamaNotificationRenderer.build(context, display),
             display.baseRealtime, display.countDown, "باقي على الإقامة")
+    }
+
+    @Test fun userAppearancePersistsAndKeepsAllSurfacesOnTheSameClock() {
+        val display=IqamaCycle.display(SystemClock.elapsedRealtime()-91_000L,SystemClock.elapsedRealtime())!!
+        assertEquals("transparent",IqamaAppearance.mode(context))
+        for(mode in listOf("white","dark","transparent")) {
+            IqamaAppearance.save(context,mode)
+            assertEquals(mode,IqamaAppearance.mode(context))
+            val expected=when(mode){"white"->Color.WHITE;"dark"->Color.rgb(23,55,71);else->Color.TRANSPARENT}
+            assertEquals(expected,IqamaAppearance.colors(context).first)
+            assertSurfaces(IqamaNotificationRenderer.build(context,display),display.baseRealtime,display.countDown,"باقي على الإقامة")
+        }
+        IqamaAppearance.save(context,"invalid")
+        assertEquals("transparent",IqamaAppearance.mode(context))
     }
 
     @Test fun backgroundCyclePermissionsAreDeclared() {

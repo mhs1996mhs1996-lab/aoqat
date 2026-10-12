@@ -220,6 +220,20 @@
     window.addEventListener('prayerDesignChanged',()=>setTimeout(()=>syncDataToRoot(activeDesign()),30));
   }
 
+  function addIqamaAppearance(){
+    const host=document.getElementById('switchPanel');
+    if(!host||document.getElementById('iqamaAppearance'))return;
+    const label=document.createElement('label');label.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0';
+    label.textContent='خلفية إشعار الإقامة';const select=document.createElement('select');select.id='iqamaAppearance';
+    select.style.cssText='font:inherit;max-width:150px;padding:7px;border-radius:9px';
+    for(const [value,text] of [['white','أبيض'],['dark','داكن'],['transparent','شفاف']])select.add(new Option(text,value));
+    select.value=window.AndroidNative?.readIqamaAppearance?.()||'transparent';
+    select.onchange=()=>window.AndroidNative?.configureIqamaAppearance?.(select.value);
+    label.appendChild(select);host.appendChild(label);
+  }
+  document.addEventListener('DOMContentLoaded',addIqamaAppearance,{once:true});
+  window.addEventListener('aoqatModulesReady',addIqamaAppearance);
+
   function refreshAndroidDesignVisibility(){
     window.dispatchEvent(new CustomEvent('aoqatModulesReady'));
   }

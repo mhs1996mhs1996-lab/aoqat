@@ -216,9 +216,10 @@ object IqamaNotificationRenderer {
         val title = customTitle ?: if (display.phase == IqamaCycle.Phase.ELAPSED) "مضى على الإقامة" else "باقي على الإقامة"
         val open = PendingIntent.getActivity(context, 45220, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val view = android.widget.RemoteViews(context.packageName, R.layout.notification_iqama)
-        view.setInt(R.id.iqama_root, "setBackgroundColor", Color.WHITE)
-        view.setTextColor(R.id.iqama_state, Color.rgb(23, 55, 71))
-        view.setTextColor(R.id.iqama_chronometer, Color.rgb(23, 55, 71))
+        val appearance = IqamaAppearance.colors(context)
+        view.setInt(R.id.iqama_root, "setBackgroundColor", appearance.first)
+        view.setTextColor(R.id.iqama_state, appearance.second)
+        view.setTextColor(R.id.iqama_chronometer, appearance.second)
         view.setTextViewText(R.id.iqama_state, title)
         view.setChronometerCountDown(R.id.iqama_chronometer, display.countDown)
         view.setChronometer(R.id.iqama_chronometer, display.baseRealtime, null, true)
@@ -594,6 +595,15 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun readIqamaAppearance(): String = IqamaAppearance.mode(this@MainActivity)
+        @JavascriptInterface fun configureIqamaAppearance(mode: String) {
+            IqamaAppearance.save(this@MainActivity, mode)
+            runOnUiThread {
+                restoreIqamaServiceIfActive()
+                val at=getSharedPreferences("friday_cycle", MODE_PRIVATE).getLong("at",0L)
+                if(at>0L)FridaySchedule.start(this@MainActivity,at)
+            }
+        }
         @JavascriptInterface fun readIqamaTiming():String {
             val prefs=getSharedPreferences("iqama_schedule",MODE_PRIVATE)
             return org.json.JSONObject().put("enabled",prefs.getBoolean("enabled",false))
