@@ -178,6 +178,36 @@
   }
   async function download(canvas,format){const f=(format||"jpg").toLowerCase(),ext=f==="jpeg"?"jpg":f;const blob=await canvasBlob(canvas,f);downloadBlob(blob,ext);}
   async function saveToPhone(canvas){const blob=await canvasBlob(canvas,"jpg");if(!blob)return;const file=new File([blob],"prayer-preview.jpg",{type:"image/jpeg"});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:"مواقيت الصلاة"});return}catch(error){if(error?.name==="AbortError")return;}}downloadBlob(blob,"jpg");}
+  // Keep one prepared image in an app-owned page. The system chooser can close
+  // after sharing; this page stays mounted for sharing the same file again.
+  window.aoqatCreatePrayerShareView=function(){
+    const panel=document.createElement('section');panel.id='prayerShareView';panel.className='web-settings-list';
+    panel.innerHTML='<img id="prayerSharePreview" alt="معاينة صورة مواقيت الصلاة" hidden style="width:100%;max-width:320px;height:auto;margin:0 auto;border-radius:12px"><button type="button" id="prayerShareApps" class="main-action" disabled>↗ مشاركة الصورة</button><button type="button" id="prayerShareSave" class="main-action" disabled>📥 حفظ على الجهاز</button><button type="button" id="prayerShareRetry" class="main-action" hidden>إعادة المحاولة</button><p id="prayerShareStatus" role="status" style="margin:8px 0;line-height:1.8">جاري تجهيز الصورة…</p>';
+    const share=panel.querySelector('#prayerShareApps'),save=panel.querySelector('#prayerShareSave'),retry=panel.querySelector('#prayerShareRetry'),status=panel.querySelector('#prayerShareStatus'),preview=panel.querySelector('img');
+    let file=null,previewUrl=null,disposed=false,sharing=false;
+    panel.aoqatDispose=()=>{disposed=true;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;file=null;};
+    async function prepare(){
+      retry.hidden=true;status.textContent='جاري تجهيز الصورة…';
+      try{
+        const design=activeDesign();if(!design)throw Error('No active design');
+        const canvas=await renderPreview(design),blob=await canvasBlob(canvas,'jpg');
+        if(disposed)return;if(!blob)throw Error('Image unavailable');
+        file=new File([blob],'prayer-preview.jpg',{type:'image/jpeg'});previewUrl=URL.createObjectURL(blob);preview.src=previewUrl;preview.hidden=false;
+        save.disabled=false;
+        const supported=!!navigator.share&&!!navigator.canShare&&navigator.canShare({files:[file]});share.disabled=!supported;
+        status.textContent=supported?'اختر المشاركة لعرض التطبيقات وطرق المشاركة المتاحة على هاتفك. تبقى هذه الصفحة مفتوحة للمشاركة مرة أخرى.':'يمكنك حفظ الصورة على الجهاز. مشاركة ملفات الصور غير متاحة في هذا المتصفح.';
+      }catch(e){if(disposed)return;console.error('Prayer share image',e);status.textContent='تعذر تجهيز الصورة. أعد المحاولة.';retry.hidden=false;}
+    }
+    share.onclick=async()=>{
+      if(!file||sharing)return;sharing=true;share.disabled=true;
+      try{await navigator.share({files:[file],title:'مواقيت الصلاة'});if(!disposed)status.textContent='يمكنك مشاركة الصورة مرة أخرى أو حفظها على الجهاز.';}
+      catch(e){if(!disposed)status.textContent=e?.name==='AbortError'?'الصورة جاهزة للمشاركة أو الحفظ.':'تعذرت المشاركة. أعد المحاولة أو احفظ الصورة على الجهاز.';}
+      finally{sharing=false;if(!disposed)share.disabled=false;}
+    };
+    save.onclick=()=>{if(file){downloadBlob(file,'jpg');status.textContent='تم طلب حفظ الصورة على الجهاز. يمكنك مشاركتها أيضاً.';}};
+    retry.onclick=prepare;Promise.resolve().then(prepare);return panel;
+  };
+
   function fallbackNative(button){bypass=true;try{button.click()}finally{setTimeout(()=>{bypass=false},0)}}
   async function exportExact(format,button,phoneMode=false){
     const design=activeDesign();if(!design)return;
@@ -191,6 +221,7 @@
     if(!btn)return;
     event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
     const phoneMode=btn.hasAttribute("data-save-phone");
+    if(phoneMode&&!window.AndroidNative?.configureAdhan&&window.aoqatOpenPrayerShare){window.aoqatOpenPrayerShare();return;}
     exportExact(phoneMode?"jpg":(btn.dataset.exportFormat||"jpg"),btn,phoneMode);
   },true);
 })();

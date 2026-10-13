@@ -1,0 +1,32 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
+(async()=>{const server=spawn('python3',['-m','http.server','8796'],{stdio:'ignore'});let browser;
+try{
+ await new Promise(r=>setTimeout(r,600));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
+ const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{window.shareFiles=[];window.shareMode='ok';Object.defineProperty(navigator,'canShare',{value:({files})=>files?.[0]?.type==='image/jpeg',configurable:true});Object.defineProperty(navigator,'share',{value:async({files})=>{window.shareFiles.push(files[0]);if(window.shareMode==='cancel')throw new DOMException('cancelled','AbortError');},configurable:true});});
+ await page.route('**/rest/**',r=>r.abort());await page.goto('http://127.0.0.1:8796',{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>window.aoqatUIReady&&window.aoqatCreatePrayerShareView);await page.locator('#designSideMenuBtn').click();
+ assert.equal(await page.locator('#webDrawerMain [data-drawer="savePhone"]').count(),0);
+ assert.equal(await page.locator('#webDrawerMain [data-drawer="prayerTimeChoice"]').count(),0);
+ await page.locator('[data-drawer="datePrayer"]').click();await page.locator('[data-time-choice-open]').click();assert.equal(await page.locator('#prayerTimeChoicePanel').isVisible(),true);
+ await page.locator('.web-back').click();assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات التاريخ و الصلاة');await page.locator('.web-back').click();
+ await page.locator('[data-drawer="settings"]').click();assert.equal(await page.locator('#webSettingsTemp [data-panel="footerPanel"]').count(),0);
+ await page.locator('[data-panel="backgroundPanel"]').click();await page.locator('[data-web-footer]').click();
+ await page.locator('#footerText').fill('النص محفوظ بعد نقل الزر');await page.locator('.web-back').click();assert.equal(await page.locator('#backgroundPanel').isVisible(),true);
+ await page.locator('.web-back').click();await page.locator('[data-setting-save-phone]').click();
+ await page.waitForFunction(()=>!document.getElementById('prayerShareApps').disabled,{},{timeout:45000});
+ await page.waitForFunction(()=>document.getElementById('prayerSharePreview').naturalWidth>0);
+ const size=await page.locator('#prayerSharePreview').evaluate(e=>[e.naturalWidth,e.naturalHeight]);assert.deepEqual(size,[2048,2896]);
+ await page.locator('#prayerShareApps').click();assert.equal(await page.locator('#prayerShareView').isVisible(),true);
+ await page.locator('#prayerShareApps').click();assert.equal(await page.evaluate(()=>shareFiles.length===2&&shareFiles[0]===shareFiles[1]&&shareFiles[0].size>10000),true);
+ await page.evaluate(()=>{window.shareMode='cancel';});await page.locator('#prayerShareApps').click();assert.equal(await page.locator('#prayerShareView').isVisible(),true);
+ const download=page.waitForEvent('download');await page.locator('#prayerShareSave').click();assert.equal((await download).suggestedFilename(),'prayer-preview.jpg');
+ await page.evaluate(()=>history.back());await page.waitForFunction(()=>!document.body.classList.contains('design-menu-open')&&history.state.aoqatWebBack.index===0);
+ assert.equal(await page.locator('#settingsContentDialog').isVisible(),false);
+ // Missing file-sharing support still permits saving, with no unrelated fallback.
+ await page.evaluate(()=>{Object.defineProperty(navigator,'canShare',{value:()=>false,configurable:true});});
+ await page.locator('#designSideMenuBtn').click();await page.locator('[data-drawer="settings"]').click();await page.locator('[data-setting-save-phone]').click();
+ await page.waitForFunction(()=>!document.getElementById('prayerShareSave').disabled,{},{timeout:45000});assert.equal(await page.locator('#prayerShareApps').isDisabled(),true);
+ await page.locator('.web-back').click();await page.waitForFunction(()=>!document.body.classList.contains('design-menu-open')&&history.state.aoqatWebBack.index===0);
+ assert.deepEqual(errors,[]);console.log('Web: nested menu moves, original full-size image, repeated/cancelled native shares, separate save, unsupported-share fallback and phone/on-screen back passed');
+}finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

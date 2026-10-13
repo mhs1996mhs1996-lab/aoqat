@@ -59,6 +59,10 @@
     // performs one cleanup only; never close a newly opened screen during an
     // asynchronous history update from an on-screen back button.
     if (!fromButton && target.index < index && screen() !== screens[target.index]) back();
+    const actual=screen(), earlier=screens.slice(0,target.index+1).lastIndexOf(actual);
+    // A completed share page returns straight to the preview, closing its menu
+    // parents too. Remove those parents from history without another UI back.
+    if(!fromButton&&earlier>=0&&earlier<target.index){index=target.index;history.go(earlier-target.index);return;}
     index = target.index;
     if (!fromButton) screens[index] = screen();
     history.replaceState(state(index), '');
