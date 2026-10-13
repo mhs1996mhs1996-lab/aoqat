@@ -17,9 +17,20 @@
     {"id":"dark-graphite","name":"رمادي داكن","icon":"🌑","vars":{"bg":"#15191e","surface":"#222830","surface2":"#2b333e","text":"#f1f4f7","muted":"#b2bfcc","accent":"#496a89","border":"#465361","top":"#1b222b"}},
     {"id":"dark-purple","name":"بنفسجي ليلي","icon":"🌌","vars":{"bg":"#1b1625","surface":"#2b2239","surface2":"#362a46","text":"#f7f1fb","muted":"#c8b8d8","accent":"#79559c","border":"#5d486f","top":"#241c31"}}
   ];
+  const BUTTON_KEY="aoqatWebButtonAppearanceV1";
+  function buttonSettings(){let x={};try{x=JSON.parse(localStorage.getItem(BUTTON_KEY)||'{}')||{};}catch(_){}return {target:['both','app','buttons'].includes(x.target)?x.target:'both',style:x.style==='solid'?'solid':'gradient',theme:themes.some(t=>t.id===x.theme)?x.theme:null};}
+  function saveButtons(x){try{localStorage.setItem(BUTTON_KEY,JSON.stringify(x));}catch(_){}}
+  function buttonTheme(){const x=buttonSettings();return themes.find(t=>t.id===(x.theme||getSavedTheme()))||themes[0];}
+  function syncButtons(){const x=buttonSettings(),t=buttonTheme();document.documentElement.style.setProperty('--wt-button-accent',t.vars.accent);document.body.dataset.buttonTheme=t.id;document.body.dataset.buttonStyle=x.style;window.dispatchEvent(new Event('aoqatButtonAppearanceChanged'));}
+  function refreshControls(){const x=buttonSettings();const selected=x.target==='buttons'?buttonTheme().id:getSavedTheme();document.querySelectorAll('.wt-card[data-theme]').forEach(b=>b.classList.toggle('is-active',b.dataset.theme===selected));document.querySelectorAll('[data-theme-control]').forEach(el=>el.value=x[el.dataset.themeControl]);document.querySelectorAll('[data-theme-current]').forEach(el=>el.textContent='الواجهة: '+(themes.find(t=>t.id===getSavedTheme())||themes[0]).name+' — الأزرار: '+buttonTheme().name);}
+  function selectTheme(id){const x=buttonSettings();if(x.target==='app'){if(!x.theme){x.theme=buttonTheme().id;saveButtons(x);}applyTheme(id);}else{x.theme=id;saveButtons(x);if(x.target==='both')applyTheme(id);else syncButtons();}refreshControls();}
+  function controls(){return '<div class="wt-controls"><label>تطبيق الثيم على<select data-theme-control="target"><option value="both">شكل التطبيق والأزرار معاً</option><option value="app">شكل التطبيق فقط</option><option value="buttons">الأزرار فقط</option></select></label><label>لون أزرار القوائم<select data-theme-control="style"><option value="gradient">لون متدرّج</option><option value="solid">لون ثابت</option></select></label><p data-theme-current></p></div>';}
+  if(!window.AndroidNative?.configureAdhan)document.addEventListener('change',e=>{const el=e.target.closest?.('[data-theme-control]');if(!el)return;const x=buttonSettings();x[el.dataset.themeControl]=el.value;saveButtons(x);syncButtons();refreshControls();});
   const css=document.createElement("style");
   css.id="webThemeSettingsStyles";
   css.textContent=`
+    .web-theme-drawer-panel .wt-card.is-active{outline:2px solid var(--wt-button-accent,var(--wt-accent));outline-offset:1px}
+    .wt-controls{display:grid;gap:8px;margin-bottom:12px}.wt-controls label{display:flex!important;flex-direction:column!important;gap:5px;font-size:14px}.wt-controls select{width:100%!important;max-width:100%!important;min-height:42px;padding:7px;border-radius:8px;border:1px solid var(--wt-border);background:var(--wt-surface2);color:var(--wt-text)}.wt-controls [data-theme-current]{font-size:12px;line-height:1.7;margin:0;color:var(--wt-muted)}
     body.aoqat-web-theme{background:var(--wt-bg)!important;color:var(--wt-text)!important}
     body.aoqat-web-theme .topbar{background:var(--wt-top)!important;border-color:var(--wt-border)!important}
     body.aoqat-web-theme .panel,body.aoqat-web-theme .font-panel{background:var(--wt-surface)!important;color:var(--wt-text)!important;border-color:var(--wt-border)!important}
@@ -53,6 +64,7 @@
     document.body.classList.add("aoqat-web-theme");
     document.body.dataset.webTheme=theme.id;
     saveTheme(theme.id);
+    syncButtons();refreshControls();
     document.querySelectorAll("#webThemePanel .wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===theme.id));
   }
 
@@ -67,7 +79,7 @@
 
     const panel=document.createElement("div");
     panel.id="webThemePanel";panel.hidden=true;
-    panel.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid">'+themes.map(t=>'<button type="button" class="wt-card" data-theme="'+t.id+'"><span class="wt-swatch" style="background:linear-gradient(90deg,'+t.vars.bg+','+t.vars.accent+')"></span><span>'+t.icon+' '+t.name+'</span></button>').join("")+'</div>';
+    panel.innerHTML=(!window.AndroidNative?.configureAdhan?controls():'')+'<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid">'+themes.map(t=>'<button type="button" class="wt-card" data-theme="'+t.id+'"><span class="wt-swatch" style="background:linear-gradient(90deg,'+t.vars.bg+','+t.vars.accent+')"></span><span>'+t.icon+' '+t.name+'</span></button>').join("")+'</div>';
 
     const backgroundBtn=main.querySelector('[data-open-panel="backgroundPanel"]');
     if(backgroundBtn?.parentElement===main)main.insertBefore(btn,backgroundBtn); else main.appendChild(btn);
@@ -76,13 +88,14 @@
     btn.addEventListener("click",()=>{panel.hidden=!panel.hidden;});
     panel.addEventListener("click",e=>{
       const card=e.target.closest(".wt-card"); if(!card)return;
-      applyTheme(card.dataset.theme);
+      selectTheme(card.dataset.theme);
     });
     applyTheme(getSavedTheme());
     return true;
   }
   window.ensureWebThemePanel=function(){install();return document.getElementById("webThemePanel");};
-  window.applyWebTheme=applyTheme;
+  window.applyWebTheme=selectTheme;
+  window.refreshWebThemeControls=refreshControls;
   window.addEventListener("pageshow",()=>applyTheme(getSavedTheme()));
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)applyTheme(getSavedTheme());});
   function start(){

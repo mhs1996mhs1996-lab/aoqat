@@ -4,9 +4,9 @@
  const roots='#settingsContentDialog,#adhanServicesDialog';
  const switches='.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled]';
  const skip='.wt-card,.color-swatch,.palette-color,[data-color],.web-drawer-row,[data-drawer],#aqReader button';
- function blend(hex,t){const n=parseInt(hex.slice(1),16),rgb=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(v*(1-t)));return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
+ function blend(hex,t){const n=parseInt(hex.slice(1),16),rgb=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(t>=0?v*(1-t):v+(255-v)*(-t)));return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
  function lum(hex){const n=parseInt(hex.slice(1),16);return [n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);}
- function palette(){const accent=getComputedStyle(document.documentElement).getPropertyValue('--wt-accent').trim()||'#137985',a=blend(accent,.16),b=blend(accent,.02),l=[lum(a),lum(b)];const white=Math.min(...l.map(v=>1.05/(v+.05))),black=Math.min(...l.map(v=>(v+.05)/.05));return {background:'linear-gradient(135deg,'+a+','+b+')',color:white>=black?'#fff':'#10212a'};}
+ function palette(){const accent=getComputedStyle(document.documentElement).getPropertyValue('--wt-button-accent').trim()||'#137985',a=blend(accent,.40),b=blend(accent,-.15),l=[lum(a),lum(b)];const white=Math.min(...l.map(v=>1.05/(v+.05))),black=Math.min(...l.map(v=>(v+.05)/.05));return {background:document.body.dataset.buttonStyle==='solid'?accent:'linear-gradient(135deg,'+a+','+b+')',color:(document.body.dataset.buttonStyle==='solid'?lum(accent)<.18:white>=black)?'#fff':'#10212a'};}
  function on(button){const pressed=button.getAttribute('aria-pressed');if(pressed==='true'||pressed==='false')return pressed==='true';if(button.hasAttribute('data-enabled'))return button.dataset.enabled==='true';return button.matches('.pa-on,.is-on,.enabled,.on');}
  let queued=false;
  function paint(){queued=false;const p=palette();document.querySelectorAll(roots).forEach(root=>root.querySelectorAll('button').forEach(button=>{
@@ -22,7 +22,7 @@
  function start(){
   const observer=new MutationObserver(records=>{if(records.some(r=>r.target===document.body&&r.attributeName==='data-web-theme'||r.target.closest?.(roots)||[...r.addedNodes].some(n=>n.nodeType===1&&(n.matches?.(roots)||n.querySelector?.(roots)))))schedule();});
   observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','aria-pressed','data-enabled','data-web-theme']});
-  document.addEventListener('click',schedule,true);window.addEventListener('pageshow',schedule);schedule();
+  window.addEventListener('aoqatButtonAppearanceChanged',schedule);document.addEventListener('click',schedule,true);window.addEventListener('pageshow',schedule);schedule();
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
