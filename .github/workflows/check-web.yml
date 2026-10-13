@@ -28,10 +28,10 @@ jobs:
           npm install --no-save --package-lock=false playwright
           node tests/date-selection-browser.cjs
           node tests/prayer-time-choice-browser.cjs
+          node tests/prayer-share-browser.cjs
           node tests/settings-scroll-browser.cjs
           node tests/offline-startup-browser.cjs
           node tests/web-back-navigation-browser.cjs
-          node tests/prayer-share-browser.cjs
           node tests/friday-browser.cjs
           node tests/adhan-rollover-browser.cjs
           node tests/settings-subwindows-browser.cjs
