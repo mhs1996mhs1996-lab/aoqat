@@ -28,6 +28,7 @@ jobs:
           npm install --no-save --package-lock=false playwright
           node tests/date-selection-browser.cjs
           node tests/prayer-time-choice-browser.cjs
+          node tests/azkar-web-browser.cjs
           node tests/font-retention-browser.cjs
           node tests/prayer-share-browser.cjs
           node tests/settings-scroll-browser.cjs

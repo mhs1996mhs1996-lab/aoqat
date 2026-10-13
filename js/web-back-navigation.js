@@ -8,6 +8,7 @@
     .sort((a, b) => Number(a.style.getPropertyValue('--leaf-level')) - Number(b.style.getPropertyValue('--leaf-level')));
   // Reuse each screen's existing back handler, including saving and cleanup.
   function back() {
+    if (visible(byId('adAzkarPage'))&&window.aoqatCloseAzkarCategory?.())return true;
     if (visible(byId('aqSheet'))) { byId('aqCloseSheet')?.click(); return true; }
     for (const leaf of leaves().reverse()) {
       const button = leaf.querySelector(':scope > header [data-subwindow-back]');
@@ -28,7 +29,8 @@
       visible(byId('settingsContentDialog')) ? byId('webSubTitle')?.textContent : '',
       visible(byId('adhanServicesDialog')),
       leaves().map(e => e.id || e.querySelector('h3')?.textContent || 'editor'),
-      visible(byId('aqSheet'))
+      visible(byId('aqSheet')),
+      visible(byId('adAzkarPage'))?window.aoqatAzkarCategory||'':''
     ]);
   }
   const key = 'aoqatWebBack', session = Date.now() + '-' + Math.random();

@@ -529,6 +529,7 @@
   };
   window.aoqatCloseService = () => {
     if (!externalService) return;
+    window.aoqatCloseAzkarCategory?.();window.aoqatAzkarCategory="";
     externalService = false; service = ""; stopServiceSensors();
   };
   async function showService(kind) {
@@ -664,6 +665,7 @@
         }
       };
     } else {
+      if(!native&&window.aoqatRenderAzkar){window.aoqatRenderAzkar(el);return;}
       el.innerHTML='<div class="ad-azkar-menu">'+[["morning","☀️","أذكار الصباح"],["evening","🌙","أذكار المساء"],["prayer","🕌","أذكار بعد الصلاة"]].map(([id,icon,title])=>`<button type="button" data-azkar-kind="${id}" aria-pressed="${azkarKind===id}">${icon} ${title}</button>`).join('')+'</div><div id="adAzkarList" hidden></div>';
       const draw=()=>{
         const list=window.AoqatAzkar[azkarKind];
