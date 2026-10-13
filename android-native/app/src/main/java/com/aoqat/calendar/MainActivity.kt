@@ -217,7 +217,8 @@ object IqamaNotificationRenderer {
         val open = PendingIntent.getActivity(context, 45220, Intent(context, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val view = android.widget.RemoteViews(context.packageName, R.layout.notification_iqama)
         val appearance = IqamaAppearance.colors(context)
-        view.setInt(R.id.iqama_root, "setBackgroundColor", appearance.first)
+        // Color the system notification card, never paint a rectangle inside it.
+        view.setInt(R.id.iqama_root, "setBackgroundColor", Color.TRANSPARENT)
         view.setTextColor(R.id.iqama_state, appearance.second)
         view.setTextColor(R.id.iqama_chronometer, appearance.second)
         view.setTextViewText(R.id.iqama_state, title)
@@ -227,6 +228,8 @@ object IqamaNotificationRenderer {
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setCustomContentView(view).setCustomBigContentView(view).setCustomHeadsUpContentView(view)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setColor(if (appearance.first == Color.TRANSPARENT) Color.rgb(23,55,71) else appearance.first)
+            .setColorized(IqamaAppearance.mode(context) != "transparent")
             .setContentTitle(title).setContentIntent(open)
             .setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -730,6 +733,30 @@ class MainActivity : Activity() {
             }
         }
 
+        @JavascriptInterface
+        fun sharePrayerImage(dataUrl: String, filename: String, requestId: String) {
+            Thread {
+                try {
+                    val send = PrayerImageShare.intent(this@MainActivity, dataUrl)
+                    runOnUiThread {
+                        try { startActivity(Intent.createChooser(send, "مشاركة صورة مواقيت الصلاة")); imageActionResult(requestId, true) }
+                        catch (_: Exception) { imageActionResult(requestId, false) }
+                    }
+                } catch (_: Exception) { runOnUiThread { imageActionResult(requestId, false) } }
+            }.start()
+        }
+        @JavascriptInterface
+        fun savePrayerImage(dataUrl: String, filename: String, requestId: String) {
+            Thread {
+                try {
+                    val (mime, bytes) = PrayerImageShare.decode(dataUrl)
+                    val extension = when(mime) { "image/png" -> ".png"; "image/webp" -> ".webp"; else -> ".jpg" }
+                    saveImage(bytes, mime, "prayer-preview$extension")
+                    runOnUiThread { imageActionResult(requestId, true) }
+                } catch (_: Exception) { runOnUiThread { imageActionResult(requestId, false) } }
+            }.start()
+        }
+
         // Compatibility bridge only. UI text never owns the native clock lifecycle.
         @JavascriptInterface
         fun showIqamaNotification(text: String) = Unit
@@ -770,6 +797,10 @@ class MainActivity : Activity() {
                 }
             }.start()
         }
+    }
+
+    private fun imageActionResult(id: String, ok: Boolean) {
+        if (::webView.isInitialized && !isFinishing) webView.evaluateJavascript("window.aoqatImageActionResult?.(" + org.json.JSONObject.quote(id) + "," + ok + ")", null)
     }
 
     private fun saveImage(bytes: ByteArray, mime: String, filename: String) {

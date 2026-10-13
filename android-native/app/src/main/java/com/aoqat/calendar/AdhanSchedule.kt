@@ -50,6 +50,16 @@ object AdhanSchedule {
     @Synchronized fun release(c: Context,id: String,at: Long) {
         if (prefs(c).getLong(deliveryKey(id,at),0)==at) prefs(c).edit().remove(deliveryKey(id,at)).commit()
     }
+    @Synchronized fun retry(c: Context, id: String, at: Long) {
+        release(c,id,at)
+        if (!enabled(c) || id !in PrayerTimes.ids || settings(c).optJSONObject("modes")?.optString(id,"sound") in listOf("silent","vibrate") || System.currentTimeMillis()-at !in 0L until 115000L) return
+        val p=prefs(c);val same=p.getLong("retryAt_$id",0)==at
+        val count=if(same)p.getInt("retryCount_$id",0)else 0
+        if(count>=2)return
+        p.edit().putLong("retryAt_$id",at).putInt("retryCount_$id",count+1).apply()
+        alarm(c,60490+PrayerTimes.ids.indexOf(id),"PLAY",System.currentTimeMillis()+2000,
+            PrayerTimes.Prayer(id,at,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY))
+    }
     fun enabled(c: Context) = settings(c).optBoolean("enabled", false)
     fun configure(c: Context, json: String) {
         val s = try { JSONObject(json) } catch (_: Exception) { return }
@@ -89,20 +99,22 @@ object AdhanSchedule {
         FridaySchedule.schedule(c)
         PrayerNotifications.schedule(c)
         val s = settings(c); val now = System.currentTimeMillis(); val events = PrayerTimes.events(c)
-        // Fixed slots are replaced/cancelled on every settings edit, not accumulated.
-        for (i in 0..39) { cancel(c, 60000 + i, "PLAY"); cancel(c, 60100 + i, "REMINDER"); cancel(c, 60200 + i, "SUHOOR"); cancel(c,60500+i,"IQAMA_QUIET") }
+        // Replace desired alarms in place; cancelling them all first leaves a delivery gap.
+        val wanted=mutableSetOf<Pair<Int,String>>()
+        fun queue(slot:Int,action:String,at:Long,p:PrayerTimes.Prayer){wanted.add(slot to action);alarm(c,slot,action,at,p)}
         for ((i,p) in events.withIndex()) if (i < 40 && s.optBoolean("enabled", false) && !FridaySchedule.suppress(c,p.id,p.at)) {
             AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let { (start,end) ->
-                if (end>now) alarm(c,60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
+                if (end>now) queue(60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
             }
             val mode = s.optJSONObject("modes")?.optString(p.id, "sound") ?: "sound"
             val due = now-p.at in 0L until 120000L && p.at >= prefs(c).getLong("enabledAt",0) && !delivered(c,p)
-            if (!PrayerNotifications.selected(c,p.id) && mode != "silent" && (p.at > now || due)) alarm(c, 60000+i, "PLAY", maxOf(p.at,now+100), p)
+            if (!PrayerNotifications.selected(c,p.id) && mode != "silent" && (p.at > now || due)) queue( 60000+i, "PLAY", maxOf(p.at,now+100), p)
             val before = s.optInt("reminder", 0).coerceIn(0,60)*60000L
-            if (before > 0 && p.at-before > now) alarm(c, 60100+i, "REMINDER", p.at-before, p)
+            if (before > 0 && p.at-before > now) queue( 60100+i, "REMINDER", p.at-before, p)
             val suhoor = s.optInt("suhoor",0).coerceIn(0,120)*60000L
-            if (p.id == "fajr" && suhoor > 0 && p.at-suhoor > now) alarm(c, 60200+i, "SUHOOR", p.at-suhoor, p)
+            if (p.id == "fajr" && suhoor > 0 && p.at-suhoor > now) queue( 60200+i, "SUHOOR", p.at-suhoor, p)
         }
+        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
         cancel(c, 60300, "NEXT")
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
@@ -116,8 +128,9 @@ class AdhanReceiver : BroadcastReceiver() {
                 val id=intent.getStringExtra("prayerId") ?: return
                 val at=intent.getLongExtra("prayerAt",0)
                 if (AdhanSchedule.claim(c,id,at)) {
+                    AdhanDispatch.acquire(c)
                     try { androidx.core.content.ContextCompat.startForegroundService(c, Intent(c, AdhanPlaybackService::class.java).putExtras(intent)) }
-                    catch (e: Exception) { AdhanSchedule.release(c,id,at); android.util.Log.e("AdhanReceiver","Unable to start scheduled adhan",e) }
+                    catch (e: Exception) { AdhanDispatch.release(); AdhanSchedule.retry(c,id,at); android.util.Log.e("AdhanReceiver","Unable to start scheduled adhan",e) }
                 }
             }
             "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c) && !FridaySchedule.suppress(c,intent.getStringExtra("prayerId")?:"",intent.getLongExtra("prayerAt",0))) {

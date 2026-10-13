@@ -41,7 +41,7 @@ class IqamaNotificationTest {
             val clock = root.findViewById<Chronometer>(R.id.iqama_chronometer)
             assertEquals(IqamaAppearance.colors(context).second, clock.currentTextColor)
             assertEquals(IqamaAppearance.colors(context).second,root.findViewById<TextView>(R.id.iqama_state).currentTextColor)
-            assertEquals(IqamaAppearance.colors(context).first,(root.findViewById<android.view.View>(R.id.iqama_root).background as ColorDrawable).color)
+            assertEquals(Color.TRANSPARENT,(root.findViewById<android.view.View>(R.id.iqama_root).background as ColorDrawable).color)
             assertEquals(base, clock.base)
             assertEquals(countdown, clock.isCountDown)
             assertEquals(title, root.findViewById<TextView>(R.id.iqama_state).text.toString())
@@ -73,6 +73,9 @@ class IqamaNotificationTest {
             val expected=when(mode){"white"->Color.WHITE;"dark"->Color.rgb(23,55,71);else->Color.TRANSPARENT}
             assertEquals(expected,IqamaAppearance.colors(context).first)
             assertSurfaces(IqamaNotificationRenderer.build(context,display),display.baseRealtime,display.countDown,"باقي على الإقامة")
+            val n = IqamaNotificationRenderer.build(context, display)
+            assertEquals(mode != "transparent", n.extras.getBoolean("android.colorized"))
+            if (mode != "transparent") assertEquals(expected, n.color)
         }
         IqamaAppearance.save(context,"invalid")
         assertEquals("transparent",IqamaAppearance.mode(context))

@@ -71,7 +71,12 @@ jobs:
               row=next(r for r in rows if r['gregorian_month']==12 and r['gregorian_day']==30)
               assert [row[k] for k in ['fajr','sunrise','dhuhr','asr','maghrib','isha']]==['5:58','7:14','12:12','2:48','5:06','6:26']
               assert 'configurePrayerNotifications' in z.read(prefix+'js/prayer-alert-methods.js').decode()
-              assert 'native)return;const now' in z.read(prefix+'js/prayer-alert-methods.js').decode()
+              bundle=z.read(prefix+'js/apk-startup-bundle.js').decode()
+              for token in ['aoqatCreatePrayerShareView','sharePrayerImage','aoqatRenderAzkar','adAzkarPrev','aoqatWebButtonAppearanceV1']:
+                  assert token in bundle, token
+              assert 'const webOnly=true' in bundle
+              assert 'if(window.AndroidNative?.configureAdhan)return;' not in z.read(prefix+'js/azkar-web.js').decode()
+              assert 'native)return;const now'  in z.read(prefix+'js/prayer-alert-methods.js').decode()
           print('Verified: 604 unchanged Quran pages, annual offline database, native notification UI; APK bytes:',apk.stat().st_size)
           PYCODE
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
@@ -80,14 +85,14 @@ jobs:
       - name: Prepare downloadable APK parts
         run: |
           mkdir -p android-native/app/build/apk-transfer
-          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.47.apk.part-
-          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.47.sha256
+          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.48.apk.part-
+          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.48.sha256
 
       - name: Upload APK transfer part 1
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.47-part-1
-          path: android-native/app/build/apk-transfer/aoqat-v1.47.apk.part-aa
+          name: aoqat-v1.48-part-1
+          path: android-native/app/build/apk-transfer/aoqat-v1.48.apk.part-aa
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -95,10 +100,10 @@ jobs:
       - name: Upload APK transfer part 2
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.47-part-2
+          name: aoqat-v1.48-part-2
           path: |
-            android-native/app/build/apk-transfer/aoqat-v1.47.apk.part-ab
-            android-native/app/build/apk-transfer/aoqat-v1.47.sha256
+            android-native/app/build/apk-transfer/aoqat-v1.48.apk.part-ab
+            android-native/app/build/apk-transfer/aoqat-v1.48.sha256
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -106,7 +111,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.47-build82
+          name: aoqat-android-v1.48-build83
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

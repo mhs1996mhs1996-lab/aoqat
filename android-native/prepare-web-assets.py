@@ -15,6 +15,7 @@ def transform(name,changes):
         text=text.replace(old,new)
     path=target/'js'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text)
 transform('web-menu-order.js',[
+ ('const webOnly=!window.AndroidNative?.configureAdhan;', 'const webOnly=true;'),
  ('...(!window.AndroidNative?.configureAdhan ? [["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"]] : [])', '...[ ["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"] ]'),
  ('...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])','["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]'),
  ('["quran","qibla","azkar"].includes(id)','["quran","qibla","azkar","widget"].includes(id)')])
@@ -42,6 +43,7 @@ transform('quran-reader.js',[
  ("fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();})",'Promise.resolve().then(()=>JSON.parse(window.AndroidNative.readQuranAsset("quran.json")))'),
  ("fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();})",'Promise.resolve().then(()=>JSON.parse(window.AndroidNative.readQuranAsset("quran-pages.json")))')])
 transform('adhan-settings.js',[
+ ('if(!native&&window.aoqatRenderAzkar)', 'if(window.aoqatRenderAzkar)'),
  ('panel.querySelectorAll("[data-setting]")', 'document.querySelectorAll("#adhanPanel [data-setting], #prayerServicePanel [data-setting]")'),
  ('if (!native) { $("adServiceMenu").hidden=true;', 'if (servicePanel) { $("adServiceMenu").hidden=true;'),
  ('...(native ? [["services", "✨", "الخدمات"]] : [])','...[]'),
@@ -51,6 +53,26 @@ transform('adhan-settings.js',[
  ('if (kind === "quran" && !native)', 'if (kind === "quran")'),
  ('    if (!native) {\n      servicePanel = document.createElement("section");','    {\n      servicePanel = document.createElement("section");'),
  ('على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.', 'يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.')])
+
+# Bring the reviewed web-only menus, Azkar reader and saved font overrides into this APK.
+transform('azkar-web.js', [(' if(window.AndroidNative?.configureAdhan)return;', '')])
+transform('web-menu-button-theme.js', [(' if(window.AndroidNative?.configureAdhan)return;', '')])
+transform('web-theme-settings.js', [
+ ('if(!window.AndroidNative?.configureAdhan)document.addEventListener', 'document.addEventListener'),
+ ("(!window.AndroidNative?.configureAdhan?controls():'')", 'controls()')])
+transform('font-controls-core.js', [
+ ('!window.AndroidNative?.configureAdhan&&list.some', 'list.some'),
+ ('if(window.AndroidNative?.configureAdhan||!root)return;', 'if(!root)return;')])
+transform('prayer-countdown.js', [("${nativeIqama?'.iqama-status{background:rgba(126,84,14,.9)}':''}", '')])
+transform('exact-export.js', [
+ ('phoneMode&&!window.AndroidNative?.configureAdhan&&window.aoqatOpenPrayerShare', 'phoneMode&&window.aoqatOpenPrayerShare'),
+ ('const supported=!!navigator.share', 'const supported=!!window.AndroidNative?.sharePrayerImage||!!navigator.share'),
+ ("await navigator.share({files:[file],title:'مواقيت الصلاة'});", "if(window.AndroidNative?.sharePrayerImage)await nativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:'مواقيت الصلاة'});"),
+ ("save.onclick=()=>{if(file){downloadBlob(file,'jpg');status.textContent='تم طلب حفظ الصورة على الجهاز. يمكنك مشاركتها أيضاً.';}};", "save.onclick=async()=>{if(!file)return;save.disabled=true;try{if(window.AndroidNative?.savePrayerImage)await nativeImageAction('savePrayerImage',file);else downloadBlob(file,'jpg');if(!disposed)status.textContent='تم حفظ الصورة على الجهاز. يمكنك مشاركتها أيضاً.';}catch(e){if(!disposed)status.textContent='تعذر الحفظ. امنح إذن الحفظ إذا طُلب، ثم أعد المحاولة.';}finally{if(!disposed)save.disabled=false;}};"),
+ ('  window.aoqatCreatePrayerShareView=function(){', '''  let imageActionSequence=0;const imageActions=new Map();
+  window.aoqatImageActionResult=(id,ok)=>{const pending=imageActions.get(id);if(!pending)return;imageActions.delete(id);ok?pending.resolve():pending.reject(Error('Native image action failed'));};
+  async function nativeImageAction(method,file){const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});return new Promise((resolve,reject)=>{const id='image-'+(++imageActionSequence);imageActions.set(id,{resolve,reject});try{window.AndroidNative[method](dataUrl,file.name,id);}catch(e){imageActions.delete(id);reject(e);}});}
+  window.aoqatCreatePrayerShareView=function(){''')])
 
 # Use the current web menu with durable Android notification delivery.
 transform('prayer-alert-methods.js',[('  if(window.AndroidNative?.configureAdhan)return;', '  const N=window.AndroidNative,native=!!N?.configurePrayerNotifications;'), ("JSON.parse(localStorage.getItem(KEY)||'{}')", "JSON.parse(native?N.readPrayerNotificationSettings():localStorage.getItem(KEY)||'{}')"), ('function save(){localStorage.setItem(KEY,JSON.stringify(settings));}', 'function save(){localStorage.setItem(KEY,JSON.stringify(settings));if(native)N.configurePrayerNotifications(JSON.stringify(settings));}'), ('function unlock(){try{', 'function unlock(){if(native)return;try{'), ('function chime(){if(!audio', 'function chime(){if(native){N.previewPrayerNotification();return;}if(!audio'), ('تنبيه الويب يعمل أثناء فتح الصفحة؛ اسمح بالإشعارات حتى تظهر في قائمة إشعارات الهاتف.', 'الإشعارات تعمل من المواقيت المحفوظة، دون إنترنت وبالخلفية بعد منح الأذونات.'), ('<p id="pnStatus" role="status"></p>', '${native?\'<button type="button" id="pnPermissions">أذونات الإشعارات والعمل بالخلفية</button><p class="ad-note">\'+N.prayerNotificationReadiness()+\'</p>\':\'\'}<p id="pnStatus" role="status"></p>'), ("if(settings.enabled&&'Notification' in window", "if(!native&&settings.enabled&&'Notification' in window"), ("if(settings.enabled&&(!('Notification'", "if(!native&&settings.enabled&&(!('Notification'"), ("$('pnPreview').onclick=()=>{unlock();chime();};", "$('pnPreview').onclick=()=>{unlock();chime();};if(native)$('pnPermissions').onclick=()=>N.prayerNotificationPermissions();"), ('  function tick(){const now=', '  function tick(){if(native)return;const now='), ("  document.addEventListener('pointerdown'", "  window.aoqatPrayerNotificationNativeSettings=value=>{if(!native)return;settings={...settings,...value};drawNotice();};\n  document.addEventListener('pointerdown'")])
