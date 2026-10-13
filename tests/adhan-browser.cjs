@@ -119,6 +119,8 @@ const { spawn } = require("node:child_process");
     await first.click();
     assert.equal(await first.getAttribute("data-remaining"), "2");
     await page.locator("#webDrawerSub .web-back").click();
+    assert.equal(await page.locator("#adAzkarMenu").isVisible(),true);
+    await page.locator("#webDrawerSub .web-back").click();
     await page.locator('[data-drawer="datePrayer"]').click();
     assert.equal(
       await page.locator('#webSubBody [data-panel="iqamaPanel"]').count(),
