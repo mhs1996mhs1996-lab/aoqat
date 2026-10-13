@@ -20,7 +20,7 @@
   function write(v){try{localStorage.setItem(STORE_KEY,JSON.stringify(v));}catch(e){console.error(e);}}
   function snapshot(d){const items={};[d,...d.querySelectorAll('*')].forEach(el=>{const p=props(el);if(Object.keys(p).length)items[path(el,d)]=p;});return {items};}
   function saveCurrent(){const d=activeDesign();if(!d)return false;const st=read();st[designKey(d)]=snapshot(d);write(st);dirty=false;badge();return true;}
-  function applySaved(d){if(!d)return;const saved=read()[designKey(d)];if(!saved?.items)return;Object.entries(saved.items).forEach(([p,pr])=>{const el=find(d,p);if(el)Object.entries(pr).forEach(([k,v])=>el.style[k]=v);});}
+  function applySaved(d){if(!d)return;const saved=read()[designKey(d)];if(saved?.items)Object.entries(saved.items).forEach(([p,pr])=>{const el=find(d,p);if(el)Object.entries(pr).forEach(([k,v])=>el.style[k]=v);});window.PrayerFontCore?.restore?.(d);}
   function restoreAll(){document.querySelectorAll('.design-carousel-track > .design-slide').forEach(s=>{if(getComputedStyle(s).display!=="none")applySaved(s.firstElementChild);});}
   function mark(){dirty=true;badge();}
   function badge(){const b=document.querySelector('[data-open-panel="fontPanel"]');if(!b)return;let x=b.querySelector('.font-save-badge');if(dirty&&!x){x=document.createElement('span');x.className='font-save-badge';x.textContent='غير محفوظ';b.appendChild(x);}if(x)x.style.display=dirty?'inline-flex':'none';}

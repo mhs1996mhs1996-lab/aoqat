@@ -132,6 +132,7 @@
       b.style.cssText='width:100%;margin-top:10px;text-align:right';
       b.onclick=()=>openPanel('النص السفلي','footerPanel','background');p.appendChild(b);
     }
+    if(webOnly&&id==='fontPanel'){window.PrayerFontCore?.restoreAll?.();window.PrayerFontCore?.load?.();}
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
   function settingsView(){

@@ -18,14 +18,15 @@
   function statusIndex(){const s=document.querySelector('.final-carousel-controls .design-carousel-status')?.textContent||'';const m=s.match(/(\d+)\s*من\s*(\d+)/);return m?Number(m[1])-1:null;}
   function activeRoot(){
     const list=slides();if(!list.length)return document.getElementById('design');
+    const pinned=window.__prayerActiveDesignElement;if(!window.AndroidNative?.configureAdhan&&list.some(s=>s.firstElementChild===pinned))return pinned;
     let i=statusIndex();
     if(i===null){const car=document.querySelector('.design-carousel'),cr=car?.getBoundingClientRect();if(cr?.width){const cx=cr.left+cr.width/2;let best=0,dist=Infinity;list.forEach((s,n)=>{const r=s.getBoundingClientRect(),d=Math.abs(r.left+r.width/2-cx);if(r.width&&d<dist){dist=d;best=n;}});i=best;}else i=0;}
     i=Math.max(0,Math.min(i,list.length-1));return list[i]?.firstElementChild||null;
   }
   function role(){const v=document.getElementById('elementSelect')?.value||'';if(ROLE_BY_VALUE[v])return ROLE_BY_VALUE[v];const m=v.match(/data-(?:field|f)=["']?([^"'\]]+)/i);return m?m[1]:null;}
   const unique=a=>Array.from(new Set(a.filter(Boolean)));
-  function targetsFor(r){
-    const root=activeRoot();if(!root||!r)return [];
+  function targetsFor(r,root=activeRoot()){
+    if(!root||!r)return [];
     if(PRAYERS.includes(r)){
       let rows=[];root.querySelectorAll(`[data-field="${r}"],[data-f="${r}"]`).forEach(el=>{rows.push(el.closest(ROW_SELECTOR)||el);});
       if(!rows.length){const all=Array.from(root.querySelectorAll(ROW_SELECTOR)),p=PRAYERS.indexOf(r);if(all[p])rows=[all[p]];}
@@ -42,12 +43,26 @@
     targets.forEach(el=>{if((!kind||kind==='fontFamily')&&vals.fontFamily)el.style.setProperty('font-family',`"${vals.fontFamily}", Arial, sans-serif`,'important');if((!kind||kind==='fontSize')&&Number.isFinite(vals.fontSize)&&vals.fontSize>0)el.style.setProperty('font-size',`${vals.fontSize}px`,'important');if((!kind||kind==='fontWeight')&&vals.fontWeight)el.style.setProperty('font-weight',vals.fontWeight,'important');if((!kind||kind==='fontColor')&&vals.fontColor)el.style.setProperty('color',vals.fontColor,'important');if((!kind||kind==='textAlign')&&vals.textAlign)el.style.setProperty('text-align',vals.textAlign,'important');if((!kind||kind==='textShadow')&&vals.textShadow!=null)el.style.setProperty('text-shadow',shadow(vals.textShadow),'important');});
     if(kind&&kind in vals)remember(root,r,kind,vals[kind]);window.dispatchEvent(new CustomEvent('prayerFontChanged',{detail:{design:root,role:r,targets}}));
   }
+  function restore(root=activeRoot()){
+    if(window.AndroidNative?.configureAdhan||!root)return;
+    const kinds={fontFamily:'font-family',fontSize:'font-size',fontWeight:'font-weight',fontColor:'color',textAlign:'text-align',textShadow:'text-shadow'};
+    for(const r of new Set([...Object.values(ROLE_BY_VALUE),...PRAYERS]))for(const [kind,property] of Object.entries(kinds)){
+      let value;try{value=localStorage.getItem(`aoqat-font:${designKey(root)}:${r}:${kind}`);}catch(_){continue;}
+      if(value===null)continue;
+      if(kind==='fontSize'){if(!Number.isFinite(Number(value))||Number(value)<=0)continue;value=Number(value)+'px';}
+      else if(kind==='fontFamily')value=`"${value}", Arial, sans-serif`;
+      else if(kind==='textShadow')value=shadow(value);
+      targetsFor(r,root).forEach(el=>el.style.setProperty(property,value,'important'));
+    }
+  }
+  function restoreAll(){slides().forEach(s=>restore(s.firstElementChild));}
   function load(){const t=targetsFor(role())[0];if(!t)return;const s=getComputedStyle(t),size=document.getElementById('fontSize');if(size)size.value=Math.round(parseFloat(s.fontSize)||40);const w=document.getElementById('fontWeight');if(w){const x=String(parseInt(s.fontWeight)||400);if(Array.from(w.options).some(o=>o.value===x))w.value=x;}const c=document.getElementById('fontColor');if(c&&/^rgb/.test(s.color)){const m=s.color.match(/\d+/g);if(m?.length>=3)c.value='#'+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join('');}}
   function init(){
     ['fontFamily','fontSize','fontWeight','fontColor','textAlign','textShadow'].forEach(id=>{const el=document.getElementById(id);if(!el)return;const ev=(id==='fontSize'||id==='fontColor')?'input':'change';el.addEventListener(ev,()=>apply(id),true);if(ev!=='change')el.addEventListener('change',()=>apply(id),true);});
     document.getElementById('elementSelect')?.addEventListener('change',()=>setTimeout(load,0),true);
-    const sync=()=>setTimeout(()=>{const root=activeRoot();window.__prayerActiveDesignElement=root;const list=slides();window.__prayerActiveDesignIndex=Math.max(0,list.findIndex(s=>s.firstElementChild===root));load();},20);
+    const sync=()=>setTimeout(()=>{restoreAll();const root=activeRoot();window.__prayerActiveDesignElement=root;const list=slides();window.__prayerActiveDesignIndex=Math.max(0,list.findIndex(s=>s.firstElementChild===root));load();},20);
     document.addEventListener('click',e=>{if(e.target.closest('.final-carousel-controls,.final-carousel-dots,.design-carousel-btn,.design-carousel-dot'))sync();},true);window.addEventListener('prayerDesignChanged',sync);
   }
-  window.PrayerFontCore={activeRoot,targetsFor,apply,load};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+  window.addEventListener('aoqatModulesReady',()=>{restoreAll();load();});
+  window.PrayerFontCore={activeRoot,targetsFor,apply,load,restore,restoreAll};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
