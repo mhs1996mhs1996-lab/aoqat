@@ -530,6 +530,7 @@
   window.aoqatCloseService = () => {
     if (!externalService) return;
     window.aoqatCloseAzkarCategory?.();window.aoqatAzkarCategory="";
+    document.getElementById("prayerServicePanel")?.classList.remove("web-azkar-flat");
     externalService = false; service = ""; stopServiceSensors();
   };
   async function showService(kind) {

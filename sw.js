@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v50";
+const CACHE_NAME = "aoqat-pwa-v51";
 const APP_SHELL = [
   "/js/azkar-web.js?v=1",
   "/js/prayer-time-choice.js",
