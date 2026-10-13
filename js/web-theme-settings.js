@@ -7,7 +7,15 @@
     {id:"white-sky",name:"أبيض وسماوي حديث",icon:"🔵",vars:{bg:"#eef8fc",surface:"#ffffff",surface2:"#e4f5fb",text:"#173c52",muted:"#65808e",accent:"#3bb5d8",border:"#b9e0ec",top:"#f7fdff"}},
     {id:"cream-green",name:"كريمي وأخضر هادئ",icon:"🟩",vars:{bg:"#f1f1df",surface:"#fffef2",surface2:"#e9f0df",text:"#33452b",muted:"#68765d",accent:"#668a51",border:"#c9d2a9",top:"#f4f5e9"}},
     {id:"beige-gold",name:"بيج وذهبي أنيق",icon:"🟫",vars:{bg:"#ead8c2",surface:"#fff5e8",surface2:"#f1dfcb",text:"#57351f",muted:"#86634d",accent:"#b66f3e",border:"#d9b18f",top:"#f2e1cf"}},
-    {id:"dark-night",name:"داكن كحلي (ليلي)",icon:"🌙",vars:{bg:"#061019",surface:"#102431",surface2:"#0b1b27",text:"#f4f7f8",muted:"#b7c7d0",accent:"#1b8ca8",border:"#294857",top:"#0c2734"}}
+    {id:"dark-night",name:"داكن كحلي (ليلي)",icon:"🌙",vars:{bg:"#061019",surface:"#102431",surface2:"#0b1b27",text:"#f4f7f8",muted:"#b7c7d0",accent:"#1b8ca8",border:"#294857",top:"#0c2734"}},
+    {"id":"white-lavender","name":"أبيض وبنفسجي","icon":"🟣","vars":{"bg":"#f2edf8","surface":"#fffaff","surface2":"#eee5f6","text":"#352844","muted":"#70607e","accent":"#78549b","border":"#d0bedf","top":"#f5effb"}},
+    {"id":"soft-rose","name":"وردي هادئ","icon":"🌸","vars":{"bg":"#f7edef","surface":"#fffafb","surface2":"#f6e4ea","text":"#532b3b","muted":"#866172","accent":"#a14869","border":"#dfb8c7","top":"#f9eff3"}},
+    {"id":"white-teal","name":"أبيض وتركوازي","icon":"💠","vars":{"bg":"#eaf6f4","surface":"#fbfffe","surface2":"#dff0eb","text":"#173f3a","muted":"#527b72","accent":"#157b72","border":"#aed4c9","top":"#eff9f6"}},
+    {"id":"emerald","name":"أخضر زمردي","icon":"🌿","vars":{"bg":"#eaf2e9","surface":"#fbfff8","surface2":"#dfecdb","text":"#234128","muted":"#59745c","accent":"#347348","border":"#b6cdb0","top":"#f0f7ec"}},
+    {"id":"white-navy","name":"أبيض وأزرق ملكي","icon":"🔷","vars":{"bg":"#edf1f9","surface":"#ffffff","surface2":"#e4ebf7","text":"#203653","muted":"#62738e","accent":"#3e5b9c","border":"#b8c8e2","top":"#f4f7fc"}},
+    {"id":"warm-burgundy","name":"عاجي وعنابي","icon":"🍷","vars":{"bg":"#f3ede5","surface":"#fffaf2","surface2":"#efe1dc","text":"#4b2930","muted":"#826568","accent":"#8c3f50","border":"#d5b9b6","top":"#f7eee8"}},
+    {"id":"dark-graphite","name":"رمادي داكن","icon":"🌑","vars":{"bg":"#15191e","surface":"#222830","surface2":"#2b333e","text":"#f1f4f7","muted":"#b2bfcc","accent":"#496a89","border":"#465361","top":"#1b222b"}},
+    {"id":"dark-purple","name":"بنفسجي ليلي","icon":"🌌","vars":{"bg":"#1b1625","surface":"#2b2239","surface2":"#362a46","text":"#f7f1fb","muted":"#c8b8d8","accent":"#79559c","border":"#5d486f","top":"#241c31"}}
   ];
   const css=document.createElement("style");
   css.id="webThemeSettingsStyles";
