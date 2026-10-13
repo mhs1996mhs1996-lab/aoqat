@@ -110,7 +110,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 setOnCompletionListener{successful=true;stopSelf()};setOnErrorListener{_,_,_->Toast.makeText(this@AdhanPlaybackService,"تعذر تشغيل الصوت المختار؛ اختر ملفًا صوتيًا صالحًا",Toast.LENGTH_LONG).show();stopSelf();true}
                 setOnPreparedListener { ready ->
                     if(player!==ready||manuallyStopped)return@setOnPreparedListener
-                    ready.start();audioStarted=true
+                    try { ready.start();audioStarted=true } catch(e:Exception) { android.util.Log.e("Adhan","Prepared audio failed to start",e);stopSelf();return@setOnPreparedListener }
                     if(!preview&&prayerAt>0)getSharedPreferences("adhan_delivery_diagnostics",MODE_PRIVATE).edit().putLong("expected_$prayer",prayerAt).putLong("started_$prayer",System.currentTimeMillis()).apply()
                     if(config.optString("sound")=="custom"&&config.optBoolean("partial"))handler.postDelayed({successful=true;stopSelf()},config.optInt("customEnd",35).coerceIn(1,180)*1000L)
                 }
