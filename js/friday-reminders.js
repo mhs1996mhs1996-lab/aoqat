@@ -23,12 +23,12 @@
     host.querySelectorAll('[data-friday-reminder]').forEach(b=>b.onclick=()=>{const k=b.dataset.fridayReminder;settings[k]=!settings[k];save();if(settings[k])requestPermission();});
     host.querySelector('#frSunnahDelay').onchange=e=>{const n=Number(e.target.value);if(Number.isInteger(n)&&n>=0&&n<=120){settings.afterMaghrib=n;save();}else draw();};
     host.querySelector('#frKahfTime').onchange=e=>{const n=C.clock(e.target.value),r=row(new Date()),f=C.prayerMinutes(r?.fajr,'fajr'),m=C.prayerMinutes(r?.maghrib,'maghrib');if(n===null||(f!==null&&m!==null&&(n<f||n>=m))){e.target.setCustomValidity('اختر وقتاً خلال نهار الجمعة بين الفجر والمغرب.');e.target.reportValidity();e.target.value=settings.kahfTime;return;}e.target.setCustomValidity('');settings.kahfTime=e.target.value;save();};
-    host.querySelector('#frReminderPreview').onclick=()=>notify({kind:'preview',title:'معاينة تذكير الجمعة',body:'تذكير بسنن الجمعة وقراءة سورة الكهف، مع المصادر داخل الأذكار.'});draw();
+    host.querySelector('#frReminderPreview').onclick=()=>notify({kind:'preview',title:'معاينة تذكير الجمعة',body:'تذكير بسنن الجمعة وقراءة سورة الكهف، مع المصادر داخل حقيبة المسلم.'});draw();
   }
   function banner(event){document.getElementById('fridayReminderBanner')?.remove();const el=document.createElement('aside');el.id='fridayReminderBanner';el.setAttribute('role','alert');const title=document.createElement('strong'),body=document.createElement('p'),close=document.createElement('button');title.textContent=event.title;body.textContent=event.body;close.type='button';close.textContent='إغلاق';close.onclick=()=>el.remove();el.append(title,body,close);document.body.appendChild(el);}
-  async function notify(event){banner(event);if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
-    const options={body:event.body,tag:'aoqat-friday-'+event.kind,icon:'assets/icons/app-icon.svg',data:{kind:'friday-reminder',url:location.origin+'/'}};
-    try{const reg=await navigator.serviceWorker?.getRegistration();if(reg)await reg.showNotification(event.title,options);else new Notification(event.title,options);}catch(_){} }
+  async function notify(event){const entry=window.AoqatReminderInbox?.add(event);banner(event);if(typeof Notification==='undefined'||Notification.permission!=='granted')return;
+    const options={body:event.body,tag:'aoqat-friday-'+event.kind,icon:'assets/icons/app-icon.svg',data:{kind:'friday-reminder',id:entry?.id,entry,url:location.origin+'/?reminder='+encodeURIComponent(entry?.id||'')}};
+    try{const reg=await navigator.serviceWorker?.getRegistration();if(reg)await reg.showNotification(event.title,options);else {const n=new Notification(event.title,options);n.onclick=()=>{window.focus();if(entry)window.aoqatOpenNotification?.(entry.id);n.close();};}}catch(_){} }
   function tick(now=new Date()){let sent;try{sent=JSON.parse(localStorage.getItem(SENT)||'{}');}catch(_){sent={};}if(!sent||typeof sent!=='object'||Array.isArray(sent))sent={};
     for(const event of currentEvents(now)){const age=+now-event.at;if(age<0||age>120000||sent[event.key])continue;sent[event.key]=+now;
       for(const key of Object.keys(sent))if(+now-Number(sent[key])>15*86400000)delete sent[key];

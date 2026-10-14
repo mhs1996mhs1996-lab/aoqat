@@ -1,5 +1,6 @@
-const CACHE_NAME = "aoqat-pwa-v61-azkar-in-muslim-bag";
+const CACHE_NAME = "aoqat-pwa-v62-reminder-inbox";
 const APP_SHELL = [
+  "/js/reminder-inbox.js",
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=1",
@@ -55,7 +56,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=16",
   "/js/compact-design-menu.js?v=12",
   "/js/web-theme-settings.js?v=4",
-  "/js/web-menu-order.js?v=28",
+  "/js/web-menu-order.js?v=29",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
@@ -137,7 +138,8 @@ self.addEventListener("notificationclick", event => {
   if (data.kind === "friday-reminder") {
     event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
       const client=clients.find(item=>"focus" in item);
-      return client?.focus ? client.focus() : self.clients.openWindow("/");
+      if(client?.focus){client.postMessage({type:"AOQAT_OPEN_REMINDER",id:data.id,entry:data.entry});return client.focus();}
+      return self.clients.openWindow("/?reminder="+encodeURIComponent(data.id||""));
     }));
     return;
   }
