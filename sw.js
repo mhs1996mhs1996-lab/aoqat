@@ -1,9 +1,9 @@
-const CACHE_NAME = "aoqat-pwa-v60-muslim-bag";
+const CACHE_NAME = "aoqat-pwa-v60-muslim-bag-friday-only";
 const APP_SHELL = [
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=1",
-  "/js/azkar-web.js?v=2",
+  "/js/azkar-web.js?v=3",
   "/js/friday-sunnah-data.js",
   "/js/friday-reminders-core.js",
   "/js/friday-reminders.js",
