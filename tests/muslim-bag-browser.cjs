@@ -1,4 +1,17 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
+
+const FC=require('../js/fasting-reminders-core.js');
+assert.equal(FC.defaults().enabled,true);assert.equal(FC.normalize({enabled:false}).enabled,false);
+for(const [month,day] of [[9,13],[10,1],[12,10],[12,11],[12,12],[12,13]])assert.equal(FC.reasons({month,day,weekday:1}).length,0);
+assert.equal(FC.reasons({month:5,day:13,weekday:1}).length,2);
+assert.equal(FC.reasons({month:12,day:9,weekday:2})[0].id,'arafah');
+assert.equal(FC.reasons({month:1,day:9,weekday:2})[0].id,'ashura');
+assert.equal(FC.reasons({month:1,day:10,weekday:2})[0].id,'ashura');
+assert.equal(FC.reasons({month:10,day:2,weekday:2})[0].id,'shawwal');
+assert.equal(FC.reasons({month:1,day:1,weekday:2})[0].id,'muharram');
+assert.equal(FC.event(new Date('2026-10-18T20:00:00+03:00'),{enabled:false}),null);
+assert.equal(FC.event(new Date('2026-10-18T20:00:00+03:00'),{}).topicId,'monday-thursday');
+
 (async()=>{const server=spawn('python3',['-m','http.server','8786'],{stdio:'ignore'});let browser;
 try{await new Promise(r=>setTimeout(r,600));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});const p=await browser.newPage({viewport:{width:390,height:740},timezoneId:'Asia/Baghdad',serviceWorkers:'block'}),errors=[];p.on('pageerror',e=>errors.push(e.message));await p.route('**/rest/**',r=>r.abort());await p.goto('http://127.0.0.1:8786',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.aoqatUIReady&&window.AoqatMuslimBag);await p.locator('#designSideMenuBtn').click();const before=await p.evaluate(()=>({iqama:localStorage.aoqatIqamaMinutesV1,adhan:localStorage.aoqatAdhanV1,friday:localStorage.aoqatFridayRemindersV1}));await p.locator('[data-drawer="muslimBag"]').click();assert.deepEqual(await p.locator('[data-bag-section]').evaluateAll(es=>es.map(e=>e.dataset.bagSection)),['azkar','friday','fasting']);
 await p.locator('[data-bag-section="azkar"]').click();assert.equal(await p.locator('[data-azkar-kind="friday"]').count(),0);await p.locator('[data-azkar-kind="morning"]').click();await p.locator('[data-dhikr="0"]').click();const remaining=await p.locator('[data-dhikr="0"]').getAttribute('data-remaining');await p.locator('.web-back').click();assert.equal(await p.locator('#adAzkarMenu').isVisible(),true);await p.locator('.web-back').click();assert.equal(await p.locator('#muslimBagMenu').isVisible(),true);
@@ -13,5 +26,16 @@ assert.equal(await p.locator('[data-reminder-id]').count(),2);
 await p.locator('[data-reminder-id="friday-test"]').click();assert.ok((await p.locator('#reminderInbox').textContent()).includes('شرح التذكير'));await p.locator('#reminderInbox button').click();assert.equal(await p.locator('#adAzkarTitle').textContent(),'سنن يوم الجمعة و آدابها');await p.locator('.web-back').click();await p.locator('.web-back').click();
 await p.goto('http://127.0.0.1:8786/?reminder=kahf-test',{waitUntil:'domcontentloaded'});await p.waitForSelector('#reminderInbox');assert.ok((await p.locator('#reminderInbox').textContent()).includes('قراءة سورة الكهف'));await p.evaluate(()=>window.aoqatHandleBack());assert.equal(await p.locator('[data-reminder-id]').count(),2);
 await p.evaluate(()=>{const rows=window.AoqatReminderInbox.read().map(x=>({...x,createdAt:Date.now()-86400001}));localStorage.setItem('aoqatReminderInboxV1',JSON.stringify(rows));window.dispatchEvent(new Event('aoqatInboxChanged'));});assert.equal(await p.locator('[data-reminder-id]').count(),0);assert.ok((await p.locator('#reminderInbox').textContent()).includes('لا توجد إشعارات'));
+
+await p.evaluate(()=>window.aoqatOpenMuslimBagSection('fasting'));assert.equal(await p.locator('#fastingReminderToggle').getAttribute('aria-pressed'),'true');
+assert.equal(await p.locator('#fastingReminderToggle').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(18, 133, 76)');
+await p.locator('#fastingReminderTime').fill('19:30');await p.locator('#fastingReminderTime').dispatchEvent('change');assert.equal(await p.evaluate(()=>window.AoqatFastingReminders.read().time),'19:30');
+await p.locator('#fastingReminderToggle').click();assert.equal(await p.locator('#fastingReminderToggle').getAttribute('aria-pressed'),'false');assert.equal(await p.locator('#fastingReminderToggle').evaluate(e=>getComputedStyle(e).backgroundColor),'rgb(127, 145, 145)');
+await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.aoqatUIReady&&window.aoqatOpenMuslimBagSection);await p.evaluate(()=>window.aoqatOpenMuslimBagSection('fasting'));assert.equal(await p.locator('#fastingReminderToggle').getAttribute('aria-pressed'),'false');assert.equal(await p.locator('#fastingReminderTime').inputValue(),'19:30');
+await p.evaluate(()=>window.AoqatFastingReminders.tick(new Date('2026-10-18T19:30:00+03:00')));assert.equal(await p.evaluate(()=>window.AoqatReminderInbox.read().filter(x=>x.kind==='fasting').length),0);
+await p.locator('#fastingReminderToggle').click();await p.evaluate(()=>{const d=new Date('2026-10-18T19:30:00+03:00');window.AoqatFastingReminders.tick(d);window.AoqatFastingReminders.tick(d);});
+assert.equal(await p.evaluate(()=>window.AoqatReminderInbox.read().filter(x=>x.kind==='fasting').length),1);
+await p.locator('#fastingReminderBanner button').first().click();await p.locator('#reminderInbox button').click();assert.equal(await p.locator('[data-fasting-topic="monday-thursday"]').getAttribute('open'),'');assert.equal(await p.locator('#fastingReminderToggle').getAttribute('aria-pressed'),'true');
+
 assert.deepEqual(errors,[]);console.log('Muslim bag: three working sections, sourced fasting, nested/phone back, retained dhikr progress and unchanged prayer settings passed');
 }finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1});

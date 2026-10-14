@@ -1,5 +1,7 @@
-const CACHE_NAME = "aoqat-pwa-v63-refresh-on-update";
+const CACHE_NAME = "aoqat-pwa-v64-fasting-reminders";
 const APP_SHELL = [
+  "/js/fasting-reminders-core.js",
+  "/js/fasting-reminders.js",
   "/js/reminder-inbox.js",
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
@@ -144,7 +146,7 @@ self.addEventListener("notificationclick", event => {
   const data = notification?.data || {};
   notification?.close();
 
-  if (data.kind === "friday-reminder") {
+  if (data.kind === "friday-reminder" || data.kind === "fasting-reminder") {
     event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
       const client=clients.find(item=>"focus" in item);
       if(client?.focus){client.postMessage({type:"AOQAT_OPEN_REMINDER",id:data.id,entry:data.entry});return client.focus();}
