@@ -178,7 +178,7 @@
     openSub("بيانات التاريخ و الصلاة",wrap,"main");
   }
   function muslimBagView(){
-    window.aoqatCloseAzkarCategory?.();bagSection='';
+    bagSection='';window.aoqatCloseAzkarCategory?.();
     const wrap=document.createElement('div');wrap.id='muslimBagMenu';wrap.className='web-settings-list';
     for(const [id,icon,label] of [['azkar','📿','الأذكار'],['friday','🌿','سنن يوم الجمعة'],['fasting','🌙','صيام التطوع']]){
       const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.bagSection=id;
@@ -193,6 +193,8 @@
     bagSection=kind;openPanel(kind==='friday'?'سنن يوم الجمعة':'الأذكار','prayerServicePanel','muslimBag');window.aoqatOpenService?.('azkar');
     if(kind==='friday'){
       document.querySelector('[data-azkar-kind="friday"]')?.click();
+      const closeCategory=window.aoqatCloseAzkarCategory;
+      window.aoqatCloseAzkarCategory=()=>{if(returnMode==='muslimBag'&&bagSection==='friday'){bagSection='';closeCategory?.();muslimBagView();return true;}return closeCategory?.()||false;};
       const back=document.getElementById('adAzkarBack');if(back){back.textContent='‹ رجوع إلى حقيبة المسلم';back.onclick=muslimBagView;}
     }
   }
