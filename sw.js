@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v60-muslim-bag-friday-only";
+const CACHE_NAME = "aoqat-pwa-v61-azkar-in-muslim-bag";
 const APP_SHELL = [
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
@@ -55,7 +55,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=16",
   "/js/compact-design-menu.js?v=12",
   "/js/web-theme-settings.js?v=4",
-  "/js/web-menu-order.js?v=27",
+  "/js/web-menu-order.js?v=28",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"

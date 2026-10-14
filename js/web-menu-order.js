@@ -17,7 +17,7 @@
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
   ];
   const webOnly=!window.AndroidNative?.configureAdhan;
-  const MENU_ROWS=webOnly?[...ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications"].includes(id)),["muslimBag","🎒","حقيبة المسلم"]]:ROWS;
+  const MENU_ROWS=webOnly?[...ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications","azkar"].includes(id)),["muslimBag","🎒","حقيبة المسلم"]]:ROWS;
   let returnMode="main",bagSection="";
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 

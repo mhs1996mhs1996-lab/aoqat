@@ -113,7 +113,7 @@ const { spawn } = require("node:child_process");
       (await page.locator("#adVerses").textContent()).includes("ٱلنَّاسِ"),
     );
     await page.locator(".web-back").click();
-    await page.locator('[data-drawer="azkar"]').click();
+    await page.locator('[data-drawer="muslimBag"]').click();await page.locator('[data-bag-section="azkar"]').click();
     await page.locator('[data-azkar-kind="prayer"]').click();
     const first = page.locator('[data-dhikr="0"]');
     await first.click();
@@ -121,7 +121,7 @@ const { spawn } = require("node:child_process");
     await page.locator("#webDrawerSub .web-back").click();
     assert.equal(await page.locator("#adAzkarMenu").isVisible(),true);
     await page.locator("#webDrawerSub .web-back").click();
-    await page.locator('[data-drawer="datePrayer"]').click();
+    await page.locator("#webDrawerSub .web-back").click();await page.locator('[data-drawer="datePrayer"]').click();
     assert.equal(
       await page.locator('#webSubBody [data-panel="iqamaPanel"]').count(),
       0,
