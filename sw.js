@@ -1,5 +1,6 @@
-const CACHE_NAME = "aoqat-pwa-v59";
+const CACHE_NAME = "aoqat-pwa-v60";
 const APP_SHELL = [
+  "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=1",
   "/js/azkar-web.js?v=2",
   "/js/friday-sunnah-data.js",
@@ -45,7 +46,7 @@ const APP_SHELL = [
   "/js/script.js?v=4",
   "/js/export-toolbar.js?v=2",
   "/js/exact-export.js?v=2",
-  "/js/modal-panels.js?v=9",
+  "/js/modal-panels.js?v=10",
   "/js/tomorrow-alarm.js?v=9",
   "/js/push-notifications.js?v=9",
   "/js/quran-reader.js",
@@ -53,7 +54,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=16",
   "/js/compact-design-menu.js?v=12",
   "/js/web-theme-settings.js?v=4",
-  "/js/web-menu-order.js?v=25",
+  "/js/web-menu-order.js?v=26",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"

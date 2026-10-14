@@ -17,7 +17,7 @@
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
   ];
   const webOnly=!window.AndroidNative?.configureAdhan;
-  const MENU_ROWS=webOnly?ROWS.filter(([id])=>!["savePhone","prayerTimeChoice"].includes(id)):ROWS;
+  const MENU_ROWS=webOnly?ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications"].includes(id)):ROWS;
   let returnMode="main";
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 
@@ -141,7 +141,7 @@
     const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
     if(!body||!home)return;
     body.querySelector("#prayerShareView")?.aoqatDispose?.();
-    [...body.children].forEach(el=>{if(el.matches(".panel,.font-panel,.inline-control-panel")&&el.id!=="webSettingsTemp"){el.classList.remove("inline-open","active-panel");home.appendChild(el);}});
+    [...(webOnly?body.querySelectorAll(":scope > .panel,:scope > .font-panel,:scope > .inline-control-panel,#webSettingsTemp > #switchPanel"):body.children)].forEach(el=>{if(el.matches(".panel,.font-panel,.inline-control-panel")&&el.id!=="webSettingsTemp"){el.classList.remove("inline-open","active-panel");home.appendChild(el);}});
   }
   function mainView(){
     restoreMoved();const sub=document.getElementById("webDrawerSub");sub?.classList.remove("open");if(sub)document.getElementById("webExactDrawer")?.appendChild(sub);const overlay=document.getElementById("settingsContentDialog");if(overlay)overlay.hidden=true;
@@ -165,6 +165,8 @@
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 حفظ على الهاتف';b.onclick=savePhone;wrap.appendChild(b);}
     openSub("إعدادت التصميم",wrap,"main");
+    if(webOnly){const controls=document.getElementById('switchPanel');if(controls){controls.classList.add('inline-open');wrap.appendChild(controls);window.aoqatMoveNotificationSettings?.();}}
+
   }
   function datePrayerView(){
     const wrap=document.createElement("div");wrap.id="webDatePrayerTemp";wrap.className="web-settings-list";
@@ -222,4 +224,5 @@
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
+
 

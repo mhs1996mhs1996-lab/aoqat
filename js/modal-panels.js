@@ -100,7 +100,21 @@
     return true;
   }
 
+  function refreshPreviewDayButton(){
+    const b=document.getElementById('previewDayToggle');if(!b)return;
+    const now=currentNowParts(),next=addDays(now,1);
+    const day=Number(document.getElementById('gregorianDay')?.value);
+    const year=Number(document.getElementById('gregorianYear')?.value);
+    const selected=document.getElementById('gregorianMonth')?.value;
+    const tomorrow=day===next.day&&selected===monthName(next.month)&&year===next.year;
+    const today=day===now.day&&selected===monthName(now.month)&&year===now.year;
+    b.dataset.previewDay=tomorrow?'tomorrow':today?'today':'custom';
+    b.textContent=tomorrow?'📅 بيانات اليوم التالي':today?'📅 بيانات اليوم':'📅 بيانات اليوم / بيانات اليوم التالي';
+    b.setAttribute('aria-pressed',String(tomorrow));
+    b.setAttribute('aria-label',tomorrow?'بيانات اليوم التالي — اضغط للرجوع إلى بيانات اليوم':today?'بيانات اليوم — اضغط لعرض بيانات اليوم التالي':'اضغط للرجوع إلى بيانات اليوم');
+  }
   function setSwitchStatus(message,type=""){
+    refreshPreviewDayButton();
     const el=document.getElementById("tomorrowSwitchStatus");
     if(!el) return;
     el.textContent=message;
@@ -211,6 +225,7 @@
       panel.innerHTML=`
         <div class="switch-help">يتم تجهيز صورة اليوم التالي تلقائيًا بعد وقت صلاة العشاء المخزن في قاعدة البيانات بـ 35 دقيقة.</div>
         <button type="button" id="autoTomorrowToggle" class="switch-control-btn"></button>
+        ${!window.AndroidNative?.configureAdhan?'<button type="button" id="previewDayToggle" class="switch-control-btn manual"></button>':''}
         <button type="button" id="showTomorrowNowBtn" class="switch-control-btn manual">➡ عرض اليوم التالي الآن</button>
         <button type="button" id="showTodayNowBtn" class="switch-control-btn manual secondary">↩ الرجوع إلى اليوم</button>
         <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">التبديل التلقائي متوقف</div>`;
@@ -295,16 +310,28 @@
       if(permission==="granted"){localStorage.setItem(NOTIFY_KEY,"1");setSwitchStatus("تم تشغيل التنبيه","success");}else{localStorage.setItem(NOTIFY_KEY,"0");setSwitchStatus("لم يتم السماح بإشعارات التطبيق","error");}
       refreshToggleButtons();
     });
+    document.getElementById('previewDayToggle')?.addEventListener('click',async()=>{
+      const b=document.getElementById('previewDayToggle');if(b.disabled)return;b.disabled=true;
+      try{refreshPreviewDayButton();if(b.dataset.previewDay==='today')await showTomorrowManual();else await showTodayManual();}
+      finally{b.disabled=false;refreshPreviewDayButton();}
+    });
+    if(!window.AndroidNative?.configureAdhan){
+      const style=document.createElement('style');style.textContent='#showTomorrowNowBtn,#showTodayNowBtn{display:none!important}';document.head.appendChild(style);
+      document.addEventListener('prayerPreviewDateChanged',refreshPreviewDayButton);
+      ['gregorianDay','gregorianMonth','gregorianYear'].forEach(id=>document.getElementById(id)?.addEventListener('change',refreshPreviewDayButton));
+      refreshPreviewDayButton();
+    }
     document.getElementById("showTomorrowNowBtn")?.addEventListener("click",showTomorrowManual);
     document.getElementById("showTodayNowBtn")?.addEventListener("click",showTodayManual);
 
     refreshToggleButtons();
     if(autoEnabled()) setTimeout(()=>evaluateAutoSwitch(true),1400);
-    setInterval(()=>{if(autoEnabled()) evaluateAutoSwitch(false);},60000);
-    window.addEventListener("focus",()=>{if(autoEnabled()) evaluateAutoSwitch(false);});
-    document.addEventListener("visibilitychange",()=>{if(!document.hidden&&autoEnabled()) evaluateAutoSwitch(false)});
+    setInterval(()=>{refreshPreviewDayButton();if(autoEnabled()) evaluateAutoSwitch(false);},60000);
+    window.addEventListener("focus",()=>{refreshPreviewDayButton();if(autoEnabled()) evaluateAutoSwitch(false);});
+    document.addEventListener("visibilitychange",()=>{if(!document.hidden){refreshPreviewDayButton();if(autoEnabled()) evaluateAutoSwitch(false);}});
   }
 
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",initInlinePanels,{once:true});
   else initInlinePanels();
 })();
+

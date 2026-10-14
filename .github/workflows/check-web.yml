@@ -30,6 +30,7 @@ jobs:
           node tests/prayer-time-choice-browser.cjs
           node tests/azkar-web-browser.cjs
           node tests/interface-pages-browser.cjs
+          node tests/notification-settings-layout-browser.cjs
           node tests/menu-button-theme-browser.cjs
           node tests/font-retention-browser.cjs
           node tests/prayer-share-browser.cjs
