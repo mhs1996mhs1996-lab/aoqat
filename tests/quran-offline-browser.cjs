@@ -1,5 +1,6 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
 (async()=>{const server=spawn('python3',['-m','http.server','8771'],{stdio:'ignore'});let browser;try{
+ await require('./sw-update-browser.cjs')();
  await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:8771',{waitUntil:'domcontentloaded'});

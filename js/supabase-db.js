@@ -204,7 +204,9 @@ function setupPWAInstallation(){
 
     if("serviceWorker" in navigator){
         window.addEventListener("load",()=>{
-            navigator.serviceWorker.register("/sw.js").catch(err=>console.error("SW registration failed",err));
+            navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"}).then(reg=>{
+                document.addEventListener("visibilitychange",()=>{if(!document.hidden&&navigator.onLine)reg.update().catch(()=>{});});
+            }).catch(err=>console.error("SW registration failed",err));
         });
     }
 

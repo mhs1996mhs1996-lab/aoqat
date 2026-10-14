@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v62-reminder-inbox";
+const CACHE_NAME = "aoqat-pwa-v63-refresh-on-update";
 const APP_SHELL = [
   "/js/reminder-inbox.js",
   "/js/muslim-bag.js",
@@ -70,10 +70,18 @@ self.addEventListener("install", event => {
 });
 
 self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-hafs1441" && key !== "aoqat-mushaf-hafs-pocket" && key !== "aoqat-mushaf-phone-hafs").map(key => caches.delete(key))))
-  );
-  self.clients.claim();
+  event.waitUntil((async()=>{
+    const keys=await caches.keys();
+    const upgraded=keys.some(key=>key.startsWith("aoqat-pwa-")&&key!==CACHE_NAME);
+    await Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-hafs1441" && key !== "aoqat-mushaf-hafs-pocket" && key !== "aoqat-mushaf-phone-hafs").map(key => caches.delete(key)));
+    await self.clients.claim();
+    // An existing document still runs the previous menu even after the worker changes.
+    // Reload once per installed upgrade; preferences remain in localStorage.
+    if(upgraded){
+      const clients=await self.clients.matchAll({type:"window"});
+      await Promise.all(clients.map(client=>client.navigate?client.navigate(client.url).catch(()=>{}):Promise.resolve()));
+    }
+  })());
 });
 
 self.addEventListener("fetch", event => {
