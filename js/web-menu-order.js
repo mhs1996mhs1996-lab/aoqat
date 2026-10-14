@@ -17,8 +17,8 @@
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
   ];
   const webOnly=!window.AndroidNative?.configureAdhan;
-  const MENU_ROWS=webOnly?ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications"].includes(id)):ROWS;
-  let returnMode="main";
+  const MENU_ROWS=webOnly?[...ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications"].includes(id)),["muslimBag","🎒","حقيبة المسلم"]]:ROWS;
+  let returnMode="main",bagSection="";
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 
   function closeAdhanServices(){
@@ -177,6 +177,26 @@
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.timeChoiceOpen='true';b.textContent='🕰️ طريقة اختيار أوقات الصلاة';b.onclick=()=>openSub('طريقة اختيار أوقات الصلاة',window.aoqatPrayerTimeChoiceView(),'datePrayer');wrap.appendChild(b);}
     openSub("بيانات التاريخ و الصلاة",wrap,"main");
   }
+  function muslimBagView(){
+    window.aoqatCloseAzkarCategory?.();bagSection='';
+    const wrap=document.createElement('div');wrap.id='muslimBagMenu';wrap.className='web-settings-list';
+    for(const [id,icon,label] of [['azkar','📿','الأذكار'],['friday','🌿','سنن يوم الجمعة'],['fasting','🌙','صيام التطوع']]){
+      const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.bagSection=id;
+      b.innerHTML=icon+' <span>'+label+'</span><span aria-hidden="true">‹</span>';b.onclick=()=>openMuslimBagSection(id);wrap.appendChild(b);
+    }
+    openSub('حقيبة المسلم',wrap,'main');
+  }
+  function openMuslimBagSection(kind,topicId){
+    if(!webOnly)return;
+    if(kind==='fasting'){bagSection=kind;openSub('صيام التطوع',window.AoqatMuslimBag.createFastingView(topicId),'muslimBag');return;}
+    if(!['azkar','friday'].includes(kind))return;
+    bagSection=kind;openPanel(kind==='friday'?'سنن يوم الجمعة':'الأذكار','prayerServicePanel','muslimBag');window.aoqatOpenService?.('azkar');
+    if(kind==='friday'){
+      document.querySelector('[data-azkar-kind="friday"]')?.click();
+      const back=document.getElementById('adAzkarBack');if(back){back.textContent='‹ رجوع إلى حقيبة المسلم';back.onclick=muslimBagView;}
+    }
+  }
+  window.aoqatOpenMuslimBagSection=openMuslimBagSection;
   function adhanIqamaView(){
     const wrap=document.createElement("div");wrap.className="web-settings-list";
     [["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});openSub("بيانات الاذان والإقامة",wrap,"main");
@@ -196,13 +216,14 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(["quran","qibla","azkar"].includes(id)){
         const title=ROWS.find(row=>row[0]===id)[2];
         openPanel(title,"prayerServicePanel");window.aoqatOpenService?.(id);return;
       }
+      if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
       if(id==="prayerTimeChoice"){openSub("طريقة اختيار أوقات الصلاة",window.aoqatPrayerTimeChoiceView(),"main");return;}
       if(id==="datePrayer"){datePrayerView();return;}
@@ -224,5 +245,6 @@
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
+
 
 
