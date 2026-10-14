@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v57";
+const CACHE_NAME = "aoqat-pwa-v58";
 const APP_SHELL = [
   "/js/web-menu-button-theme.js?v=1",
   "/js/azkar-web.js?v=1",

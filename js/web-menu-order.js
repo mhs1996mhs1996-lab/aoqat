@@ -112,12 +112,17 @@
   let interfaceMove=null;
   function restoreInterfacePart(){if(!interfaceMove)return;const {node,anchor}=interfaceMove;if(anchor.parentNode)anchor.replaceWith(node);interfaceMove=null;}
   function openInterfacePart(key,title){
+    restoreInterfacePart();
     const panel=document.getElementById('backgroundPanel');
     const selectors={elements:'#interfaceVisibilityControls .interface-visibility-grid',designs:'#designVisibilityControls .interface-visibility-grid',tools:'#backgroundDesignTools .bg-tools-grid'};
     const node=panel?.querySelector(selectors[key]);if(!node)return;
     const anchor=document.createComment('interface-controls-home');node.before(anchor);
     const view=document.createElement('section');view.id='webInterfacePage';view.className='web-settings-list';
     openSub(title,view,'background');view.appendChild(node);interfaceMove={node,anchor};
+    if(key==='tools'){
+      const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.webFooter='true';b.textContent='✍ النص السفلي';b.style.textAlign='right';
+      b.onclick=()=>openPanel('النص السفلي','footerPanel','tools');view.appendChild(b);
+    }
   }
   function prepareInterfaceMenu(panel){
     panel.classList.add('web-interface-menu');
@@ -150,11 +155,6 @@
   function openPanel(title,id,backTo="main"){
     if(id==="adhanPanel"){openAdhanServices();return;}
     const p=document.getElementById(id);if(!p)return;
-    if(webOnly&&id==="backgroundPanel"&&!p.querySelector('[data-web-footer]')){
-      const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.webFooter='true';b.textContent='✍ النص السفلي';
-      b.style.cssText='width:100%;margin-top:10px;text-align:right';
-      b.onclick=()=>openPanel('النص السفلي','footerPanel','background');p.appendChild(b);
-    }
     if(webOnly&&id==='backgroundPanel')prepareInterfaceMenu(p);
     if(webOnly&&id==='fontPanel'){window.PrayerFontCore?.restoreAll?.();window.PrayerFontCore?.load?.();}
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
@@ -194,7 +194,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(["quran","qibla","azkar"].includes(id)){

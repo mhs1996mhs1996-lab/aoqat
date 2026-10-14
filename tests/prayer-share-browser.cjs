@@ -11,8 +11,8 @@ try{
  await page.locator('[data-drawer="datePrayer"]').click();await page.locator('[data-time-choice-open]').click();assert.equal(await page.locator('#prayerTimeChoicePanel').isVisible(),true);
  await page.locator('.web-back').click();assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات التاريخ و الصلاة');await page.locator('.web-back').click();
  await page.locator('[data-drawer="settings"]').click();assert.equal(await page.locator('#webSettingsTemp [data-panel="footerPanel"]').count(),0);
- await page.locator('[data-panel="backgroundPanel"]').click();await page.locator('[data-web-footer]').click();
- await page.locator('#footerText').fill('النص محفوظ بعد نقل الزر');await page.locator('.web-back').click();assert.equal(await page.locator('#backgroundPanel').isVisible(),true);
+ await page.locator('[data-panel="backgroundPanel"]').click();await page.locator('[data-interface-page="tools"]').click();await page.locator('[data-web-footer]').click();
+ await page.locator('#footerText').fill('النص محفوظ بعد نقل الزر');await page.locator('.web-back').click();assert.equal(await page.locator('#webSubTitle').textContent(),'أدوات تعديل التصميم');await page.locator('.web-back').click();
  await page.locator('.web-back').click();await page.locator('[data-setting-save-phone]').click();
  await page.waitForFunction(()=>!document.getElementById('prayerShareApps').disabled,{},{timeout:45000});
  await page.waitForFunction(()=>document.getElementById('prayerSharePreview').naturalWidth>0);
