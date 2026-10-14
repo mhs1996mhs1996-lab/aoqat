@@ -8,12 +8,15 @@ import shutil
 import re
 root=Path(__file__).resolve().parent.parent
 target=Path(sys.argv[1])
+transformed_names=set()
 def transform(name,changes):
-    text=(root/'js'/name).read_text()
+    staged=target/'js'/name
+    text=(staged if name in transformed_names else root/'js'/name).read_text()
     for old,new in changes:
         if old not in text: raise RuntimeError('APK integration target missing: '+name+' '+old[:70])
         text=text.replace(old,new)
     path=target/'js'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text)
+    transformed_names.add(name)
 transform('web-menu-order.js',[
  ('const webOnly=!window.AndroidNative?.configureAdhan;', 'const webOnly=true;'),
  ('...(!window.AndroidNative?.configureAdhan ? [["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"]] : [])', '...[ ["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"] ]'),
@@ -121,6 +124,34 @@ transform('carousel-unified-fix.js', [('function init(){let tries=0;', 'function
 # Avoid walking every design on every unrelated DOM mutation.
 transform('universal-preview-editor.js', [('const obs=new MutationObserver(()=>{markMovables();bindSave();});obs.observe(document.body,{childList:true,subtree:true});', 'let queued=false;const obs=new MutationObserver(records=>{if(queued||!records.some(r=>[...r.addedNodes,...r.removedNodes].some(n=>n.nodeType===1)))return;queued=true;requestAnimationFrame(()=>{queued=false;markMovables();bindSave();});});const preview=document.querySelector(".previewBox");if(preview)obs.observe(preview,{childList:true,subtree:true});')])
 transform('adaptive-design-boxes.js', [('  function schedule(root){requestAnimationFrame(()=>requestAnimationFrame(()=>fitRoot(root||document)));}', '  let fitQueued=false;const fitRoots=new Set();function schedule(root){fitRoots.add(root||document);if(fitQueued)return;fitQueued=true;requestAnimationFrame(()=>{fitQueued=false;for(const node of fitRoots)fitRoot(node);fitRoots.clear();});}'), ('if(m.some(x=>x.type===\'childList\'))schedule(document);', 'if(m.some(x=>x.target.closest?.(CARD_SELECTORS)||[...x.addedNodes,...x.removedNodes].some(n=>n.nodeType===1)))schedule(document.querySelector(".previewBox"));'), ('}).observe(document.body,{subtree:true,childList:true});', '}).observe(document.querySelector(".previewBox")||document.body,{subtree:true,childList:true});')])
+# APK reveal follows complete local initialization and two layout frames.
+# Keep this separate from hosted startup behavior and never wait for online sync.
+transform('startup-stabilizer.js', [
+ ('  function finish(){', '  let finishing=false;\n  function finish(){\n    if(finishing)return;finishing=true;'),
+ ("    document.body.classList.remove('aoqat-booting');\n    document.body.classList.add('aoqat-ready');\n    window.aoqatUIReady=true;", """    document.body.classList.remove('design-menu-open');
+    const menu=document.getElementById('designSideMenuBtn');
+    if(menu)menu.setAttribute('aria-expanded','false');
+    window.AoqatAndroidUniversal?.syncAllData?.();
+    // Trigger local font layout now; the cap only protects against broken fonts.
+    document.querySelector('.previewBox')?.getBoundingClientRect();
+    const fonts=document.fonts?.ready||Promise.resolve();
+    let cap;Promise.race([fonts,new Promise(resolve=>{cap=setTimeout(resolve,800);})]).then(()=>{
+      clearTimeout(cap);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
+        document.body.classList.remove('aoqat-booting');
+        document.body.classList.add('aoqat-ready');
+        window.aoqatUIReady=true;
+        window.AndroidNative?.startupReady?.();
+      }));
+    });"""),
+ ('modulesReady=true;if(prayerDataReady())finish();', 'modulesReady=true;'),
+ ('tries>=40', 'tries>=125'),
+ ('},100);', '},32);')])
+# Menu post-module adjustments run in the initialization turn, before reveal.
+transform('compact-design-menu.js', [("()=>setTimeout(()=>{arrange();installExclusivePopupBehavior();},50)", "()=>{arrange();installExclusivePopupBehavior();}")])
+transform('web-menu-order.js', [("()=>setTimeout(install,100)", "install")])
+transform('design-side-menu.js', [("()=>setTimeout(()=>{syncActionWidth();hideEmptyStrips();},80)", "()=>{syncActionWidth();hideEmptyStrips();}")])
+
 html=(target/'index.html').read_text()
 static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
 dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())

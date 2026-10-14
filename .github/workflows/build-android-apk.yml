@@ -85,14 +85,14 @@ jobs:
       - name: Prepare downloadable APK parts
         run: |
           mkdir -p android-native/app/build/apk-transfer
-          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.48.apk.part-
-          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.48.sha256
+          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.49.apk.part-
+          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.49.sha256
 
       - name: Upload APK transfer part 1
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.48-part-1
-          path: android-native/app/build/apk-transfer/aoqat-v1.48.apk.part-aa
+          name: aoqat-v1.49-part-1
+          path: android-native/app/build/apk-transfer/aoqat-v1.49.apk.part-aa
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -100,10 +100,10 @@ jobs:
       - name: Upload APK transfer part 2
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.48-part-2
+          name: aoqat-v1.49-part-2
           path: |
-            android-native/app/build/apk-transfer/aoqat-v1.48.apk.part-ab
-            android-native/app/build/apk-transfer/aoqat-v1.48.sha256
+            android-native/app/build/apk-transfer/aoqat-v1.49.apk.part-ab
+            android-native/app/build/apk-transfer/aoqat-v1.49.sha256
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -111,7 +111,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.48-build83
+          name: aoqat-android-v1.49-build84
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30

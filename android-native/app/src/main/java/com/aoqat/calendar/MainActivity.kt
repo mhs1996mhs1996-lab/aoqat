@@ -300,6 +300,10 @@ class MainActivity : Activity() {
     }
 
 
+    private lateinit var startupScreen: StartupScreen
+    private lateinit var startupContainer: android.widget.FrameLayout
+    private var startupDismissRequested = false
+
     private var firstResume = true
     private lateinit var webView: WebView
     private val ADHAN_AUDIO_REQUEST = 812
@@ -314,11 +318,24 @@ class MainActivity : Activity() {
             window.setDecorFitsSystemWindows(true)
         }
 
+        startupContainer = android.widget.FrameLayout(this)
+        startupScreen = StartupScreen(this)
+        startupContainer.addView(startupScreen)
+        setContentView(startupContainer)
+        // Let the local launch surface paint before WebView construction.
+        android.view.Choreographer.getInstance().postFrameCallback {
+            startupContainer.post { if (!isFinishing && !isDestroyed) initializeWebView() }
+        }
+    }
+
+    private fun initializeWebView() {
         webView = WebView(this).apply {
             if (Build.VERSION.SDK_INT >= 29) isForceDarkAllowed = false
             setBackgroundColor(Color.rgb(5, 24, 34))
         }
-        setContentView(webView)
+        startupContainer.addView(webView, 0, android.widget.FrameLayout.LayoutParams(
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+            android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
 
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
@@ -597,7 +614,23 @@ class MainActivity : Activity() {
         view.evaluateJavascript(js, null)
     }
 
+    private fun dismissStartupWhenPainted() {
+        if (startupDismissRequested || !::webView.isInitialized || isDestroyed) return
+        startupDismissRequested = true
+        // JS readiness alone is insufficient: wait for that layout to reach WebView's compositor.
+        webView.postVisualStateCallback(1L, object : WebView.VisualStateCallback() {
+            override fun onComplete(requestId: Long) {
+                if (!isDestroyed) {
+                    startupContainer.removeView(startupScreen)
+                    webView.importantForAccessibility = android.view.View.IMPORTANT_FOR_ACCESSIBILITY_AUTO
+                }
+            }
+        })
+    }
+
     inner class AndroidBridge {
+        @JavascriptInterface fun startupReady() { runOnUiThread { dismissStartupWhenPainted() } }
+
         @JavascriptInterface fun readIqamaAppearance(): String = IqamaAppearance.mode(this@MainActivity)
         @JavascriptInterface fun configureIqamaAppearance(mode: String) {
             IqamaAppearance.save(this@MainActivity, mode)
