@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v64-fasting-reminders";
+const CACHE_NAME = "aoqat-pwa-v65-fasting-controls-bottom";
 const APP_SHELL = [
   "/js/fasting-reminders-core.js",
   "/js/fasting-reminders.js",
