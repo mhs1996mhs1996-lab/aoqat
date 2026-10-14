@@ -3,6 +3,17 @@
   const C=window.AoqatFridayRemindersCore,KEY='aoqatFridayRemindersV1',SENT='aoqatFridayRemindersSentV1';
   if(!C)return;
   function read(){try{return C.normalize(JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(_){return C.defaults();}}
+  // Migrate the previous 08:00 default once; later user choices remain untouched.
+  try{
+    const marker='aoqatFridayKahfNineMigrationV1';
+    if(localStorage.getItem(marker)!=='done'){
+      const raw=JSON.parse(localStorage.getItem(KEY)||'{}');
+      if(raw&&typeof raw==='object'&&!Array.isArray(raw)&&raw.kahfTime==='08:00'){
+        raw.kahfTime='09:00';localStorage.setItem(KEY,JSON.stringify(raw));
+      }
+      localStorage.setItem(marker,'done');
+    }
+  }catch(_){}
   let settings=read();
   function row(now){const d=C.dateParts(now);return typeof cachedAnnualPrayer==='function'?cachedAnnualPrayer(d.month,d.day):null;}
   function save(){try{localStorage.setItem(KEY,JSON.stringify(settings));}catch(_){}draw();}
