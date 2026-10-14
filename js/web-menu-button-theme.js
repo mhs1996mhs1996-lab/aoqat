@@ -2,7 +2,7 @@
 (function(){
  if(window.AndroidNative?.configureAdhan)return;
  const roots='#settingsContentDialog,#adhanServicesDialog';
- const switches='.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled]';
+ const switches='.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled],[data-time-mode]';
  const skip='.wt-card,.color-swatch,.palette-color,[data-color],.web-drawer-row,[data-drawer],#aqReader button';
  function blend(hex,t){const n=parseInt(hex.slice(1),16),rgb=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(t>=0?v*(1-t):v+(255-v)*(-t)));return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
  function lum(hex){const n=parseInt(hex.slice(1),16);return [n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);}

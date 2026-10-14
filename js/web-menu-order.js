@@ -108,7 +108,30 @@
     d=document.createElement("section");d.id="settingsContentDialog";d.className="sidebar";d.hidden=true;d.dir="rtl";d.setAttribute("role","dialog");d.setAttribute("aria-modal","true");d.setAttribute("aria-labelledby","webSubTitle");document.body.appendChild(d);
     d.addEventListener("keydown",e=>{if(e.key==="Escape"){e.preventDefault();e.stopPropagation();d.querySelector(".web-back")?.click();}});return d;
   }
+
+  let interfaceMove=null;
+  function restoreInterfacePart(){if(!interfaceMove)return;const {node,anchor}=interfaceMove;if(anchor.parentNode)anchor.replaceWith(node);interfaceMove=null;}
+  function openInterfacePart(key,title){
+    const panel=document.getElementById('backgroundPanel');
+    const selectors={elements:'#interfaceVisibilityControls .interface-visibility-grid',designs:'#designVisibilityControls .interface-visibility-grid',tools:'#backgroundDesignTools .bg-tools-grid'};
+    const node=panel?.querySelector(selectors[key]);if(!node)return;
+    const anchor=document.createComment('interface-controls-home');node.before(anchor);
+    const view=document.createElement('section');view.id='webInterfacePage';view.className='web-settings-list';
+    openSub(title,view,'background');view.appendChild(node);interfaceMove={node,anchor};
+  }
+  function prepareInterfaceMenu(panel){
+    panel.classList.add('web-interface-menu');
+    if(panel.querySelector('#webInterfaceMenu'))return;
+    const list=document.createElement('div');list.id='webInterfaceMenu';list.className='web-settings-list';
+    for(const [key,icon,title] of [['elements','👁️','إظهار عناصر واجهة البرنامج'],['designs','🖼️','إظهار / إخفاء التصاميم'],['tools','🛠️','أدوات تعديل التصميم']]){
+      const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.interfacePage=key;b.innerHTML=icon+' <span>'+title+'</span> <span aria-hidden="true">‹</span>';b.onclick=()=>openInterfacePart(key,title);list.appendChild(b);
+    }
+    panel.insertBefore(list,panel.querySelector('[data-web-footer]'));
+    if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
+  }
+
   function restoreMoved(){
+    restoreInterfacePart();
     window.aoqatCloseService?.();
     const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
     if(!body||!home)return;
@@ -132,6 +155,7 @@
       b.style.cssText='width:100%;margin-top:10px;text-align:right';
       b.onclick=()=>openPanel('النص السفلي','footerPanel','background');p.appendChild(b);
     }
+    if(webOnly&&id==='backgroundPanel')prepareInterfaceMenu(p);
     if(webOnly&&id==='fontPanel'){window.PrayerFontCore?.restoreAll?.();window.PrayerFontCore?.load?.();}
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
