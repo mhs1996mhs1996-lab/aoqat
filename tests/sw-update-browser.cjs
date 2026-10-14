@@ -12,10 +12,10 @@ module.exports=async function(){
   const context=await browser.newContext(),page=await context.newPage();
   await page.goto('http://127.0.0.1:8779/');
   await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;});
-  await page.waitForFunction(()=>navigator.serviceWorker.controller);
+  await page.waitForFunction(()=>navigator.serviceWorker.controller,null,{timeout:20000});
   await page.evaluate(async()=>{localStorage.setItem('aoqatActiveDesignIdV1','design3');localStorage.setItem('aoqatDhikrProgressV1','saved');await caches.open('aoqat-mushaf-phone-hafs');});
   phase=2;await page.evaluate(async()=>{const reg=await navigator.serviceWorker.getRegistration();await reg.update();});
-  await page.waitForFunction(()=>document.querySelector('#version')?.textContent==='2');
+  await page.waitForFunction(()=>document.querySelector('#version')?.textContent==='2',null,{timeout:20000});
   assert.equal(await page.evaluate(()=>localStorage.aoqatActiveDesignIdV1),'design3');
   assert.equal(await page.evaluate(()=>localStorage.aoqatDhikrProgressV1),'saved');
   const keys=await page.evaluate(()=>caches.keys());assert.ok(keys.includes('aoqat-mushaf-phone-hafs'));assert.ok(!keys.includes('aoqat-pwa-upgrade-test-1'));

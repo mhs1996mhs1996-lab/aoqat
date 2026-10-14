@@ -79,7 +79,8 @@ self.addEventListener("activate", event => {
     // Reload once per installed upgrade; preferences remain in localStorage.
     if(upgraded){
       const clients=await self.clients.matchAll({type:"window"});
-      await Promise.all(clients.map(client=>client.navigate?client.navigate(client.url).catch(()=>{}):Promise.resolve()));
+      // Do not await navigation: its fetch waits for activation to finish.
+      clients.forEach(client=>{if(client.navigate)client.navigate(client.url).catch(()=>{});});
     }
   })());
 });
