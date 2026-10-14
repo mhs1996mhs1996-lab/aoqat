@@ -1,7 +1,10 @@
-const CACHE_NAME = "aoqat-pwa-v58";
+const CACHE_NAME = "aoqat-pwa-v59";
 const APP_SHELL = [
   "/js/web-menu-button-theme.js?v=1",
-  "/js/azkar-web.js?v=1",
+  "/js/azkar-web.js?v=2",
+  "/js/friday-sunnah-data.js",
+  "/js/friday-reminders-core.js",
+  "/js/friday-reminders.js",
   "/js/prayer-time-choice.js",
   "/js/web-back-navigation.js",
   "/data/prayer-times-offline.js",
@@ -129,6 +132,13 @@ self.addEventListener("notificationclick", event => {
   const data = notification?.data || {};
   notification?.close();
 
+  if (data.kind === "friday-reminder") {
+    event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
+      const client=clients.find(item=>"focus" in item);
+      return client?.focus ? client.focus() : self.clients.openWindow("/");
+    }));
+    return;
+  }
   if (data.kind !== "tomorrow-publish-alarm") return;
 
   if (event.action === "stop") {
