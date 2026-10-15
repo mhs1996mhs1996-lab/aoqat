@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 module.exports=async p=>{
  await p.clock.install({time:new Date('2026-10-18T12:00:00+03:00')});
- await p.evaluate(()=>{AndroidNative.configureCommunityReminders=value=>window.communityNativeSettings=JSON.parse(value);AndroidNative.readCommunityReminderInbox=()=>JSON.stringify([{id:'native-fixture',kind:'fasting',section:'fasting',topicId:'white-days',title:'تذكير اختبار',body:'شرح التذكير',createdAt:Date.now()}]);AndroidNative.consumeCommunityReminderId=()=>{if(window.fixtureOpened)return '';window.fixtureOpened=true;return 'native-fixture';};});
+ await p.evaluate(()=>{AndroidNative.sharePrayerImage=(data,name,id)=>{window.sharedImage=data;window.aoqatImageActionResult(id,true);};AndroidNative.savePrayerImage=(data,name,id)=>{window.savedImage=data;window.aoqatImageActionResult(id,true);};AndroidNative.configureCommunityReminders=value=>window.communityNativeSettings=JSON.parse(value);AndroidNative.readCommunityReminderInbox=()=>JSON.stringify([{id:'native-fixture',kind:'fasting',section:'fasting',topicId:'white-days',title:'تذكير اختبار',body:'شرح التذكير',createdAt:Date.now()}]);AndroidNative.consumeCommunityReminderId=()=>{if(window.fixtureOpened)return '';window.fixtureOpened=true;return 'native-fixture';};});
  // Re-evaluate the packaged adapter after installing the mock Android bridge.
  await p.addScriptTag({url:'js/native-reminders.js'});
  await p.waitForFunction(()=>window.communityNativeSettings&&document.querySelector('#reminderInbox'));
