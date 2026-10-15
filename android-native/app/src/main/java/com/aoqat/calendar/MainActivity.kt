@@ -795,7 +795,7 @@ class MainActivity : Activity() {
                 try {
                     val (mime, bytes) = PrayerImageShare.decode(dataUrl)
                     val extension = when(mime) { "image/png" -> ".png"; "image/webp" -> ".webp"; else -> ".jpg" }
-                    saveImage(bytes, mime, "prayer-preview$extension")
+                    saveImage(bytes, mime, filename.substringBeforeLast('.').replace(Regex("[^A-Za-z0-9_-]"),"_").take(80)+"-"+System.nanoTime()+extension)
                     runOnUiThread { imageActionResult(requestId, true) }
                 } catch (_: Exception) { runOnUiThread { imageActionResult(requestId, false) } }
             }.start()

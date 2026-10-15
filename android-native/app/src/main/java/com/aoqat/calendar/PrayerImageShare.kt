@@ -27,10 +27,11 @@ object PrayerImageShare {
         val folder = File(c.cacheDir, "shared-prayer-images").apply { mkdirs() }
         folder.listFiles()?.filter { System.currentTimeMillis() - it.lastModified() > 7 * 86400000L }?.forEach { it.delete() }
         val extension = when (mime) { "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg" }
-        val file = File(folder, "prayer-preview.$extension").apply { writeBytes(bytes) }
+        val file = File(folder, "prayer-preview-${System.nanoTime()}.$extension").apply { writeBytes(bytes) }
         val uri = FileProvider.getUriForFile(c, c.packageName + ".prayer-images", file)
         return Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
-            .putExtra(Intent.EXTRA_TITLE, "مواقيت الصلاة")
+            .putExtra(Intent.EXTRA_TITLE, "مشاركة التصميم")
             .apply { clipData = ClipData.newUri(c.contentResolver, "مواقيت الصلاة", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
 }
+
