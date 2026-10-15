@@ -82,7 +82,8 @@
         if(targetDate)text(ctx,'تذكير ليوم '+dateLabel(targetDate),540,1094,32,p.accent,'center');
       }else{
         text(ctx,'أبواب من صيام التطوع',540,188,35,p.accent,'center');
-        topics.forEach((item,i)=>card(ctx,p,i,222+i*124,112,item.title,item.ref));
+        const summaries={'monday-thursday':'صيام الاثنين والخميس','white-days':'الأيام البيض: 13 و14 و15 من الشهر الهجري',arafah:'صيام يوم عرفة: 9 ذي الحجة لغير الحاج',ashura:'صيام عاشوراء: 10 محرم، ويُصام التاسع معه',shawwal:'ستة أيام من شوال بعد رمضان',muharram:'الإكثار من الصيام في شهر الله المحرم',dawud:'صيام داود: صيام يوم وإفطار يوم'};
+        topics.forEach((item,i)=>card(ctx,p,i,222+i*124,112,summaries[item.id]||item.title,item.ref));
       }
       text(ctx,'لا صيام في العيدين أو أيام التشريق تطوعاً.',540,1175,28,p.ink,'center');
       text(ctx,'البخاري 1990؛ مسلم 1141 • يُراعى ثبوت الهلال محلياً.',540,1219,24,p.ink,'center');
