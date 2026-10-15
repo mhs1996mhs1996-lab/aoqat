@@ -51,6 +51,7 @@
    el.querySelector('#fridayReminderHost')?.remove();
    el.querySelector('#communityPostControls-friday')?.remove();
    if(kind==='friday'){window.AoqatFridayReminders?.mount(page);window.AoqatCommunityPosts?.mount('friday',page);}
+   window.AoqatAzkarReminders?.mount(page,kind);
    move(positions[kind]||0);
    document.getElementById('webSubBody')?.scrollTo(0,0);el.querySelector('#adAzkarBack').focus({preventScroll:true});
   }

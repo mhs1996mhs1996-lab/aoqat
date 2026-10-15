@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v73-design-share-apk";
+const CACHE_NAME = "aoqat-pwa-v74-azkar-reminders";
 const APP_SHELL = [
   "/js/fasting-posts-calendar.js",
   "/js/community-posts-core.js",
@@ -11,7 +11,9 @@ const APP_SHELL = [
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=1",
-  "/js/azkar-web.js?v=5",
+  "/js/azkar-web.js?v=6",
+  "/js/azkar-reminders-core.js",
+  "/js/azkar-reminders.js",
   "/js/friday-sunnah-data.js",
   "/js/friday-reminders-core.js",
   "/js/friday-reminders.js",
@@ -151,6 +153,14 @@ self.addEventListener("notificationclick", event => {
   const data = notification?.data || {};
   notification?.close();
 
+  if (data.kind === "azkar-reminder") {
+    event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
+      const client=clients.find(item=>"focus" in item);
+      if(client){client.postMessage({type:"AOQAT_OPEN_AZKAR",topicId:data.topicId});return client.focus();}
+      return self.clients.openWindow("/?azkar="+encodeURIComponent(data.topicId||""));
+    }));
+    return;
+  }
   if (data.kind === "friday-reminder" || data.kind === "fasting-reminder" || data.kind === "community-post-reminder") {
     event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
       const client=clients.find(item=>"focus" in item);
