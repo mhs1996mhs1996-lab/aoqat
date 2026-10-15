@@ -1,0 +1,31 @@
+const assert=require('node:assert/strict');
+module.exports=async p=>{
+ await p.clock.install({time:new Date('2026-10-18T12:00:00+03:00')});
+ await p.evaluate(()=>{AndroidNative.configureCommunityReminders=value=>window.communityNativeSettings=JSON.parse(value);AndroidNative.readCommunityReminderInbox=()=>JSON.stringify([{id:'native-fixture',kind:'fasting',section:'fasting',topicId:'white-days',title:'تذكير اختبار',body:'شرح التذكير',createdAt:Date.now()}]);AndroidNative.consumeCommunityReminderId=()=>{if(window.fixtureOpened)return '';window.fixtureOpened=true;return 'native-fixture';};});
+ // Re-evaluate the packaged adapter after installing the mock Android bridge.
+ await p.addScriptTag({url:'js/native-reminders.js'});
+ await p.waitForFunction(()=>window.communityNativeSettings&&document.querySelector('#reminderInbox'));
+ assert.equal(await p.locator('#reminderInbox h3').textContent(),'تذكير اختبار');
+ assert.equal(await p.evaluate(()=>communityNativeSettings.friday.enabled),true);
+ assert.equal(await p.evaluate(()=>communityNativeSettings.friday.kahfTime),'09:00');
+ assert.equal(await p.evaluate(()=>communityNativeSettings.fasting.enabled),true);
+ assert.equal(await p.evaluate(()=>communityNativeSettings.posts.friday.enabled),false);
+ assert.equal(await p.evaluate(()=>communityNativeSettings.posts.fasting.enabled),false);
+ await p.evaluate(()=>{aoqatOpenMuslimBagSection('friday');});
+ await p.locator('[data-open-community-post="friday"]').click();
+ await p.waitForFunction(()=>!document.querySelector('#communityPostShare').disabled);
+ await p.locator('#communityPostShare').click();await p.locator('#communityPostShare').click();
+ await p.locator('#communityPostSave').click();
+ assert.ok(await p.evaluate(()=>sharedImage.startsWith('data:image/jpeg;base64,')&&savedImage===sharedImage));
+ await p.evaluate(()=>aoqatOpenMuslimBagSection('fasting'));
+ await p.locator('[data-post-reminder="fasting"]').click();
+ await p.waitForFunction(()=>communityNativeSettings.posts.fasting.enabled);
+ await p.locator('[data-open-community-post="fasting"]').click();
+ await p.waitForFunction(()=>!document.querySelector('#communityPostShare').disabled);
+ assert.equal(await p.locator('#communityPostView').getAttribute('data-post-topic'),'monday');
+ await p.locator('#communityPostShare').click();await p.locator('#communityPostSave').click();
+ assert.ok(await p.evaluate(()=>savedImage===sharedImage));
+ await p.evaluate(()=>aoqatOpenMuslimBagSection('fasting'));await p.locator('[data-post-reminder="fasting"]').click();
+ await p.waitForFunction(()=>communityNativeSettings.posts.fasting.enabled===false);
+ console.log('Packaged APK: offline Friday/fasting JPEGs, native share/save bridge, default switches, settings sync and notification-to-explanation route passed');
+};

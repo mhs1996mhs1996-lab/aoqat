@@ -75,7 +75,28 @@ transform('exact-export.js', [
  ('  window.aoqatCreatePrayerShareView=function(){', '''  let imageActionSequence=0;const imageActions=new Map();
   window.aoqatImageActionResult=(id,ok)=>{const pending=imageActions.get(id);if(!pending)return;imageActions.delete(id);ok?pending.resolve():pending.reject(Error('Native image action failed'));};
   async function nativeImageAction(method,file){const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});return new Promise((resolve,reject)=>{const id='image-'+(++imageActionSequence);imageActions.set(id,{resolve,reject});try{window.AndroidNative[method](dataUrl,file.name,id);}catch(e){imageActions.delete(id);reject(e);}});}
+  window.aoqatNativeImageAction=nativeImageAction;
   window.aoqatCreatePrayerShareView=function(){''')])
+
+# Enable the newly reviewed local Muslim bag modules only in the packaged APK.
+for module in ['reminder-inbox.js','friday-reminders.js','fasting-reminders.js','community-posts-renderer.js','community-posts.js']:
+    transform(module,[('if(window.AndroidNative?.configureAdhan)return;','')])
+transform('community-posts-renderer.js', [('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
+transform('community-posts.js',[
+ ('async function permission(){', 'async function permission(){if(window.AndroidNative?.communityReminderPermissions){window.AndroidNative.communityReminderPermissions();return;}'),
+ ('function tick(now=new Date()){', 'function tick(now=new Date()){if(window.AndroidNative?.configureAdhan)return;'),
+ ('const supported=!!navigator.share', 'const supported=!!window.AndroidNative?.sharePrayerImage||!!navigator.share'),
+ ("await navigator.share({files:[file],title:kind==='friday'?'سنن يوم الجمعة وآدابها':'صيام التطوع'});", "if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:kind==='friday'?'سنن يوم الجمعة وآدابها':'صيام التطوع'});"),
+ ("download.onclick=()=>{if(!file||!url)return;", "download.onclick=async()=>{if(!file||!url)return;if(window.AndroidNative?.savePrayerImage){download.disabled=true;try{await window.aoqatNativeImageAction('savePrayerImage',file);if(!disposed)status.textContent='تم حفظ البوست على الجهاز.';}catch(_){if(!disposed)status.textContent='تعذر الحفظ. أعد المحاولة.';}finally{if(!disposed)download.disabled=false;}return;}"),
+ ('تنبيه النشر منفصل عن تذكيرات العبادة، ويعمل أثناء فتح الموقع؛ إغلاقه يوقف التنبيه المحلي.', 'تنبيه النشر منفصل عن تذكيرات العبادة، ويعمل دون إنترنت وبالخلفية بعد منح أذونات الهاتف.')])
+transform('friday-reminders.js',[
+ ('async function requestPermission(){', 'async function requestPermission(){if(window.AndroidNative?.communityReminderPermissions){window.AndroidNative.communityReminderPermissions();return;}'),
+ ('function tick(now=new Date()){', 'function tick(now=new Date()){if(window.AndroidNative?.configureAdhan)return;'),
+ ('التنبيهات المحلية تعمل أثناء فتح الموقع؛ إغلاق الصفحة يوقفها. يمكن عرض إشعار الهاتف إذا سمحت للمتصفح.', 'التنبيهات تعمل دون إنترنت وبالخلفية بعد منح أذونات الإشعارات والمنبّه.')])
+transform('fasting-reminders.js',[
+ ('async function permission(){', 'async function permission(){if(window.AndroidNative?.communityReminderPermissions){window.AndroidNative.communityReminderPermissions();return;}'),
+ ('function tick(now=new Date()){', 'function tick(now=new Date()){if(window.AndroidNative?.configureAdhan)return;'),
+ ('يعمل أثناء فتح الموقع؛ إشعار الهاتف يحتاج السماح للمتصفح.', 'يعمل دون إنترنت وبالخلفية بعد منح أذونات الهاتف.')])
 
 # Use the current web menu with durable Android notification delivery.
 transform('prayer-alert-methods.js',[('  if(window.AndroidNative?.configureAdhan)return;', '  const N=window.AndroidNative,native=!!N?.configurePrayerNotifications;'), ("JSON.parse(localStorage.getItem(KEY)||'{}')", "JSON.parse(native?N.readPrayerNotificationSettings():localStorage.getItem(KEY)||'{}')"), ('function save(){localStorage.setItem(KEY,JSON.stringify(settings));}', 'function save(){localStorage.setItem(KEY,JSON.stringify(settings));if(native)N.configurePrayerNotifications(JSON.stringify(settings));}'), ('function unlock(){try{', 'function unlock(){if(native)return;try{'), ('function chime(){if(!audio', 'function chime(){if(native){N.previewPrayerNotification();return;}if(!audio'), ('تنبيه الويب يعمل أثناء فتح الصفحة؛ اسمح بالإشعارات حتى تظهر في قائمة إشعارات الهاتف.', 'الإشعارات تعمل من المواقيت المحفوظة، دون إنترنت وبالخلفية بعد منح الأذونات.'), ('<p id="pnStatus" role="status"></p>', '${native?\'<button type="button" id="pnPermissions">أذونات الإشعارات والعمل بالخلفية</button><p class="ad-note">\'+N.prayerNotificationReadiness()+\'</p>\':\'\'}<p id="pnStatus" role="status"></p>'), ("if(settings.enabled&&'Notification' in window", "if(!native&&settings.enabled&&'Notification' in window"), ("if(settings.enabled&&(!('Notification'", "if(!native&&settings.enabled&&(!('Notification'"), ("$('pnPreview').onclick=()=>{unlock();chime();};", "$('pnPreview').onclick=()=>{unlock();chime();};if(native)$('pnPermissions').onclick=()=>N.prayerNotificationPermissions();"), ('  function tick(){const now=', '  function tick(){if(native)return;const now='), ("  document.addEventListener('pointerdown'", "  window.aoqatPrayerNotificationNativeSettings=value=>{if(!native)return;settings={...settings,...value};drawNotice();};\n  document.addEventListener('pointerdown'")])
@@ -156,6 +177,7 @@ html=(target/'index.html').read_text()
 static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
 dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())
 paths=['js/startup-stabilizer.js','js/design-side-menu.js']+[src.split('?')[0] for src in static if not src.startswith('data/prayer-times.js')]+[src.split('?')[0] for src in dynamic]
+paths.append('js/native-reminders.js')
 seen=set();chunks=['const prayerTimes=[];']
 for relative in paths:
     # This old compatibility module repeatedly unhides all slides, conflicting
@@ -165,6 +187,7 @@ for relative in paths:
     seen.add(relative)
     path=target/relative
     if not path.exists():path=root/relative
+    if relative=='js/native-reminders.js':path=root/'android-native/apk-overrides/native-reminders.js'
     chunks.append('\n/* '+relative+' */\n'+path.read_text()+'\n;')
 chunks.append("document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('aoqatModulesReady'))),{once:true});")
 (target/'js/apk-startup-bundle.js').write_text('\n'.join(chunks))
@@ -196,5 +219,6 @@ for prefix,extension in [('mushaf-phone-hafs','json.gz')]:
         manifest[name]=hashlib.sha256((root/name).read_bytes()).hexdigest()
 (target/'assets').mkdir(parents=True,exist_ok=True)
 (target/'assets/mushaf-apk-sha256.json').write_text(json.dumps(manifest,separators=(',',':')))
+
 
 

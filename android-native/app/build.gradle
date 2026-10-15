@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 84 // Local launch screen and first-frame readiness
-        versionName '1.49'
+        versionCode 85 // Offline Muslim bag, native reminders and shared poster previews
+        versionName '1.50'
     }
 
     compileOptions {
@@ -66,7 +66,7 @@ tasks.register('syncWebAssets', Sync) {
         include 'assets/mushaf-phone-hafs/**'
     }
     from(apkOverrideRoot) {
-        include 'android-ui-fixes.js', 'android-back-navigation.js'
+        include 'android-ui-fixes.js', 'android-back-navigation.js', 'native-reminders.js'
         into 'js'
     }
     into(webAssetDir)
@@ -94,5 +94,6 @@ dependencies {
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.robolectric:robolectric:4.14.1'
 }
+
 
 

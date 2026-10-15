@@ -362,8 +362,14 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent);setIntent(intent)
+        if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatRefreshNativeReminders?.()",null)
+    }
+
     override fun onResume() {
         super.onResume()
+        if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatRefreshNativeReminders?.()",null)
         if (::webView.isInitialized) { protectDisplayColors(); webView.evaluateJavascript("window.aoqatRefreshNativePrayerRows?.()", null) }
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatPrayerNotificationNativeSettings?.("+PrayerNotifications.settings(this).toString()+")",null)
@@ -629,6 +635,11 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun readCommunityReminderSettings():String = CommunityReminders.settings(this@MainActivity)
+        @JavascriptInterface fun configureCommunityReminders(json:String){CommunityReminders.configure(this@MainActivity,json)}
+        @JavascriptInterface fun readCommunityReminderInbox():String = CommunityReminders.inbox(this@MainActivity).toString()
+        @JavascriptInterface fun consumeCommunityReminderId():String {val id=intent.getStringExtra("communityReminderId")?:"";intent.removeExtra("communityReminderId");return id}
+        @JavascriptInterface fun communityReminderPermissions(){runOnUiThread{requestPrayerNoticeAccess(force=true)}}
         @JavascriptInterface fun startupReady() { runOnUiThread { dismissStartupWhenPainted() } }
 
         @JavascriptInterface fun readIqamaAppearance(): String = IqamaAppearance.mode(this@MainActivity)
@@ -772,7 +783,7 @@ class MainActivity : Activity() {
                 try {
                     val send = PrayerImageShare.intent(this@MainActivity, dataUrl)
                     runOnUiThread {
-                        try { startActivity(Intent.createChooser(send, "مشاركة صورة مواقيت الصلاة")); imageActionResult(requestId, true) }
+                        try { startActivity(Intent.createChooser(send, "مشاركة الصورة")); imageActionResult(requestId, true) }
                         catch (_: Exception) { imageActionResult(requestId, false) }
                     }
                 } catch (_: Exception) { runOnUiThread { imageActionResult(requestId, false) } }
@@ -965,6 +976,7 @@ class MainActivity : Activity() {
         private const val STORAGE_PERMISSION_REQUEST = 2002
     }
 }
+
 
 
 

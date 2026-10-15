@@ -228,9 +228,10 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) AdhanPlaybackService.restoreVolume(context)
         AdhanPlaybackService.restoreRingerIfExpired(context)
         PrayerWidget.update(context)
+        CommunityReminders.refresh(context)
         if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
         val pending = goAsync()
-        Thread { try { IqamaNativeScheduler.refresh(context) } finally { pending.finish() } }.start()
+        Thread { try { IqamaNativeScheduler.refresh(context);CommunityReminders.refreshNow(context) } finally { pending.finish() } }.start()
     }
 }
 
@@ -434,4 +435,5 @@ class AlarmActivity : Activity() {
         setContentView(root)
     }
 }
+
 

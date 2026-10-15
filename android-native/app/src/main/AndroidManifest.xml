@@ -55,6 +55,7 @@
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User enabled next prayer notification with a live countdown" />
         </service>
         <service android:name=".FridayNotificationService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse"><property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User configured Friday adhan and sermon countdown" /></service>
+        <receiver android:name=".CommunityReminderReceiver" android:exported="false" />
         <receiver android:name=".FridayReceiver" android:exported="false" />
         <receiver android:name=".AdhanReceiver" android:exported="false" />
         <receiver android:name=".PrayerWidget" android:exported="true">
@@ -118,4 +119,5 @@
         </provider>
     </application>
 </manifest>
+
 

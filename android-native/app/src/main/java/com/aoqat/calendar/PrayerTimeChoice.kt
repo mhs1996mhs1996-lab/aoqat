@@ -43,6 +43,8 @@ object PrayerStartup {
             PrayerAlarm.schedule(app)
             AlarmScheduler.scheduleFromDatabase(app)
             PrayerWidget.update(app)
+            CommunityReminders.refresh(app)
         }catch(e:Exception){android.util.Log.e("PrayerStartup","Unable to restore cached services",e)}
     }}
 }
+

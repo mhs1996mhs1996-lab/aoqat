@@ -4,7 +4,7 @@
   // أزيلت عناصر (الحويجة/اللغة/الصوت) لأنها كانت مجرد اختصارات شكلية مرتبطة بلوحات غير صحيحة.
   const ROWS=[
     ["settings","⚙️","إعدادت التصميم"],["notifications","🔔","الإشعارات"],["appearance","🎨","شكل التطبيق"],
-    ["savePhone","📱","حفظ على الهاتف"],
+    ["savePhone","📱","مشاركة التصميم"],
     ["datePrayer","📅","بيانات التاريخ و الصلاة"],
     ...(!window.AndroidNative?.configureAdhan ? [["prayerTimeChoice","🕰️","طريقة اختيار أوقات الصلاة"]] : []),["adhanIqama","🕌","بيانات الاذان والإقامة"],
     ...(!window.AndroidNative?.configureAdhan ? [["quran","📖","القرآن الكريم"],["qibla","🧭","اتجاه القبلة"],["azkar","📿","الأذكار"]] : [])
@@ -164,7 +164,7 @@
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
-    if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 حفظ على الهاتف';b.onclick=savePhone;wrap.appendChild(b);}
+    if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
     openSub("إعدادت التصميم",wrap,"main");
     if(webOnly){const controls=document.getElementById('switchPanel');if(controls){controls.classList.add('inline-open');wrap.appendChild(controls);window.aoqatMoveNotificationSettings?.();}}
 
@@ -218,7 +218,7 @@
   }
   function themeView(){const p=document.createElement("div");p.className="web-theme-drawer-panel";const source=document.getElementById("webThemePanel");if(source){p.innerHTML=source.innerHTML;}else{p.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid"><button type="button" class="wt-card" data-theme="cream-blue">🟦 كريمي وأزرق فاتح</button><button type="button" class="wt-card" data-theme="cream-gold">🟨 كريمي وذهبي هادئ</button><button type="button" class="wt-card" data-theme="white-sky">🔵 أبيض وسماوي حديث</button><button type="button" class="wt-card" data-theme="cream-green">🟩 كريمي وأخضر هادئ</button><button type="button" class="wt-card" data-theme="beige-gold">🟫 بيج وذهبي أنيق</button><button type="button" class="wt-card" data-theme="dark-night">🌙 داكن كحلي (ليلي)</button></div>';}p.addEventListener("click",e=>{const card=e.target.closest(".wt-card");if(!card)return;if(typeof window.applyWebTheme==="function")window.applyWebTheme(card.dataset.theme);p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));window.refreshWebThemeControls?.();});p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));openSub("شكل التطبيق",p,"main");window.refreshWebThemeControls?.();}
   function savePhone(){
-    if(webOnly&&window.aoqatCreatePrayerShareView){document.body.classList.add('design-menu-open');openSub('حفظ على الهاتف',window.aoqatCreatePrayerShareView(),'program');return;}
+    if(webOnly&&window.aoqatCreatePrayerShareView){document.body.classList.add('design-menu-open');openSub('مشاركة التصميم',window.aoqatCreatePrayerShareView(),'program');return;}
     const b=document.getElementById("saveToPhoneBtn");if(b){b.click();return;}const x=document.querySelector("[data-save-phone]");if(x)x.click();}
 
   window.aoqatOpenPrayerShare=savePhone;
@@ -263,6 +263,7 @@
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
+
 
 
 
