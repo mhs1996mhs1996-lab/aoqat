@@ -20,13 +20,13 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           mkdir -p release
-          gh run download 38036108306 --name aoqat-android-v1.43-build78 --dir release
-          mv release/app-debug.apk release/aoqat-v1.43.apk
+          gh run download 38723589534 --name aoqat-android-v1.50-build85 --dir release
+          mv release/app-debug.apk release/aoqat-v1.50.apk
       - name: Verify release bytes and signing certificate
         run: |
-          echo '8af4a9c2a2953b0f97f3974825b4ad6a10245e3fabac4d3671cd5141a71c5a54  release/aoqat-v1.43.apk' | sha256sum --check
+          echo '6886cd552d32f1b04418e33511b6a49718041cebc912c61ca5fe7f8aa1ad5747  release/aoqat-v1.50.apk' | sha256sum --check
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
-          "$signer" verify --print-certs release/aoqat-v1.43.apk > release/signature.txt
+          "$signer" verify --print-certs release/aoqat-v1.50.apk > release/signature.txt
           grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' release/signature.txt
       - name: Publish installation file
         env:
@@ -34,6 +34,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > release/notes.txt <<'NOTES'
-          الإصدار 1.43: قاعدة مواقيت سنوية محفوظة، مزامنة تلقائية للأيام الثمانية، ومصحف كامل يعمل دون الإنترنت. يشمل آخر إضافات المصحف والحفظ السريع وخدمات الأذان والتنبيه والجمعة. ثبّت التحديث فوق النسخة الحالية للحفاظ على إعداداتك.
+          الإصدار 1.50: نسخة كاملة تعمل دون إنترنت مع المصحف وقاعدة المواقيت، حقيبة المسلم، تذكيرات الجمعة والصيام، البوستات ومشاركة التصميم. ثبّت التحديث فوق النسخة الحالية للحفاظ على إعداداتك.
           NOTES
-          gh release create v1.43 release/aoqat-v1.43.apk --target f0766098b40120daa66ecbe7e96be24a16b7572c --title 'أوقات الصلاة في الحويجة 1.43' --notes-file release/notes.txt
+          gh release create v1.50 release/aoqat-v1.50.apk --target 9ac423d96944c83d9954bafbd859ae493aeb96a0 --title 'أوقات الصلاة في الحويجة 1.50' --notes-file release/notes.txt
