@@ -22,7 +22,6 @@ module.exports=async()=>{
   await new Promise(r=>setTimeout(r,600));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
   const p=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'}),errors=[];
   await p.clock.install({time:new Date('2026-10-18T10:00:00+03:00')});
-  await p.route('**/functions/v1/hijri-sync',r=>r.abort());
   p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{window.postShares=[];window.postShareMode='ok';window.postNotices=[];window.Notification=class{static permission='granted';constructor(title,options){postNotices.push({title,options});}};
    Object.defineProperty(navigator,'canShare',{configurable:true,value:({files})=>files?.[0]?.type==='image/jpeg'});
@@ -84,19 +83,6 @@ module.exports=async()=>{
   await p.waitForFunction(()=>document.querySelector('#communityPostView').dataset.postTheme==='3');assert.equal(await p.locator('#communityPostShare').isDisabled(),true);assert.equal(await p.locator('#communityPostSave').isDisabled(),false);
   await p.route('https://**',r=>r.abort());await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.aoqatUIReady);await p.clock.setSystemTime(new Date('2027-06-14T10:00:00+03:00'));await p.evaluate(()=>aoqatOpenCommunityPost('fasting','ashura','2027-06-15'));
   await p.waitForFunction(()=>document.querySelector('#communityPostPreview')?.naturalWidth===1080);
-  // A verified future announcement updates every conversion, persists offline and leaves current dates alone.
-  const hp=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'});
-  await hp.clock.install({time:new Date('2027-02-09T12:00:00+03:00')});
-  await hp.route('**/rest/**',r=>r.abort());
-  await hp.route('**/functions/v1/hijri-sync',r=>r.fulfill({json:{status:'ok',anchors:[{year:1448,month:9,startDate:'2027-02-09',publishedAt:'2027-02-08T15:00:00Z',source:'https://dws.gov.iq/test-fixture'}]}}));
-  await hp.goto('http://127.0.0.1:8794',{waitUntil:'domcontentloaded'});await hp.waitForFunction(()=>window.aoqatUIReady);
-  await hp.evaluate(async()=>{await AoqatHijriCalendar.sync();setTodayDateAutomatically();});
-  assert.equal(await hp.locator('#hijriDay').inputValue(),'1');
-  assert.equal(await hp.locator('#hijriMonth').inputValue(),'رمضان');
-  assert.equal(await hp.evaluate(()=>AoqatHijriCalendar.parts(new Date('2026-10-15T12:00:00+03:00')).day===AoqatHijriCore.baseline(new Date('2026-10-15T12:00:00+03:00')).day),true);
-  await hp.unroute('**/functions/v1/hijri-sync');await hp.route('https://**',r=>r.abort());
-  await hp.reload({waitUntil:'domcontentloaded'});await hp.waitForFunction(()=>window.aoqatUIReady);
-  assert.equal(await hp.locator('#hijriDay').inputValue(),'1');await hp.close();
   assert.deepEqual(errors,[]);console.log('Community posts: weekly designs, 1080x1350 JPEG, repeated/cancelled shares, saving, independent opt-in schedules, topic selection, inbox routing and offline assets passed');
  }finally{await browser?.close();server.kill();}
 };

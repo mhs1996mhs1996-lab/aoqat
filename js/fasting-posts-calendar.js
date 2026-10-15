@@ -1,9 +1,13 @@
 (function(root){'use strict';
+ const DAY=86400000,names=['محرم','صفر','ربيع الأول','ربيع الآخر','جمادى الأولى','جمادى الآخرة','رجب','شعبان','رمضان','شوال','ذو القعدة','ذو الحجة'];
+ function key(date){return root.AoqatFridayRemindersCore.dateParts(date).key;}
+ function baseline(date){const p=Object.fromEntries(new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura',{timeZone:'Asia/Baghdad',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(date).map(x=>[x.type,x.value]));return {year:+p.year,month:+p.month,day:+p.day};}
+ const calendar={DAY,key,baseline};
  const idList=['monday','thursday','white-days','tasua','ashura','shawwal','dhul-hijjah','arafah'];
- function date(date){const C=root.AoqatHijriCore,k=C.key(date),h=root.AoqatHijriCalendar?.parts(date)||C.parts(date);return {...h,key:k,weekday:new Date(k+'T12:00:00Z').getUTCDay()};}
+ function date(date){const C=calendar,k=C.key(date),h=C.baseline(date);return {...h,key:k,weekday:new Date(k+'T12:00:00Z').getUTCDay()};}
  function allowed(h){return h.month!==9&&!(h.month===10&&h.day===1)&&!(h.month===12&&h.day>=10&&h.day<=13);}
  function candidates(now=new Date()){
-  const C=root.AoqatHijriCore,k=C.key(now),mid=Date.parse(k+'T12:00:00+03:00'),today=date(new Date(mid)),tomorrow=date(new Date(mid+C.DAY)),out=[];
+  const C=calendar,k=C.key(now),mid=Date.parse(k+'T12:00:00+03:00'),today=date(new Date(mid)),tomorrow=date(new Date(mid+C.DAY)),out=[];
   const add=(id,target,label)=>{if(!out.some(x=>x.id===id))out.push({id,topicId:id,targetDate:target,title:label});};
   if(allowed(tomorrow)){
    if(tomorrow.weekday===1)add('monday',tomorrow.key,'صيام يوم الاثنين');
@@ -31,5 +35,5 @@
   return find(id);
  }
  function selectedTopics(raw,version2=false){if(!Array.isArray(raw))return [...idList];const ids=new Set(raw);if(!version2&&ids.has('monday-thursday')){ids.add('monday');ids.add('thursday');}if(!version2&&ids.has('ashura'))ids.add('tasua');if(!version2&&['monday-thursday','white-days','arafah','ashura','shawwal','muharram'].every(x=>ids.has(x)))ids.add('dhul-hijjah');return idList.filter(x=>ids.has(x));}
- const api={idList,date,allowed,candidates,topic,selectedTopics};root.AoqatFastingPostsCalendar=api;if(typeof module!=='undefined')module.exports=api;
+ const api={DAY,key,baseline,names,idList,date,allowed,candidates,topic,selectedTopics};root.AoqatFastingPostsCalendar=api;if(typeof module!=='undefined')module.exports=api;
 })(typeof window==='undefined'?globalThis:window);

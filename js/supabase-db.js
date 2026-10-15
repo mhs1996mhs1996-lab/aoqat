@@ -24,13 +24,13 @@ function updateDateFromGregorian(){
     setSelectValue("dayName",dayName);
     try{
         const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
-        const h=window.AoqatHijriCalendar?.parts(selected)||window.AoqatHijriCore.parts(selected);
+        const parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{year:"numeric",month:"numeric",day:"numeric"}).formatToParts(selected),h={};for(const part of parts)h[part.type]=part.value;
         const values={hijriDay:h.day,hijriMonth:months[Number(h.month)-1],hijriYear:h.year};
         for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el&&!Array.from(el.options).some(o=>o.value===String(value)))el.add(new Option(String(value),String(value)));setSelectValue(id,value);}
     }catch(error){console.warn("Hijri date conversion unavailable",error);}
     if(typeof updateAll==="function")updateAll();return {year,month:monthIndex+1,day,dayName};
 }
-function setTodayDateAutomatically(){const now=new Date();const day=now.getDate(),monthIndex=now.getMonth(),year=now.getFullYear(),dayName=ARABIC_DAY_NAMES[now.getDay()];setSelectValue("gregorianDay",day);setSelectValue("gregorianMonth",GREGORIAN_MONTHS[monthIndex]);setSelectValue("gregorianYear",year);setSelectValue("dayName",dayName);try{const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"],h=window.AoqatHijriCalendar?.parts(new Date(year,monthIndex,day,12))||window.AoqatHijriCore.parts(new Date(year,monthIndex,day,12));setSelectValue("hijriDay",h.day);setSelectValue("hijriMonth",months[Number(h.month)-1]);setSelectValue("hijriYear",h.year);}catch(_){}if(typeof updateAll==="function")updateAll();return{day,month:monthIndex+1,year,dayName};}
+function setTodayDateAutomatically(){const now=new Date();const day=now.getDate(),monthIndex=now.getMonth(),year=now.getFullYear(),dayName=ARABIC_DAY_NAMES[now.getDay()];setSelectValue("gregorianDay",day);setSelectValue("gregorianMonth",GREGORIAN_MONTHS[monthIndex]);setSelectValue("gregorianYear",year);setSelectValue("dayName",dayName);try{const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"],parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{year:"numeric",month:"numeric",day:"numeric"}).formatToParts(new Date(year,monthIndex,day,12)),h={};for(const p of parts)h[p.type]=p.value;setSelectValue("hijriDay",h.day);setSelectValue("hijriMonth",months[Number(h.month)-1]);setSelectValue("hijriYear",h.year);}catch(_){}if(typeof updateAll==="function")updateAll();return{day,month:monthIndex+1,year,dayName};}
 /* Local database rows first; network refresh never blocks an available row. */
 const PRAYER_FIELDS=["fajr","sunrise","dhuhr","asr","maghrib","isha"];
 function validPrayerRow(row){
@@ -301,3 +301,4 @@ function setupDesignSaveSystem(){
 }
 
 async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setupPWAInstallation();setupDesignSaveSystem();setTodayDateAutomatically();await loadPrayerFromDatabase(true);setupPrayerBackgroundSync();}
+

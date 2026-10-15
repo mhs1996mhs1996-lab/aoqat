@@ -1,7 +1,5 @@
 const CACHE_NAME = "aoqat-pwa-v71-fasting-occasions";
 const APP_SHELL = [
-  "/js/hijri-calendar-core.js",
-  "/js/hijri-calendar.js",
   "/js/fasting-posts-calendar.js",
   "/js/community-posts-core.js",
   "/js/community-posts-renderer.js",
@@ -186,3 +184,5 @@ self.addEventListener("notificationclick", event => {
     })
   );
 });
+
+

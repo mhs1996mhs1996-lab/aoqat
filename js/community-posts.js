@@ -60,7 +60,7 @@
     let choices=[];
     function options(){
       const keep=topic.value;choices=kind==='fasting'?window.AoqatFastingPostsCalendar.candidates(new Date()).filter(x=>read().fasting.topics.includes(x.id)):[];
-      const today=window.AoqatHijriCore.key(new Date());
+      const today=window.AoqatFastingPostsCalendar.key(new Date());
       if(initialTopic&&initialDate>=today&&window.AoqatFastingPostsCalendar.topic(initialTopic)&&!choices.some(x=>x.id===initialTopic)){
         const remaining=Date.parse(initialDate+'T12:00:00+03:00')-Date.parse(today+'T12:00:00+03:00');
         if(remaining>=0&&remaining<=2*86400000)choices.push({id:initialTopic,topicId:initialTopic,title:window.AoqatFastingPostsCalendar.topic(initialTopic).title,targetDate:initialDate});
@@ -129,9 +129,8 @@
   const style=document.createElement('style');style.textContent=
     '.community-post-controls{direction:rtl;margin-top:20px;padding:14px;border:1px solid var(--wt-border,#d9c8a8);border-radius:12px;line-height:1.8}.community-post-controls h4{margin:0 0 12px}.community-post-controls button{width:100%;margin:8px 0}.community-post-controls label,.community-post-share label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}.community-post-controls select,.community-post-share select{max-width:100%;width:100%}.community-post-controls input[type="number"],.community-post-controls input[type="time"]{width:140px}.community-post-controls p{font-size:14px!important}.community-post-controls [hidden]{display:none!important}.post-topic-options input{width:22px!important;height:22px!important}.post-topic-options label{flex-wrap:nowrap}.post-topic-options{border:1px solid var(--wt-border,#ddd);border-radius:10px;padding:10px}.community-post-share{line-height:1.8}.community-post-share>button{width:100%;margin:8px 0}.community-post-share img{display:block;max-width:100%;width:360px;height:auto;margin:12px auto;border-radius:12px}.community-post-share img[hidden]{display:none}body.design-menu-open #settingsContentDialog #webDrawerSub #webSubBody .community-post-controls [data-post-reminder]{background:#7f9191!important;background-image:none!important;color:#fff!important}body.design-menu-open #settingsContentDialog #webDrawerSub #webSubBody .community-post-controls [data-post-reminder][aria-pressed="true"]{background:#12854c!important;background-image:none!important}#communityPostBanner{position:fixed;inset:auto 12px 20px;z-index:2147483000;padding:16px;border:1px solid #ccb15a;border-radius:12px;background:#fffaf0;color:#182c34}#communityPostBanner button{margin:8px;padding:10px}';
   document.head.append(style);window.AoqatCommunityPosts={read,mount,createShareView,tick};
-  let dayKey=window.AoqatHijriCore.key(new Date());
+  let dayKey=window.AoqatFastingPostsCalendar.key(new Date());
   function refresh(){document.querySelectorAll('[data-post-controls],#communityPostView').forEach(x=>x.aoqatRefresh?.());}
-  window.addEventListener('aoqatHijriUpdated',refresh);
-  setInterval(()=>{tick();const next=window.AoqatHijriCore.key(new Date());if(next!==dayKey){dayKey=next;refresh();}},1000);
+  setInterval(()=>{tick();const next=window.AoqatFastingPostsCalendar.key(new Date());if(next!==dayKey){dayKey=next;refresh();}},1000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden){tick();refresh();}});
 })();

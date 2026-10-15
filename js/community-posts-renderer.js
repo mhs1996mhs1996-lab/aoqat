@@ -49,7 +49,7 @@
     ['الإكثار من الدعاء وتحرّي ساعة الإجابة.','البخاري 935؛ مسلم 852']
   ];
   function dateLabel(key){
-    const date=new Date(key+'T12:00:00+03:00'),h=window.AoqatHijriCalendar?.parts(date)||window.AoqatHijriCore.parts(date);return new Intl.DateTimeFormat('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'long'}).format(date)+' '+h.day+' '+window.AoqatHijriCore.names[h.month-1]+' '+h.year+' هـ';
+    const date=new Date(key+'T12:00:00+03:00'),h=window.AoqatFastingPostsCalendar.date(date);return new Intl.DateTimeFormat('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'long'}).format(date)+' '+h.day+' '+window.AoqatFastingPostsCalendar.names[h.month-1]+' '+h.year+' هـ';
   }
   async function render(kind,topicId,now=new Date(),design='weekly',targetDate=''){
     await font();const index=window.AoqatCommunityPostsCore.themeIndex(now,design),p=palettes[index],canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
