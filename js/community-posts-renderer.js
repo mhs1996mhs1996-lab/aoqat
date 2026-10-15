@@ -49,7 +49,7 @@
     ['الإكثار من الدعاء وتحرّي ساعة الإجابة.','البخاري 935؛ مسلم 852']
   ];
   function dateLabel(key){
-    return new Intl.DateTimeFormat('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(key+'T12:00:00+03:00'));
+    const date=new Date(key+'T12:00:00+03:00'),h=window.AoqatHijriCalendar?.parts(date)||window.AoqatHijriCore.parts(date);return new Intl.DateTimeFormat('ar-IQ',{timeZone:'Asia/Baghdad',weekday:'long'}).format(date)+' '+h.day+' '+window.AoqatHijriCore.names[h.month-1]+' '+h.year+' هـ';
   }
   async function render(kind,topicId,now=new Date(),design='weekly',targetDate=''){
     await font();const index=window.AoqatCommunityPostsCore.themeIndex(now,design),p=palettes[index],canvas=document.createElement('canvas');canvas.width=1080;canvas.height=1350;
@@ -69,7 +69,7 @@
       text(ctx,'خلاصة للسنن والآداب؛ التفاصيل والأدلة داخل حقيبة المسلم.',540,1183,27,p.ink,'center');
       text(ctx,'الغسل والإنصات من الآداب المؤكدة؛ ليست كل البنود نوافل.',540,1224,24,p.ink,'center');
     }else{
-      const topics=window.AoqatMuslimBag.topics,item=topics.find(x=>x.id===topicId);
+      const item=window.AoqatFastingPostsCalendar.topic(topicId);
       if(item){
         const heading=fit(ctx,item.title,900,52,2);ctx.fillStyle=p.accent;ctx.textAlign='center';
         heading.rows.forEach((row,i)=>text(ctx,row,540,214+i*65,heading.size,p.accent,'center'));
@@ -80,11 +80,7 @@
         f.rows.forEach((row,i)=>ctx.fillText(row,950,start+i*65));
         text(ctx,item.ref,540,top+645,26,p.ink,'center');
         if(targetDate)text(ctx,'تذكير ليوم '+dateLabel(targetDate),540,1094,32,p.accent,'center');
-      }else{
-        text(ctx,'أبواب من صيام التطوع',540,188,35,p.accent,'center');
-        const summaries={'monday-thursday':'صيام الاثنين والخميس','white-days':'الأيام البيض: 13 و14 و15 من الشهر الهجري',arafah:'صيام يوم عرفة: 9 ذي الحجة لغير الحاج',ashura:'صيام عاشوراء: 10 محرم، ويُصام التاسع معه',shawwal:'ستة أيام من شوال بعد رمضان',muharram:'الإكثار من الصيام في شهر الله المحرم',dawud:'صيام داود: صيام يوم وإفطار يوم'};
-        topics.forEach((item,i)=>card(ctx,p,i,222+i*124,112,summaries[item.id]||item.title,item.ref));
-      }
+      }else{throw Error('No fasting occasion selected');}
       text(ctx,'لا صيام في العيدين أو أيام التشريق تطوعاً.',540,1175,28,p.ink,'center');
       text(ctx,'البخاري 1990؛ مسلم 1141 • يُراعى ثبوت الهلال محلياً.',540,1219,24,p.ink,'center');
     }

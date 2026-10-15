@@ -7,6 +7,7 @@
     {id:'shawwal',title:'ستة أيام من شوال',text:'يُستحب صيام ستة أيام من شوال بعد رمضان؛ ورد فضل صيام رمضان ثم إتباعه بست من شوال.',ref:'صحيح مسلم 1164',url:'https://sunnah.com/muslim:1164a'},
     {id:'muharram',title:'الإكثار من الصيام في محرم',text:'ورد أن أفضل الصيام بعد رمضان صيام شهر الله المحرم؛ فيُستحب الإكثار من الصيام فيه.',ref:'صحيح مسلم 1163',url:'https://sunnah.com/muslim:1163a'},
     {id:'dawud',title:'صيام داود عليه السلام',text:'صيام يوم وإفطار يوم؛ وصفه النبي ﷺ بأنه أفضل الصيام. وهو لمن يستطيع المحافظة عليه مع أداء واجباته.',ref:'صحيح البخاري 1976',url:'https://sunnah.com/bukhari:1976'}
+    ,{id:'dhul-hijjah',title:'صيام التسعة الأولى من ذي الحجة',text:'يُستحب الصيام في الأيام التسعة الأولى من ذي الحجة، وآكدها يوم عرفة لغير الحاج. أمّا اليوم العاشر فهو عيد الأضحى ولا يجوز صيامه.',ref:'سنن أبي داود 2437؛ صحيح البخاري 1990',url:'https://sunnah.com/abudawud:2437'}
   ];
   function createFastingView(topicId){const root=document.createElement('section');root.id='muslimBagFasting';root.className='muslim-bag-content';
     const intro=document.createElement('p');intro.textContent='صيام التطوع عبادة مستحبة. افتح القسم لقراءة الشرح ومصدره.';root.appendChild(intro);

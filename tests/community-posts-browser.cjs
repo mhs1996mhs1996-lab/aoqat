@@ -1,7 +1,9 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process'),fs=require('node:fs');
+require('./fasting-calendar-checks.cjs')();
 globalThis.AoqatFridayRemindersCore=require('../js/friday-reminders-core.js');
 globalThis.AoqatFastingRemindersCore=require('../js/fasting-reminders-core.js');
 const C=require('../js/community-posts-core.js');
+function AoqatPostIds(){return ['monday','thursday','white-days','tasua','ashura','shawwal','dhul-hijjah','arafah'];}
 module.exports=async()=>{
  const thursday=new Date('2026-10-15T17:00:00+03:00'),row={gregorian_month:10,gregorian_day:15,maghrib:'5:35',isha:'7:00'},on={enabled:true};
  assert.equal(C.defaults().enabled,false);assert.deepEqual(C.events(thursday,{},row),[]);
@@ -11,7 +13,7 @@ module.exports=async()=>{
  assert.deepEqual(C.events(thursday,{friday:on},{...row,isha:null}),[]);
  assert.deepEqual(C.events(thursday,{friday:on},{...row,gregorian_day:16}),[]);
  const sunday=new Date('2026-10-18T17:00:00+03:00'),sunRow={...row,gregorian_day:18};
- assert.equal(C.events(sunday,{fasting:on},sunRow)[0].topicId,'monday-thursday');
+ assert.equal(C.events(sunday,{fasting:on},sunRow)[0].topicId,'monday');
  assert.deepEqual(C.events(sunday,{fasting:{...on,topics:[]}},sunRow),[]);
  assert.equal(C.themeIndex(new Date('2026-10-15T01:00:00+03:00')),C.themeIndex(new Date('2026-10-21T23:00:00+03:00')));
  assert.notEqual(C.themeIndex(thursday),C.themeIndex(new Date('2026-10-22T17:00:00+03:00')));
@@ -19,6 +21,8 @@ module.exports=async()=>{
  try{
   await new Promise(r=>setTimeout(r,600));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
   const p=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'}),errors=[];
+  await p.clock.install({time:new Date('2026-10-18T10:00:00+03:00')});
+  await p.route('**/functions/v1/hijri-sync',r=>r.abort());
   p.on('pageerror',e=>errors.push(e.message));
   await p.addInitScript(()=>{window.postShares=[];window.postShareMode='ok';window.postNotices=[];window.Notification=class{static permission='granted';constructor(title,options){postNotices.push({title,options});}};
    Object.defineProperty(navigator,'canShare',{configurable:true,value:({files})=>files?.[0]?.type==='image/jpeg'});
@@ -45,6 +49,7 @@ module.exports=async()=>{
    const data=await p.evaluate(async i=>(await AoqatPostRenderer.render('friday','',new Date('2026-10-15T17:00:00+03:00'),String(i))).canvas.toDataURL('image/png'),i);
    fs.writeFileSync('/tmp/aoqat-adhan-post-friday-'+i+'.png',Buffer.from(data.split(',')[1],'base64'));
   }
+  for(const id of AoqatPostIds()){const data=await p.evaluate(async id=>(await AoqatPostRenderer.render('fasting',id,new Date(),'0','2026-10-19')).canvas.toDataURL('image/png'),id);fs.writeFileSync('/tmp/aoqat-adhan-post-'+id+'.png',Buffer.from(data.split(',')[1],'base64'));}
   const fastingImage=await p.evaluate(async()=>(await AoqatPostRenderer.render('fasting','white-days',new Date(),'0')).canvas.toDataURL('image/png'));
   fs.writeFileSync('/tmp/aoqat-adhan-post-fasting.png',Buffer.from(fastingImage.split(',')[1],'base64'));
   await p.locator('.web-back').click();assert.equal(await p.locator('[data-post-reminder="friday"]').getAttribute('aria-pressed'),'true');
@@ -54,6 +59,8 @@ module.exports=async()=>{
   await p.locator('[data-post-reminder="fasting"]').click();await p.locator('[data-post-mode="fasting"]').selectOption('clock');await p.locator('[data-post-time="fasting"]').fill('18:05');await p.locator('[data-post-time="fasting"]').dispatchEvent('change');
   await p.locator('[data-post-topic="arafah"]').uncheck();
   await p.locator('[data-open-community-post="fasting"]').click();await p.waitForFunction(()=>!document.querySelector('#communityPostSave').disabled);
+  await p.clock.setSystemTime(new Date('2026-10-23T10:00:00+03:00'));
+  await p.evaluate(()=>document.querySelector('#communityPostView').aoqatRefresh());
   await p.locator('#communityPostTopic').selectOption('white-days');await p.waitForFunction(()=>document.querySelector('#communityPostView').dataset.postTopic==='white-days');
   await p.locator('#communityPostDesign').selectOption('2');await p.waitForFunction(()=>document.querySelector('#communityPostView').dataset.postTheme==='2');
   await p.evaluate(()=>window.postShareMode='ok');await p.locator('#communityPostShare').click();
@@ -75,8 +82,22 @@ module.exports=async()=>{
   assert.equal(await p.locator('#webSubTitle').textContent(),'بوست سنن الجمعة');
   await p.evaluate(()=>Object.defineProperty(navigator,'canShare',{value:()=>false,configurable:true}));await p.locator('#communityPostDesign').selectOption('3');
   await p.waitForFunction(()=>document.querySelector('#communityPostView').dataset.postTheme==='3');assert.equal(await p.locator('#communityPostShare').isDisabled(),true);assert.equal(await p.locator('#communityPostSave').isDisabled(),false);
-  await p.route('https://**',r=>r.abort());await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.aoqatUIReady);await p.evaluate(()=>aoqatOpenCommunityPost('fasting','ashura'));
+  await p.route('https://**',r=>r.abort());await p.reload({waitUntil:'domcontentloaded'});await p.waitForFunction(()=>window.aoqatUIReady);await p.clock.setSystemTime(new Date('2027-06-14T10:00:00+03:00'));await p.evaluate(()=>aoqatOpenCommunityPost('fasting','ashura','2027-06-15'));
   await p.waitForFunction(()=>document.querySelector('#communityPostPreview')?.naturalWidth===1080);
+  // A verified future announcement updates every conversion, persists offline and leaves current dates alone.
+  const hp=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'});
+  await hp.clock.install({time:new Date('2027-02-09T12:00:00+03:00')});
+  await hp.route('**/rest/**',r=>r.abort());
+  await hp.route('**/functions/v1/hijri-sync',r=>r.fulfill({json:{status:'ok',anchors:[{year:1448,month:9,startDate:'2027-02-09',publishedAt:'2027-02-08T15:00:00Z',source:'https://dws.gov.iq/test-fixture'}]}}));
+  await hp.goto('http://127.0.0.1:8794',{waitUntil:'domcontentloaded'});await hp.waitForFunction(()=>window.aoqatUIReady);
+  await hp.evaluate(async()=>{await AoqatHijriCalendar.sync();setTodayDateAutomatically();});
+  assert.equal(await hp.locator('#hijriDay').inputValue(),'1');
+  assert.equal(await hp.locator('#hijriMonth').inputValue(),'رمضان');
+  assert.equal(await hp.evaluate(()=>AoqatHijriCalendar.parts(new Date('2026-10-15T12:00:00+03:00')).day===AoqatHijriCore.baseline(new Date('2026-10-15T12:00:00+03:00')).day),true);
+  await hp.unroute('**/functions/v1/hijri-sync');await hp.route('https://**',r=>r.abort());
+  await hp.reload({waitUntil:'domcontentloaded'});await hp.waitForFunction(()=>window.aoqatUIReady);
+  assert.equal(await hp.locator('#hijriDay').inputValue(),'1');await hp.close();
   assert.deepEqual(errors,[]);console.log('Community posts: weekly designs, 1080x1350 JPEG, repeated/cancelled shares, saving, independent opt-in schedules, topic selection, inbox routing and offline assets passed');
  }finally{await browser?.close();server.kill();}
 };
+

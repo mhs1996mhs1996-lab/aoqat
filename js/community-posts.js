@@ -24,11 +24,11 @@
     const days=document.createElement('fieldset');days.className='post-topic-options';
     if(kind==='fasting'){
       const legend=document.createElement('legend');legend.textContent='ذكّرني بالنشر قبل هذه الأيام';days.append(legend);
-      for(const item of window.AoqatMuslimBag.topics.filter(x=>C.topicIds.includes(x.id))){
+      for(const item of window.AoqatFastingPostsCalendar.idList.map(id=>window.AoqatFastingPostsCalendar.topic(id)).filter(Boolean)){
         const input=document.createElement('input');input.type='checkbox';input.dataset.postTopic=item.id;
         input.onchange=()=>{const s=read()[kind];s.topics=[...days.querySelectorAll('input:checked')].map(x=>x.dataset.postTopic);save(kind,s);draw();};days.append(label(item.title,input));
       }
-      const note=document.createElement('p');note.textContent='حسب التقويم الهجري (أم القرى) بالتطبيق؛ تُراعى رؤية الهلال المحلية. صيام داود يُنشر يدوياً حسب خطتك، ولا يُجدول تلقائياً.';days.append(note);
+      const note=document.createElement('p');note.textContent='كل مناسبة لها بوست مستقل في موعدها، بحسب التاريخ الهجري المعتمد في التطبيق.';days.append(note);
     }
     const permissionButton=button('السماح بإشعارات الهاتف');permissionButton.onclick=permission;
     body.append(label('طريقة تحديد موعد النشر',mode),delayLabel,timeLabel);if(kind==='fasting')body.append(days);body.append(status,permissionButton);
@@ -36,7 +36,7 @@
     const note=document.createElement('p');note.textContent='النشر يتم باختيارك عبر تطبيقات الهاتف، وليس تلقائياً. تنبيه النشر منفصل عن تذكيرات العبادة، ويعمل أثناء فتح الموقع؛ إغلاقه يوقف التنبيه المحلي.';
     box.append(title,open,label('تصميم البوست',design),toggle,body,note);host.append(box);
     function draw(){
-      const s=read()[kind];toggle.textContent='🔔 تنبيه نشر البوست: '+(s.enabled?'تشغيل':'إيقاف');toggle.setAttribute('aria-pressed',String(s.enabled));toggle.setAttribute('aria-expanded',String(s.enabled));body.hidden=!s.enabled;
+      const s=read()[kind];if(kind==='fasting'){const available=window.AoqatFastingPostsCalendar.candidates(new Date()).filter(x=>s.topics.includes(x.id));open.disabled=!available.length;open.textContent=available.length?'↗ نشر بوست صيام التطوع':'لا يوجد بوست صيام مجدول للنشر اليوم';}toggle.textContent='🔔 تنبيه نشر البوست: '+(s.enabled?'تشغيل':'إيقاف');toggle.setAttribute('aria-pressed',String(s.enabled));toggle.setAttribute('aria-expanded',String(s.enabled));body.hidden=!s.enabled;
       mode.value=s.mode;delay.value=s.delay;time.value=s.time;delayLabel.hidden=s.mode!=='after';timeLabel.hidden=s.mode!=='clock';design.value=s.design;
       days.querySelectorAll('input').forEach(i=>i.checked=s.topics.includes(i.dataset.postTopic));
       const now=new Date(),at=C.schedule(now,s,row(now));
@@ -50,16 +50,25 @@
     delay.onchange=()=>{const n=Number(delay.value);if(!Number.isInteger(n)||n<1||n>120){delay.setCustomValidity('اختر من 1 إلى 120 دقيقة.');delay.reportValidity();return;}delay.setCustomValidity('');const s=read()[kind];s.delay=n;save(kind,s);draw();};
     time.onchange=()=>{if(!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time.value))return;const s=read()[kind];s.time=time.value;save(kind,s);draw();};
     design.onchange=()=>{const s=read()[kind];s.design=design.value;save(kind,s);draw();};
-    draw();
+    box.aoqatRefresh=draw;draw();
   }
   function createShareView(kind,initialTopic='',initialDate=''){
     const panel=document.createElement('section');panel.id='communityPostView';panel.className='community-post-share';panel.dir='rtl';
     const preview=document.createElement('img');preview.id='communityPostPreview';preview.alt=kind==='friday'?'بوست سنن يوم الجمعة وآدابها':'بوست صيام التطوع';preview.hidden=true;
     const design=designSelect(read()[kind].design);design.id='communityPostDesign';
     const topic=document.createElement('select');topic.id='communityPostTopic';
-    topic.append(new Option('تلقائي حسب صيام الغد، أو بوست تعريفي عام','auto'),new Option('بوست تعريفي عام','general'));
-    if(kind==='fasting')for(const item of window.AoqatMuslimBag.topics)topic.append(new Option(item.title,item.id));
-    topic.value=initialTopic||'auto';
+    let choices=[];
+    function options(){
+      const keep=topic.value;choices=kind==='fasting'?window.AoqatFastingPostsCalendar.candidates(new Date()).filter(x=>read().fasting.topics.includes(x.id)):[];
+      const today=window.AoqatHijriCore.key(new Date());
+      if(initialTopic&&initialDate>=today&&window.AoqatFastingPostsCalendar.topic(initialTopic)&&!choices.some(x=>x.id===initialTopic)){
+        const remaining=Date.parse(initialDate+'T12:00:00+03:00')-Date.parse(today+'T12:00:00+03:00');
+        if(remaining>=0&&remaining<=2*86400000)choices.push({id:initialTopic,topicId:initialTopic,title:window.AoqatFastingPostsCalendar.topic(initialTopic).title,targetDate:initialDate});
+      }
+      topic.replaceChildren();for(const item of choices)topic.append(new Option(item.title,item.id));
+      topic.value=choices.some(x=>x.id===keep)?keep:choices.some(x=>x.id===initialTopic)?initialTopic:choices[0]?.id||'';
+    }
+    options();
     const share=button('↗ مشاركة عبر تطبيقات الهاتف'),download=button('📥 حفظ على الجهاز'),retry=button('إعادة المحاولة');
     share.id='communityPostShare';download.id='communityPostSave';retry.id='communityPostRetry';share.disabled=true;download.disabled=true;retry.hidden=true;
     const status=document.createElement('p');status.id='communityPostStatus';status.setAttribute('role','status');status.textContent='جاري تجهيز البوست…';
@@ -69,13 +78,11 @@
     async function prepare(){
       const version=++serial;share.disabled=true;download.disabled=true;retry.hidden=true;status.textContent='جاري تجهيز البوست…';
       try{
-        let id=topic.value,date=initialDate;
+        options();let id=topic.value,date='';
         if(kind==='fasting'){
-          if(id==='auto'){
-            const target=window.AoqatFastingRemindersCore.target(new Date()),reasons=window.AoqatFastingRemindersCore.reasons(target).filter(x=>read().fasting.topics.includes(x.id));
-            id=reasons[0]?.id||'';date=id?target.key:'';
-          }else if(id==='general'){id='';date='';}
-          else if(!initialTopic||id!==initialTopic)date='';
+          const item=choices.find(x=>x.id===id);
+          if(!item){if(url)URL.revokeObjectURL(url);url=null;file=null;preview.removeAttribute('src');preview.hidden=true;status.textContent='لا يوجد بوست صيام متاح في هذا الموعد.';return;}
+          date=item.targetDate;
         }
         const rendered=await window.AoqatPostRenderer.render(kind,id,new Date(),design.value,date);
         const blob=await new Promise(resolve=>rendered.canvas.toBlob(resolve,'image/jpeg',.96));
@@ -96,7 +103,7 @@
       finally{sharing=false;if(!disposed)share.disabled=false;}
     };
     download.onclick=()=>{if(!file||!url)return;const a=document.createElement('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();status.textContent='تم طلب حفظ البوست على الجهاز.';};
-    retry.onclick=prepare;Promise.resolve().then(prepare);return panel;
+    retry.onclick=prepare;panel.aoqatRefresh=prepare;Promise.resolve().then(prepare);return panel;
   }
   async function notify(event){
     const entry=window.AoqatReminderInbox?.add(event);if(!entry)return;
@@ -122,5 +129,9 @@
   const style=document.createElement('style');style.textContent=
     '.community-post-controls{direction:rtl;margin-top:20px;padding:14px;border:1px solid var(--wt-border,#d9c8a8);border-radius:12px;line-height:1.8}.community-post-controls h4{margin:0 0 12px}.community-post-controls button{width:100%;margin:8px 0}.community-post-controls label,.community-post-share label{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:14px 0}.community-post-controls select,.community-post-share select{max-width:100%;width:100%}.community-post-controls input[type="number"],.community-post-controls input[type="time"]{width:140px}.community-post-controls p{font-size:14px!important}.community-post-controls [hidden]{display:none!important}.post-topic-options input{width:22px!important;height:22px!important}.post-topic-options label{flex-wrap:nowrap}.post-topic-options{border:1px solid var(--wt-border,#ddd);border-radius:10px;padding:10px}.community-post-share{line-height:1.8}.community-post-share>button{width:100%;margin:8px 0}.community-post-share img{display:block;max-width:100%;width:360px;height:auto;margin:12px auto;border-radius:12px}.community-post-share img[hidden]{display:none}body.design-menu-open #settingsContentDialog #webDrawerSub #webSubBody .community-post-controls [data-post-reminder]{background:#7f9191!important;background-image:none!important;color:#fff!important}body.design-menu-open #settingsContentDialog #webDrawerSub #webSubBody .community-post-controls [data-post-reminder][aria-pressed="true"]{background:#12854c!important;background-image:none!important}#communityPostBanner{position:fixed;inset:auto 12px 20px;z-index:2147483000;padding:16px;border:1px solid #ccb15a;border-radius:12px;background:#fffaf0;color:#182c34}#communityPostBanner button{margin:8px;padding:10px}';
   document.head.append(style);window.AoqatCommunityPosts={read,mount,createShareView,tick};
-  setInterval(()=>tick(),1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick();});
+  let dayKey=window.AoqatHijriCore.key(new Date());
+  function refresh(){document.querySelectorAll('[data-post-controls],#communityPostView').forEach(x=>x.aoqatRefresh?.());}
+  window.addEventListener('aoqatHijriUpdated',refresh);
+  setInterval(()=>{tick();const next=window.AoqatHijriCore.key(new Date());if(next!==dayKey){dayKey=next;refresh();}},1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){tick();refresh();}});
 })();

@@ -37,12 +37,7 @@
   function hijriFor(dateParts){
     try{
       const d=new Date(dateParts.year,dateParts.month-1,dateParts.day,12,0,0);
-      const parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{
-        year:"numeric",month:"numeric",day:"numeric"
-      }).formatToParts(d);
-      const out={};
-      parts.forEach(p=>{if(p.type!=="literal"&&p.type!=="era") out[p.type]=Number(p.value)});
-      return {day:out.day,month:out.month,year:out.year};
+      return window.AoqatHijriCalendar?.parts(d)||window.AoqatHijriCore.parts(d);
     }catch(error){return null;}
   }
 
@@ -334,4 +329,5 @@
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",initInlinePanels,{once:true});
   else initInlinePanels();
 })();
+
 
