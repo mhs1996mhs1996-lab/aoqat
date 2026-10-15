@@ -141,6 +141,7 @@
     const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
     if(!body||!home)return;
     body.querySelector("#prayerShareView")?.aoqatDispose?.();
+    body.querySelector("#communityPostView")?.aoqatDispose?.();
     [...(webOnly?body.querySelectorAll(":scope > .panel,:scope > .font-panel,:scope > .inline-control-panel,#webSettingsTemp > #switchPanel"):body.children)].forEach(el=>{if(el.matches(".panel,.font-panel,.inline-control-panel")&&el.id!=="webSettingsTemp"){el.classList.remove("inline-open","active-panel");home.appendChild(el);}});
   }
   function mainView(){
@@ -199,6 +200,11 @@
     }
   }
   window.aoqatOpenMuslimBagSection=openMuslimBagSection;
+  window.aoqatOpenCommunityPost=function(kind,topicId,targetDate){
+    if(!webOnly||!['friday','fasting'].includes(kind)||!window.AoqatCommunityPosts)return;
+    bagSection='';window.aoqatCloseAzkarCategory?.();document.body.classList.add('design-menu-open');
+    openSub(kind==='friday'?'بوست سنن الجمعة':'بوست صيام التطوع',window.AoqatCommunityPosts.createShareView(kind,topicId,targetDate),'post:'+kind);
+  };
   function inboxView(id){
     if(!webOnly||!window.AoqatReminderInbox)return;
     bagSection='';window.aoqatCloseAzkarCategory?.();document.body.classList.add('design-menu-open');
@@ -225,7 +231,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(["quran","qibla","azkar"].includes(id)){

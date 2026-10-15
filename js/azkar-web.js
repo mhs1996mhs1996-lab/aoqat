@@ -49,7 +49,8 @@
    list.querySelectorAll('[data-dhikr]').forEach(c=>c.onclick=()=>{const n=c.dataset.free==='true'?Number(c.dataset.remaining)+1:Math.max(0,Number(c.dataset.remaining)-1);remaining[kind+':'+c.dataset.dhikr]=n;c.dataset.remaining=String(n);c.textContent=c.dataset.free==='true'?'عدد التكرار: '+n:n?'العدد المتبقي: '+n:'✓ اكتمل';c.disabled=c.dataset.free!=='true'&&n===0;if(c.disabled&&autoAdvance)move((positions[kind]||0)+1);else move(positions[kind]||0);});
    list.querySelectorAll('[data-dhikr-reset]').forEach(c=>c.onclick=()=>{const i=Number(c.dataset.dhikrReset),x=data[kind][i],n=x.count??0,button=list.querySelector('[data-dhikr="'+i+'"]');remaining[kind+':'+i]=n;button.dataset.remaining=String(n);button.disabled=false;button.textContent=x.count==null?'عدد التكرار: '+n:'العدد المتبقي: '+n;move(positions[kind]||0);});
    el.querySelector('#fridayReminderHost')?.remove();
-   if(kind==='friday')window.AoqatFridayReminders?.mount(page);
+   el.querySelector('#communityPostControls-friday')?.remove();
+   if(kind==='friday'){window.AoqatFridayReminders?.mount(page);window.AoqatCommunityPosts?.mount('friday',page);}
    move(positions[kind]||0);
    document.getElementById('webSubBody')?.scrollTo(0,0);el.querySelector('#adAzkarBack').focus({preventScroll:true});
   }

@@ -1,12 +1,16 @@
-const CACHE_NAME = "aoqat-pwa-v68-migrate-kahf-nine";
+const CACHE_NAME = "aoqat-pwa-v69-community-posts";
 const APP_SHELL = [
+  "/js/community-posts-core.js",
+  "/js/community-posts-renderer.js",
+  "/js/community-posts.js",
+  "/assets/fonts/amiri-quran.ttf",
   "/js/fasting-reminders-core.js",
   "/js/fasting-reminders.js",
   "/js/reminder-inbox.js",
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=1",
-  "/js/azkar-web.js?v=4",
+  "/js/azkar-web.js?v=5",
   "/js/friday-sunnah-data.js",
   "/js/friday-reminders-core.js",
   "/js/friday-reminders.js",
@@ -58,7 +62,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=16",
   "/js/compact-design-menu.js?v=12",
   "/js/web-theme-settings.js?v=4",
-  "/js/web-menu-order.js?v=29",
+  "/js/web-menu-order.js?v=30",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
@@ -146,7 +150,7 @@ self.addEventListener("notificationclick", event => {
   const data = notification?.data || {};
   notification?.close();
 
-  if (data.kind === "friday-reminder" || data.kind === "fasting-reminder") {
+  if (data.kind === "friday-reminder" || data.kind === "fasting-reminder" || data.kind === "community-post-reminder") {
     event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
       const client=clients.find(item=>"focus" in item);
       if(client?.focus){client.postMessage({type:"AOQAT_OPEN_REMINDER",id:data.id,entry:data.entry});return client.focus();}

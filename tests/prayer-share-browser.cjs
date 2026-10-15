@@ -1,6 +1,7 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
 (async()=>{const server=spawn('python3',['-m','http.server','8796'],{stdio:'ignore'});let browser;
 try{
+ await require('./community-posts-browser.cjs')();
  await new Promise(r=>setTimeout(r,600));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
  const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.addInitScript(()=>{window.shareFiles=[];window.shareMode='ok';Object.defineProperty(navigator,'canShare',{value:({files})=>files?.[0]?.type==='image/jpeg',configurable:true});Object.defineProperty(navigator,'share',{value:async({files})=>{window.shareFiles.push(files[0]);if(window.shareMode==='cancel')throw new DOMException('cancelled','AbortError');},configurable:true});});
