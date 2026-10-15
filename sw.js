@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v71-fasting-occasions";
+const CACHE_NAME = "aoqat-pwa-v72-weekly-post-layouts";
 const APP_SHELL = [
   "/js/fasting-posts-calendar.js",
   "/js/community-posts-core.js",
@@ -184,5 +184,6 @@ self.addEventListener("notificationclick", event => {
     })
   );
 });
+
 
 

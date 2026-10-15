@@ -23,12 +23,15 @@ module.exports=async()=>{
   const p=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'}),errors=[];
   await p.clock.install({time:new Date('2026-10-18T10:00:00+03:00')});
   p.on('pageerror',e=>errors.push(e.message));
-  await p.addInitScript(()=>{window.postShares=[];window.postShareMode='ok';window.postNotices=[];window.Notification=class{static permission='granted';constructor(title,options){postNotices.push({title,options});}};
+  await p.addInitScript(()=>{if(!localStorage.getItem('aoqatCommunityPostsV1'))localStorage.setItem('aoqatCommunityPostsV1',JSON.stringify({friday:{design:'3',enabled:false},fasting:{design:'5',enabled:false}}));window.postShares=[];window.postShareMode='ok';window.postNotices=[];window.Notification=class{static permission='granted';constructor(title,options){postNotices.push({title,options});}};
    Object.defineProperty(navigator,'canShare',{configurable:true,value:({files})=>files?.[0]?.type==='image/jpeg'});
    Object.defineProperty(navigator,'share',{configurable:true,value:async({files})=>{postShares.push(files[0]);if(postShareMode==='cancel')throw new DOMException('cancelled','AbortError');}});
   });
   await p.route('**/rest/**',r=>r.abort());await p.goto('http://127.0.0.1:8794',{waitUntil:'domcontentloaded'});
   await p.waitForFunction(()=>window.aoqatUIReady&&window.AoqatCommunityPosts);
+  assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().friday.color),'3');
+  assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().fasting.color),'5');
+  assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().friday.design),'weekly');
   const before=await p.evaluate(()=>({friday:localStorage.aoqatFridayRemindersV1,fasting:localStorage.aoqatFastingRemindersV1,adhan:localStorage.aoqatAdhanV1}));
   await p.locator('#designSideMenuBtn').click();await p.locator('[data-drawer="muslimBag"]').click();await p.locator('[data-bag-section="friday"]').click();
   assert.equal(await p.locator('#adAzkarPage').evaluate(e=>e.lastElementChild.id),'communityPostControls-friday');
@@ -43,14 +46,30 @@ module.exports=async()=>{
   assert.equal(await p.evaluate(()=>postShares.length===2&&postShares[0]===postShares[1]&&postShares[0].size>30000),true);
   await p.evaluate(()=>window.postShareMode='cancel');await p.locator('#communityPostShare').click();assert.equal(await p.locator('#communityPostView').isVisible(),true);
   const download=p.waitForEvent('download');await p.locator('#communityPostSave').click();assert.match((await download).suggestedFilename(),/^aoqat-friday-.*\.jpg$/);
-  // Save actual canvas images for visual review; all six weekly variants and fasting.
-  for(let i=0;i<6;i++){
-   const data=await p.evaluate(async i=>(await AoqatPostRenderer.render('friday','',new Date('2026-10-15T17:00:00+03:00'),String(i))).canvas.toDataURL('image/png'),i);
-   fs.writeFileSync('/tmp/aoqat-adhan-post-friday-'+i+'.png',Buffer.from(data.split(',')[1],'base64'));
+  // Weekly changes rearrange elements, keeping each section's selected palette.
+  const layouts=await p.evaluate(async()=>{
+   const colors=[],images=[],signatures=[];
+   for(const kind of ['friday','fasting'])for(let i=0;i<6;i++){
+    const r=await AoqatPostRenderer.render(kind,kind==='fasting'?'white-days':'',new Date(),'weekly',kind==='fasting'?'2026-10-19':'',kind==='friday'?'3':'5');
+    const date=new Date('2026-10-15T17:00:00+03:00');date.setDate(date.getDate()+i*7);
+    const weekly=await AoqatPostRenderer.render(kind,kind==='fasting'?'white-days':'',date,'weekly','2026-10-19',kind==='friday'?'3':'5');
+    colors.push([kind,weekly.color,Array.from(weekly.canvas.getContext('2d').getImageData(0,0,1,1).data)]);
+    const fixed=await AoqatPostRenderer.render(kind,kind==='fasting'?'white-days':'',date,String(i),'2026-10-19',kind==='friday'?'3':'5');
+    images.push({name:kind+'-'+i,data:fixed.canvas.toDataURL('image/png')});signatures.push([kind,fixed.canvas.toDataURL()]);
+   }
+   return {colors,images,signatures};
+  });
+  for(const kind of ['friday','fasting']){const rows=layouts.colors.filter(x=>x[0]===kind);assert.ok(rows.every(x=>x[1]===(kind==='friday'?'3':'5')));assert.ok(rows.every(x=>JSON.stringify(x[2])===JSON.stringify(rows[0][2])));assert.equal(new Set(layouts.signatures.filter(x=>x[0]===kind).map(x=>x[1])).size,6);}
+  for(const image of layouts.images)fs.writeFileSync('/tmp/aoqat-adhan-post-'+image.name+'.png',Buffer.from(image.data.split(',')[1],'base64'));
+  for(const id of AoqatPostIds())for(let i=0;i<6;i++){
+    const check=await p.evaluate(async({id,i})=>{
+      const proto=CanvasRenderingContext2D.prototype,original=proto.fillText,draw=[];
+      proto.fillText=function(value,x,y,...rest){draw.push({value:String(value),x,y,width:this.measureText(value).width,align:this.textAlign});return original.call(this,value,x,y,...rest);};
+      try{await AoqatPostRenderer.render('fasting',id,new Date(),String(i),'2026-10-19','5');return draw;}finally{proto.fillText=original;}
+    },{id,i});
+    assert.ok(check.every(x=>x.y>=24&&x.y<=1325),'Text stays within poster: '+id+'/'+i);
+    assert.ok(check.every(x=>x.align==='center'?x.x-x.width/2>=24&&x.x+x.width/2<=1056:x.x-x.width>=24&&x.x<=1056),'Text width fits: '+id+'/'+i);
   }
-  for(const id of AoqatPostIds()){const data=await p.evaluate(async id=>(await AoqatPostRenderer.render('fasting',id,new Date(),'0','2026-10-19')).canvas.toDataURL('image/png'),id);fs.writeFileSync('/tmp/aoqat-adhan-post-'+id+'.png',Buffer.from(data.split(',')[1],'base64'));}
-  const fastingImage=await p.evaluate(async()=>(await AoqatPostRenderer.render('fasting','white-days',new Date(),'0')).canvas.toDataURL('image/png'));
-  fs.writeFileSync('/tmp/aoqat-adhan-post-fasting.png',Buffer.from(fastingImage.split(',')[1],'base64'));
   await p.locator('.web-back').click();assert.equal(await p.locator('[data-post-reminder="friday"]').getAttribute('aria-pressed'),'true');
   await p.locator('.web-back').click();await p.locator('[data-bag-section="fasting"]').click();
   assert.equal(await p.locator('#muslimBagFasting').evaluate(e=>e.lastElementChild.id),'communityPostControls-fasting');
@@ -68,6 +87,8 @@ module.exports=async()=>{
   assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().fasting.time),'18:05');
   assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().fasting.topics.includes('arafah')),false);
   assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().fasting.design),'2');
+  assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().friday.color),'3');
+  assert.equal(await p.evaluate(()=>AoqatCommunityPosts.read().fasting.color),'5');
   assert.deepEqual(await p.evaluate(()=>({friday:localStorage.aoqatFridayRemindersV1,fasting:localStorage.aoqatFastingRemindersV1,adhan:localStorage.aoqatAdhanV1})),before);
   // Due reminder, deduplication and inbox-to-post route.
   const result=await p.evaluate(()=>{const now=new Date('2026-10-15T16:00:00+03:00'),d=AoqatFridayRemindersCore.dateParts(now),r=cachedAnnualPrayer(d.month,d.day);
@@ -86,4 +107,5 @@ module.exports=async()=>{
   assert.deepEqual(errors,[]);console.log('Community posts: weekly designs, 1080x1350 JPEG, repeated/cancelled shares, saving, independent opt-in schedules, topic selection, inbox routing and offline assets passed');
  }finally{await browser?.close();server.kill();}
 };
+
 

@@ -1,6 +1,6 @@
 (function(root){'use strict';
   const topicIds=['monday','thursday','white-days','tasua','ashura','shawwal','dhul-hijjah','arafah'];
-  const defaults=()=>({enabled:false,mode:'after',delay:20,time:'18:00',design:'weekly',topics:[...topicIds],topicSchema:2});
+  const defaults=()=>({enabled:false,mode:'after',delay:20,time:'18:00',design:'weekly',topics:[...topicIds],topicSchema:2,color:'0',layoutSchema:1});
   function normalize(raw={}){
     const s=defaults();s.enabled=raw?.enabled===true;
     if(raw?.mode==='clock')s.mode='clock';
@@ -8,6 +8,7 @@
     if(/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(raw?.time))s.time=raw.time;
     if(['weekly','0','1','2','3','4','5'].includes(String(raw?.design)))s.design=String(raw.design);
     if(Array.isArray(raw?.topics))s.topics=root.AoqatFastingPostsCalendar.selectedTopics(raw.topics,raw.topicSchema===2);
+    if(/^[0-5]$/.test(String(raw?.color)))s.color=String(raw.color);
     return s;
   }
   function themeIndex(date,design='weekly'){
@@ -39,3 +40,4 @@
   const api={topicIds,defaults,normalize,themeIndex,schedule,events};root.AoqatCommunityPostsCore=api;
   if(typeof module!=='undefined')module.exports=api;
 })(typeof window==='undefined'?globalThis:window);
+
