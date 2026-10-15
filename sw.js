@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v69-community-posts";
+const CACHE_NAME = "aoqat-pwa-v70-friday-order";
 const APP_SHELL = [
   "/js/community-posts-core.js",
   "/js/community-posts-renderer.js",
