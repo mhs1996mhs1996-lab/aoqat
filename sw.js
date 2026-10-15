@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v72-weekly-post-layouts";
+const CACHE_NAME = "aoqat-pwa-v73-design-share-apk";
 const APP_SHELL = [
   "/js/fasting-posts-calendar.js",
   "/js/community-posts-core.js",
