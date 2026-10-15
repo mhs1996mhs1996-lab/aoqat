@@ -177,6 +177,7 @@ html=(target/'index.html').read_text()
 static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
 dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())
 paths=['js/startup-stabilizer.js','js/design-side-menu.js']+[src.split('?')[0] for src in static if not src.startswith('data/prayer-times.js')]+[src.split('?')[0] for src in dynamic]
+(target/'js/native-reminders.js').write_text((root/'android-native/apk-overrides/native-reminders.js').read_text())
 paths.append('js/native-reminders.js')
 seen=set();chunks=['const prayerTimes=[];']
 for relative in paths:
