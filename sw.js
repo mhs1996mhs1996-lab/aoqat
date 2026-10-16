@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v74-azkar-reminders";
+const CACHE_NAME = "aoqat-pwa-v75-fixed-web-colors";
 const APP_SHELL = [
   "/js/fasting-posts-calendar.js",
   "/js/community-posts-core.js",

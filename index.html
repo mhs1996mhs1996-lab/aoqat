@@ -5,6 +5,20 @@
 <meta name="color-scheme" content="only light">
 <meta name="supported-color-schemes" content="light">
 <style>html{color-scheme:only light!important}</style>
+<script>
+// Keep system/browser auto-darkening separate from the user's chosen palette.
+// The native app retains its existing rendering settings.
+if (!window.AndroidNative?.configureAdhan) {
+  document.documentElement.setAttribute('data-aoqat-web-colors', 'fixed');
+}
+</script>
+<style>
+html[data-aoqat-web-colors="fixed"],
+html[data-aoqat-web-colors="fixed"] * {
+  color-scheme: light !important;
+  color-scheme: only light !important;
+}
+</style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>برنامج تقاويم الصلاة</title>
 <link rel="stylesheet" href="css/style.css">
