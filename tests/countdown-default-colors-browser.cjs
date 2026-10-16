@@ -1,0 +1,16 @@
+const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
+(async()=>{const server=spawn('python3',['-m','http.server','8816'],{stdio:'ignore'});let browser;
+try{
+ await new Promise(r=>setTimeout(r,1500));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox','--single-process','--no-zygote']});const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.route('**/rest/**',r=>r.abort());
+ await page.goto('http://127.0.0.1:8816',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.aoqatUIReady&&document.getElementById('countdownEditBridgeStyle'));
+ await page.locator('#designSideMenuBtn').click();await page.locator('[data-drawer="settings"]').click();await page.locator('[data-panel="backgroundPanel"]').click();await page.locator('[data-interface-page="elements"]').click();
+ const buttons=page.locator('#webInterfacePage .interface-visibility-btn');assert.equal(await buttons.nth(2).locator('span').textContent(),'باقي على الصلاة');await buttons.nth(2).click();await buttons.nth(3).click();await page.locator('.web-back').click();await page.locator('.web-back').click();await page.locator('.web-back').click();await page.locator('#designSideMenuBtn').click();
+ await page.waitForFunction(()=>['nextPrayerLabel','nextPrayerCountdown','iqamaLabel','iqamaCountdown'].every(id=>getComputedStyle(document.getElementById(id)).color==='rgb(255, 255, 255)'));
+ const colors=()=>page.evaluate(()=>['nextPrayerLabel','nextPrayerCountdown','iqamaLabel','iqamaCountdown'].map(id=>getComputedStyle(document.getElementById(id)).color));const backgrounds=()=>page.evaluate(()=>['.next-prayer','.iqama-status'].map(sel=>getComputedStyle(document.querySelector(sel)).backgroundColor));
+ const original=await backgrounds();assert.ok(original.every(c=>c!=='rgba(0, 0, 0, 0)'));
+ for(const theme of ['cream-gold','dark-night','white-sky']){await page.evaluate(theme=>applyWebTheme(theme),theme);assert.deepEqual(await colors(),Array(4).fill('rgb(255, 255, 255)'));assert.deepEqual(await backgrounds(),original);}
+ await page.evaluate(()=>{if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn').click();});await page.waitForTimeout(300);await page.screenshot({path:'/tmp/aoqat-countdown-default-white.png'});
+ await page.evaluate(()=>{localStorage.setItem('aoqat-live-adhan-style-v1',JSON.stringify({fontColor:'#ffff00'}));localStorage.setItem('aoqat-live-iqama-style-v1',JSON.stringify({fontColor:'#55ff88'}));});
+ await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>getComputedStyle(document.getElementById('iqamaCountdown')).color==='rgb(85, 255, 136)');assert.deepEqual(await colors(),['rgb(255, 255, 0)','rgb(255, 255, 0)','rgb(85, 255, 136)','rgb(85, 255, 136)']);assert.deepEqual(await backgrounds(),original);
+ assert.deepEqual(errors,[]);console.log('Fresh-install countdown text/digits are white on existing backgrounds across themes; visibility label has no ellipsis; saved custom colors survive reload.');
+}finally{await browser?.close();server.kill();}})().catch(e=>{console.error(e);process.exitCode=1;});

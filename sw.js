@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v76-web-startup-colors";
+const CACHE_NAME = "aoqat-pwa-v77-countdown-default-white";
 const APP_SHELL = [
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
@@ -94,8 +94,8 @@ const APP_SHELL = [
   "/js/push-notifications.js?v=9",
   "/js/quran-reader.js",
   "/js/iqama-timing.js?v=1",
-  "/js/prayer-countdown.js?v=16",
-  "/js/compact-design-menu.js?v=12",
+  "/js/prayer-countdown.js?v=17",
+  "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
   "/js/web-menu-order.js?v=30",
   "/css/quran-reader.css",
