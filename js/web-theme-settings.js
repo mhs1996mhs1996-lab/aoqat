@@ -1,6 +1,16 @@
 "use strict";
 (function(){
   const STORAGE_KEY="aoqatWebAppearanceThemeV1";
+  // Also protect a previously cached document when the appearance module updates.
+  if(!window.AndroidNative?.configureAdhan){
+    document.documentElement.setAttribute('data-aoqat-web-colors','fixed');
+    if(!document.getElementById('webFixedColorScheme')){
+      const fixed=document.createElement('style');fixed.id='webFixedColorScheme';
+      fixed.textContent='html[data-aoqat-web-colors="fixed"],html[data-aoqat-web-colors="fixed"] *{color-scheme:light!important;color-scheme:only light!important}';
+      document.head.appendChild(fixed);
+    }
+  }
+
   const themes=[
     {id:"cream-blue",name:"كريمي وأزرق فاتح",icon:"🟦",vars:{bg:"#f5f0e4",surface:"#fffaf0",surface2:"#e8f5fb",text:"#12334a",muted:"#587487",accent:"#35acd0",border:"#b9dbe8",top:"#eaf7fb"}},
     {id:"cream-gold",name:"كريمي وذهبي هادئ",icon:"🟨",vars:{bg:"#f4ead5",surface:"#fffaf0",surface2:"#f8efd9",text:"#4f3b20",muted:"#806c4b",accent:"#b58a35",border:"#dbc28d",top:"#f6eddc"}},

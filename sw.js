@@ -1,5 +1,37 @@
-const CACHE_NAME = "aoqat-pwa-v75-fixed-web-colors";
+const CACHE_NAME = "aoqat-pwa-v76-web-startup-colors";
 const APP_SHELL = [
+  "/js/design-side-menu.js?v=2",
+  "/js/startup-stabilizer.js?v=1",
+  "/js/modal-panels.js?v=4",
+  "/js/design-side-menu.js?v=1",
+  "/js/tomorrow-alarm.js?v=1",
+  "/js/push-notifications.js?v=1",
+  "/js/hide-legacy-design.js?v=1",
+  "/js/second-design.js?v=5",
+  "/js/additional-designs.js?v=6",
+  "/js/design-order.js?v=3",
+  "/js/night-design.js?v=3",
+  "/js/five-new-designs.js?v=6",
+  "/js/reference-date-order-fix.js?v=4",
+  "/js/footer-placement-guard.js?v=1",
+  "/js/manual-edit-toggle.js?v=5",
+  "/js/background-tools-organizer.js?v=2",
+  "/js/footer-background-organizer.js?v=1",
+  "/js/interface-clock.js?v=2",
+  "/js/font-controls-core.js?v=3",
+  "/js/universal-font-controls.js?v=10",
+  "/js/adaptive-design-boxes.js?v=1",
+  "/js/font-design-manager.js?v=2",
+  "/js/design-history.js?v=2",
+  "/js/universal-preview-editor.js?v=2",
+  "/js/export-toolbar.js?v=4",
+  "/js/compact-design-menu.js?v=1",
+  "/js/exact-export.js?v=19",
+  "/js/prayer-countdown.js?v=6",
+  "/js/prayer-countdown-mobile-fix.js?v=2",
+  "/js/prayer-countdown-edit-bridge.js?v=2",
+  "/js/carousel-unified-fix.js?v=9",
+
   "/js/fasting-posts-calendar.js",
   "/js/community-posts-core.js",
   "/js/community-posts-renderer.js",
@@ -64,7 +96,7 @@ const APP_SHELL = [
   "/js/iqama-timing.js?v=1",
   "/js/prayer-countdown.js?v=16",
   "/js/compact-design-menu.js?v=12",
-  "/js/web-theme-settings.js?v=4",
+  "/js/web-theme-settings.js?v=5",
   "/js/web-menu-order.js?v=30",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
@@ -98,6 +130,21 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.pathname === "/rest/v1/annual_prayer_times") return;
+  // Online visits receive the deployed page; offline visits keep the full local shell.
+  if (event.request.mode === "navigate" && url.origin === self.location.origin) {
+    event.respondWith((async()=>{
+      const cache=await caches.open(CACHE_NAME);
+      try {
+        const response=await fetch(event.request);
+        if(response.ok){await cache.put(event.request,response.clone());await cache.put("/index.html",response.clone());return response;}
+        return (await cache.match(event.request)) || (await cache.match("/index.html")) || response;
+      } catch (_) {
+        return (await cache.match(event.request)) || (await cache.match("/index.html")) || Response.error();
+      }
+    })());
+    return;
+  }
+
   if (url.origin === self.location.origin && (APP_SHELL.includes(url.pathname + url.search) || /^\/(js|css|data)\//.test(url.pathname))) {
     event.respondWith(caches.open(CACHE_NAME).then(async cache => {
       const cached = await cache.match(event.request);
