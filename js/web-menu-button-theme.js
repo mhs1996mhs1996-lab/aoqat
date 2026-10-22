@@ -2,12 +2,16 @@
 (function(){
  if(window.AndroidNative?.configureAdhan)return;
  const roots='#settingsContentDialog,#adhanServicesDialog';
- const switches='.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled],[data-time-mode]';
+ const switches='[data-prayer][data-mode],.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled],[data-time-mode]';
  const skip='[data-azkar-toggle],[data-azkar-mode],[data-post-reminder],#frReminderToggle,#fastingReminderToggle,.wt-card,.color-swatch,.palette-color,[data-color],.web-drawer-row,[data-drawer],#aqReader button';
  function blend(hex,t){const n=parseInt(hex.slice(1),16),rgb=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(t>=0?v*(1-t):v+(255-v)*(-t)));return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
  function lum(hex){const n=parseInt(hex.slice(1),16);return [n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);}
  function palette(){const accent=getComputedStyle(document.documentElement).getPropertyValue('--wt-button-accent').trim()||'#137985',a=blend(accent,.40),b=blend(accent,-.15),l=[lum(a),lum(b)];const white=Math.min(...l.map(v=>1.05/(v+.05))),black=Math.min(...l.map(v=>(v+.05)/.05));return {background:document.body.dataset.buttonStyle==='solid'?accent:'linear-gradient(135deg,'+a+','+b+')',color:(document.body.dataset.buttonStyle==='solid'?lum(accent)<.18:white>=black)?'#fff':'#10212a'};}
  function on(button){const pressed=button.getAttribute('aria-pressed');if(pressed==='true'||pressed==='false')return pressed==='true';if(button.hasAttribute('data-enabled'))return button.dataset.enabled==='true';return button.matches('.pa-on,.is-on,.enabled,.on');}
+ // Selection is a state, so it must remain distinct from decorative button palettes.
+ const modeStyle=document.createElement('style');modeStyle.id='webAdhanModeSelectionStyle';
+ modeStyle.textContent=':is(#settingsContentDialog,#adhanServicesDialog) button[data-prayer][data-mode] small{color:inherit!important}:is(#settingsContentDialog,#adhanServicesDialog) button[data-prayer][data-mode][aria-pressed="true"] small::after{content:" ✓";font-weight:900}';
+ document.head.appendChild(modeStyle);
  let queued=false;
  function paint(){queued=false;const p=palette();document.querySelectorAll(roots).forEach(root=>root.querySelectorAll('button').forEach(button=>{
   if(button.matches(skip)||button.closest('#aqReader'))return;
