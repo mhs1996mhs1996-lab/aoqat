@@ -85,7 +85,7 @@ const { spawn } = require("node:child_process");
     );
     assert.ok(
       await page.evaluate(() =>
-        window.testAdhanAudio.src.endsWith("adhan-v124-3-short.mp3"),
+        window.testAdhanAudio.src.endsWith("adhan-quba-suraihi-short.mp3"),
       ),
     );
     await page.locator("#adStop").click();
@@ -109,6 +109,7 @@ const { spawn } = require("node:child_process");
     await page.locator('[data-qr-panel="index"]').click();
     await page.waitForSelector("#adSurah");
     await page.locator("#adSurah").selectOption("114");
+    await page.waitForFunction(() => document.querySelector("#aqReader")?.dataset.page === "604" && document.querySelector("#aqReader")?.dataset.ready === "true");
     assert.ok(
       (await page.locator("#adVerses").textContent()).includes("ٱلنَّاسِ"),
     );
