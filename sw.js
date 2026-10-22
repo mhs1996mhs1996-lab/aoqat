@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v78-adhan-mode-selection";
+const CACHE_NAME = "aoqat-pwa-v79-adhan-global-mode-selection";
 const APP_SHELL = [
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
@@ -42,7 +42,7 @@ const APP_SHELL = [
   "/js/reminder-inbox.js",
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
-  "/js/web-menu-button-theme.js?v=2",
+  "/js/web-menu-button-theme.js?v=3",
   "/js/azkar-web.js?v=6",
   "/js/azkar-reminders-core.js",
   "/js/azkar-reminders.js",
