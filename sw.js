@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v79-adhan-global-mode-selection";
+const CACHE_NAME = "aoqat-pwa-v80-quba-suraihi";
 const APP_SHELL = [
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
@@ -62,13 +62,15 @@ const APP_SHELL = [
   "/css/adhan.css?v=2",
   "/css/adhan-modal.css?v=1",
   "/js/adhan-core.js?v=3",
-  "/js/adhan-settings.js?v=4",
+  "/js/adhan-settings.js?v=5",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
   "/assets/audio/adhan-v124-1.mp3",
   "/assets/audio/adhan-v124-1-short.mp3",
   "/assets/audio/adhan-v124-2.mp3",
   "/assets/audio/adhan-v124-2-short.mp3",
+  "/assets/audio/adhan-quba-suraihi.mp3",
+  "/assets/audio/adhan-quba-suraihi-short.mp3",
   "/assets/audio/adhan-v124-3.mp3",
   "/assets/audio/adhan-v124-3-short.mp3",
   "/assets/audio/adhan-v124-4.mp3",

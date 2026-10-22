@@ -9,3 +9,14 @@ Pinned source commit: b9180a2bb769f74cff8e378ef2cc7aaf8db5cd5b
 - adhan-v124-4.mp3: `Nasser_Al_Qatami_-_HQ_(ناصر_القطامي).mp3`
 
 The Makkah Ali Ahmad Mulla recording is encoded as mono 64 kbps MP3 from its HQ source. The other full recordings retain their original audio bytes. Short recordings contain the opening four takbirs, ending during the following pause (34.6, 38.0, 25.2 and 26.8 seconds respectively). No changes to prayer times, scheduling, volume settings or custom audio storage.
+
+## Web-only replacement for voice 3 — Quba / Abdulmajeed Al-Suraihi
+
+- Source: https://archive.org/details/athan-nasTv
+- Original MP3: https://archive.org/download/athan-nasTv/athan-nasTv.mp3
+- Source metadata title: الأذان بصوت المؤذن عبد المجيد السريحي :: قناة الناس
+- Source description identifies the muezzin as مؤذن مسجد قباء.
+- `adhan-quba-suraihi.mp3`: complete 188-second recording, mono 64 kbps MP3.
+- `adhan-quba-suraihi-short.mp3`: opening four takbirs, ending at the pause at 32 seconds.
+- Full recording checked using Arabic speech transcription: opening takbirs, both shahadas, both hayyalas, closing takbirs and final لا إله إلا الله are present.
+- Web voice ID 3 is retained for saved preferences. Native Android keeps its original label and recordings.

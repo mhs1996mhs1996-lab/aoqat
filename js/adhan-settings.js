@@ -98,6 +98,8 @@
     );
   }
   async function source() {
+    if (!native && state.sound === "3")
+      return `assets/audio/adhan-quba-suraihi${state.partial ? "-short" : ""}.mp3`;
     if (state.sound !== "custom")
       return `assets/audio/adhan-v124-${state.sound}${state.partial ? "-short" : ""}.mp3`;
     if (customURL) return customURL;
@@ -249,7 +251,7 @@
  <section id="adSection-sound" class="ad-section" hidden><div class="ad-card"><h3>صوت الأذان</h3><label>المؤذن<select data-setting="sound">${[
    ["1", "أذان مكة — علي أحمد ملا"],
    ["2", "أذان المدينة — الحرم النبوي"],
-   ["3", "أذان مكة — محمد خليل رمل"],
+   ["3", native ? "أذان مكة — محمد خليل رمل" : "أذان مسجد قباء — عبدالمجيد السريحي"],
    ["4", "ناصر القطامي"],
    ["custom", "صوت من الهاتف"],
  ]
