@@ -134,6 +134,7 @@ jobs:
           node tests/adhan-modal-browser.cjs
           node tests/prayer-alarm-browser.cjs
           node tests/apk-services-browser.cjs
+          node tests/apk-reminders-focus-browser.cjs
           node tests/apk-day-rollover-browser.cjs
           node tests/adhan-browser.cjs
           node tests/adhan-scheduled-browser.cjs
