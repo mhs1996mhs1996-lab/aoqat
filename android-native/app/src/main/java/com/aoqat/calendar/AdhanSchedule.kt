@@ -45,8 +45,12 @@ object AdhanSchedule {
         if (PrayerNotifications.selected(c,id) || FridaySchedule.suppress(c,id,at) || (if(special)!FridaySchedule.enabled(c) else !enabled(c)) || id !in PrayerTimes.ids+listOf("fridayFirst","fridaySecond") || now-at !in 0L until 120000L || (!special && at < prefs(c).getLong("enabledAt",0))) return false
         val key=deliveryKey(id,at)
         if (prefs(c).getLong(key,0)==at) return false
-        return prefs(c).edit().putLong(key,at).commit()
+        val saved=prefs(c).edit().putLong(key,at).commit()
+        if(saved&&!special)alarm(c,60480+PrayerTimes.ids.indexOf(id),"VERIFY_PLAY",now+30000,PrayerTimes.Prayer(id,at,false))
+        return saved
     }
+    fun confirmStarted(c:Context,id:String,at:Long){prefs(c).edit().putLong("started_$id",at).commit()}
+    fun started(c:Context,id:String,at:Long)=prefs(c).getLong("started_$id",0)==at
     @Synchronized fun release(c: Context,id: String,at: Long) {
         if (prefs(c).getLong(deliveryKey(id,at),0)==at) prefs(c).edit().remove(deliveryKey(id,at)).commit()
     }
@@ -78,7 +82,7 @@ object AdhanSchedule {
     }
     fun storeRows(c: Context, value: String) {
         try { val a = JSONArray(value); if (a.length() > 0) c.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit().putString("rows", OfflinePrayerSync.merge(OfflinePrayerSync.rows(c), a).toString()).commit() } catch (_: Exception) { return }
-        schedule(c); IqamaNativeScheduler.scheduleCached(c); PrayerAlarm.schedule(c); PrayerWidget.update(c)
+        schedule(c); IqamaNativeScheduler.scheduleCached(c); PrayerAlarm.schedule(c); PrayerWidget.update(c); CommunityReminders.refresh(c)
     }
     fun alarm(c: Context, id: Int, action: String, at: Long, prayer: PrayerTimes.Prayer? = null) {
         val am = c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -132,6 +136,11 @@ class AdhanReceiver : BroadcastReceiver() {
                     try { androidx.core.content.ContextCompat.startForegroundService(c, Intent(c, AdhanPlaybackService::class.java).putExtras(intent)) }
                     catch (e: Exception) { AdhanDispatch.release(); AdhanSchedule.retry(c,id,at); android.util.Log.e("AdhanReceiver","Unable to start scheduled adhan",e) }
                 }
+            }
+            "VERIFY_PLAY" -> {
+                val id=intent.getStringExtra("prayerId")?:return
+                val at=intent.getLongExtra("prayerAt",0)
+                if(!AdhanSchedule.started(c,id,at)&&!(AdhanPlaybackService.running&&AdhanPlaybackService.activePrayerId==id))AdhanSchedule.retry(c,id,at)
             }
             "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c) && !FridaySchedule.suppress(c,intent.getStringExtra("prayerId")?:"",intent.getLongExtra("prayerAt",0))) {
                 val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

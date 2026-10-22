@@ -524,6 +524,7 @@ class MainActivity : Activity() {
                 }
 
                 function wireNativeAlarm() {
+                    if(window.aoqatNativePublishAlarm)return;
                     document.querySelectorAll('button').forEach(function (button) {
                         var text = (button.innerText || '').trim();
                         if (text.indexOf('تنبيه النشر على الهاتف') === -1) return;
@@ -639,6 +640,7 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configureCommunityReminders(json:String){CommunityReminders.configure(this@MainActivity,json)}
         @JavascriptInterface fun readCommunityReminderInbox():String = CommunityReminders.inbox(this@MainActivity).toString()
         @JavascriptInterface fun consumeCommunityReminderId():String {val id=intent.getStringExtra("communityReminderId")?:"";intent.removeExtra("communityReminderId");return id}
+        @JavascriptInterface fun previewAzkarReminder(kind:String){if(kind !in AzkarReminderPlan.titles)return;CommunityReminders.preview(this@MainActivity,kind)}
         @JavascriptInterface fun communityReminderPermissions(){runOnUiThread{requestPrayerNoticeAccess(force=true)}}
         @JavascriptInterface fun startupReady() { runOnUiThread { dismissStartupWhenPainted() } }
 
@@ -722,18 +724,23 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configurePrayerTimeChoice(json:String):String = PrayerTimeChoice.configure(this@MainActivity,json)
         @JavascriptInterface fun cachePrayerRows(json:String){AdhanSchedule.storeRows(this@MainActivity,json)}
         @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}
-        @JavascriptInterface fun stopAdhan(){stopService(Intent(this@MainActivity,AdhanPlaybackService::class.java))}
+        @JavascriptInterface fun stopAdhan(){AdhanPlaybackService.stop(this@MainActivity)}
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
         @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
         @JavascriptInterface fun adhanPermissions(){runOnUiThread{requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(!nm.isNotificationPolicyAccessGranted)startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))else if(Build.VERSION.SDK_INT>=34&&!nm.canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))else Toast.makeText(this@MainActivity,"أذونات الأذان وشاشة القفل متاحة",Toast.LENGTH_LONG).show()}}
+
+        @JavascriptInterface fun stopPublishAlarm(){AlarmSoundService.stop(this@MainActivity)}
+        @JavascriptInterface fun readPublishAlarmEnabled(legacy:Boolean):Boolean=AlarmScheduler.migrate(this@MainActivity,legacy)
 
         @JavascriptInterface
         fun enableAlarm() {
             runOnUiThread {
                 requestNotificationPermissionIfNeeded()
                 openExactAlarmSettingsIfNeeded()
-                AlarmScheduler.scheduleFromDatabase(this@MainActivity)
+                AlarmScheduler.setEnabled(this@MainActivity,true)
+                requestIqamaBackgroundAccessIfNeeded(forAdhan=true)
+                if(Build.VERSION.SDK_INT>=34&&!(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))
                 Toast.makeText(
                     this@MainActivity,
                     "تم تفعيل منبّه Android الأصلي وسيُجدول حسب وقت العشاء + 35 دقيقة",
@@ -746,7 +753,7 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun disableAlarm() {
             runOnUiThread {
-                AlarmScheduler.cancel(this@MainActivity)
+                AlarmScheduler.setEnabled(this@MainActivity,false)
                 Toast.makeText(this@MainActivity, "تم إيقاف منبّه النشر على الهاتف", Toast.LENGTH_SHORT).show()
             }
         }

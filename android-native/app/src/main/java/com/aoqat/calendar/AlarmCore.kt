@@ -34,7 +34,17 @@ object AlarmScheduler {
     private const val API_KEY = "sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1"
     private const val LOCATION = "الحويجة وضواحيها"
 
-    fun scheduleFromDatabase(context: Context) {
+    private fun prefs(c:Context)=c.getSharedPreferences("publish_alarm_settings",Context.MODE_PRIVATE)
+    fun enabled(c:Context)=prefs(c).getBoolean("enabled",false)
+    @Synchronized fun migrate(c:Context,legacy:Boolean):Boolean{if(!prefs(c).contains("enabled")){prefs(c).edit().putBoolean("enabled",legacy).commit();if(legacy)scheduleFromDatabase(c)};return enabled(c)}
+    @Synchronized fun setEnabled(c:Context,on:Boolean){prefs(c).edit().putBoolean("enabled",on).commit();if(on)scheduleFromDatabase(c)else cancel(c)}
+    @Synchronized fun claim(c:Context,at:Long):Boolean {
+        if(!enabled(c)||at<=0||System.currentTimeMillis()-at !in 0 until 120000L||prefs(c).getLong("delivered",0)==at)return false
+        return prefs(c).edit().putLong("delivered",at).commit()
+    }
+
+    @Synchronized fun scheduleFromDatabase(context: Context) {
+        if(!enabled(context)){cancel(context);return}
         Thread {
             try {
                 var date = LocalDate.now()
@@ -48,7 +58,7 @@ object AlarmScheduler {
         }.start()
     }
 
-    fun cancel(context: Context) {
+    @Synchronized fun cancel(context: Context) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, AlarmReceiver::class.java)
         val pending = PendingIntent.getBroadcast(context, REQUEST_CODE, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
@@ -78,12 +88,14 @@ object AlarmScheduler {
         scheduleExactMillis(context, target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
 
-    private fun scheduleExactMillis(context: Context, millis: Long) {
+    @Synchronized private fun scheduleExactMillis(context: Context, millis: Long) {
+        if(!enabled(context))return
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java)
+        val intent = Intent(context, AlarmReceiver::class.java).putExtra("at",millis)
         val pending = PendingIntent.getBroadcast(context, REQUEST_CODE, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarmManager.canScheduleExactAlarms()) return
-        alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pending)
+        val show=PendingIntent.getActivity(context,REQUEST_CODE,Intent(context,MainActivity::class.java),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(millis,show),pending)
     }
 }
 
@@ -107,6 +119,7 @@ object IqamaNativeScheduler {
         prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString())
             .putString("afterMinutes", after.toString()).commit()
         AdhanSchedule.schedule(context)
+        CommunityReminders.refresh(context)
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(context)
         PrayerAlarm.schedule(context)
         if (!enabled) {
@@ -205,6 +218,7 @@ object IqamaNativeScheduler {
 
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
+        if(!AlarmScheduler.claim(context,intent?.getLongExtra("at",0)?:0))return
         AlarmSoundService.start(context)
         AlarmUi.showFullScreenNotification(context)
         try {
@@ -235,7 +249,7 @@ class BootReceiver : BroadcastReceiver() {
 }
 
 object AlarmUi {
-    const val CHANNEL_ID = "prayer_publish_alarm_v2"
+    const val CHANNEL_ID = "prayer_publish_alarm_screen_v3"
     const val NOTIFICATION_ID = 45101
 
     fun ensureChannel(context: Context) {
@@ -248,9 +262,8 @@ object AlarmUi {
             .build()
         val channel = NotificationChannel(CHANNEL_ID, "تنبيه نشر مواقيت الصلاة", NotificationManager.IMPORTANCE_HIGH).apply {
             description = "منبه نشر مواقيت اليوم التالي"
-            enableVibration(true)
-            vibrationPattern = longArrayOf(0, 800, 300, 800, 300, 1200)
-            setSound(sound, attrs)
+            enableVibration(false)
+            setSound(null, null)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannel(channel)
@@ -279,6 +292,8 @@ object AlarmUi {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setAutoCancel(false)
+            .setOnlyAlertOnce(true)
+            .setDeleteIntent(stopPending)
             .setContentIntent(fullPending)
             .setFullScreenIntent(fullPending, true)
             .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة 10 دقائق", snoozePending)
@@ -319,8 +334,9 @@ class AlarmSoundService : Service() {
     private val stopHandler = Handler(Looper.getMainLooper())
     private val safetyStop = Runnable { stopSelf() }
 
-    override fun onCreate() {
-        super.onCreate()
+    override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
+        if(!AlarmScheduler.enabled(this)||intent?.action=="STOP"){stopSelf();return START_NOT_STICKY}
+        if(player!=null)return START_NOT_STICKY
         AlarmUi.ensureChannel(this)
         startForeground(AlarmUi.NOTIFICATION_ID, AlarmUi.buildAlarmNotification(this))
 
@@ -354,6 +370,7 @@ class AlarmSoundService : Service() {
 
         // حماية احتياطية حتى لا يبقى الصوت يعمل بلا نهاية إذا منع النظام ظهور الواجهة.
         stopHandler.postDelayed(safetyStop, 15 * 60_000L)
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
@@ -365,18 +382,22 @@ class AlarmSoundService : Service() {
         wakeLock = null
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else @Suppress("DEPRECATION") stopForeground(true)
         AlarmUi.dismiss(this)
+        sendBroadcast(Intent(STOPPED).setPackage(packageName))
         super.onDestroy()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        const val STOPPED="com.aoqat.calendar.PUBLISH_ALARM_STOPPED"
         fun start(context: Context) {
+            if(!AlarmScheduler.enabled(context))return
             val i = Intent(context, AlarmSoundService::class.java)
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(i) else context.startService(i)
         }
 
         fun stop(context: Context) {
+            context.sendBroadcast(Intent(STOPPED).setPackage(context.packageName))
             context.stopService(Intent(context, AlarmSoundService::class.java))
             AlarmUi.dismiss(context)
         }
@@ -384,6 +405,7 @@ class AlarmSoundService : Service() {
 }
 
 class AlarmActivity : Activity() {
+    private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 27) {
@@ -391,6 +413,9 @@ class AlarmActivity : Activity() {
             setTurnScreenOn(true)
         }
 
+        if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED))
+        if(!AlarmScheduler.enabled(this)){finish();return}
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -433,6 +458,8 @@ class AlarmActivity : Activity() {
         root.addView(stop, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         setContentView(root)
     }
+    @Deprecated("Deprecated in Java") override fun onBackPressed(){AlarmSoundService.stop(this);super.onBackPressed()}
+    override fun onDestroy(){unregisterReceiver(stopped);super.onDestroy()}
 }
 
 

@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 85 // Offline Muslim bag, native reminders and shared poster previews
-        versionName '1.50'
+        versionCode 86 // Reliable adhan focus, native Azkar reminders and unified compass
+        versionName '1.51'
     }
 
     compileOptions {

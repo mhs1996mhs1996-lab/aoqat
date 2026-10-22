@@ -16,7 +16,23 @@ class QiblaActivity:Activity(),SensorEventListener{
     private var declination=0f
     private var listener:LocationListener?=null
     private fun bearing(lat:Double,lon:Double):Float{val a=Math.toRadians(lat);val b=Math.toRadians(21.4225);val d=Math.toRadians(39.8262-lon);return ((Math.toDegrees(atan2(sin(d)*cos(b),cos(a)*sin(b)-sin(a)*cos(b)*cos(d)))+360)%360).toFloat()}
-    override fun onCreate(b:Bundle?){super.onCreate(b);sensor=getSystemService(SENSOR_SERVICE) as SensorManager;val l=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(24,24,24,24)};l.addView(TextView(this).apply{text="اتجاه القبلة";textSize=26f});arrow=TextView(this).apply{text="↑";textSize=110f;gravity=Gravity.CENTER};l.addView(arrow);info=TextView(this).apply{text="نحتاج الموقع وحساس الاتجاه. أبعد الهاتف عن المعادن.";textSize=17f;gravity=Gravity.CENTER};l.addView(info);l.addView(Button(this).apply{text="تحديد الموقع وتحديث القبلة";setOnClickListener{locate()}});l.addView(Button(this).apply{text="رجوع";setOnClickListener{finish()}});setContentView(l);locate()}
+    override fun onCreate(b:Bundle?){
+        super.onCreate(b)
+        sensor=getSystemService(SENSOR_SERVICE) as SensorManager
+        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutDirection=android.view.View.LAYOUT_DIRECTION_RTL;setPadding(24,24,24,24);setBackgroundColor(android.graphics.Color.rgb(255,250,240))}
+        val header=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
+        header.addView(Button(this).apply{id=android.R.id.button1;text="‹ رجوع";setOnClickListener{finish()}})
+        header.addView(TextView(this).apply{text="اتجاه القبلة";textSize=24f;setTextColor(android.graphics.Color.rgb(27,52,65));gravity=Gravity.CENTER},LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1f))
+        root.addView(header)
+        val content=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
+        arrow=TextView(this).apply{text="↑";contentDescription="اتجاه القبلة";textSize=110f;setTextColor(android.graphics.Color.rgb(36,128,82));gravity=Gravity.CENTER}
+        content.addView(arrow)
+        info=TextView(this).apply{text="نحتاج الموقع وحساس الاتجاه. أبعد الهاتف عن المعادن.";textSize=17f;setTextColor(android.graphics.Color.rgb(27,52,65));gravity=Gravity.CENTER}
+        content.addView(info)
+        content.addView(Button(this).apply{text="تحديد الموقع وتحديث القبلة";setOnClickListener{locate()}})
+        root.addView(content,LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,0,1f))
+        setContentView(root);locate()
+    }
     private fun locate(){if(checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)!=PackageManager.PERMISSION_GRANTED){requestPermissions(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),810);return};val m=getSystemService(LOCATION_SERVICE) as LocationManager;val providers=m.getProviders(true);val last=providers.mapNotNull{m.getLastKnownLocation(it)}.maxByOrNull{it.time};last?.let{applyLocation(it)};if(!providers.contains(LocationManager.NETWORK_PROVIDER)){info.text=if(last==null)"فعّل خدمة الموقع ثم أعد المحاولة" else info.text;return};listener?.let{m.removeUpdates(it)};listener=object:LocationListener{override fun onLocationChanged(l:Location){applyLocation(l);m.removeUpdates(this)};override fun onProviderEnabled(p:String){};override fun onProviderDisabled(p:String){};@Deprecated("Deprecated")override fun onStatusChanged(p:String,s:Int,b:Bundle?){}};m.requestLocationUpdates(LocationManager.NETWORK_PROVIDER,0L,0f,listener!!);info.text="جاري تحديد موقعك…"}
     private fun applyLocation(l:Location){bearing=bearing(l.latitude,l.longitude);declination=GeomagneticField(l.latitude.toFloat(),l.longitude.toFloat(),l.altitude.toFloat(),System.currentTimeMillis()).declination;info.text="القبلة ${"%.1f".format(bearing)}° من الشمال؛ أبعد الهاتف عن المعادن"}
     override fun onResume(){super.onResume();val s=sensor.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);if(s==null)info.text="لا يوجد حساس بوصلة. يُعرض اتجاه القبلة بالدرجات بعد تحديد موقعك." else sensor.registerListener(this,s,SensorManager.SENSOR_DELAY_UI)}

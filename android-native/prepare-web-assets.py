@@ -57,6 +57,27 @@ transform('adhan-settings.js',[
  ('    if (!native) {\n      servicePanel = document.createElement("section");','    {\n      servicePanel = document.createElement("section");'),
  ('على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.', 'يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.')])
 
+# Replace the browser alarm entirely: Android owns audio, stopping, snooze and lock-screen UI.
+(target/'js/tomorrow-alarm.js').write_text((root/'android-native/apk-overrides/native-publish-alarm.js').read_text())
+# No browser push subscription or service-worker alarm can compete with the native alarm.
+(target/'js/push-notifications.js').write_text('/* APK uses native publish notifications. */')
+
+# Native compass opens directly from the menu, with one Activity and one back button.
+transform('web-menu-order.js', [
+ ('const id=b.dataset.drawer;', 'const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}')])
+# The native scheduler owns background reminders; the web module supplies its reviewed controls only.
+transform('azkar-reminders.js', [
+ ('  if(window.AndroidNative?.configureAdhan)return;', ''),
+ ('function tick(now=new Date()){', 'function tick(now=new Date()){if(window.AndroidNative?.configureAdhan)return;'),
+ ('function permissionNote(){', "function permissionNote(){if(window.AndroidNative?.configureAdhan)return 'تنبيهات الهاتف تعمل دون إنترنت وبالخلفية بعد منح الأذونات.';"),
+ ('async function permission(){', 'async function permission(){if(window.AndroidNative?.configureAdhan){window.AndroidNative.communityReminderPermissions();draw();return;}'),
+ ("await permission();notify([{kind:'preview'", "await permission();if(window.AndroidNative?.previewAzkarReminder){window.AndroidNative.previewAzkarReminder(kind);return;}notify([{kind:'preview'"),
+ ("host.querySelector('[data-azkar-permission]').hidden=", "host.querySelector('[data-azkar-permission]').hidden=!window.AndroidNative?.configureAdhan&&"),
+ ('السماح بإشعارات المتصفح', 'أذونات الإشعارات والعمل بالخلفية'),
+ ('المواعيد بتوقيت العراق. تعمل التنبيهات أثناء فتح الموقع، وصوت إشعار الهاتف حسب إعدادات الجهاز والمتصفح.', 'المواعيد بتوقيت العراق. التنبيهات تعمل دون إنترنت وبالخلفية، بصوت إشعار قصير حسب إعدادات الهاتف.')])
+transform('adhan-settings.js', [
+ ('native ? "أذان مكة — محمد خليل رمل" : "أذان مسجد قباء — عبدالمجيد السريحي"', '"أذان مسجد قباء — عبدالمجيد السريحي"')])
+
 # Bring the reviewed web-only menus, Azkar reader and saved font overrides into this APK.
 transform('azkar-web.js', [(' if(window.AndroidNative?.configureAdhan)return;', '')])
 transform('web-menu-button-theme.js', [(' if(window.AndroidNative?.configureAdhan)return;', '')])

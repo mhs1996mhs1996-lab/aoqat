@@ -3,6 +3,8 @@ package com.aoqat.calendar
 import android.app.*
 import android.content.*
 import android.os.Build
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
 import org.json.JSONObject
@@ -64,7 +66,7 @@ object CommunityReminderPlan {
 }
 
 object CommunityReminders {
- private const val CHANNEL="muslim_bag_reminders_v1"
+ internal const val CHANNEL="muslim_bag_reminders_sound_v2"
  private const val TTL=86400000L
  private val worker=Executors.newSingleThreadExecutor()
  private fun prefs(c:Context)=c.getSharedPreferences("community_reminders_v1",Context.MODE_PRIVATE)
@@ -72,21 +74,26 @@ object CommunityReminders {
  fun configure(c:Context,json:String){try{JSONObject(json);if(json!=settings(c)){prefs(c).edit().putString("settings",json).commit();refresh(c)}}catch(_:Exception){}}
  fun inbox(c:Context):JSONArray{val now=System.currentTimeMillis();val old=try{JSONArray(prefs(c).getString("inbox","[]"))}catch(_:Exception){JSONArray()};val out=JSONArray();for(i in 0 until old.length()){val e=old.optJSONObject(i)?:continue;val age=now-e.optLong("createdAt");if(age in 0 until TTL)out.put(e)};prefs(c).edit().putString("inbox",out.toString()).apply();return out}
  fun refreshNow(c:Context){try{schedule(c)}catch(e:Exception){android.util.Log.e("CommunityReminders","Schedule failed",e)}}
- fun deliverDue(c:Context){val today=LocalDate.now(CommunityReminderPlan.zone);val rows=PrayerTimes.rows(c);val config=JSONObject(settings(c));for(d in listOf(today.minusDays(1),today)){val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};for(e in CommunityReminderPlan.events(d,config,row))deliver(c,e.toString())}}
+ private fun events(c:Context,d:LocalDate,config:JSONObject,row:JSONObject?):List<JSONObject> = CommunityReminderPlan.events(d,config,row) + (config.optJSONObject("azkar")?.let { AzkarReminderPlan.events(d,it,row){id->IqamaNativeScheduler.durations(c,id)} } ?: emptyList())
+ fun deliverDue(c:Context){val today=LocalDate.now(CommunityReminderPlan.zone);val rows=PrayerTimes.rows(c);val config=JSONObject(settings(c));for(d in listOf(today.minusDays(1),today)){val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};for(e in events(c,d,config,row))deliver(c,e.toString())}}
  fun refresh(c:Context){val app=c.applicationContext;worker.execute{try{schedule(app)}catch(e:Exception){android.util.Log.e("CommunityReminders","Schedule failed",e)}}}
  private fun alarm(c:Context,id:Int,at:Long,event:JSONObject?){val am=c.getSystemService(Context.ALARM_SERVICE)as AlarmManager;val intent=Intent(c,CommunityReminderReceiver::class.java).setAction("DELIVER").putExtra("event",event?.toString());val pi=PendingIntent.getBroadcast(c,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE);if(Build.VERSION.SDK_INT<31||am.canScheduleExactAlarms())am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi)else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,pi)}
- @Synchronized private fun schedule(c:Context){val am=c.getSystemService(Context.ALARM_SERVICE)as AlarmManager
+ @Synchronized private fun schedule(c:Context){deliverDue(c);val am=c.getSystemService(Context.ALARM_SERVICE)as AlarmManager
   for(id in 88000..88299){val pi=PendingIntent.getBroadcast(c,id,Intent(c,CommunityReminderReceiver::class.java).setAction("DELIVER"),PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE);if(pi!=null){am.cancel(pi);pi.cancel()}}
   val config=JSONObject(settings(c));val rows=PrayerTimes.rows(c);val today=LocalDate.now(CommunityReminderPlan.zone);val now=System.currentTimeMillis();var id=88000
-  for(offset in 0L..7L){val d=today.plusDays(offset);val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};for(e in CommunityReminderPlan.events(d,config,row))if(e.getLong("at")>now)alarm(c,id++,e.getLong("at"),e)}
+  for(offset in 0L..7L){val d=today.plusDays(offset);val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};for(e in events(c,d,config,row))if(e.getLong("at")>now)alarm(c,id++,e.getLong("at"),e)}
   alarm(c,88299,today.plusDays(1).atStartOfDay(CommunityReminderPlan.zone).plusMinutes(2).toInstant().toEpochMilli(),null);inbox(c)
  }
- @Synchronized fun deliver(c:Context,raw:String?){if(raw.isNullOrBlank())return;val e=try{JSONObject(raw)}catch(_:Exception){return};val now=System.currentTimeMillis();if(now-e.optLong("at") !in 0 until 1800000L)return
-  val rows=PrayerTimes.rows(c);val d=Instant.ofEpochMilli(e.optLong("at")).atZone(CommunityReminderPlan.zone).toLocalDate();val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};val cutoff=when(e.optString("kind")){"community-post","sunnah"->PrayerTimes.minutes(row?.optString("isha")?:"","isha");"kahf"->PrayerTimes.minutes(row?.optString("maghrib")?:"","maghrib");else->null};if(cutoff!=null&&now>=d.atStartOfDay(CommunityReminderPlan.zone).plusMinutes(cutoff.toLong()).toInstant().toEpochMilli())return
-  if(CommunityReminderPlan.events(d,JSONObject(settings(c)),row).none{it.optString("id")==e.optString("id")&&it.optLong("at")==e.optLong("at")})return
+ @Synchronized fun deliver(c:Context,raw:String?){if(raw.isNullOrBlank())return;val e=try{JSONObject(raw)}catch(_:Exception){return};val now=System.currentTimeMillis();if(now-e.optLong("at") !in 0 until (if(e.optString("kind")=="azkar-reminder")120000L else 1800000L))return
+  val rows=PrayerTimes.rows(c);val d=if(e.optString("kind")=="azkar-reminder")try{LocalDate.parse(e.getString("sourceDate"))}catch(_:Exception){return}else Instant.ofEpochMilli(e.optLong("at")).atZone(CommunityReminderPlan.zone).toLocalDate();val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};val cutoff=when(e.optString("kind")){"community-post","sunnah"->PrayerTimes.minutes(row?.optString("isha")?:"","isha");"kahf"->PrayerTimes.minutes(row?.optString("maghrib")?:"","maghrib");else->null};if(cutoff!=null&&now>=d.atStartOfDay(CommunityReminderPlan.zone).plusMinutes(cutoff.toLong()).toInstant().toEpochMilli())return
+  if(events(c,d,JSONObject(settings(c)),row).none{it.optString("id")==e.optString("id")&&it.optLong("at")==e.optLong("at")})return
   val entries=inbox(c);if((0 until entries.length()).any{entries.getJSONObject(it).optString("id")==e.optString("id")})return
   e.put("createdAt",now);val updated=JSONArray().put(e);for(i in 0 until entries.length())updated.put(entries.getJSONObject(i));prefs(c).edit().putString("inbox",updated.toString()).commit()
-  val nm=c.getSystemService(Context.NOTIFICATION_SERVICE)as NotificationManager;nm.createNotificationChannel(NotificationChannel(CHANNEL,"تذكيرات حقيبة المسلم",NotificationManager.IMPORTANCE_DEFAULT))
+  notify(c,e)
+ }
+ internal fun preview(c:Context,kind:String){val e=JSONObject().put("id","azkar-preview:"+kind).put("title","معاينة: "+AzkarReminderPlan.titles[kind]).put("body","تجربة تذكير الأذكار");notify(c,e)}
+ private fun notify(c:Context,e:JSONObject){
+  val nm=c.getSystemService(Context.NOTIFICATION_SERVICE)as NotificationManager;nm.createNotificationChannel(NotificationChannel(CHANNEL,"تذكيرات الأذكار والجمعة والصيام",NotificationManager.IMPORTANCE_DEFAULT).apply{setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())})
   val code=e.getString("id").hashCode();val open=Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("communityReminderId",e.getString("id"));val pi=PendingIntent.getActivity(c,code,open,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
   try{nm.notify(code,NotificationCompat.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_popup_reminder).setContentTitle(e.getString("title")).setContentText(e.getString("body")).setStyle(NotificationCompat.BigTextStyle().bigText(e.getString("body"))).setContentIntent(pi).setAutoCancel(true).setTimeoutAfter(TTL).build())}catch(_:SecurityException){}
  }
