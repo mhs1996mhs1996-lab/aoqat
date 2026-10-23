@@ -1,5 +1,9 @@
-const CACHE_NAME = "aoqat-pwa-v80-quba-suraihi";
+const CACHE_NAME = "aoqat-pwa-v81-quiet-search-calendar";
 const APP_SHELL = [
+  "/js/prayer-alert-methods.js?v=2",
+  "/js/web-quiet-core.js?v=1",
+  "/js/web-quiet-settings.js?v=1",
+  "/js/web-settings-search-calendar.js?v=1",
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
   "/js/modal-panels.js?v=4",
@@ -62,7 +66,7 @@ const APP_SHELL = [
   "/css/adhan.css?v=2",
   "/css/adhan-modal.css?v=1",
   "/js/adhan-core.js?v=3",
-  "/js/adhan-settings.js?v=5",
+  "/js/adhan-settings.js?v=6",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
   "/assets/audio/adhan-v124-1.mp3",
@@ -99,7 +103,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
-  "/js/web-menu-order.js?v=30",
+  "/js/web-menu-order.js?v=31",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"

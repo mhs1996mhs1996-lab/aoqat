@@ -72,6 +72,7 @@
       ?.classList.toggle("adhan-on", state.enabled);
     window.dispatchEvent(new Event("aoqatAdhanChanged"));
   }
+  if(!native)window.AoqatWebQuietSettings={read:()=>C.normalize(state),save:patch=>{state=C.normalize({...state,...patch});persist();render();}};
   function audioDB() {
     return new Promise((resolve, reject) => {
       const req = indexedDB.open("aoqat-audio", 1);
@@ -479,7 +480,7 @@
     if(!native && audio)audio.muted=!!quietWindow&&!fridayAudio;
     const quietStatus=$("adQuietStatus");
     if(quietStatus){quietStatus.hidden=!quietWindow;quietStatus.textContent=quietWindow
-      ? (quietWindow.prayerId==='friday'?'الصامت لصلاة الجمعة':"الصامت بعد إقامة "+names[quietWindow.prayerId])+": "+Math.ceil((quietWindow.end-now)/60000)+" دقيقة متبقية" : "";}
+      ? (quietWindow.prayerId==='friday'?'الصامت لصلاة الجمعة':(quietWindow.source==='adhan'?"الصامت عند أذان ":"الصامت بعد إقامة ")+names[quietWindow.prayerId])+": "+Math.ceil((quietWindow.end-now)/60000)+" دقيقة متبقية" : "";}
     if (!native && (state.enabled||state.friday.enabled)) {
       for (const e of ev) {
         if(!e.customFriday&&!state.enabled)continue;

@@ -260,6 +260,11 @@
     }
     return true;
   }
+  if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={
+    main:mainView,sub:openSub,panel:(id,title)=>openPanel(title,id,'settings'),interface:openInterfacePart,
+    adhan:()=>{adhanIqamaView();openAdhanServices();},bag:openMuslimBagSection,
+    drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
+  };
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
