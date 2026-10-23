@@ -2,3 +2,8 @@
 #monthlyCalendars .main-action{height:auto!important;min-height:44px!important;white-space:normal!important;box-sizing:border-box}#monthlyCalendars .mc-months>button{overflow:hidden;justify-content:flex-start}#monthlyCalendars .mc-months img{flex-shrink:0}#monthlyCalendars .mc-years>button{min-height:82px!important}
 
 .mc-designs{display:grid;gap:16px}.mc-designs>button{display:flex!important;flex-direction:column;align-items:center;gap:10px;padding:12px!important;width:100%;margin:0!important}.mc-designs img{display:block;width:100%;height:240px;object-fit:contain;background:#fff}.mc-designs strong{display:block}#monthlyCalendars .mc-designs>button[aria-pressed=true]{outline:3px solid #278052;outline-offset:2px}
+
+body.design-menu-open #settingsContentDialog #monthlyCalendars .mc-designs>button{background:#fff!important;background-image:none!important;color:#18354d!important;border:1px solid #ced9df!important;border-radius:12px!important;padding:12px!important;box-shadow:0 3px 12px #18354d12}
+body.design-menu-open #settingsContentDialog #monthlyCalendars .mc-designs>button[aria-pressed=true]{border:3px solid #278052!important;outline:none!important;background:#f5fbf7!important}
+#monthlyCalendars .mc-designs img{height:auto;max-height:none;width:100%;object-fit:contain;border-radius:0}
+#monthlyCalendars .mc-designs strong{padding:6px 0;font-size:16px}
