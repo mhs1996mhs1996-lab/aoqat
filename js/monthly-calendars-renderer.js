@@ -1,0 +1,16 @@
+(function(){'use strict';if(window.AndroidNative?.configureAdhan)return;const C=window.AoqatMonthlyCalendarsCore;if(!C)return;
+ let loaded;function font(){if(!loaded)loaded=(async()=>{const f=new FontFace('AoqatCalendar','url("/assets/fonts/amiri-quran.ttf")');await f.load();document.fonts.add(f);await document.fonts.ready;})().catch(e=>{loaded=null;throw e;});return loaded;}
+ async function render(model,raw,scale=1){await font();const s=C.normalize(raw),canvas=document.createElement('canvas');canvas.width=Math.round(1080*scale);canvas.height=Math.round(1580*scale);const ctx=canvas.getContext('2d');ctx.scale(scale,scale);ctx.fillStyle=s.page;ctx.fillRect(0,0,1080,1580);ctx.direction='rtl';ctx.textBaseline='middle';
+  function box(x,y,w,h,fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}
+  function text(value,x,y,w,id,size){const g=s.styles[id];ctx.fillStyle=g.color;ctx.textAlign='center';let n=size||g.size;ctx.font=n+'px "'+g.font+'"';while(n>12&&ctx.measureText(String(value)).width>w){n--;ctx.font=n+'px "'+g.font+'"';}ctx.fillText(String(value),x+w/2,y);}
+  box(32,22,1016,61,s.styles.title.bg);text('مواقيت الصلاة لمدينة الحويجة وضواحيها لشهر',32,52,1016,'title');box(32,83,1016,53,s.styles.month.bg);text(model.monthName+' ['+model.month+']',32,108,1016,'month');
+  box(704,140,344,53,s.styles.hijri.bg);text(model.hijriYear+' هـ',704,165,344,'hijri');box(32,140,344,53,s.styles.gregorian.bg);text(model.year+' م',32,165,344,'gregorian');box(396,140,288,53,s.styles.yearLabel.bg);text('لسنة',396,165,288,'yearLabel');text(model.hijriMonths,604,207,444,'hijri',Math.min(s.styles.hijri.size,23));
+  const columns=[{id:'weekday',label:'الأيام',width:154},{id:'date',label:'التاريخ',width:94},...C.fields.map((id,i)=>({id,label:['الفجر','الشروق','الظهر','العصر','المغرب','العشاء'][i],width:128}))],top=232,header=45,rowHeight=39;let right=1048;
+  for(const col of columns){col.x=right-col.width;right=col.x;box(col.x,top,col.width,header,s.styles.headers.bg);text(col.label,col.x,top+header/2,col.width-8,'headers');}
+  model.days.forEach((row,i)=>{const y=top+header+i*rowHeight;for(const col of columns){const id=col.id==='weekday'?'weekday':col.id==='date'?'date':'times',v=id==='weekday'?row.weekday:id==='date'?row.day:row.times[col.id];box(col.x,y,col.width,rowHeight,s.styles[id].bg);if(row.weekday==='الجمعة'){ctx.fillStyle=s.border;ctx.globalAlpha=.14;ctx.fillRect(col.x,y,col.width,rowHeight);ctx.globalAlpha=1;}text(v,col.x+3,y+rowHeight/2,col.width-6,id);}});
+  ctx.strokeStyle=s.border;ctx.lineWidth=1;const bottom=top+header+model.days.length*rowHeight;for(const x of [32,...columns.map(c=>c.x+c.width)]){ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,bottom);ctx.stroke();}for(const y of [top,top+header,...model.days.map((_,i)=>top+header+(i+1)*rowHeight)]){ctx.beginPath();ctx.moveTo(32,y);ctx.lineTo(1048,y);ctx.stroke();}
+  const footer='حسب التوقيت المحلي لمدينة الحويجة وضواحيها';box(32,1510,1016,44,s.styles.footer.bg);text(footer,32,1533,1016,'footer');return canvas;
+ }
+ function blob(canvas,type='image/png'){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error('تعذر تجهيز صورة التقويم.')),type));}
+ window.AoqatMonthlyCalendarRenderer={render,blob};
+})();

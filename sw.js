@@ -1,9 +1,13 @@
-const CACHE_NAME = "aoqat-pwa-v84-search-icon";
+const CACHE_NAME = "aoqat-pwa-v85-monthly-calendars";
 const APP_SHELL = [
+  "/js/monthly-calendars-core.js?v=1",
+  "/js/monthly-calendars-renderer.js?v=1",
+  "/js/monthly-calendars.js?v=1",
+  "/css/monthly-calendars.css?v=1",
   "/js/prayer-alert-methods.js?v=2",
   "/js/web-quiet-core.js?v=1",
   "/js/web-quiet-settings.js?v=1",
-  "/js/web-settings-search-calendar.js?v=4",
+  "/js/web-settings-search-calendar.js?v=5",
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
   "/js/modal-panels.js?v=4",
@@ -43,7 +47,7 @@ const APP_SHELL = [
   "/assets/fonts/amiri-quran.ttf",
   "/js/fasting-reminders-core.js",
   "/js/fasting-reminders.js",
-  "/js/reminder-inbox.js",
+  "/js/reminder-inbox.js?v=2",
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=3",
@@ -214,7 +218,7 @@ self.addEventListener("notificationclick", event => {
     }));
     return;
   }
-  if (data.kind === "friday-reminder" || data.kind === "fasting-reminder" || data.kind === "community-post-reminder") {
+  if (data.kind === "calendar-post-reminder" || data.kind === "friday-reminder" || data.kind === "fasting-reminder" || data.kind === "community-post-reminder") {
     event.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(clients=>{
       const client=clients.find(item=>"focus" in item);
       if(client?.focus){client.postMessage({type:"AOQAT_OPEN_REMINDER",id:data.id,entry:data.entry});return client.focus();}
