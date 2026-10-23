@@ -1,9 +1,9 @@
-const CACHE_NAME = "aoqat-pwa-v88-calendar-natural-type";
+const CACHE_NAME = "aoqat-pwa-v89-calendar-inline-heading";
 const APP_SHELL = [
-  "/js/monthly-calendars-core.js?v=3",
-  "/js/monthly-calendars-renderer.js?v=3",
-  "/js/monthly-calendars.js?v=3",
-  "/css/monthly-calendars.css?v=3",
+  "/js/monthly-calendars-core.js?v=4",
+  "/js/monthly-calendars-renderer.js?v=4",
+  "/js/monthly-calendars.js?v=4",
+  "/css/monthly-calendars.css?v=4",
   "/js/prayer-alert-methods.js?v=2",
   "/js/web-quiet-core.js?v=1",
   "/js/web-quiet-settings.js?v=1",

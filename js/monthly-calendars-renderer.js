@@ -3,41 +3,30 @@
  async function render(model,raw,scale=1){await font();const s=C.normalize(raw),wide=s.design==='landscape',W=wide?1580:1080,H=wide?1080:1580,canvas=document.createElement('canvas');canvas.width=Math.round(W*scale);canvas.height=Math.round(H*scale);const ctx=canvas.getContext('2d');ctx.scale(scale,scale);ctx.fillStyle=s.page;ctx.fillRect(0,0,W,H);ctx.direction='rtl';ctx.textBaseline='middle';
   function box(x,y,w,h,fill){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);}
   function text(value,x,y,w,id,height){const g=s.styles[id];let n=Math.min(g.size,height?height*.72:g.size);ctx.save();ctx.beginPath();ctx.rect(x,y-(height||90)/2,w,height||90);ctx.clip();ctx.textAlign='center';ctx.fillStyle=g.color;ctx.font=n+'px "'+g.font+'"';while(n>10&&ctx.measureText(String(value)).width>w){n-=.5;ctx.font=n+'px "'+g.font+'"';}ctx.fillText(String(value),x+w/2,y);ctx.restore();}
-  const geometric=s.design==='geometric',edge=20,inner=W-edge*2;
-  // Each layout has its own hierarchy, not a different border around the same poster.
-  let top;
-  if(geometric){
-   box(0,0,W,12,s.border);
-   box(edge,28,inner,82,s.styles.title.bg);
-   text('مواقيت الصلاة لمدينة الحويجة و ضواحيها لشهر',edge+12,69,inner-24,'title',82);
-   box(edge,118,inner*.56,102,s.styles.month.bg);
-   text(model.monthName+' ['+model.month+']',edge+10,169,inner*.56-20,'month',86);
-   const yearX=edge+inner*.58,yearW=inner*.42;
-   text(model.year+' م',yearX,146,yearW,'gregorian',56);
-   text(model.hijriYear+' هـ',yearX,198,yearW,'hijri',56);
-   text('لسنة',edge,230,inner,'yearLabel',44);
-   top=258;
-  }else if(wide){
-   box(edge,16,inner,64,s.styles.title.bg);
-   text('مواقيت الصلاة لمدينة الحويجة و ضواحيها لشهر',edge+12,48,inner-24,'title',64);
-   box(edge,90,inner,90,s.styles.month.bg);
-   text(model.monthName+' ['+model.month+']',edge+inner*.3,132,inner*.4,'month',72);
-   text(model.year+' م',edge,132,inner*.28,'gregorian',72);
-   text(model.hijriYear+' هـ',edge+inner*.72,132,inner*.28,'hijri',72);
-   text('لسنة',edge,191,inner,'yearLabel',34);top=218;
-  }else{
-   box(edge,12,inner,72,s.styles.title.bg);
-   text('مواقيت الصلاة لمدينة الحويجة و ضواحيها لشهر',edge+8,48,inner-16,'title',72);
-   box(edge,86,inner,64,s.styles.month.bg);
-   text(model.monthName+' ['+model.month+']',edge+8,118,inner-16,'month',64);
-   for(const [id,value,x,w] of [['gregorian',model.year+' م',edge,inner*.34],['yearLabel','لسنة',edge+inner*.34,inner*.32],['hijri',model.hijriYear+' هـ',edge+inner*.66,inner*.34]]){box(x,153,w,58,s.styles[id].bg);text(value,x+6,182,w-12,id,58);}
-   top=222;
-  }
-  const bottom=H-edge;
+  const geometric=s.design==='geometric',ledger=s.design==='ledger',architectural=s.design==='architectural',edge=architectural?28:20,inner=W-edge*2;
+  if(geometric)box(0,0,W,10,s.border);
+  if(ledger){box(0,0,10,H,s.border);box(W-10,0,10,H,s.border);}
+  if(architectural){ctx.strokeStyle=s.border;ctx.lineWidth=3;ctx.strokeRect(8,8,W-16,H-16);ctx.lineWidth=1;ctx.strokeRect(16,16,W-32,H-32);for(const x of [edge,W-edge]){ctx.beginPath();ctx.moveTo(x,22);ctx.lineTo(x===edge?x+80:x-80,22);ctx.stroke();}}
+  // A single RTL line, with independently styled runs and uniform font fitting.
+  // Letter proportions stay natural: there is no horizontal canvas scaling.
+  const titleTop=architectural?30:18,titleH=92,titleY=titleTop+titleH/2;
+  const runs=[{id:'title',value:'مواقيت الصلاة لمدينة الحويجة و ضواحيها لشهر'},{id:'month',value:model.monthName+' ['+model.month+']'}];
+  let factor=1;
+  function widths(){return runs.map(r=>{const g=s.styles[r.id];ctx.font=(g.size*factor)+'px "'+g.font+'"';return ctx.measureText(r.value).width;});}
+  let sizes=widths(),gap=14,total=sizes[0]+sizes[1]+gap;
+  factor=Math.min(1,(inner-24)/total,64/Math.max(...runs.map(r=>s.styles[r.id].size)));
+  sizes=widths();total=sizes[0]+sizes[1]+gap*factor;
+  box(edge,titleTop,inner,titleH,s.styles.title.bg);
+  ctx.save();ctx.beginPath();ctx.rect(edge,titleTop,inner,titleH);ctx.clip();ctx.textAlign='right';let right=(W+total)/2;
+  runs.forEach((r,i)=>{const g=s.styles[r.id],width=sizes[i];if(i)box(right-width-4,titleTop,width+8,titleH,g.bg);ctx.font=(g.size*factor)+'px "'+g.font+'"';ctx.fillStyle=g.color;ctx.fillText(r.value,right,titleY);right-=width+gap*factor;});ctx.restore();
+  const yearsY=titleTop+titleH+6,yearH=64;
+  for(const [id,value,x,w] of [['gregorian',model.year+' م',edge,inner*.34],['yearLabel','لسنة',edge+inner*.34,inner*.32],['hijri',model.hijriYear+' هـ',edge+inner*.66,inner*.34]]){box(x,yearsY,w,yearH,s.styles[id].bg);text(value,x+6,yearsY+yearH/2,w-12,id,yearH);}
+  const top=yearsY+yearH+12,bottom=H-edge;
+  if(ledger||architectural){box(edge,top-6,inner,2,s.border);}
   function table(rows,left,width){const header=44,rowH=(bottom-top-header)/Math.ceil(wide?model.days.length/2:model.days.length),fractions=[.165,.11,...Array(6).fill(.725/6)],columns=[{id:'weekday',label:'الأيام'},{id:'date',label:'التاريخ'},...C.fields.map((id,i)=>({id,label:['الفجر','الشروق','الظهر','العصر','المغرب','العشاء'][i]}))];let right=left+width;
    columns.forEach((col,i)=>{col.width=width*fractions[i];col.x=right-col.width;right=col.x;box(col.x,top,col.width,header,s.styles.headers.bg);text(col.label,col.x+4,top+header/2,col.width-8,'headers',header);});
-   rows.forEach((row,i)=>{const y=top+header+i*rowH;for(const col of columns){const id=col.id==='weekday'?'weekday':col.id==='date'?'date':'times',value=id==='weekday'?row.weekday:id==='date'?row.day:row.times[col.id];box(col.x,y,col.width,rowH,s.styles[id].bg);if(geometric&&i%2===0){ctx.save();ctx.globalAlpha=.65;box(col.x,y,col.width,rowH,s.page);ctx.restore();}if(row.weekday==='الجمعة'){ctx.fillStyle=s.border;ctx.globalAlpha=.12;ctx.fillRect(col.x,y,col.width,rowH);ctx.globalAlpha=1;}text(value,col.x+4,y+rowH/2,col.width-8,id,rowH);}});
-   const end=top+header+rows.length*rowH;ctx.strokeStyle=s.border;ctx.lineWidth=1;for(const x of (geometric?[]:[left,...columns.map(c=>c.x+c.width)])){ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,end);ctx.stroke();}for(const y of [top,top+header,...rows.map((_,i)=>top+header+(i+1)*rowH)]){ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(left+width,y);ctx.stroke();}if(geometric){box(left+width-5,top,5,end-top,s.border);}
+   rows.forEach((row,i)=>{const y=top+header+i*rowH;for(const col of columns){const id=col.id==='weekday'?'weekday':col.id==='date'?'date':'times',value=id==='weekday'?row.weekday:id==='date'?row.day:row.times[col.id];box(col.x,y+(ledger?2:0),col.width,rowH-(ledger?4:0),s.styles[id].bg);if((geometric||ledger)&&i%2===0){ctx.save();ctx.globalAlpha=.65;box(col.x,y,col.width,rowH,s.page);ctx.restore();}if(row.weekday==='الجمعة'){ctx.fillStyle=s.border;ctx.globalAlpha=.12;ctx.fillRect(col.x,y,col.width,rowH);ctx.globalAlpha=1;}text(value,col.x+4,y+rowH/2,col.width-8,id,rowH);}});
+   const end=top+header+rows.length*rowH;ctx.strokeStyle=s.border;ctx.lineWidth=1;for(const x of ((geometric||ledger)?[]:[left,...columns.map(c=>c.x+c.width)])){ctx.beginPath();ctx.moveTo(x,top);ctx.lineTo(x,end);ctx.stroke();}for(const y of (ledger?[top,top+header]:[top,top+header,...rows.map((_,i)=>top+header+(i+1)*rowH)])){ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(left+width,y);ctx.stroke();}if(geometric){box(left+width-5,top,5,end-top,s.border);}
   }
   if(wide){const count=Math.ceil(model.days.length/2),gap=20,width=(inner-gap)/2;table(model.days.slice(0,count),edge+width+gap,width);table(model.days.slice(count),edge,width);}else table(model.days,edge,inner);
   return canvas;
