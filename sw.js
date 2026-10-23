@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v85-monthly-calendars";
+const CACHE_NAME = "aoqat-pwa-v86-prayer-photo-corrections";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=1",
   "/js/monthly-calendars-renderer.js?v=1",
@@ -59,7 +59,7 @@ const APP_SHELL = [
   "/js/friday-reminders.js",
   "/js/prayer-time-choice.js",
   "/js/web-back-navigation.js",
-  "/data/prayer-times-offline.js",
+  "/data/prayer-times-offline.js?v=2",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
   "/assets/mushaf-hafs-pocket-ready.json", "/assets/mushaf-hafs-pocket.json.gz", "/assets/mushaf-hafs-pocket/001.webp", "/assets/mushaf-hafs-pocket/604.webp", "/assets/mushaf-hafs-1441-ready.json", "/assets/mushaf-hafs-1441.json.gz", "/assets/mushaf-hafs-1441/001.webp", "/assets/mushaf-hafs-1441/604.webp", "/css/quran-reader.css?v=phone-hafs-1",
   "/assets/qcf-preview/data.json", "/assets/qcf-preview/p498.woff2", "/assets/qcf-preview/p499.woff2",
