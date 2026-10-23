@@ -1,9 +1,9 @@
-const CACHE_NAME = "aoqat-pwa-v82-settings-header";
+const CACHE_NAME = "aoqat-pwa-v83-stacked-settings-header";
 const APP_SHELL = [
   "/js/prayer-alert-methods.js?v=2",
   "/js/web-quiet-core.js?v=1",
   "/js/web-quiet-settings.js?v=1",
-  "/js/web-settings-search-calendar.js?v=2",
+  "/js/web-settings-search-calendar.js?v=3",
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
   "/js/modal-panels.js?v=4",
