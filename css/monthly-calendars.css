@@ -7,3 +7,9 @@ body.design-menu-open #settingsContentDialog #monthlyCalendars .mc-designs>butto
 body.design-menu-open #settingsContentDialog #monthlyCalendars .mc-designs>button[aria-pressed=true]{border:3px solid #278052!important;outline:none!important;background:#f5fbf7!important}
 #monthlyCalendars .mc-designs img{height:auto;max-height:none;width:100%;object-fit:contain;border-radius:0}
 #monthlyCalendars .mc-designs strong{padding:6px 0;font-size:16px}
+
+/* Keep calendar typography and compact controls local to this section. */
+#monthlyCalendars,#monthlyCalendars button,#monthlyCalendars input,#monthlyCalendars select{font-family:"Times New Roman",serif!important}
+#monthlyCalendars .mc-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 8px}
+body.design-menu-open #settingsContentDialog #monthlyCalendars .mc-actions>button{width:100%!important;min-width:0!important;min-height:36px!important;height:auto!important;padding:5px 6px!important;font-size:13px!important;line-height:1.25!important;border-radius:9px!important;margin:0!important}
+#monthlyCalendars .mc-actions+.mc-preview{margin-top:6px}
