@@ -15,3 +15,35 @@ body.design-menu-open #settingsContentDialog #monthlyCalendars .mc-actions>butto
 #monthlyCalendars .mc-actions+.mc-preview{margin-top:6px}
 
 #monthlyCalendars .mc-size-controls{display:flex;align-items:center;flex-wrap:wrap;gap:6px;flex:1 1 210px}#monthlyCalendars .mc-size-controls button{width:36px!important;min-height:36px!important;margin:0!important;padding:0!important;font-size:22px!important}#monthlyCalendars .mc-size-controls input[type=number]{width:68px!important}#monthlyCalendars #mcFontSizeRange{flex:1 1 100%;width:100%!important;min-width:100px;min-height:32px;accent-color:#278052}
+
+/* Calendar home: daily times first, followed by the day grid and compact year folders. */
+#monthlyCalendars.mc-home{padding:8px}
+#monthlyCalendars.mc-home>h3{font-size:16px;margin:12px 0 4px;line-height:1.4}
+#monthlyCalendars.mc-home>p{font-size:12px;margin:0 0 8px;line-height:1.5}
+#monthlyCalendars.mc-home>.mc-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-home>.mc-actions>button{font-size:12px!important;min-height:34px!important;padding:5px!important}
+#monthlyCalendars.mc-home .mc-years{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0}
+body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-home .mc-years>button{height:auto!important;min-height:54px!important;padding:7px 4px!important;gap:2px!important;font-size:14px!important;line-height:1.25!important;border-radius:9px!important}
+#monthlyCalendars.mc-home .mc-years small{font-size:10px;line-height:1.3}
+#monthlyCalendars.mc-home .mc-add-year{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;margin:8px 0}
+#monthlyCalendars.mc-home .mc-add-year label{gap:6px;flex-wrap:nowrap;font-size:12px}
+#monthlyCalendars.mc-home .mc-add-year label>span{min-width:0}
+#monthlyCalendars.mc-home .mc-add-year input{width:78px!important;min-height:34px!important;height:34px!important;padding:3px!important;font-size:14px!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-home .mc-add-year button{width:auto!important;min-height:34px!important;height:auto!important;margin:0!important;padding:5px 8px!important;font-size:12px!important}
+#monthlyCalendars #webCalendar{padding:0 0 10px;border-bottom:1px solid var(--wt-border,#d3ddda)}
+#monthlyCalendars #webCalendarDetail h4{margin:0 0 7px;font-size:13px;line-height:1.5}
+#monthlyCalendars #webCalendarDetail table{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0 0 10px;border:0}
+#monthlyCalendars #webCalendarDetail tr{display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--wt-border,#d3ddda);border-radius:8px;padding:4px;background:var(--wt-panel,#f6faf7)}
+#monthlyCalendars #webCalendarDetail th,#monthlyCalendars #webCalendarDetail td{padding:0;border:0;text-align:center;line-height:1.3}
+#monthlyCalendars #webCalendarDetail th{font-size:12px;font-weight:normal}
+#monthlyCalendars #webCalendarDetail td{font-size:17px;font-weight:bold;font-variant-numeric:tabular-nums;direction:ltr}
+#monthlyCalendars .web-calendar-toolbar{display:grid;grid-template-columns:30px minmax(0,1fr) 30px 44px;gap:4px}
+#monthlyCalendars .web-calendar-toolbar label{min-width:0;font-size:11px;line-height:1.3}
+#monthlyCalendars .web-calendar-toolbar input{height:30px!important;min-height:30px!important;padding:2px 4px!important;font-size:13px!important;border-radius:7px}
+body.design-menu-open #settingsContentDialog #monthlyCalendars .web-calendar-toolbar button{width:auto!important;min-width:0!important;height:32px!important;min-height:32px!important;margin:0!important;padding:2px!important;font-size:14px!important;align-self:end;border-radius:7px!important}
+#monthlyCalendars #webCalendarTitle{margin:6px 0 2px;font-size:15px;line-height:1.4}
+#monthlyCalendars .web-calendar-weekday{font-size:9px;padding:3px 0}
+#monthlyCalendars .web-calendar-grid{gap:3px}
+body.design-menu-open #settingsContentDialog #monthlyCalendars .web-calendar-grid button{width:100%!important;min-width:0!important;height:39px!important;min-height:39px!important;margin:0!important;padding:2px!important;gap:0!important;border-radius:7px!important;line-height:1.2!important}
+#monthlyCalendars .web-calendar-grid strong{font-size:15px}
+#monthlyCalendars .web-calendar-grid small{font-size:10px}
