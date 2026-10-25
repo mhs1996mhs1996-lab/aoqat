@@ -25,7 +25,7 @@
   let root,host,quran,meta,official,phone,printPages,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0,dragFrame=0,warmTask=0;
   const fittedSizes=new Map(),preparedPages=new Map(),phonePages=new Map(),phoneRequests=new Map();
   const phoneMode=()=>Boolean(phone&&state.layout==='phone');
-  const mobileTrial=()=>Boolean(phone&&official?.tajwidEdition&&state.mobileTrial&&[1,2,3,499].includes(state.page));
+  const mobileTrial=()=>false; // Never substitute monochrome phone artwork for the colored Tajwid edition.
   const pageKey=(paper,page)=>[state.layout,page,paper.clientWidth,paper.clientHeight,state.font].join(':');
   const $=id=>root?.querySelector('#'+id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const arabic=n=>String(n).replace(/\d/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
@@ -70,7 +70,7 @@
       printPages=official.pages.map((p,i)=>({...p,start:phone.pages[i].start,end:phone.pages[i].end}));
       // Preserve the existing 6236-verse indexing for bookmarks and search.
       if(printPages.some((p,i)=>!p.hits?.length||p.start!==m.pages[i].start))console.warn('Original Mushaf page ranges differ from legacy metadata; original printed ayah hit regions remain authoritative');
-      meta={...m,pages:printPages};state.layout='print';state.phoneRevision=1;
+      meta={...m,pages:printPages};state.layout='print';state.mobileTrial=false;state.phoneRevision=1;
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
@@ -300,8 +300,8 @@
   }
 
   function settingsPanel(){
-    sheet('إعدادات المصحف',`${phone&&official?.tajwidEdition?'<label style="display:block;padding:12px 0">تجربة عرض الهاتف للصفحات ١ و٢ و٣ و٤٩٩ <input id="aqMobileTrial" type="checkbox" '+(state.mobileTrial?'checked':'')+'></label><p>تجربة بخط الهاتف، وليست نسخة التجويد الملوّنة النهائية. بقية الصفحات تبقى على عرضها الحالي.</p>':''}${phone&&!official?.tajwidEdition?'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option></select></label>':''}<label>مظهر المصحف<select id="aqTheme"><option value="sepia">ورقي — المظهر الحالي</option><option value="ivory">عاجي بخط أسود</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>${phone||official?'تكبير القراءة':'حجم الخط'}<input id="aqFont" type="range" min="${phone||official?44:22}" max="${phone||official?80:46}" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
-    if(phone&&official?.tajwidEdition){const trial=$('aqMobileTrial');if(trial)trial.onchange=e=>{state.mobileTrial=e.target.checked;preparedPages.clear();save();renderPage();};}
+    sheet('إعدادات المصحف',`${phone&&!official?.tajwidEdition?'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option></select></label>':''}<label>مظهر المصحف<select id="aqTheme"><option value="sepia">ورقي — المظهر الحالي</option><option value="ivory">عاجي بخط أسود</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>${phone||official?'تكبير القراءة':'حجم الخط'}<input id="aqFont" type="range" min="${phone||official?44:22}" max="${phone||official?80:46}" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
+    
     if(phone&&!official?.tajwidEdition){$('aqLayout').value=state.layout;$('aqLayout').onchange=e=>setLayout(e.target.value);}
     if(phone||official){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';const status=document.createElement('p');status.setAttribute('role','status');$('aqSheetBody').append(button,status);button.onclick=async()=>{button.disabled=true;const downloadingPhone=phoneMode();let next=1,done=0;try{const cache=await caches.open(downloadingPhone?phone.cacheName:official.cacheName||'aoqat-mushaf-hafs1441');await Promise.all(Array.from({length:4},async()=>{while(next<=604){const n=next++,url=downloadingPhone?`${phone.directory}/${String(n).padStart(3,'0')}.json.gz`:`${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(n).padStart(3,'0')}.webp`;if(!await cache.match(url)){const r=await fetch(url);if(!r.ok||(!downloadingPhone&&!r.headers.get('content-type')?.includes('image/')))throw Error();await cache.put(url,r);}status.textContent=`تم تنزيل ${++done} / 604 صفحة`;}}));status.textContent='تم تنزيل المصحف كاملاً للقراءة بدون إنترنت';}catch(_){status.textContent='توقف التنزيل؛ الصفحات المكتملة محفوظة. يمكنك إعادة المحاولة.';}finally{button.disabled=false;}};}
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
