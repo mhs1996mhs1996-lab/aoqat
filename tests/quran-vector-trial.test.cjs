@@ -19,3 +19,10 @@ test('offline shell installs only the selected Quran edition',()=>{
  const sw=fs.readFileSync('sw.js','utf8'),shell=sw.slice(sw.indexOf('const APP_SHELL'),sw.indexOf('const PUSH_ACTION_URL'));
  assert.match(shell,/mushaf-phone-hafs\/001.json.gz/);assert.match(shell,/mushaf-phone-hafs\/604.json.gz/);assert.doesNotMatch(shell,/mushaf-hafs-pocket|mushaf-hafs-1441|qcf-preview/);
 });
+
+test('deployed page bypasses an older cached Quran reader',()=>{
+ const html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('sw.js','utf8');
+ const src=html.match(/<script src="(js\/quran-reader\.js[^"]*)"/)[1];
+ assert.ok(src.includes('?v='));
+ assert.ok(sw.includes('"/'+src+'"'),'offline shell must cache the same version requested by the page');
+});
