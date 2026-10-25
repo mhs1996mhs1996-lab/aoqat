@@ -139,8 +139,8 @@
     }
     if(official){
       const p=official.pages[page-1],start=meta.pages[page-1].start,items=pageItems(page),indices=new Map(items.map((v,n)=>[v.s+':'+v.a,start+n]));
-      const hits=p.hits.map(h=>{const i=indices.get(h.surahNumber+':'+h.ayahNumber);if(i===undefined)throw Error('Mushaf ayah mapping mismatch');const v=verses[i];return `<path d="${esc(h.polygon)}" role="button" tabindex="0" data-qr-verse="${i}" class="aq-original-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}"><title>${esc(v.text)}</title></path>`;}).join('');
-      return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="مصحف المدينة برواية حفص، صفحة ${page}"><image href="${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(page).padStart(3,'0')}.webp" width="${p.width}" height="${p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
+      const hits=official.tajwidEdition?'' : p.hits.map(h=>{const i=indices.get(h.surahNumber+':'+h.ayahNumber);if(i===undefined)throw Error('Mushaf ayah mapping mismatch');const v=verses[i];return `<path d="${esc(h.polygon)}" role="button" tabindex="0" data-qr-verse="${i}" class="aq-original-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}"><title>${esc(v.text)}</title></path>`;}).join('');
+            return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${official.tajwidEdition?`0 0 ${p.width} ${p.height}`:(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="${official.tajwidEdition?'مصحف التجويد الملوّن':'مصحف المدينة برواية حفص'}، صفحة ${page}"><image preserveAspectRatio="xMidYMid meet" href="${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(page).padStart(3,'0')}.webp" width="${p.width}" height="${p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
     }
     if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
       if(line.s)return `<div class="aq-mushaf-line">${surahBanner(line.s)}</div>`;
@@ -173,7 +173,7 @@
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
-    root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=phoneMode()?'qcf2-phone':official?(official.imageDirectory?'hafs-pocket':'hafs-1441'):'text';
+    root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=phoneMode()?'qcf2-phone':official?(official.tajwidEdition?'tajwid-hafs':official.imageDirectory?'hafs-pocket':'hafs-1441'):'text';
     if(Number.isInteger(state.lastVerse))root.querySelectorAll(`[data-qr-verse="${state.lastVerse}"]`).forEach(e=>e.classList.add('aq-selected'));
     fit();if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
