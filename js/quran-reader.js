@@ -131,25 +131,41 @@
     document.body.classList.toggle('quran-reader-immersive',on);
   }
   function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
-  // Limited live QCF V2 test inside the existing web reader, page 3 only.
-  let qcf3Rows=null,qcf3Pending=null,qcf3Failed=false;
-  function fetchQcf3(){
-    if(qcf3Rows||qcf3Pending||qcf3Failed)return;
-    qcf3Pending=fetch('https://api.quran.com/api/v4/verses/by_page/3?words=true&word_fields=code_v2%2Ctext_uthmani&per_page=50&mushaf=1').then(r=>{if(!r.ok)throw Error('QCF unavailable');return r.json()}).then(data=>{
-      const rows=new Map(),index=new Map(verses.map((v,i)=>[v.s+':'+v.a,i]));
-      for(const verse of data.verses||[]){const idx=index.get(verse.verse_key);if(idx===undefined)throw Error('Unknown verse');for(const w of verse.words||[]){if(!w.code_v2||!w.line_number)throw Error('Missing QCF glyph');if(!rows.has(w.line_number))rows.set(w.line_number,[]);rows.get(w.line_number).push({code:w.code_v2,idx,end:w.char_type_name==='end'});}}
-      if(rows.size!==15)throw Error('Unexpected QCF line count');
-      qcf3Rows=[...rows].sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
-      if(root?.isConnected&&state.page===3&&phoneMode()){preparedPages.clear();renderPage();}
-    }).catch(()=>{qcf3Failed=true}).finally(()=>{qcf3Pending=null});
+  // QCF V2 responsive pages. Keep the original verified phone artwork as a safe fallback.
+  const qcfRows=new Map(),qcfPending=new Map(),qcfFailed=new Set(),qcfFonts=new Set();
+  function fetchQcfPage(page){
+    if(qcfRows.has(page)||qcfPending.has(page)||qcfFailed.has(page))return;
+    const task=(async()=>{
+      const response=await fetch('https://api.quran.com/api/v4/verses/by_page/'+page+'?words=true&word_fields=code_v2%2Ctext_uthmani&per_page=50&mushaf=1');
+      if(!response.ok)throw Error('QCF data unavailable');
+      const data=await response.json(),rows=new Map(),indices=new Map(verses.map((v,i)=>[v.s+':'+v.a,i]));
+      for(const verse of data.verses||[]){
+        const idx=indices.get(verse.verse_key);if(idx===undefined)throw Error('QCF verse mismatch');
+        for(const w of verse.words||[]){
+          if(!w.code_v2||!w.line_number)throw Error('Incomplete QCF glyph');
+          if(w.page_number&&w.page_number!==page)throw Error('QCF page mismatch');
+          if(!rows.has(w.line_number))rows.set(w.line_number,[]);
+          rows.get(w.line_number).push({code:w.code_v2,idx,end:w.char_type_name==='end'});
+        }
+      }
+      if(rows.size<8||rows.size>15)throw Error('Invalid QCF line count');
+      if(!qcfFonts.has(page)){
+        const font=new FontFace('AqQcfV2Page'+page,'url(https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p'+page+'.woff2)');
+        await font.load();document.fonts.add(font);qcfFonts.add(page);
+      }
+      qcfRows.set(page,[...rows].sort((x,y)=>x[0]-y[0]).map(x=>x[1]));
+      if(qcfRows.size>12)qcfRows.delete(qcfRows.keys().next().value);
+      if(root?.isConnected&&state.page===page&&phoneMode()){preparedPages.clear();renderPage();}
+    })().catch(()=>qcfFailed.add(page)).finally(()=>qcfPending.delete(page));
+    qcfPending.set(page,task);
   }
-  function qcf3HTML(){
-    if(!qcf3Rows)return null;
-    return qcf3Rows.map((words,n)=>'<div class="aq-qcf3-line" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf3-word'+(w.end?' aq-qcf3-end':'')+'" role="button" tabindex="0" data-qr-verse="'+w.idx+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
+  function qcfPageHTML(page){
+    const rows=qcfRows.get(page);if(!rows)return null;
+    return rows.map((words,n)=>'<div class="aq-qcf3-line" style="font-family:AqQcfV2Page'+page+',serif" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf3-word'+(w.end?' aq-qcf3-end':'')+'" style="font-family:inherit" role="button" tabindex="0" data-qr-verse="'+w.idx+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
   }
   function pageHTML(page){
     if(phoneMode()||mobileTrial()){
-      if(page===3){fetchQcf3();const preview=qcf3HTML();if(preview)return preview;}
+      fetchQcfPage(page);const preview=qcfPageHTML(page);if(preview)return preview;
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
         return `<svg class="aq-native-line${line.c?' aq-native-centered':''}" viewBox="${[line.box[0]-line.box[2]*.018,line.box[1],line.box[2]*1.036,line.box[3]].join(' ')}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-label="${esc([...new Set(line.v.map(v=>verses[v[0]].text))].join(' '))}">${line.v.map(([i,d])=>`<g role="button" tabindex="0" data-qr-verse="${i}" class="aq-native-verse${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(verses[i].name)} الآية ${verses[i].a}"><path d="${d}"/><title>${esc(verses[i].text)}</title></g>`).join('')}</svg>`;
@@ -201,8 +217,8 @@
     fitText(paper,text,state.page);
   }
   function fitText(paper,text,page){
-    if((phoneMode()||mobileTrial())&&page===3&&qcf3Rows){
-      text.classList.remove('aq-lined-page','aq-opening','aq-original-page');text.classList.add('aq-native-page','aq-qcf3-page');text.style.setProperty('width',(paper.clientWidth-18)+'px','important');text.style.height=(paper.clientHeight-12)+'px';text.style.setProperty('--native-rows',15);return;
+    if((phoneMode()||mobileTrial())&&qcfRows.has(page)){
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page');text.classList.add('aq-native-page','aq-qcf3-page');text.style.setProperty('width',(paper.clientWidth-18)+'px','important');text.style.height=(paper.clientHeight-12)+'px';text.style.setProperty('--native-rows',qcfRows.get(page).length);return;
     }
     text.classList.remove('aq-qcf3-page');
     if(phoneMode()||mobileTrial()){
