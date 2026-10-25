@@ -168,23 +168,32 @@
     const rows=qcfData.get(page);if(!rows)return '';
     const source=phonePages.get(page);
     const slots=Array.from({length:15},()=>null);
-    // The phone mushaf contains the actual surah-title and bismillah rows,
-    // including surahs beginning in the middle of a page.
-    const textSlots=[];
-    for(let i=0;i<15;i++){
-      const line=source?.lines?.[i];
-      if(line?.s)slots[i]={heading:line.s};
-      else if(line?.b)slots[i]={bismillah:true};
-      else textSlots.push(i);
+    // QCF V2 supplies the canonical 1–15 line positions. Never compact or
+    // shift its words to accommodate banners from another mushaf edition.
+    rows.forEach((words,i)=>{
+      const n=rows.lineNumbers[i]-1;
+      if(!Number.isInteger(n)||n<0||n>=15||slots[n])throw Error('Invalid QCF line position');
+      slots[n]={words};
+    });
+    // Decorative rows are allowed only in genuinely empty QCF line positions.
+    // The phone-edition layout is advisory, not a replacement for QCF layout.
+    const decorations=[];
+    source?.lines?.forEach((line,i)=>{
+      if(line.s)decorations.push({kind:'heading',surah:line.s,position:i});
+      else if(line.b)decorations.push({kind:'bismillah',position:i});
+    });
+    const empty=slots.map((v,i)=>v===null?i:-1).filter(i=>i>=0);
+    for(const d of decorations){
+      if(!empty.length)break;
+      // Match decoration to its original position without ever displacing Quran words.
+      let target=empty.reduce((best,n)=>Math.abs(n-d.position)<Math.abs(best-d.position)?n:best,empty[0]);
+      slots[target]=d;empty.splice(empty.indexOf(target),1);
     }
-    // QCF word line numbers omit non-text rows on some opening pages.
-    // Assign every original word row in order; never overwrite Quran words.
-    rows.forEach((words,i)=>{if(i<textSlots.length)slots[textSlots[i]]=words;});
-    return slots.map((words,n)=>{
-      if(words?.heading)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(words.heading)+'</div>';
-      if(words?.bismillah)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
-      if(!words)return '<div class="aq-qcf-spacer" aria-hidden="true"></div>';
-      return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>';
+    return slots.map((slot,n)=>{
+      if(slot?.kind==='heading')return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(slot.surah)+'</div>';
+      if(slot?.kind==='bismillah')return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
+      if(!slot?.words)return '<div class="aq-qcf-spacer" aria-hidden="true"></div>';
+      return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+slot.words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>';
     }).join('');
   }
   function pageHTML(page){
