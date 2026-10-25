@@ -166,14 +166,20 @@
   }
   function qcfHTML(page){
     const rows=qcfData.get(page);if(!rows)return '';
-    const first=pageItems(page)[0],startSurah=first&&first.a===1?first.s:null;
     const source=phonePages.get(page);
     const slots=Array.from({length:15},()=>null);
-    const numbers=rows.lineNumbers||[];
-    rows.forEach((words,i)=>{const line=numbers[i]||i+1;if(line>=1&&line<=15)slots[line-1]=words;});
-    if(startSurah&&source?.lines){
-      source.lines.forEach((line,i)=>{if(i>=15)return;if(line.s)slots[i]={heading:line.s};else if(line.b)slots[i]={bismillah:true};});
+    // The phone mushaf contains the actual surah-title and bismillah rows,
+    // including surahs beginning in the middle of a page.
+    const textSlots=[];
+    for(let i=0;i<15;i++){
+      const line=source?.lines?.[i];
+      if(line?.s)slots[i]={heading:line.s};
+      else if(line?.b)slots[i]={bismillah:true};
+      else textSlots.push(i);
     }
+    // QCF word line numbers omit non-text rows on some opening pages.
+    // Assign every original word row in order; never overwrite Quran words.
+    rows.forEach((words,i)=>{if(i<textSlots.length)slots[textSlots[i]]=words;});
     return slots.map((words,n)=>{
       if(words?.heading)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(words.heading)+'</div>';
       if(words?.bismillah)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
@@ -210,7 +216,7 @@
     return html;
   }
   function renderPage(animate=false){
-    if(phoneMode()&&state.page>=3&&pageItems(state.page)[0]?.a===1&&!phonePages.has(state.page)){
+    if(phoneMode()&&state.page>=3&&!phonePages.has(state.page)){
       const target=state.page;
       $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل عنوان السورة والبسملة…</p>';
       root.dataset.ready='false';
