@@ -314,3 +314,10 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-surah-inf
 /* Keep quick-save in the reading view only: tool panels must not overlap it. */
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{display:none!important}
 body.quran-reader-open.quran-reader-immersive #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{display:inline-flex!important;align-items:center!important;justify-content:center!important}
+
+/* Layering fix: quick save remains in folio below the Quran toolbar overlays. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-folio{z-index:0!important;isolation:isolate!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{z-index:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
+body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{display:inline-flex!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-top,.aq-bottom,.aq-turn,.aq-slider,.aq-notice){z-index:20!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-index:30!important}
