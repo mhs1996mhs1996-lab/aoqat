@@ -135,7 +135,7 @@
     if(phoneMode()||mobileTrial()){
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
-        return `<svg class="aq-native-line${line.c?' aq-native-centered':''}" viewBox="${[line.box[0]-line.box[2]*.06,line.box[1],line.box[2]*1.12,line.box[3]].join(' ')}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-label="${esc([...new Set(line.v.map(v=>verses[v[0]].text))].join(' '))}">${line.v.map(([i,d])=>`<g role="button" tabindex="0" data-qr-verse="${i}" class="aq-native-verse${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(verses[i].name)} الآية ${verses[i].a}"><path d="${d}"/><title>${esc(verses[i].text)}</title></g>`).join('')}</svg>`;
+        return `<svg class="aq-native-line${line.c?' aq-native-centered':''}" viewBox="${[line.box[0]-line.box[2]*.035,line.box[1],line.box[2]*1.07,line.box[3]].join(' ')}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-label="${esc([...new Set(line.v.map(v=>verses[v[0]].text))].join(' '))}">${line.v.map(([i,d])=>`<g role="button" tabindex="0" data-qr-verse="${i}" class="aq-native-verse${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(verses[i].name)} الآية ${verses[i].a}"><path d="${d}"/><title>${esc(verses[i].text)}</title></g>`).join('')}</svg>`;
       }).join('');
     }
     if(official){
