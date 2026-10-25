@@ -606,8 +606,7 @@
         return;
       }
       el.innerHTML =
-        '<div class="ad-qibla-card"><div class="ad-qibla-head"><h3>اتجاه القبلة</h3><button type="button" id="adQiblaBack" class="ad-qibla-back">رجوع ‹</button></div><p class="ad-qibla-hint">حدّد موقعك، ثم وجّه الهاتف بعيداً عن المعادن للحصول على اتجاه دقيق.</p><div class="ad-qibla-compass-wrap"><div class="ad-compass"><span id="adArrow" class="ad-arrow">↑</span></div></div><button type="button" id="adQiblaStart" class="ad-qibla-start">تحديد القبلة بموقعي</button><p id="adQiblaInfo" class="ad-qibla-info" aria-live="polite"></p></div>';
-      $("adQiblaBack").onclick = () => { document.getElementById("adServiceBack")?.click(); if(externalService) window.aoqatClosePrayerService?.(); };
+        '<div class="ad-qibla-card"><div class="ad-qibla-head"><h3>اتجاه القبلة</h3></div><p class="ad-qibla-hint">حدّد موقعك، ثم وجّه الهاتف بعيداً عن المعادن للحصول على اتجاه دقيق.</p><div class="ad-qibla-compass-wrap"><div class="ad-compass"><span id="adArrow" class="ad-arrow">↑</span></div></div><button type="button" id="adQiblaStart" class="ad-qibla-start">تحديد القبلة بموقعي</button><p id="adQiblaInfo" class="ad-qibla-info" aria-live="polite"></p></div>';
       $("adQiblaStart").onclick = async () => {
         try {
           if (
