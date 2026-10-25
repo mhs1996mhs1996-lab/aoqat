@@ -169,7 +169,6 @@
   }
   function pageHTML(page){
     if(phoneMode()||mobileTrial()){
-      return qcfHTML(page);
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
         return `<svg class="aq-native-line${line.c?' aq-native-centered':''}" viewBox="${[line.box[0]-line.box[2]*.018,line.box[1],line.box[2]*1.036,line.box[3]].join(' ')}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-label="${esc([...new Set(line.v.map(v=>verses[v[0]].text))].join(' '))}">${line.v.map(([i,d])=>`<g role="button" tabindex="0" data-qr-verse="${i}" class="aq-native-verse${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(verses[i].name)} الآية ${verses[i].a}"><path d="${d}"/><title>${esc(verses[i].text)}</title></g>`).join('')}</svg>`;
@@ -196,16 +195,12 @@
     return html;
   }
   function renderPage(animate=false){
-    if(phoneMode()&&!qcfData.has(state.page)){
+    if((phoneMode()||mobileTrial())&&!phonePages.has(state.page)){
       const target=state.page;
-      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل خط QCF V2 الأصلي للصفحة '+arabic(target)+'…</p>';
+      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل الصفحة '+arabic(target)+'…</p>';
       root.dataset.ready='false';
-      qcfLoad(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل خط QCF V2 لهذه الصفحة. تأكد من الإنترنت ثم أعد فتح الصفحة.</p>';root.dataset.ready='error';}});
+      phonePage(target).then(()=>{if(root?.isConnected&&(phoneMode()||mobileTrial())&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل صفحة المصحف؛ حاول مجدداً عند توفر الإنترنت.</p>';root.dataset.ready='error';}});
       return;
-    }
-    if((phoneMode()||mobileTrial())&&!qcfData.has(state.page)){
-      const target=state.page;$('adVerses').innerHTML='<p class="aq-loading">تحميل الصفحة…</p>';root.dataset.ready='false';
-      phonePage(target).then(()=>{if(root?.isConnected&&(phoneMode()||mobileTrial())&&state.page===target)renderPage(animate);}).catch(()=>{if(root?.isConnected&&state.page===target)notice('تعذر تحميل الصفحة؛ اتصل بالإنترنت لتنزيلها ثم أعد فتحها.');});return;
     }
     root.dataset.ready='true';
     $('aqQuickSave').textContent='الحفظ السريع';
@@ -230,8 +225,13 @@
   function fitText(paper,text,page){
 
     if(phoneMode()||mobileTrial()){
-      text.classList.remove('aq-lined-page','aq-opening','aq-original-page');text.classList.add('aq-native-page','aq-qcf-page');const zoom=1;text.style.setProperty('width',(paper.clientWidth-18)+'px','important');text.style.height=(paper.clientHeight-12)+'px';
-      const rows=qcfData.get(page)?.length||15;text.classList.toggle('aq-qcf-opening',page<=2);text.style.setProperty('--native-rows',page<=2?15:rows);text.style.setProperty('--native-zoom',zoom);
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-qcf-page','aq-qcf-opening');
+      text.classList.add('aq-native-page');
+      text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
+      text.style.height=(paper.clientHeight-12)+'px';
+      const rows=phonePages.get(page)?.lines.length||15;
+      text.style.setProperty('--native-rows',rows);
+      text.style.setProperty('--native-zoom',1);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
