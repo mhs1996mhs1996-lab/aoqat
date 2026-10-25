@@ -259,6 +259,6 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf3-word
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf3-end{color:#a7814e!important}
 
 /* Dynamic QCF V2 per-page fonts, preserving the original reader controls. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf3-line{font-family:inherit!important;font-size:clamp(17px,4.75vw,31px)!important;min-width:0!important;overflow:hidden!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf3-line{font-family:var(--qcf-font),serif!important;font-size:clamp(17px,4.75vw,31px)!important;min-width:0!important;overflow:hidden!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf3-word{font-family:inherit!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf3-page{grid-template-rows:repeat(var(--native-rows,15),minmax(0,1fr))!important}
