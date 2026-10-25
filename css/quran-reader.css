@@ -253,3 +253,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-ve
 
 /* Uniform Quran glyph appearance across all pages and page transitions. */
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse path{stroke:#14100c!important;stroke-width:.42!important;stroke-linejoin:round!important;paint-order:stroke fill!important}
+
+/* Genuine per-page QCF V2 glyph rendering; no artificial stroke or font substitution. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-page{display:grid!important;grid-template-rows:repeat(var(--native-rows,15),minmax(0,1fr))!important;gap:0!important;overflow:hidden!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-line{display:flex!important;align-items:center!important;justify-content:space-between!important;direction:rtl!important;white-space:nowrap!important;min-width:0!important;font-family:var(--aq-qcf-font),serif!important;font-size:clamp(18px,5vw,32px)!important;line-height:1!important;letter-spacing:0!important;overflow:hidden!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-word{font-family:inherit!important;flex:0 0 auto!important;white-space:pre!important;color:var(--qr-ink)!important;cursor:pointer!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-marker{color:#a78050!important}
