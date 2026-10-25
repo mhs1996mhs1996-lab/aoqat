@@ -1,0 +1,34 @@
+name: Verify trial original Mushaf reader
+on:
+  push:
+    branches: [trial-mushaf-reference-20261025]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  original-reader:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check original page source and ayah mapping
+        run: node --test tests/mushaf-trial-inventory.test.cjs tests/quran-pages.test.cjs tests/quran-original-pages.test.cjs tests/quran-pocket-pages.test.cjs
+      - name: Install browser test dependencies
+        run: npm install --no-save --package-lock=false playwright
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify original page reader on phone
+        env:
+          CHROME_PATH: /home/runner/.cache/ms-playwright/chromium-*/chrome-linux/chrome
+        run: |
+          CHROME_PATH="$(find "$HOME/.cache/ms-playwright" -type f -name chrome -path '*/chrome-linux/chrome' | head -1)" node tests/quran-original-browser.cjs
+      - name: Upload page previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: original-mushaf-trial-previews
+          path: /tmp/aoqat-original-*.png
+          if-no-files-found: ignore
