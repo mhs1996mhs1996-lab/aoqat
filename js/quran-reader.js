@@ -131,8 +131,45 @@
     document.body.classList.toggle('quran-reader-immersive',on);
   }
   function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
+  // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
+  const qcfData=new Map(),qcfPending=new Map(),qcfErrors=new Map(),qcfFontReady=new Set();
+  function qcfLoad(page,force=false){
+    if(qcfData.has(page))return Promise.resolve(qcfData.get(page));
+    if(qcfPending.has(page))return qcfPending.get(page);
+    if(qcfErrors.has(page)&&!force)return Promise.reject(qcfErrors.get(page));
+    if(force)qcfErrors.delete(page);
+    const job=(async()=>{
+      const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?words=true&word_fields=code_v2%2Ctext_uthmani&per_page=50&mushaf=1';
+      const res=await fetch(url);if(!res.ok)throw Error('QCF API '+res.status);
+      const data=await res.json(),lines=new Map(),lookup=new Map(verses.map((v,i)=>[v.s+':'+v.a,i]));
+      for(const verse of data.verses||[]){
+        const index=lookup.get(verse.verse_key);
+        if(index===undefined)throw Error('QCF verse index mismatch');
+        for(const w of verse.words||[]){
+          if(!w.code_v2||!Number.isInteger(w.line_number))throw Error('Missing QCF code or line');
+          if(w.page_number&&w.page_number!==page)throw Error('Page mismatch');
+          if(!lines.has(w.line_number))lines.set(w.line_number,[]);
+          lines.get(w.line_number).push({code:w.code_v2,index,end:w.char_type_name==='end'});
+        }
+      }
+      if(lines.size<1||lines.size>15)throw Error('Unexpected line count');
+      if(!qcfFontReady.has(page)){
+        const font=new FontFace('AqQcfV2Page'+page,'url("https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p'+page+'.woff2")');
+        await font.load();document.fonts.add(font);qcfFontReady.add(page);
+      }
+      const rows=[...lines].sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+      qcfData.set(page,rows);if(qcfData.size>16)qcfData.delete(qcfData.keys().next().value);
+      return rows;
+    })().catch(e=>{qcfErrors.set(page,e);throw e}).finally(()=>qcfPending.delete(page));
+    qcfPending.set(page,job);return job;
+  }
+  function qcfHTML(page){
+    const rows=qcfData.get(page);if(!rows)return '';
+    return rows.map((words,n)=>'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
+  }
   function pageHTML(page){
     if(phoneMode()||mobileTrial()){
+      return qcfHTML(page);
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
         return `<svg class="aq-native-line${line.c?' aq-native-centered':''}" viewBox="${[line.box[0]-line.box[2]*.018,line.box[1],line.box[2]*1.036,line.box[3]].join(' ')}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-label="${esc([...new Set(line.v.map(v=>verses[v[0]].text))].join(' '))}">${line.v.map(([i,d])=>`<g role="button" tabindex="0" data-qr-verse="${i}" class="aq-native-verse${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(verses[i].name)} الآية ${verses[i].a}"><path d="${d}"/><title>${esc(verses[i].text)}</title></g>`).join('')}</svg>`;
@@ -159,7 +196,14 @@
     return html;
   }
   function renderPage(animate=false){
-    if((phoneMode()||mobileTrial())&&!phonePages.has(state.page)){
+    if(phoneMode()&&!qcfData.has(state.page)){
+      const target=state.page;
+      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل خط QCF V2 الأصلي للصفحة '+arabic(target)+'…</p>';
+      root.dataset.ready='false';
+      qcfLoad(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل خط QCF V2 لهذه الصفحة. تأكد من الإنترنت ثم أعد فتح الصفحة.</p>';root.dataset.ready='error';}});
+      return;
+    }
+    if((phoneMode()||mobileTrial())&&!qcfData.has(state.page)){
       const target=state.page;$('adVerses').innerHTML='<p class="aq-loading">تحميل الصفحة…</p>';root.dataset.ready='false';
       phonePage(target).then(()=>{if(root?.isConnected&&(phoneMode()||mobileTrial())&&state.page===target)renderPage(animate);}).catch(()=>{if(root?.isConnected&&state.page===target)notice('تعذر تحميل الصفحة؛ اتصل بالإنترنت لتنزيلها ثم أعد فتحها.');});return;
     }
@@ -186,8 +230,8 @@
   function fitText(paper,text,page){
 
     if(phoneMode()||mobileTrial()){
-      text.classList.remove('aq-lined-page','aq-opening','aq-original-page');text.classList.add('aq-native-page');const zoom=1;text.style.setProperty('width',(paper.clientWidth-18)+'px','important');text.style.height=(paper.clientHeight-12)+'px';
-      const rows=phonePages.get(page)?.lines.length||15;text.style.setProperty('--native-rows',rows);text.style.setProperty('--native-zoom',zoom);
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page');text.classList.add('aq-native-page','aq-qcf-page');const zoom=1;text.style.setProperty('width',(paper.clientWidth-18)+'px','important');text.style.height=(paper.clientHeight-12)+'px';
+      const rows=qcfData.get(page)?.length||15;text.style.setProperty('--native-rows',rows);text.style.setProperty('--native-zoom',zoom);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
@@ -220,7 +264,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).catch(()=>{});}return;}
+    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){qcfLoad(p).catch(()=>{});}return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
