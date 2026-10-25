@@ -64,6 +64,8 @@
       official=await loadOfficial();
       if(!official)throw Error('Original Mushaf page artwork unavailable');
       printPages=official.pages.map((p,i)=>({...p,start:phone.pages[i].start,end:phone.pages[i].end}));
+      // Preserve the existing 6236-verse indexing for bookmarks and search.
+      if(printPages.some((p,i)=>!p.hits?.length||p.start!==m.pages[i].start))throw Error('Original Mushaf verse mapping mismatch');
       meta={...m,pages:printPages};state.layout='print';state.phoneRevision=1;
     }).catch(e=>{loading=null;throw e;});
     return loading;
