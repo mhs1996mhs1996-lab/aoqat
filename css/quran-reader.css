@@ -259,3 +259,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-page{
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-line{display:flex!important;align-items:center!important;justify-content:space-between!important;direction:rtl!important;white-space:nowrap!important;min-width:0!important;font-family:var(--aq-qcf-font),serif!important;font-size:clamp(18px,5vw,32px)!important;line-height:1!important;letter-spacing:0!important;overflow:hidden!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-word{font-family:inherit!important;flex:0 0 auto!important;white-space:pre!important;color:var(--qr-ink)!important;cursor:pointer!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-marker{color:#a78050!important}
+
+/* QCF V2 special opening pages: keep native glyphs but restore compact centered verses. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-opening{grid-template-rows:repeat(15,minmax(0,1fr))!important;position:relative!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-opening .aq-qcf-line{grid-row:var(--aq-qcf-row)!important;justify-content:center!important;gap:clamp(1px,1vw,7px)!important;overflow:visible!important;font-size:clamp(18px,5vw,32px)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-opening-title{grid-row:2/span 2!important;align-self:center!important;justify-self:stretch!important;min-width:0!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-opening-title .aq-surah-banner{margin:0!important}
