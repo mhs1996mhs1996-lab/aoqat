@@ -53,7 +53,10 @@
     const r=await fetch(prefix+'.json.gz');if(!r.ok)throw Error('Mushaf metadata unavailable');
     const bytes=new Uint8Array(await r.arrayBuffer());
     const data=bytes[0]===31&&bytes[1]===139?await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));
-    if(data.pages.length!==604||data.pages.some((p,i)=>p.id!==i+1||!p.hits.length))throw Error('Invalid original Mushaf pages');return data;
+    if(data.pages.length!==604||data.pages.some((p,i)=>p.id!==i+1||!p.hits.length))throw Error('Invalid original Mushaf pages');
+    // Use the user's colored Tajwid edition only after all 604 assets are deployed.
+    try{const tajwid=await fetch('assets/mushaf-tajwid-ready.json',{cache:'no-store'});if(tajwid.ok){const manifest=await tajwid.json();if(manifest.pages===604&&manifest.edition==='tajwid-hafs'){data.imageDirectory='assets/mushaf-tajwid';data.tajwidEdition=true;}}}catch(_){/* Preserve the currently working reader. */}
+    return data;
   }
   async function load(){
     if(!loading)loading=Promise.all([fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();}),fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();}),loadPhone()]).then(async ([q,m,f])=>{official=null;phone=f;
