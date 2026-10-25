@@ -161,7 +161,7 @@
   }
   function qcfPageHTML(page){
     const rows=qcfRows.get(page);if(!rows)return null;
-    return rows.map((words,n)=>'<div class="aq-qcf3-line" style="font-family:AqQcfV2Page'+page+',serif" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf3-word'+(w.end?' aq-qcf3-end':'')+'" style="font-family:inherit" role="button" tabindex="0" data-qr-verse="'+w.idx+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
+    return rows.map((words,n)=>'<div class="aq-qcf3-line" style="--qcf-font:AqQcfV2Page'+page+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf3-word'+(w.end?' aq-qcf3-end':'')+'" style="font-family:inherit" role="button" tabindex="0" data-qr-verse="'+w.idx+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
   }
   function pageHTML(page){
     if(phoneMode()||mobileTrial()){
