@@ -236,3 +236,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="tajwid-hafs"] .aq-paper{display:grid!important;place-items:center!important;overflow:hidden!important;padding:4px!important;}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="tajwid-hafs"] .aq-original-page{align-self:center!important;justify-self:center!important;flex-shrink:0!important;margin:0!important;padding:0!important;line-height:0!important;}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="tajwid-hafs"] .aq-original-art{display:block!important;width:100%!important;height:100%!important;}
+
+/* Restored mobile mushaf: clearer glyph strokes and verse separators without changing pagination. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-line{fill:#17130e!important;filter:contrast(1.16)!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse path{stroke:#17130e!important;stroke-width:.22!important;paint-order:stroke fill!important}
