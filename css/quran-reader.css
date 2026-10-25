@@ -275,3 +275,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-word{
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-page .aq-qcf-heading{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:visible!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-page .aq-qcf-heading .aq-surah-banner{margin:0!important;padding:1px 10px!important;width:100%!important;box-sizing:border-box!important;font-size:15px!important;line-height:1.4!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-page .aq-qcf-bismillah{display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:0!important;font-family:AoqatQuran,serif!important;font-size:22px!important;line-height:1.4!important;color:var(--qr-ink)!important}
+
+/* Surah openings must remain legible even when the QCF page has no free decorative row. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-inline-opening{position:absolute;top:0;left:0;right:0;z-index:1;text-align:center;pointer-events:none;transform:translateY(-100%)}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-inline-opening .aq-surah-banner{margin:0!important;font-size:13px!important;padding:0 5px!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-qcf-inline-bismillah{font-family:AoqatQuran,serif;font-size:16px}
