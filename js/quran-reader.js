@@ -175,25 +175,38 @@
       if(!Number.isInteger(n)||n<0||n>=15||slots[n])throw Error('Invalid QCF line position');
       slots[n]={words};
     });
-    // Decorative rows are allowed only in genuinely empty QCF line positions.
-    // The phone-edition layout is advisory, not a replacement for QCF layout.
-    const decorations=[];
-    source?.lines?.forEach((line,i)=>{
-      if(line.s)decorations.push({kind:'heading',surah:line.s,position:i});
-      else if(line.b)decorations.push({kind:'bismillah',position:i});
-    });
-    const empty=slots.map((v,i)=>v===null?i:-1).filter(i=>i>=0);
-    for(const d of decorations){
-      if(!empty.length)break;
-      // Match decoration to its original position without ever displacing Quran words.
-      let target=empty.reduce((best,n)=>Math.abs(n-d.position)<Math.abs(best-d.position)?n:best,empty[0]);
-      slots[target]=d;empty.splice(empty.indexOf(target),1);
+    // Derive surah openings from the actual QCF verse stream, not from
+    // another edition's page rows. Each surah begins at ayah 1.
+    const openings=[];
+    for(let i=0;i<rows.length;i++){
+      const words=rows[i],first=words[0];
+      if(!first)continue;
+      const verse=verses[first.index];
+      if(verse?.a===1 && (i===0 || rows[i-1].at(-1)?.index!==first.index)){
+        openings.push({surah:verse.s,line:rows.lineNumbers[i]-1});
+      }
+    }
+    // The title and basmala belong immediately before the first ayah.
+    // Reserve the nearest free rows before it; never shift or overwrite words.
+    for(const opening of openings){
+      const free=slots.map((v,i)=>v===null&&i<opening.line?i:-1).filter(i=>i>=0);
+      const needed=opening.surah===9?1:2;
+      if(free.length>=needed){
+        const positions=free.slice(-needed);
+        slots[positions[0]]={kind:'heading',surah:opening.surah};
+        if(needed===2)slots[positions[1]]={kind:'bismillah'};
+      }else{
+        // Some editions have no spare grid row: attach a compact title to
+        // the first verse line instead of losing it or moving Quran words.
+        const target=slots[opening.line];
+        if(target?.words)target.opening=opening.surah;
+      }
     }
     return slots.map((slot,n)=>{
       if(slot?.kind==='heading')return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(slot.surah)+'</div>';
       if(slot?.kind==='bismillah')return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       if(!slot?.words)return '<div class="aq-qcf-spacer" aria-hidden="true"></div>';
-      return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+slot.words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>';
+      return (slot.opening?'<div class="aq-qcf-inline-opening">'+surahBanner(slot.opening)+(slot.opening===9?'':'<div class="aq-qcf-inline-bismillah">'+esc(quran[0].verses[0].text)+'</div>')+'</div>':'')+'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+slot.words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>';
     }).join('');
   }
   function pageHTML(page){
