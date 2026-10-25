@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v112-phone-balanced";
+const CACHE_NAME = "aoqat-pwa-v113-phone-fine";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -101,7 +101,7 @@ const APP_SHELL = [
   "/js/modal-panels.js?v=10",
   "/js/tomorrow-alarm.js?v=9",
   "/js/push-notifications.js?v=9",
-  "/js/quran-reader.js?v=phone-scale-balanced-20261025",
+  "/js/quran-reader.js?v=phone-scale-fine-20261025",
   "/js/iqama-timing.js?v=1",
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
