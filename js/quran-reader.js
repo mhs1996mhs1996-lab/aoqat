@@ -38,7 +38,7 @@
   function pageItems(p=state.page){if(phoneMode())return verses.slice(phone.pages[p-1].start,phone.pages[p-1].end);return verses.slice(meta.pages[p-1].start,p<604?meta.pages[p].start:verses.length);}
   function surahBanner(id){
     const s=quran[id-1],kind=s.type==='meccan'?'مكية':'مدنية';
-    return `<h2 class="aq-surah-banner aq-surah-details"><span class="aq-surah-count">${arabic(s.total_verses)} آية</span><span class="aq-surah-name">سورة ${esc(s.name)}</span><span class="aq-surah-kind">${kind}</span></h2>`;
+    return `<h2 class="aq-surah-banner aq-surah-details"><span class="aq-surah-count">${arabic(s.total_verses)} آيات</span><span class="aq-surah-name">سورة ${esc(s.name)}</span><span class="aq-surah-kind">${kind}</span></h2>`;
   }
   function notice(text){if($('aqNotice'))$('aqNotice').textContent=text;}
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
