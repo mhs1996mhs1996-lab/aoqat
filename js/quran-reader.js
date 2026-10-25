@@ -165,7 +165,7 @@
   }
   function qcfHTML(page){
     const rows=qcfData.get(page);if(!rows)return '';
-    return rows.map((words,n)=>'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
+    return (page<=2?'<div class="aq-qcf-opening-title">'+surahBanner(page===1?1:2)+'</div>':'')+rows.map((words,n)=>'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(page<=2?n+5:n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
   }
   function pageHTML(page){
     if(phoneMode()||mobileTrial()){
@@ -231,7 +231,7 @@
 
     if(phoneMode()||mobileTrial()){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page');text.classList.add('aq-native-page','aq-qcf-page');const zoom=1;text.style.setProperty('width',(paper.clientWidth-18)+'px','important');text.style.height=(paper.clientHeight-12)+'px';
-      const rows=qcfData.get(page)?.length||15;text.style.setProperty('--native-rows',rows);text.style.setProperty('--native-zoom',zoom);
+      const rows=qcfData.get(page)?.length||15;text.classList.toggle('aq-qcf-opening',page<=2);text.style.setProperty('--native-rows',page<=2?15:rows);text.style.setProperty('--native-zoom',zoom);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
