@@ -168,6 +168,7 @@
     return (page<=2?'<div class="aq-qcf-opening-title">'+surahBanner(page===1?1:2)+'</div>':'')+rows.map((words,n)=>'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(page<=2?n+5:n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
   }
   function pageHTML(page){
+    if(phoneMode()&&page>=3)return qcfHTML(page);
     if(phoneMode()||mobileTrial()){
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
@@ -195,7 +196,15 @@
     return html;
   }
   function renderPage(animate=false){
-    if((phoneMode()||mobileTrial())&&!phonePages.has(state.page)){
+    if(phoneMode()&&state.page>=3&&!qcfData.has(state.page)){
+      const target=state.page;
+      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل خط QCF V2 الأصلي…</p>';
+      root.dataset.ready='false';
+      qcfLoad(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل خط QCF V2. تحقق من اتصال الإنترنت وأعد فتح الصفحة.</p>';root.dataset.ready='error';}});
+      return;
+    }
+
+    if((phoneMode()||mobileTrial())&&state.page<=2&&!phonePages.has(state.page)){
       const target=state.page;
       $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل الصفحة '+arabic(target)+'…</p>';
       root.dataset.ready='false';
@@ -224,6 +233,19 @@
   }
   function fitText(paper,text,page){
 
+    if(phoneMode()&&page>=3){
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page','aq-qcf-opening');
+      text.classList.add('aq-qcf-page');
+      text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
+      text.style.height=(paper.clientHeight-12)+'px';
+      text.style.setProperty('--native-rows',15);
+      for(const line of text.querySelectorAll('.aq-qcf-line')){
+        let size=32;line.style.setProperty('font-size',size+'px','important');
+        while(size>18&&line.scrollWidth>line.clientWidth+2){size-=.5;line.style.setProperty('font-size',size+'px','important');}
+        if(line.scrollWidth>line.clientWidth+2)line.style.setProperty('justify-content','flex-start','important');
+      }
+      return;
+    }
     if(phoneMode()||mobileTrial()){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-qcf-page','aq-qcf-opening');
       text.classList.add('aq-native-page');
@@ -264,7 +286,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).catch(()=>{});}return;}
+    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){(p>=3?qcfLoad(p):phonePage(p)).catch(()=>{});}return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
