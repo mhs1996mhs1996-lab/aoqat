@@ -38,7 +38,10 @@
   function pageItems(p=state.page){if(phoneMode())return verses.slice(phone.pages[p-1].start,phone.pages[p-1].end);return verses.slice(meta.pages[p-1].start,p<604?meta.pages[p].start:verses.length);}
   function surahBanner(id){
     const s=quran[id-1],kind=s.type==='meccan'?'مكية':'مدنية';
-    return `<div class="aq-surah-info-clean"><span class="aq-surah-info-count">${arabic(s.total_verses)} آية</span><span class="aq-surah-info-name">سورة ${esc(s.name)}</span><span class="aq-surah-info-kind">${kind}</span></div>`;
+    // Self-contained frame avoids older Quran heading selectors overriding its border.
+    const frame='display:grid!important;grid-template-columns:25% 50% 25%!important;direction:rtl!important;align-items:center!important;width:100%!important;min-height:42px!important;box-sizing:border-box!important;padding:5px 12px!important;margin:0!important;border:3px double #ad916a!important;border-radius:9px!important;background:linear-gradient(90deg,#f2e8d9,#fffbf4 50%,#f2e8d9)!important;box-shadow:inset 0 0 0 3px #fffaf1,inset 0 0 0 4px #d2bda0!important;color:#30444a!important;white-space:nowrap!important;overflow:hidden!important;line-height:1.35!important';
+    const cell='display:block!important;min-width:0!important;white-space:nowrap!important;overflow:hidden!important;font-family:Tahoma,Arial,sans-serif!important;font-weight:600!important;line-height:1.35!important';
+    return `<div class="aq-surah-info-clean" style="${frame}"><span class="aq-surah-info-count" style="${cell};text-align:right!important;font-size:clamp(11px,3vw,15px)!important">${arabic(s.total_verses)} آية</span><span class="aq-surah-info-name" style="${cell};text-align:center!important;font-size:clamp(14px,3.7vw,19px)!important">سورة ${esc(s.name)}</span><span class="aq-surah-info-kind" style="${cell};text-align:left!important;font-size:clamp(11px,3vw,15px)!important">${kind}</span></div>`;
   }
   function notice(text){if($('aqNotice'))$('aqNotice').textContent=text;}
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
