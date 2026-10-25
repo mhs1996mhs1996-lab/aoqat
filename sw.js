@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v107-quran-tajwid-aspect-correct";
+const CACHE_NAME = "aoqat-pwa-v108-quran-tajwid-centered-contain";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -101,7 +101,7 @@ const APP_SHELL = [
   "/js/modal-panels.js?v=10",
   "/js/tomorrow-alarm.js?v=9",
   "/js/push-notifications.js?v=9",
-  "/js/quran-reader.js?v=tajwid-aspect-correct-20261025",
+  "/js/quran-reader.js?v=tajwid-centered-contain-20261025",
   "/js/iqama-timing.js?v=1",
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
