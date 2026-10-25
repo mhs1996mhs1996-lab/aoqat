@@ -264,7 +264,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){qcfLoad(p).catch(()=>{});}return;}
+    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).catch(()=>{});}return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
