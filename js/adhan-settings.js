@@ -606,7 +606,8 @@
         return;
       }
       el.innerHTML =
-        '<p>تحتاج البوصلة إلى الموقع وحساس الاتجاه. أبعد الهاتف عن المعادن.</p><button type="button" id="adQiblaStart">تحديد القبلة بموقعي</button><div class="ad-compass"><span id="adArrow" class="ad-arrow">↑</span></div><p id="adQiblaInfo"></p>';
+        '<div class="ad-qibla-card"><div class="ad-qibla-head"><h3>اتجاه القبلة</h3><button type="button" id="adQiblaBack" class="ad-qibla-back">رجوع ‹</button></div><p class="ad-qibla-hint">حدّد موقعك، ثم وجّه الهاتف بعيداً عن المعادن للحصول على اتجاه دقيق.</p><div class="ad-qibla-compass-wrap"><div class="ad-compass"><span id="adArrow" class="ad-arrow">↑</span></div></div><button type="button" id="adQiblaStart" class="ad-qibla-start">تحديد القبلة بموقعي</button><p id="adQiblaInfo" class="ad-qibla-info" aria-live="polite"></p></div>';
+      $("adQiblaBack").onclick = () => { document.getElementById("adServiceBack")?.click(); if(externalService) window.aoqatClosePrayerService?.(); };
       $("adQiblaStart").onclick = async () => {
         try {
           if (
