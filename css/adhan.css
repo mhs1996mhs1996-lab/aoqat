@@ -309,3 +309,55 @@ body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes .ad-mo
 body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes .ad-mode>div{display:flex!important;gap:6px!important;flex:1!important}
 body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes [data-mode]{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;min-width:48px!important;flex:1!important;padding:8px 3px!important}
 body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes [data-mode] small{font-size:12px!important;line-height:1.5!important;color:inherit!important}
+
+
+/* Web qibla: one clear card instead of nested ornamental frames. */
+#prayerServicePanel:has(.ad-qibla-card) .ad-card,
+#prayerServicePanel:has(.ad-qibla-card) .ad-service,
+#prayerServicePanel:has(.ad-qibla-card) #adServiceFrame {
+  border:0!important;box-shadow:none!important;background:transparent!important;
+  padding:0!important;margin:0!important;outline:0!important;
+}
+#prayerServicePanel .ad-qibla-card{
+  direction:rtl;box-sizing:border-box;width:100%;max-width:490px;
+  margin:10px auto 20px;padding:20px 18px 24px;
+  border:1.5px solid #c6b48a;border-radius:22px;
+  background:linear-gradient(155deg,#fffef8 0%,#f9f7ed 100%);
+  box-shadow:0 8px 26px #243b2c12,inset 0 0 0 5px #ffffffb8;
+  text-align:center;color:#203f35;
+}
+#prayerServicePanel .ad-qibla-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding-bottom:14px;border-bottom:1px solid #d8cdb1;
+}
+#prayerServicePanel .ad-qibla-head h3{margin:0;font-size:21px;font-weight:800;color:#234736}
+#prayerServicePanel .ad-qibla-back{
+  flex:none;border:1px solid #d3c49f!important;border-radius:12px!important;
+  background:#f7f4e9!important;color:#36553d!important;
+  padding:9px 15px!important;font-size:15px!important;
+}
+#prayerServicePanel .ad-qibla-hint{
+  font-size:15px;line-height:1.9;margin:18px auto 12px;max-width:330px;color:#52665a;
+}
+#prayerServicePanel .ad-qibla-compass-wrap{
+  display:grid;place-items:center;margin:16px auto 22px;
+}
+#prayerServicePanel .ad-qibla-card .ad-compass{
+  display:grid;place-items:center;width:min(61vw,225px);height:min(61vw,225px);
+  margin:0;border:5px solid #bda66b;border-radius:50%;
+  background:radial-gradient(circle,#fffdf6 52%,#f0ead7 100%);
+  box-shadow:0 0 0 8px #c4b17e24,inset 0 0 0 2px #fff9e9;
+}
+#prayerServicePanel .ad-qibla-card .ad-arrow{
+  font-size:105px;line-height:1;color:#16754e;transform-origin:center center;
+  transition:transform .2s ease-out;
+}
+#prayerServicePanel .ad-qibla-start{
+  display:block;width:min(100%,290px);margin:0 auto;
+  padding:13px 18px!important;border-radius:13px!important;
+  background:linear-gradient(120deg,#385a36,#7e9a6c)!important;
+  color:white!important;font-weight:700;font-size:16px!important;
+}
+#prayerServicePanel .ad-qibla-info{
+  min-height:24px;margin:15px 0 0;line-height:1.8;font-size:14px;color:#3d594b;
+}
