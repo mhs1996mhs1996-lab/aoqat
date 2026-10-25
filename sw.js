@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v139-quick-save-visibility";
+const CACHE_NAME = "aoqat-pwa-v140-qibla-card";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -66,10 +66,10 @@ const APP_SHELL = [
   "/",
   "/index.html",
   "/css/style.css",
-  "/css/adhan.css?v=2",
+  "/css/adhan.css?v=qibla-card-20261025",
   "/css/adhan-modal.css?v=1",
   "/js/adhan-core.js?v=3",
-  "/js/adhan-settings.js?v=6",
+  "/js/adhan-settings.js?v=qibla-card-20261025",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
   "/assets/audio/adhan-v124-1.mp3",
