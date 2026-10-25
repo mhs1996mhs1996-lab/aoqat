@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v114-phone-up";
+const CACHE_NAME = "aoqat-pwa-v115-mushaf-reference";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -61,7 +61,7 @@ const APP_SHELL = [
   "/js/web-back-navigation.js",
   "/data/prayer-times-offline.js?v=2",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
-  "/css/quran-reader.css?v=restore-phone-20261025",
+  "/css/quran-reader.css?v=mushaf-reference-20261025",
   "/js/settings-subwindows.js", "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
   "/",
   "/index.html",
