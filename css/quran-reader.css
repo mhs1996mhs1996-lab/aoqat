@@ -240,3 +240,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
 /* Restored mobile mushaf: clearer glyph strokes and verse separators without changing pagination. */
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-line{fill:#17130e!important;filter:contrast(1.16)!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-verse path{stroke:#17130e!important;stroke-width:.22!important;paint-order:stroke fill!important}
+
+/* Quran page presentation inspired by the supplied mushaf references; web reader only. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-page .aq-native-heading{display:flex!important;align-items:center!important;justify-content:center!important;min-height:0!important;overflow:visible!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-page .aq-surah-banner{width:100%!important;box-sizing:border-box!important;margin:0!important;padding:2px 8px!important;border:2px solid #b39874!important;border-radius:7px!important;background:linear-gradient(90deg,#e7d6bc77,#fff9ed,#e7d6bc77)!important;color:var(--qr-ink)!important;box-shadow:inset 0 0 0 3px #fff8eb,inset 0 0 0 4px #b3987480!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-page .aq-surah-banner::before,body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-page .aq-surah-banner::after{color:#a87c52!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-native-page .aq-native-bismillah{color:var(--qr-ink)!important;text-align:center!important}
