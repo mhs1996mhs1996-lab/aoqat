@@ -9,7 +9,7 @@
   const readers=[['ar.alafasy','مشاري راشد العفاسي'],['ar.husary','محمود خليل الحصري'],['ar.minshawi','محمد صديق المنشاوي'],['ar.abdulbasitmurattal','عبد الباسط عبد الصمد']];
   let state={layout:'phone',page:1,theme:'sepia',font:44,reciter:'ar.alafasy',volume:80,goal:20,name:'',bookmarks:[],notes:[],days:{}};
   try {Object.assign(state,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(_){}
-  state.layout='phone';
+  state.layout='print';
   state.page=Math.max(1,Math.min(TOTAL,Math.floor(Number(state.page)||1)));
   state.theme=['sepia','ivory','white','night','green','blue','contrast'].includes(state.theme)?state.theme:'sepia';
   state.font=Math.max(22,Math.min(80,Number(state.font)||44));
@@ -60,9 +60,13 @@
       if(q.length!==114||m.pages.length!==604)throw Error();quran=q;meta=m;
       verses=q.flatMap(s=>s.verses.map(v=>({s:s.id,a:v.id,name:s.name,text:v.text,search:plain(v.text)})));
       if(verses.length!==6236)throw Error();
-      // The trial uses one local vector edition. Keep verse-indexed personal data intact.
-      printPages=phone.pages;meta={...m,pages:phone.pages};state.phoneRevision=1;
-      await Promise.all([phonePage(1),phonePage(604)]);
+      // Show the original verified KFGQPC page artwork, not the reflowed QCF2 text.
+      official=await loadOfficial();
+      if(!official)throw Error('Original Mushaf page artwork unavailable');
+      printPages=official.pages.map((p,i)=>({...p,start:phone.pages[i].start,end:phone.pages[i].end}));
+      // Preserve the existing 6236-verse indexing for bookmarks and search.
+      if(printPages.some((p,i)=>!p.hits?.length||p.start!==m.pages[i].start))throw Error('Original Mushaf verse mapping mismatch');
+      meta={...m,pages:printPages};state.layout='print';state.phoneRevision=1;
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
