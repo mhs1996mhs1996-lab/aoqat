@@ -55,7 +55,7 @@
     const data=bytes[0]===31&&bytes[1]===139?await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));
     if(data.pages.length!==604||data.pages.some((p,i)=>p.id!==i+1||!p.hits.length))throw Error('Invalid original Mushaf pages');
     // Use the user's colored Tajwid edition only after all 604 assets are deployed.
-    try{const tajwid=await fetch('assets/mushaf-tajwid-ready.json',{cache:'no-store'});if(tajwid.ok){const manifest=await tajwid.json();if(manifest.pages===604&&manifest.edition==='tajwid-hafs'){data.imageDirectory='assets/mushaf-tajwid';data.tajwidEdition=true;}}}catch(_){/* Preserve the currently working reader. */}
+    try{const tajwid=await fetch('assets/mushaf-tajwid-ready.json?v=tajwid-604-20261025',{cache:'no-store'});if(tajwid.ok){const manifest=await tajwid.json();if(manifest.pages===604&&manifest.edition==='tajwid-hafs'){data.imageDirectory='assets/mushaf-tajwid';data.tajwidEdition=true;}}}catch(_){/* Preserve the currently working reader. */}
     return data;
   }
   async function load(){
@@ -140,7 +140,7 @@
     if(official){
       const p=official.pages[page-1],start=meta.pages[page-1].start,items=pageItems(page),indices=new Map(items.map((v,n)=>[v.s+':'+v.a,start+n]));
       const hits=official.tajwidEdition?'' : p.hits.map(h=>{const i=indices.get(h.surahNumber+':'+h.ayahNumber);if(i===undefined)throw Error('Mushaf ayah mapping mismatch');const v=verses[i];return `<path d="${esc(h.polygon)}" role="button" tabindex="0" data-qr-verse="${i}" class="aq-original-ayah${audioOn&&audioIndex===i?' aq-playing':''}" aria-label="${esc(v.name)} الآية ${v.a}"><title>${esc(v.text)}</title></path>`;}).join('');
-            return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${official.tajwidEdition?`0 0 682 982`:(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="${official.tajwidEdition?'مصحف التجويد الملوّن':'مصحف المدينة برواية حفص'}، صفحة ${page}"><image preserveAspectRatio="xMidYMid meet" href="${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(page).padStart(3,'0')}.webp" width="${official.tajwidEdition?682:p.width}" height="${official.tajwidEdition?982:p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
+            return `<svg class="aq-original-art" xmlns="http://www.w3.org/2000/svg" viewBox="${official.tajwidEdition?`0 0 682 982`:(p.displayBox||[0,0,p.width,p.height]).join(' ')}" preserveAspectRatio="xMidYMid meet" aria-label="${official.tajwidEdition?'مصحف التجويد الملوّن':'مصحف المدينة برواية حفص'}، صفحة ${page}"><image preserveAspectRatio="xMidYMid meet" href="${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(page).padStart(3,'0')}.webp${official.tajwidEdition?'?v=tajwid-604-20261025':''}" width="${official.tajwidEdition?682:p.width}" height="${official.tajwidEdition?982:p.height}"/><g transform="${p.hitTransform}">${hits}</g></svg>`;
     }
     if(page>2&&meta.lines?.[page-1])return meta.lines[page-1].map(line=>{
       if(line.s)return `<div class="aq-mushaf-line">${surahBanner(line.s)}</div>`;
