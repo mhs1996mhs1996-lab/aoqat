@@ -42,7 +42,7 @@
   function notice(text){if($('aqNotice'))$('aqNotice').textContent=text;}
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
   async function compressed(url){const r=await fetch(url);if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
-  async function loadPhone(){const ready=await fetch('assets/mushaf-phone-hafs-ready.json');if(!ready.ok)return null;const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');return data;}
+  async function loadPhone(){const ready=await fetch('assets/mushaf-phone-hafs-ready.json');if(!ready.ok)throw Error('Phone Mushaf unavailable');const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');return data;}
   async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);if(phonePages.size>8)phonePages.delete(phonePages.keys().next().value);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
   function setLayout(layout){const i=meta.pages[state.page-1].start;state.layout=layout;meta.pages=phoneMode()?phone.pages:printPages;state.page=pageOf(i);preparedPages.clear();save();renderPage();}
   async function loadOfficial(){
@@ -56,12 +56,13 @@
     if(data.pages.length!==604||data.pages.some((p,i)=>p.id!==i+1||!p.hits.length))throw Error('Invalid original Mushaf pages');return data;
   }
   async function load(){
-    if(!loading)loading=Promise.all([fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();}),fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();}),loadOfficial(),loadPhone()]).then(async ([q,m,o,f])=>{official=o;phone=f;
+    if(!loading)loading=Promise.all([fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();}),fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();}),loadPhone()]).then(async ([q,m,f])=>{official=null;phone=f;
       if(q.length!==114||m.pages.length!==604)throw Error();quran=q;meta=m;
       verses=q.flatMap(s=>s.verses.map(v=>({s:s.id,a:v.id,name:s.name,text:v.text,search:plain(v.text)})));
       if(verses.length!==6236)throw Error();
-      if(official){let start=0;meta={...m,pages:official.pages.map(p=>{const entry={id:p.id,start};for(const h of p.hits){const v=verses[start++];if(!v||v.s!==h.surahNumber||v.a!==h.ayahNumber)throw Error('Original page sequence mismatch');}return entry;})};if(start!==6236)throw Error('Original verse coverage mismatch');}
-      printPages=meta.pages;if(phoneMode()){const oldStart=printPages[state.page-1].start;if(!state.phoneRevision)state.page=phone.versePages[oldStart];meta={...meta,pages:phone.pages};}state.phoneRevision=1;if(phoneMode())await Promise.all([phonePage(1),phonePage(604)]);
+      // The trial uses one local vector edition. Keep verse-indexed personal data intact.
+      printPages=phone.pages;meta={...m,pages:phone.pages};state.phoneRevision=1;
+      await Promise.all([phonePage(1),phonePage(604)]);
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
@@ -152,7 +153,7 @@
   function renderPage(animate=false){
     if(phoneMode()&&!phonePages.has(state.page)){
       const target=state.page;$('adVerses').innerHTML='<p class="aq-loading">تحميل الصفحة…</p>';root.dataset.ready='false';
-      phonePage(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target)renderPage(animate);}).catch(()=>{if(root?.isConnected&&state.page===target)notice('تعذر تحميل الصفحة؛ اتصل بالإنترنت أو اختر الصفحة المصوّرة من الإعدادات.');});return;
+      phonePage(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target)renderPage(animate);}).catch(()=>{if(root?.isConnected&&state.page===target)notice('تعذر تحميل الصفحة؛ اتصل بالإنترنت لتنزيلها ثم أعد فتحها.');});return;
     }
     root.dataset.ready='true';
     $('aqQuickSave').textContent='الحفظ السريع';
@@ -167,7 +168,7 @@
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=phoneMode()?'qcf2-phone':official?(official.imageDirectory?'hafs-pocket':'hafs-1441'):'text';
     if(Number.isInteger(state.lastVerse))root.querySelectorAll(`[data-qr-verse="${state.lastVerse}"]`).forEach(e=>e.classList.add('aq-selected'));
-    fit();if(official&&pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
+    fit();if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
 
   function fit(){
@@ -291,9 +292,9 @@
   }
 
   function settingsPanel(){
-    sheet('إعدادات المصحف',`${phone?'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option></select></label>':''}<label>مظهر المصحف<select id="aqTheme"><option value="sepia">ورقي — المظهر الحالي</option><option value="ivory">عاجي بخط أسود</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>${official?'تكبير القراءة':'حجم الخط'}<input id="aqFont" type="range" min="${official?44:22}" max="${official?80:46}" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
+    sheet('إعدادات المصحف',`${phone?'<label>طريقة العرض<select id="aqLayout"><option value="phone">قراءة الهاتف</option></select></label>':''}<label>مظهر المصحف<select id="aqTheme"><option value="sepia">ورقي — المظهر الحالي</option><option value="ivory">عاجي بخط أسود</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>${phone||official?'تكبير القراءة':'حجم الخط'}<input id="aqFont" type="range" min="${phone||official?44:22}" max="${phone||official?80:46}" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
     if(phone){$('aqLayout').value=state.layout;$('aqLayout').onchange=e=>setLayout(e.target.value);}
-    if(official){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';const status=document.createElement('p');status.setAttribute('role','status');$('aqSheetBody').append(button,status);button.onclick=async()=>{button.disabled=true;const downloadingPhone=phoneMode();let next=1,done=0;try{const cache=await caches.open(downloadingPhone?phone.cacheName:official.cacheName||'aoqat-mushaf-hafs1441');await Promise.all(Array.from({length:4},async()=>{while(next<=604){const n=next++,url=downloadingPhone?`${phone.directory}/${String(n).padStart(3,'0')}.json.gz`:`${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(n).padStart(3,'0')}.webp`;if(!await cache.match(url)){const r=await fetch(url);if(!r.ok||(!downloadingPhone&&!r.headers.get('content-type')?.includes('image/')))throw Error();await cache.put(url,r);}status.textContent=`تم تنزيل ${++done} / 604 صفحة`;}}));status.textContent='تم تنزيل المصحف كاملاً للقراءة بدون إنترنت';}catch(_){status.textContent='توقف التنزيل؛ الصفحات المكتملة محفوظة. يمكنك إعادة المحاولة.';}finally{button.disabled=false;}};}
+    if(phone||official){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';const status=document.createElement('p');status.setAttribute('role','status');$('aqSheetBody').append(button,status);button.onclick=async()=>{button.disabled=true;const downloadingPhone=phoneMode();let next=1,done=0;try{const cache=await caches.open(downloadingPhone?phone.cacheName:official.cacheName||'aoqat-mushaf-hafs1441');await Promise.all(Array.from({length:4},async()=>{while(next<=604){const n=next++,url=downloadingPhone?`${phone.directory}/${String(n).padStart(3,'0')}.json.gz`:`${official.imageDirectory||'assets/mushaf-hafs-1441'}/${String(n).padStart(3,'0')}.webp`;if(!await cache.match(url)){const r=await fetch(url);if(!r.ok||(!downloadingPhone&&!r.headers.get('content-type')?.includes('image/')))throw Error();await cache.put(url,r);}status.textContent=`تم تنزيل ${++done} / 604 صفحة`;}}));status.textContent='تم تنزيل المصحف كاملاً للقراءة بدون إنترنت';}catch(_){status.textContent='توقف التنزيل؛ الصفحات المكتملة محفوظة. يمكنك إعادة المحاولة.';}finally{button.disabled=false;}};}
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
