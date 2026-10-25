@@ -157,7 +157,8 @@
         const font=new FontFace('AqQcfV2Page'+page,'url("https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p'+page+'.woff2")');
         await font.load();document.fonts.add(font);qcfFontReady.add(page);
       }
-      const rows=[...lines].sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+      const sorted=[...lines].sort((a,b)=>a[0]-b[0]);
+      const rows=sorted.map(x=>x[1]);rows.lineNumbers=sorted.map(x=>x[0]);
       qcfData.set(page,rows);if(qcfData.size>16)qcfData.delete(qcfData.keys().next().value);
       return rows;
     })().catch(e=>{qcfErrors.set(page,e);throw e}).finally(()=>qcfPending.delete(page));
@@ -165,7 +166,20 @@
   }
   function qcfHTML(page){
     const rows=qcfData.get(page);if(!rows)return '';
-    return (page<=2?'<div class="aq-qcf-opening-title">'+surahBanner(page===1?1:2)+'</div>':'')+rows.map((words,n)=>'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(page<=2?n+5:n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>').join('');
+    const first=pageItems(page)[0],startSurah=first&&first.a===1?first.s:null;
+    const source=phonePages.get(page);
+    const slots=Array.from({length:15},()=>null);
+    const numbers=rows.lineNumbers||[];
+    rows.forEach((words,i)=>{const line=numbers[i]||i+1;if(line>=1&&line<=15)slots[line-1]=words;});
+    if(startSurah&&source?.lines){
+      source.lines.forEach((line,i)=>{if(i>=15)return;if(line.s)slots[i]={heading:line.s};else if(line.b)slots[i]={bismillah:true};});
+    }
+    return slots.map((words,n)=>{
+      if(words?.heading)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(words.heading)+'</div>';
+      if(words?.bismillah)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
+      if(!words)return '<div class="aq-qcf-spacer" aria-hidden="true"></div>';
+      return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>';
+    }).join('');
   }
   function pageHTML(page){
     if(phoneMode()&&page>=3)return qcfHTML(page);
@@ -196,6 +210,13 @@
     return html;
   }
   function renderPage(animate=false){
+    if(phoneMode()&&state.page>=3&&pageItems(state.page)[0]?.a===1&&!phonePages.has(state.page)){
+      const target=state.page;
+      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل عنوان السورة والبسملة…</p>';
+      root.dataset.ready='false';
+      phonePage(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل تنسيق بداية السورة؛ حاول مجدداً.</p>';root.dataset.ready='error';}});
+      return;
+    }
     if(phoneMode()&&state.page>=3&&!qcfData.has(state.page)){
       const target=state.page;
       $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل خط QCF V2 الأصلي…</p>';
