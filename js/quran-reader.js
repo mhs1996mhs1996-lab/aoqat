@@ -156,7 +156,7 @@
       qcfRows.set(page,[...rows].sort((x,y)=>x[0]-y[0]).map(x=>x[1]));
       if(qcfRows.size>12)qcfRows.delete(qcfRows.keys().next().value);
       if(root?.isConnected&&state.page===page&&phoneMode()){preparedPages.clear();renderPage();}
-    })().catch(()=>qcfFailed.add(page)).finally(()=>qcfPending.delete(page));
+    })().catch(()=>{qcfFailed.add(page);if(root?.isConnected&&state.page===page&&phoneMode())renderPage();}).finally(()=>qcfPending.delete(page));
     qcfPending.set(page,task);
   }
   function qcfPageHTML(page){
@@ -192,6 +192,9 @@
     return html;
   }
   function renderPage(animate=false){
+    if(phoneMode()&&!qcfRows.has(state.page)&&!qcfFailed.has(state.page)){
+      const target=state.page;fetchQcfPage(target);$('adVerses').innerHTML='<p class="aq-loading">جاري تجهيز خط المصحف…</p>';root.dataset.ready='false';return;
+    }
     if((phoneMode()||mobileTrial())&&!phonePages.has(state.page)){
       const target=state.page;$('adVerses').innerHTML='<p class="aq-loading">تحميل الصفحة…</p>';root.dataset.ready='false';
       phonePage(target).then(()=>{if(root?.isConnected&&(phoneMode()||mobileTrial())&&state.page===target)renderPage(animate);}).catch(()=>{if(root?.isConnected&&state.page===target)notice('تعذر تحميل الصفحة؛ اتصل بالإنترنت لتنزيلها ثم أعد فتحها.');});return;
@@ -256,7 +259,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604)phonePage(p).catch(()=>{});return;}
+    if(phoneMode()){for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){fetchQcfPage(p);phonePage(p).catch(()=>{});}return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
