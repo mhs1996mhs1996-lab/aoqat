@@ -103,7 +103,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-slider{bo
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-notice{bottom:62px!important;height:20px!important;background:var(--qr-bar)!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-index:10!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-page-text{line-height:1.7!important}
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fff9e6!important;--qr-ink:#15120c!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=sepia]{--qr-bg:#fffaf0!important;--qr-ink:#241b13!important;--qr-line:#a9936d!important;--qr-accent:#a57942!important;--qr-ayah-ornament:#a57942!important}
 body.quran-reader-open:has(#aqReader #aqSheet:not([hidden])) #webDrawerSub .web-sub-head{display:none!important}
 body.quran-reader-open #adService{min-height:100dvh!important}
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqBookmark{position:fixed!important;top:124px!important;left:8px!important;z-index:4!important;background:var(--qr-bar)!important;border-radius:7px!important;height:32px!important;line-height:32px!important}
@@ -229,7 +229,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-sheet
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet :is(input,textarea){user-select:text!important;-webkit-user-select:text!important;-webkit-touch-callout:default!important}
 
 /* Optional ivory palette reuses the existing page assets and glyphs. */
-body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=ivory]{--qr-bg:#fffbea!important;--qr-ink:#17140f!important;--qr-line:#b49a58!important;--qr-accent:#806526!important;--qr-ayah-digit:#17140f!important;--qr-ayah-ornament:#b49a58!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=ivory]{--qr-bg:#fffaf0!important;--qr-ink:#241b13!important;--qr-line:#b49a58!important;--qr-accent:#806526!important;--qr-ayah-digit:#17140f!important;--qr-ayah-ornament:#b49a58!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition^=hafs-][data-theme=ivory] .aq-original-art image{filter:grayscale(1) contrast(1.2)!important;mix-blend-mode:multiply!important}
 
 /* Tajwid edition: centered, undistorted full-page mobile layout. */
