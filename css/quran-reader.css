@@ -321,3 +321,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{display:inline-flex!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader :is(.aq-top,.aq-bottom,.aq-turn,.aq-slider,.aq-notice){z-index:20!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-index:30!important}
+
+/* Final visibility guard: toolbar-open mode fully occludes quick save; reading mode retains it. */
+body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+body.quran-reader-open.quran-reader-immersive #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{visibility:visible!important;opacity:1!important;pointer-events:auto!important}
