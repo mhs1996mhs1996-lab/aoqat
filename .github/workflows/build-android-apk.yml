@@ -62,7 +62,7 @@ jobs:
               prefix='assets/www/'
               pages=[n for n in z.namelist() if n.startswith(prefix+'assets/mushaf-phone-hafs/') and n.endswith('.json.gz.bin')]
               assert len(pages)==604, f'Missing full-page Mushaf: {len(pages)}'
-              assert not any(n.startswith(prefix+'assets/mushaf-hafs-') for n in z.namelist()), 'Duplicate photo edition packaged'
+              assert not any(n.startswith(prefix+'assets/mushaf-hafs-') or n.startswith(prefix+'assets/mushaf-tajwid') for n in z.namelist()), 'Obsolete Quran edition packaged'
               hashes=json.loads(z.read(prefix+'assets/mushaf-apk-sha256.json'))
               for path,digest in hashes.items():
                   packaged=prefix+path+('.bin' if path.endswith('.gz') else '')
@@ -75,6 +75,7 @@ jobs:
               bundle=z.read(prefix+'js/apk-startup-bundle.js').decode()
               for token in ['aoqatRefreshNativeReminders','AoqatCommunityPosts','AoqatFastingPostsCalendar','aoqatNativeImageAction','مشاركة التصميم','aoqatCreatePrayerShareView','sharePrayerImage','aoqatRenderAzkar','adAzkarPrev','aoqatWebButtonAppearanceV1']:
                   assert token in bundle, token
+              assert 'الصفحة الورقية القديمة' not in bundle
               assert 'const webOnly=true' in bundle
               assert 'if(window.AndroidNative?.configureAdhan)return;' not in z.read(prefix+'js/azkar-web.js').decode()
               assert 'native)return;const now'  in z.read(prefix+'js/prayer-alert-methods.js').decode()
@@ -86,14 +87,14 @@ jobs:
       - name: Prepare downloadable APK parts
         run: |
           mkdir -p android-native/app/build/apk-transfer
-          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.52.apk.part-
-          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.52.sha256
+          split -b 350M android-native/app/build/outputs/apk/debug/app-debug.apk android-native/app/build/apk-transfer/aoqat-v1.53.apk.part-
+          sha256sum android-native/app/build/outputs/apk/debug/app-debug.apk > android-native/app/build/apk-transfer/aoqat-v1.53.sha256
 
       - name: Upload APK transfer part 1
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.52-part-1
-          path: android-native/app/build/apk-transfer/aoqat-v1.52.apk.part-aa
+          name: aoqat-v1.53-part-1
+          path: android-native/app/build/apk-transfer/aoqat-v1.53.apk.part-aa
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -101,10 +102,10 @@ jobs:
       - name: Upload APK transfer part 2
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-v1.52-part-2
+          name: aoqat-v1.53-part-2
           path: |
-            android-native/app/build/apk-transfer/aoqat-v1.52.apk.part-ab
-            android-native/app/build/apk-transfer/aoqat-v1.52.sha256
+            android-native/app/build/apk-transfer/aoqat-v1.53.apk.part-ab
+            android-native/app/build/apk-transfer/aoqat-v1.53.sha256
           compression-level: 0
           if-no-files-found: error
           retention-days: 30
@@ -112,7 +113,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: aoqat-android-v1.52-build87
+          name: aoqat-android-v1.53-build88
           path: android-native/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
