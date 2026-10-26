@@ -361,3 +361,8 @@ body.design-menu-open .sidebar #webDrawerSub #adhanPanel #adSection-modes [data-
 #prayerServicePanel .ad-qibla-info{
   min-height:24px;margin:15px 0 0;line-height:1.8;font-size:14px;color:#3d594b;
 }
+
+/* Hide the obsolete inner qibla back control even when an older cached JS builds it. */
+#prayerServicePanel .ad-qibla-card #adQiblaBack,
+#prayerServicePanel .ad-qibla-card .ad-qibla-back,
+#prayerServicePanel .ad-qibla-card .ad-qibla-head button{display:none!important;visibility:hidden!important}
