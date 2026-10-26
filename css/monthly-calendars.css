@@ -599,3 +599,49 @@ html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme
  html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-months{gap:5px!important}
  html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-month-info strong{font-size:10px!important}
 }
+
+/* V12: gallery navigation outside artwork, legible captions and a framed
+   ivory arch. Scoped exclusively to the two reference layouts. */
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"],
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"]{
+ background:#faf8f1!important;color:#173c3a!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-current-theme,
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-current-theme{
+ color:#365550!important;text-shadow:none!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-theme-toggle,
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-theme-toggle{
+ background:linear-gradient(115deg,#073e3d,#167a70)!important;color:#fff!important;
+ border:1px solid #bfa574!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-gallery-stage{
+ background:radial-gradient(ellipse at 50% 35%,#256f66 0%,#064a48 68%,#042c32 100%)!important;
+ padding:50px 15px 25px!important;border-radius:22px!important;overflow:hidden!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-gallery-stage .mc-scene{
+ z-index:0!important;opacity:.4!important;pointer-events:none!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-months{
+ position:relative!important;z-index:1!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-months>button.mc-featured{
+ background:#fff9ed!important;background-image:none!important;
+ border:3px solid #e3c17d!important;outline:4px solid rgba(255,245,219,.65)!important;
+ outline-offset:5px!important;border-radius:48% 48% 20px 20px / 14% 14% 20px 20px!important;
+ padding:55px 16px 20px!important;color:#143d3c!important;
+ box-shadow:0 14px 35px #001e2080!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-month-info,
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-month-info strong,
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-month-info small{
+ color:#143d3c!important;text-shadow:none!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-month-art{
+ background:#fff!important;border:1px solid #e1d2b4!important;padding:8px!important;
+ border-radius:12px!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-scene:before,
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="arch"] .mc-scene:after{
+ opacity:1!important;filter:sepia(.45) saturate(.7)!important;
+}
