@@ -19,16 +19,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          test "$(gh api repos/$GH_REPO/actions/runs/40334151983/jobs --jq '.jobs[] | select(.name == "build-apk") | .conclusion')" = success
+          test "$(gh api repos/$GH_REPO/actions/runs/40368561273/jobs --jq '.jobs[] | select(.name == "build-apk") | .conclusion')" = success
           mkdir -p release
-          gh run download 40334151983 --name aoqat-android-v1.52-build87 --dir release
-          mv release/app-debug.apk release/aoqat-v1.52.apk
+          gh run download 40368561273 --name aoqat-android-v1.53-build88 --dir release
+          mv release/app-debug.apk release/aoqat-v1.53.apk
       - name: Verify release bytes and signing certificate
         run: |
-          test -s release/aoqat-v1.52.apk
-          sha256sum release/aoqat-v1.52.apk > release/aoqat-v1.52.sha256
+          test -s release/aoqat-v1.53.apk
+          sha256sum release/aoqat-v1.53.apk > release/aoqat-v1.53.sha256
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
-          "$signer" verify --print-certs release/aoqat-v1.52.apk > release/signature.txt
+          "$signer" verify --print-certs release/aoqat-v1.53.apk > release/signature.txt
           grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' release/signature.txt
       - name: Publish installation file
         env:
@@ -36,6 +36,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           cat > release/notes.txt <<'NOTES'
-          الإصدار 1.52 التجريبي: شاشة بدء جديدة بتدرج أبيض وتركوازي، منبّه صلاة بواجهة ملء الشاشة وغفوة عبر زرّي الصوت، إشعارات الصلاة بصوت القناة المختارة في إعدادات الهاتف، ودمج أحدث محتوى الويب ضمن الحزمة. المصحف (604 صفحات) وقاعدة المواقيت دون إنترنت. تنبيه: التحديث الجزئي الصغير ومعالجة زر الطاقة والغفوة والتأكد الميداني من أذان العصر لا تزال تتطلب اختبارات إضافية. ثبّت التحديث فوق النسخة الحالية للحفاظ على إعداداتك.
+          الإصدار 1.53 التجريبي: شاشة بدء جديدة بتدرج أبيض وتركوازي، منبّه صلاة بواجهة ملء الشاشة وغفوة عبر زرّي الصوت، إشعارات الصلاة بصوت القناة المختارة في إعدادات الهاتف، ودمج أحدث محتوى الويب ضمن الحزمة. المصحف المعتمد فقط (604 صفحات) وقاعدة المواقيت دون إنترنت؛ استبعاد النسخ المصورة القديمة والملونة من الحزمة لتقليل الحجم. تنبيه: التحديث الجزئي الصغير ومعالجة زر الطاقة والغفوة والتأكد الميداني من أذان العصر لا تزال تتطلب اختبارات إضافية. ثبّت التحديث فوق النسخة الحالية للحفاظ على إعداداتك.
           NOTES
-          gh release create v1.52 release/aoqat-v1.52.apk release/aoqat-v1.52.sha256 --target 23110c13820fa72d20775f3ca1fbb63a4224688d --title 'أوقات الصلاة في الحويجة 1.52' --notes-file release/notes.txt
+          gh release create v1.53 release/aoqat-v1.53.apk release/aoqat-v1.53.sha256 --target 1711a23cc06fa22a435db609ecf013e80699b430 --title 'أوقات الصلاة في الحويجة 1.53' --notes-file release/notes.txt
