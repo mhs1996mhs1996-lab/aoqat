@@ -27,6 +27,33 @@
     {id:'flip',name:'8 التقويم التفاعلي',desc:'تقويم معلّق بحلقات مع تقليب'},
     {id:'fullscreen',name:'10 العرض الكامل',desc:'إطار مصوّر وشريط معاينات'}
   ];
+
+  // Decorative SVG illustrations are self-contained: no remote image requests and no effect on calendar data.
+  const illustration=(kind,n=1)=>{
+    const winter=n<=2||n===12, spring=n>=3&&n<=5, summer=n>=6&&n<=8;
+    const sky=winter?['#a4d4ee','#e3f2fa']:spring?['#b9dbed','#ffe2c7']:summer?['#67c9df','#f7d7a4']:['#f7b58b','#e7d7b9'];
+    const svgStart='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 520" preserveAspectRatio="xMidYMid slice"><defs><linearGradient id="s" x2="0" y2="1"><stop stop-color="'+sky[0]+'"/><stop offset="1" stop-color="'+sky[1]+'"/></linearGradient><linearGradient id="g" x2="0" y2="1"><stop stop-color="#1b7467"/><stop offset="1" stop-color="#062e34"/></linearGradient></defs>';
+    let art='';
+    if(kind==='seasons'){
+      art='<rect width="400" height="520" fill="url(#s)"/><circle cx="300" cy="88" r="45" fill="#fff1b5" opacity=".9"/>';
+      if(winter)art+='<path d="M-30 345L105 120 180 255 254 94 440 351Z" fill="#759cb1"/><path d="M54 209L105 120 156 213 130 199 110 182 91 201ZM207 169L254 94 309 190 278 178 254 151 232 184Z" fill="#fff9f1"/><path d="M0 360Q150 310 400 360V520H0" fill="#2f6279"/>';
+      else if(spring)art+='<path d="M0 365Q95 280 200 340T400 325V520H0" fill="#74a879"/><path d="M0 435Q170 310 400 430V520H0" fill="#377a68"/><path d="M68 405V270M325 404V254" stroke="#624b40" stroke-width="13"/><g fill="#f4b4c9"><circle cx="65" cy="263" r="52"/><circle cx="330" cy="251" r="55"/><circle cx="102" cy="292" r="31"/></g>';
+      else if(summer)art+='<path d="M0 340Q140 300 400 338V520H0" fill="#128eab"/><path d="M0 435Q180 390 400 422V520H0" fill="#e6d49e"/><path d="M315 410Q290 285 305 202" stroke="#795b35" stroke-width="17" fill="none"/><g stroke="#2d8562" stroke-width="16" stroke-linecap="round"><path d="M305 208Q240 154 177 184M305 208Q355 143 415 174M305 208Q263 124 272 105M305 208Q366 196 395 241"/></g>';
+      else art+='<path d="M0 370Q100 290 230 340T400 306V520H0" fill="#b28e68"/><path d="M0 430Q220 345 400 420V520H0" fill="#587b63"/><path d="M96 405V242M290 398V210" stroke="#6b5341" stroke-width="12"/><g fill="#d7a453"><circle cx="98" cy="240" r="52"/><circle cx="285" cy="207" r="59"/></g>';
+      art+='<path d="M0 505Q150 458 400 501" fill="none" stroke="#fff7e0" stroke-width="3" opacity=".55"/>';
+    }else if(kind==='arch'){
+      art='<rect width="400" height="520" fill="#073f40"/><path d="M20 520V180Q200 -95 380 180V520" fill="#19685e" stroke="#e6cb88" stroke-width="8"/><path d="M36 520V185Q200 -58 364 185V520" fill="none" stroke="#e4c88c" stroke-width="2"/><g stroke="#d5b16d" stroke-width="2" fill="none" opacity=".35"><path d="M0 360Q200 200 400 360M0 420Q200 260 400 420"/></g><g stroke="#d5b16d" stroke-width="2"><path d="M58 0V90M342 0V90"/></g><g fill="#edca7b" stroke="#fce9b1" stroke-width="3"><path d="M37 91H79L72 143H44Z"/><path d="M321 91H363L356 143H328Z"/></g><g fill="#ffedaa" opacity=".65"><ellipse cx="58" cy="119" rx="36" ry="55"/><ellipse cx="342" cy="119" rx="36" ry="55"/></g>';
+    }else if(kind==='shelf'){
+      art='<rect width="400" height="520" fill="#2b1a12"/><g fill="#674026" stroke="#b18450" stroke-width="3">';
+      for(let y=128;y<540;y+=128)art+='<rect x="0" y="'+y+'" width="400" height="19" rx="3"/><rect x="0" y="'+(y+18)+'" width="400" height="8" fill="#26170f"/>';
+      art+='</g><path d="M16 0V520M384 0V520" stroke="#b37e45" stroke-width="14"/><g fill="#f5c76c"><circle cx="40" cy="24" r="4"/><circle cx="360" cy="24" r="4"/></g>';
+    }else if(kind==='fullscreen'){
+      art='<rect width="400" height="520" fill="url(#s)"/><circle cx="322" cy="72" r="42" fill="#ffe0a0"/><path d="M0 390Q170 330 400 390V520H0" fill="#149db1"/><path d="M0 470Q220 398 400 466V520H0" fill="#eddaa8"/><path d="M40 520Q95 385 80 260" stroke="#725339" stroke-width="16" fill="none"/><g stroke="#367e59" stroke-width="16" stroke-linecap="round"><path d="M80 262Q18 207 -20 228M80 262Q123 194 191 204M80 262Q70 191 40 170"/></g><path d="M205 450V320L235 295V450M270 450V335L299 312V450" fill="#f8edcf" opacity=".55"/>';
+    }else if(kind==='flip'){
+      art='<rect width="400" height="520" fill="#0c5b56"/><g fill="#fff5d9" opacity=".15"><circle cx="50" cy="70" r="30"/><circle cx="350" cy="110" r="46"/></g><path d="M0 520Q200 445 400 520" fill="#d8b873" opacity=".25"/>';
+    }
+    return 'url("data:image/svg+xml,'+encodeURIComponent(svgStart+art+'</svg>')+'")';
+  };
   const storageKey='aoqatYearGalleryStylesV5';
   let settings={};try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch(_){}
   let enabled=Array.isArray(settings.enabled)?settings.enabled.filter(id=>themes.some(t=>t.id===id)):themes.map(t=>t.id);
@@ -67,6 +94,7 @@
   };
   const focusMonth=n=>{
     focused=(n+11)%12+1;
+    stage.style.setProperty('--mc-scene-art',illustration(active,focused));
     grid.querySelectorAll('[data-calendar-month]').forEach(el=>el.classList.toggle('mc-featured',Number(el.dataset.calendarMonth)===focused));
     Array.from(navNumbers.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
     const selected=navNumbers.children[focused-1];
@@ -74,7 +102,8 @@
   };
   const paint=()=>{
     p.dataset.galleryTheme=active;
-    decoration.textContent=active==='arch'?'☪':active==='shelf'?'✦':active==='fullscreen'?'✧':'';
+    decoration.textContent='';
+    stage.style.setProperty('--mc-scene-art',illustration(active,focused));
     const chosen=themes.find(t=>t.id===active);
     currentTheme.textContent='✓ '+chosen.name+' — '+chosen.desc;
     choices.replaceChildren();
@@ -111,7 +140,7 @@
     const info=document.createElement('span');info.className='mc-month-info';
     const num=text('span',String(month).padStart(2,'0'));num.className='mc-month-number';
     info.append(num,text('strong',C.months[month-1]),text('small',year+' / '+String(month).padStart(2,'0')),text('em','فتح التقويم ›'));
-    b.append(art,info);grid.append(b);
+    b.append(art,info);b.style.setProperty('--mc-month-landscape',illustration('seasons',month));grid.append(b);
   }
   let startX=0,startY=0;
   stage.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;startX=e.touches[0].clientX;startY=e.touches[0].clientY;},{passive:true});
