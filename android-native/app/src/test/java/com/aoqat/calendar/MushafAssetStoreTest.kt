@@ -26,6 +26,8 @@ class MushafAssetStoreTest {
         val context=RuntimeEnvironment.getApplication()
         assertEquals(604,context.assets.list("www/assets/mushaf-phone-hafs")!!.size)
         assertEquals(0,context.assets.list("www/assets/mushaf-hafs-pocket")!!.size)
+        assertEquals(0,context.assets.list("www/assets/mushaf-tajwid")!!.size)
+        assertNull(MushafAssetStore.assetPath(Uri.parse("https://aoqat.vercel.app/assets/mushaf-hafs-pocket/001.webp")))
         assertFalse(context.assets.list("www/assets")!!.any { it.startsWith("mushaf-hafs-") })
         val store=MushafAssetStore(context)
         for (page in listOf(3,245,499,604)) {
