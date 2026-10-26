@@ -54,19 +54,29 @@ object PrayerNotifications {
     }
     fun notification(c: Context, id: String, friday: Boolean, preview: Boolean = false): Notification {
         val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.createNotificationChannel(NotificationChannel("prayer_due_v1", "إشعار أوقات الصلاة", NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null); enableVibration(false); lockscreenVisibility = Notification.VISIBILITY_PUBLIC })
-        return Notification.Builder(c, "prayer_due_v1").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if (preview) "تجربة صوت الإشعار" else title(id, friday))
-            .setContentText("أوقات الصلاة في الحويجة").setVisibility(Notification.VISIBILITY_PUBLIC).setAutoCancel(true)
-            .setContentIntent(PendingIntent.getActivity(c, 78991, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)).build()
+        // Android owns the channel sound and lock-screen behavior: use the ringtone
+        // chosen by the user in the phone's notification settings, not a bundled tone.
+        nm.createNotificationChannel(NotificationChannel("prayer_due_system_v2", "إشعار أوقات الصلاة", NotificationManager.IMPORTANCE_HIGH).apply {
+            enableLights(true)
+            enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        })
+        return Notification.Builder(c, "prayer_due_system_v2")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(if (preview) "تجربة صوت الإشعار" else title(id, friday))
+            .setContentText("أوقات الصلاة في الحويجة")
+            .setCategory(Notification.CATEGORY_REMINDER)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .setContentIntent(PendingIntent.getActivity(c, 78991, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
+            .build()
     }
     fun start(c: Context, id: String, friday: Boolean = false, preview: Boolean = false) {
-        val s = settings(c); val am = c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        // Never play a second application-generated tone on top of Android's
+        // selected notification sound. Disabled prayers remain silent.
+        if (!preview && !selected(c, id)) return
         val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (s.optInt("volume", 65) == 0 || am.ringerMode != AudioManager.RINGER_MODE_NORMAL || nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL) {
-            nm.notify(78100 + PrayerTimes.ids.indexOf(id).coerceAtLeast(0), notification(c, id, friday, preview)); return
-        }
-        try { ContextCompat.startForegroundService(c, Intent(c, PrayerNotificationSoundService::class.java).putExtra("id", id).putExtra("friday", friday).putExtra("preview", preview)) }
-        catch (e: Exception) { nm.notify(78100 + PrayerTimes.ids.indexOf(id).coerceAtLeast(0), notification(c, id, friday, preview)); android.util.Log.w("PrayerNotice", "Notification sound unavailable", e) }
+        nm.notify(78100 + PrayerTimes.ids.indexOf(id).coerceAtLeast(0), notification(c, id, friday, preview))
     }
 }
 
