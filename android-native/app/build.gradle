@@ -57,7 +57,7 @@ tasks.register('syncWebAssets', Sync) {
         include 'js/**'
         include 'data/**'
         include 'assets/**'
-        exclude 'assets/mushaf-hafs-*', 'assets/mushaf-hafs-*/**', 'assets/mushaf-phone-*', 'assets/mushaf-phone-*/**', 'assets/mushaf-tajwid', 'assets/mushaf-tajwid/**'
+        exclude 'assets/mushaf-phone-*', 'assets/mushaf-phone-*/**'
         include 'pages/**'
         include 'manifest.webmanifest'
     }
