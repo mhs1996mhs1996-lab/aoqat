@@ -34,6 +34,7 @@
   let active=enabled.includes(settings.active)?settings.active:enabled[0],focused=1,search='';
   const saveStyles=()=>{try{localStorage.setItem(storageKey,JSON.stringify({enabled,active}));}catch(_){}};
   const intro=text('p','اختر الشهر لعرض تصاميمه وحفظه أو مشاركته.');
+  const toggleThemes=button('☷ تغيير نمط العرض',()=>{const open=toolbar.dataset.expanded!=='true';toolbar.dataset.expanded=String(open);toggleThemes.setAttribute('aria-expanded',String(open));});toggleThemes.className='mc-theme-toggle';toggleThemes.setAttribute('aria-expanded','false');
   const toolbar=document.createElement('div');toolbar.className='mc-year-themes';
   const choices=document.createElement('div');choices.className='mc-year-theme-choices';
   const manage=button('⚙ الأنماط',()=>{manager.hidden=!manager.hidden;manage.setAttribute('aria-expanded',String(!manager.hidden));});
@@ -42,6 +43,7 @@
   const currentTheme=text('div','');currentTheme.className='mc-current-theme';currentTheme.setAttribute('role','status');
   const stage=document.createElement('div');stage.className='mc-gallery-stage';
   const scene=document.createElement('div');scene.className='mc-scene';scene.setAttribute('aria-hidden','true');
+  const decoration=document.createElement('div');decoration.className='mc-decor';decoration.setAttribute('aria-hidden','true');scene.append(decoration);
   const grid=document.createElement('div');grid.className='mc-months';grid.setAttribute('aria-label','أشهر السنة');
   const searchBar=document.createElement('div');searchBar.className='mc-gallery-search';
   const searchInput=document.createElement('input');searchInput.type='search';searchInput.placeholder='ابحث عن شهر...';searchInput.setAttribute('aria-label','ابحث عن شهر');
@@ -68,10 +70,11 @@
     grid.querySelectorAll('[data-calendar-month]').forEach(el=>el.classList.toggle('mc-featured',Number(el.dataset.calendarMonth)===focused));
     Array.from(navNumbers.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
     const selected=navNumbers.children[focused-1];
-    selected?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'smooth'});
+    if(selected&&monthNav.contains(selected)){navNumbers.scrollTo({left:selected.offsetLeft-navNumbers.offsetLeft-navNumbers.clientWidth/2+selected.clientWidth/2,behavior:'smooth'});}
   };
   const paint=()=>{
     p.dataset.galleryTheme=active;
+    decoration.textContent=active==='arch'?'☪':active==='shelf'?'✦':active==='fullscreen'?'✧':'';
     const chosen=themes.find(t=>t.id===active);
     currentTheme.textContent='✓ '+chosen.name+' — '+chosen.desc;
     choices.replaceChildren();
@@ -99,7 +102,7 @@
     searchBar.hidden=active!=='luxgrid';
   };
   toolbar.append(choices,manage);stage.append(scene,searchBar,grid,monthNav);
-  p.append(intro,toolbar,currentTheme,manager,stage);
+  p.append(toggleThemes,toolbar,currentTheme,manager,stage);
   const settingsMonthly=read();
   for(let month=1;month<=12;month++){
     const b=button('',()=>preview(year,month)),img=document.createElement('img');
