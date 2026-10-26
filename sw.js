@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v163-annual-gallery-explicit-card-v16";
+const CACHE_NAME = "aoqat-pwa-v164-quran-phone-only";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -123,7 +123,7 @@ self.addEventListener("activate", event => {
   event.waitUntil((async()=>{
     const keys=await caches.keys();
     const upgraded=keys.some(key=>key.startsWith("aoqat-pwa-")&&key!==CACHE_NAME);
-    await Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-hafs1441" && key !== "aoqat-mushaf-hafs-pocket" && key !== "aoqat-mushaf-phone-hafs").map(key => caches.delete(key)));
+    await Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-phone-hafs").map(key => caches.delete(key)));
     await self.clients.claim();
     // An existing document still runs the previous menu even after the worker changes.
     // Reload once per installed upgrade; preferences remain in localStorage.
