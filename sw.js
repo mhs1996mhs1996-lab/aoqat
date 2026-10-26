@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v146-gallery-no-redraw";
+const CACHE_NAME = "aoqat-pwa-v147-stray-text-fix";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
