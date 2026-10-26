@@ -101,7 +101,7 @@
     root.addEventListener('contextmenu',e=>{if(e.target.closest('#aqSheet')&&!e.target.matches('input,textarea'))e.preventDefault();});
     $('aqPaper').addEventListener('pointerdown',e=>{
       if(!e.isPrimary)return;
-      clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
+      if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
       if(v)pressTimer=setTimeout(()=>{pointer=null;ignoreClickUntil=performance.now()+800;versePanel(Number(v.dataset.qrVerse));},400);
@@ -110,12 +110,13 @@
       if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
       if(Math.hypot(dx,dy)>12)clearTimeout(pressTimer);
+      if(phoneMode()&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4)galleryDrag(dx);
     });
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))){Promise.all([phonePage(target),target>=3?qcfLoad(target):Promise.resolve()]).then(()=>{if(root?.isConnected&&state.page===target-(dx>0?1:-1))go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
-      else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;clearTurn();dragOffset=0;}
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))){const from=state.page;Promise.all([phonePage(target),target>=3?qcfLoad(target):Promise.resolve()]).then(()=>{if(root?.isConnected&&state.page===from)go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
+      else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
     $('aqPaper').addEventListener('contextmenu',e=>e.preventDefault());
@@ -133,7 +134,41 @@
   function immersive(on){
     document.body.classList.toggle('quran-reader-immersive',on);
   }
-  function clearTurn(){cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
+  // Gallery-style horizontal swipe: move two already prepared pages with the finger.
+  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false;
+  function galleryReset(){
+    galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
+    const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
+  }
+  function galleryDrag(dx){
+    const paper=$('aqPaper'),current=$('adVerses');if(!paper||!current||!phoneMode()||galleryBusy)return;
+    const direction=dx>0?1:-1,target=state.page+direction;
+    if(target<1||target>604){galleryReset();return;}
+    if(galleryDirection!==direction){galleryReset();galleryDirection=direction;}
+    if(!galleryNeighbor){
+      if(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))return;
+      const neighbor=document.createElement('div');neighbor.className=current.className+' aq-gallery-neighbor';
+      neighbor.innerHTML=pageHTML(target);neighbor.style.cssText='position:absolute!important;top:0;left:0;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';
+      paper.append(neighbor);fitText(paper,neighbor,target);neighbor.style.visibility='visible';galleryNeighbor=neighbor;
+    }
+    const width=paper.clientWidth,offset=Math.max(-width,Math.min(width,dx));
+    current.style.willChange='transform';current.style.transform='translate3d('+offset+'px,0,0)';
+    galleryNeighbor.style.transform='translate3d('+(offset-direction*width)+'px,0,0)';
+  }
+  function galleryFinish(target,commit){
+    const paper=$('aqPaper'),current=$('adVerses'),neighbor=galleryNeighbor;
+    if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
+    galleryBusy=true;
+    const direction=galleryDirection,width=paper.clientWidth;
+    current.style.transition='transform 170ms ease-out';
+    neighbor.style.transition='transform 170ms ease-out';
+    requestAnimationFrame(()=>{
+      current.style.transform='translate3d('+(commit?direction*width:0)+'px,0,0)';
+      neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
+    });
+    setTimeout(()=>{galleryBusy=false;galleryReset();if(commit&&root?.isConnected)go(target);},185);
+  }
+  function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
   const qcfData=new Map(),qcfPending=new Map(),qcfErrors=new Map(),qcfFontReady=new Set();
   function qcfLoad(page,force=false){
