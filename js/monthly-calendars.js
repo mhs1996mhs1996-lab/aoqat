@@ -17,73 +17,116 @@
  }
  function yearView(year){
   const p=show('تقاويم سنة '+year,open),token=sequence;
-  p.classList.add('mc-year-view');
-  const themes=[{id:'luxgrid',name:'1 الشبكة الفاخرة',desc:'12 شهراً بشبكة زمردية'},{id:'arch',name:'2 الشرائح الأنيقة',desc:'عرض شهر داخل قوس فاخر'},{id:'seasons',name:'4 الخلفيات الشهرية',desc:'بطاقات بألوان الفصول'},{id:'colorcards',name:'5 البطاقات الملونة',desc:'ألوان مميزة لكل شهر'},{id:'shelf',name:'7 الرف الجميل',desc:'تقاويم مرتبة على رفوف'},{id:'flip',name:'8 التقويم التفاعلي',desc:'تقويم كبير مع أزرار الأشهر'},{id:'fullscreen',name:'10 العرض الكامل',desc:'معاينة واسعة وشريط أشهر'}],storageKey='aoqatYearGalleryStylesV4';
-  let settings;try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch(_){settings={};}
+  p.classList.add('mc-year-view','mc-year-v5');
+  const themes=[
+    {id:'luxgrid',name:'1 الشبكة الفاخرة',desc:'شبكة بطاقات مذهبة مع البحث'},
+    {id:'arch',name:'2 الشرائح الأنيقة',desc:'قوس إسلامي وفوانيس وتنقل بالسحب'},
+    {id:'seasons',name:'4 الخلفيات الشهرية',desc:'مناظر طبيعية موسمية مختلفة'},
+    {id:'colorcards',name:'5 البطاقات الملونة',desc:'أرقام سداسية وألوان متدرجة'},
+    {id:'shelf',name:'7 الرف الجميل',desc:'رف خشبي مع التقاويم ككتب'},
+    {id:'flip',name:'8 التقويم التفاعلي',desc:'تقويم معلّق بحلقات مع تقليب'},
+    {id:'fullscreen',name:'10 العرض الكامل',desc:'إطار مصوّر وشريط معاينات'}
+  ];
+  const storageKey='aoqatYearGalleryStylesV5';
+  let settings={};try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch(_){}
   let enabled=Array.isArray(settings.enabled)?settings.enabled.filter(id=>themes.some(t=>t.id===id)):themes.map(t=>t.id);
-  let active=enabled.includes(settings.active)?settings.active:enabled[0]||'luxgrid';
+  if(!enabled.length)enabled=themes.map(t=>t.id);
+  let active=enabled.includes(settings.active)?settings.active:enabled[0],focused=1,search='';
   const saveStyles=()=>{try{localStorage.setItem(storageKey,JSON.stringify({enabled,active}));}catch(_){}};
   const intro=text('p','اختر الشهر لعرض تصاميمه وحفظه أو مشاركته.');
   const toolbar=document.createElement('div');toolbar.className='mc-year-themes';
   const choices=document.createElement('div');choices.className='mc-year-theme-choices';
-  const manage=button('إدارة الأنماط',()=>{manager.hidden=!manager.hidden;manage.setAttribute('aria-expanded',String(!manager.hidden));});
+  const manage=button('⚙ الأنماط',()=>{manager.hidden=!manager.hidden;manage.setAttribute('aria-expanded',String(!manager.hidden));});
   manage.classList.add('mc-theme-manage');manage.setAttribute('aria-expanded','false');
   const manager=document.createElement('div');manager.className='mc-year-theme-manager';manager.hidden=true;
-  const grid=document.createElement('div');grid.className='mc-months';grid.setAttribute('aria-label','أشهر السنة');const currentTheme=text('div','');currentTheme.className='mc-current-theme';currentTheme.setAttribute('role','status');
+  const currentTheme=text('div','');currentTheme.className='mc-current-theme';currentTheme.setAttribute('role','status');
+  const stage=document.createElement('div');stage.className='mc-gallery-stage';
+  const scene=document.createElement('div');scene.className='mc-scene';scene.setAttribute('aria-hidden','true');
+  const grid=document.createElement('div');grid.className='mc-months';grid.setAttribute('aria-label','أشهر السنة');
+  const searchBar=document.createElement('div');searchBar.className='mc-gallery-search';
+  const searchInput=document.createElement('input');searchInput.type='search';searchInput.placeholder='ابحث عن شهر...';searchInput.setAttribute('aria-label','ابحث عن شهر');
+  searchInput.oninput=()=>{search=searchInput.value.trim();filterMonths();};
+  searchBar.append(searchInput);
+  const monthNav=document.createElement('div');monthNav.className='mc-month-nav';
+  const previous=button('❮',()=>focusMonth(focused-1));previous.setAttribute('aria-label','الشهر السابق');
+  const next=button('❯',()=>focusMonth(focused+1));next.setAttribute('aria-label','الشهر التالي');
+  const navNumbers=document.createElement('div');navNumbers.className='mc-month-nav-numbers';
+  for(let month=1;month<=12;month++){
+    const b=button(String(month).padStart(2,'0'),()=>focusMonth(month));b.setAttribute('aria-label',C.months[month-1]);
+    const thumb=document.createElement('img');thumb.alt='';thumb.loading='lazy';b.append(thumb);
+    navNumbers.append(b);
+  }
+  monthNav.append(previous,navNumbers,next);
+  const filterMonths=()=>{
+    grid.querySelectorAll('[data-calendar-month]').forEach(el=>{
+      const n=Number(el.dataset.calendarMonth);
+      el.hidden=!!search&&!C.months[n-1].includes(search)&&!String(n).includes(search);
+    });
+  };
+  const focusMonth=n=>{
+    focused=(n+11)%12+1;
+    grid.querySelectorAll('[data-calendar-month]').forEach(el=>el.classList.toggle('mc-featured',Number(el.dataset.calendarMonth)===focused));
+    Array.from(navNumbers.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
+    const selected=navNumbers.children[focused-1];
+    selected?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'smooth'});
+  };
   const paint=()=>{
     p.dataset.galleryTheme=active;
-    const selected=themes.find(t=>t.id===active);currentTheme.textContent='✓ النمط المختار: '+selected.name+' — '+selected.desc;
+    const chosen=themes.find(t=>t.id===active);
+    currentTheme.textContent='✓ '+chosen.name+' — '+chosen.desc;
     choices.replaceChildren();
     for(const theme of themes.filter(t=>enabled.includes(t.id))){
-      const b=button((active===theme.id?'✓ ':'')+theme.name,()=>{active=theme.id;saveStyles();paint();});
-      b.classList.add('mc-theme-option');b.setAttribute('aria-pressed',String(active===theme.id));b.setAttribute('aria-label',theme.name+(active===theme.id?'، النمط المختار':''));b.title=theme.desc;choices.append(b);
+      const b=button((active===theme.id?'✓ ':'')+theme.name,()=>{
+        active=theme.id;search='';searchInput.value='';filterMonths();saveStyles();paint();focusMonth(focused);
+      });
+      b.classList.add('mc-theme-option');b.setAttribute('aria-pressed',String(active===theme.id));
+      choices.append(b);
     }
-    manager.replaceChildren(text('p','إخفاء أي نمط لا يعجبك. يمكنك إرجاعه لاحقاً.'));
+    manager.replaceChildren(text('p','أخفِ الأنماط غير المرغوبة ويمكنك إعادتها بأي وقت.'));
     for(const theme of themes){
       const line=document.createElement('label');line.className='mc-theme-check';
       const check=document.createElement('input');check.type='checkbox';check.checked=enabled.includes(theme.id);
       check.onchange=()=>{
         if(!check.checked&&enabled.length===1){check.checked=true;return;}
         enabled=check.checked?[...enabled,theme.id]:enabled.filter(id=>id!==theme.id);
-        if(!enabled.includes(active))active=enabled[0];saveStyles();paint();
+        if(!enabled.includes(active))active=enabled[0];
+        saveStyles();paint();focusMonth(focused);
       };
       line.append(check,text('span',theme.name+' — '+theme.desc));manager.append(line);
     }
     manager.append(button('إظهار جميع الأنماط',()=>{enabled=themes.map(t=>t.id);saveStyles();paint();}));
+    monthNav.hidden=!['arch','flip','fullscreen'].includes(active);
+    searchBar.hidden=active!=='luxgrid';
   };
-  toolbar.append(choices,manage);p.append(intro,toolbar,currentTheme,manager,grid);paint();
-  const s=read();
+  toolbar.append(choices,manage);stage.append(scene,searchBar,grid,monthNav);
+  p.append(intro,toolbar,currentTheme,manager,stage);
+  const settingsMonthly=read();
   for(let month=1;month<=12;month++){
     const b=button('',()=>preview(year,month)),img=document.createElement('img');
     img.alt='تقويم '+C.months[month-1]+' '+year;img.loading='lazy';b.dataset.calendarMonth=month;
-    const imageWrap=document.createElement('span');imageWrap.className='mc-month-art';imageWrap.append(img);
+    const art=document.createElement('span');art.className='mc-month-art';art.append(img);
     const info=document.createElement('span');info.className='mc-month-info';
-    info.append(text('span','الشهر '+String(month).padStart(2,'0')),text('strong',C.months[month-1]),text('small',String(month).padStart(2,'0')+' / '+year),text('em','فتح الشهر'));
-    b.append(imageWrap,info);grid.append(b);
+    const num=text('span',String(month).padStart(2,'0'));num.className='mc-month-number';
+    info.append(num,text('strong',C.months[month-1]),text('small',year+' / '+String(month).padStart(2,'0')),text('em','فتح التقويم ›'));
+    b.append(art,info);grid.append(b);
   }
-  // The interactive layouts keep the same twelve preview buttons and original month opening action.
-  let focused=1;
-  const focusMonth=(n)=>{
-    focused=(n+11)%12+1;
-    grid.querySelectorAll('[data-calendar-month]').forEach(el=>el.classList.toggle('mc-featured',Number(el.dataset.calendarMonth)===focused));
-    Array.from(navNumbers.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
-  };
-  const monthNav=document.createElement('div');monthNav.className='mc-month-nav';
-  const previous=button('‹',()=>focusMonth(focused-1));previous.setAttribute('aria-label','الشهر السابق');
-  const next=button('›',()=>focusMonth(focused+1));next.setAttribute('aria-label','الشهر التالي');
-  const navNumbers=document.createElement('div');navNumbers.className='mc-month-nav-numbers';
-  for(let month=1;month<=12;month++){const b=button(String(month).padStart(2,'0'),()=>focusMonth(month));b.setAttribute('aria-label',C.months[month-1]);navNumbers.append(b);}
-  monthNav.append(previous,navNumbers,next);p.append(monthNav);
-  // Navigation is shown only on layouts 2, 8 and 10.
-  const updateNav=()=>{monthNav.hidden=!['arch','flip','fullscreen'].includes(active);};
-  choices.addEventListener('click',()=>requestAnimationFrame(()=>{updateNav();focusMonth(focused);}));
-  manager.addEventListener('change',()=>requestAnimationFrame(updateNav));
-  updateNav();focusMonth(1);
+  let startX=0,startY=0;
+  stage.addEventListener('touchstart',e=>{if(e.touches.length!==1)return;startX=e.touches[0].clientX;startY=e.touches[0].clientY;},{passive:true});
+  stage.addEventListener('touchend',e=>{
+    if(!['arch','flip','fullscreen'].includes(active)||!e.changedTouches.length)return;
+    const dx=e.changedTouches[0].clientX-startX,dy=e.changedTouches[0].clientY-startY;
+    if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4)focusMonth(focused+(dx>0?1:-1));
+  },{passive:true});
+  paint();focusMonth(1);
   (async()=>{for(let month=1;month<=12;month++){
     if(token!==sequence||!p.isConnected)return;
     const b=grid.querySelector('[data-calendar-month="'+month+'"]');
-    try{const canvas=await R.render(model(year,month),s,.25);
-      if(token!==sequence||!p.isConnected)return;b.querySelector('img').src=canvas.toDataURL('image/png');
+    try{
+      const canvas=await R.render(model(year,month),settingsMonthly,.25);
+      if(token!==sequence||!p.isConnected)return;
+      const src=canvas.toDataURL('image/png');
+      b.querySelector('img').src=src;
+      navNumbers.children[month-1].querySelector('img').src=src;
     }catch(e){b.append(text('small',e.message));}
   }})();
  }
