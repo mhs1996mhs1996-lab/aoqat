@@ -15,8 +15,58 @@
   const years=[...new Set([...Array.from({length:5},(_,i)=>now.year+i),...s.years])].sort((a,b)=>a-b),grid=document.createElement('div');grid.className='mc-years';for(const year of years){const b=button('📁 '+year+' م',()=>yearView(year));b.dataset.calendarYear=year;b.append(text('small','12 تقويماً شهرياً'));grid.append(b);}p.append(grid);
   const form=document.createElement('form');form.className='mc-add-year';const input=document.createElement('input');input.type='number';input.min='2026';input.max='2200';input.step='1';input.value=now.year+5;input.setAttribute('aria-label','سنة تقاويم إضافية');const add=button('فتح سنة أخرى',()=>{});add.type='submit';form.append(label('السنة الميلادية',input),add);form.onsubmit=e=>{e.preventDefault();if(!input.reportValidity()||!input.value)return;const year=Number(input.value),settings=read();settings.years.push(year);save(settings);yearView(year);};p.append(form);
  }
- function yearView(year){const p=show('تقاويم سنة '+year,open),token=sequence,grid=document.createElement('div');grid.className='mc-months';p.append(text('p','12 صورة شهرية. افتح الشهر للمشاركة أو الحفظ.'),grid);const s=read();for(let month=1;month<=12;month++){const b=button('',()=>preview(year,month)),img=document.createElement('img');img.alt='تقويم '+C.months[month-1]+' '+year;img.loading='lazy';b.dataset.calendarMonth=month;b.append(img,text('strong',C.months[month-1]),text('small',String(month).padStart(2,'0')+' / '+year));grid.append(b);}
-  (async()=>{for(let month=1;month<=12;month++){if(token!==sequence||!p.isConnected)return;const b=grid.querySelector('[data-calendar-month="'+month+'"]');try{const canvas=await R.render(model(year,month),s,.25);if(token!==sequence||!p.isConnected)return;b.querySelector('img').src=canvas.toDataURL('image/png');}catch(e){b.append(text('small',e.message));}}})();
+ function yearView(year){
+  const p=show('تقاويم سنة '+year,open),token=sequence;
+  p.classList.add('mc-year-view');
+  const themes=[{id:'royal',name:'الملكي',desc:'زمردي وذهبي'},{id:'modern',name:'العصري',desc:'أبيض وأخضر'},{id:'horizontal',name:'الأفقي',desc:'بطاقات عريضة'}],storageKey='aoqatYearGalleryStylesV1';
+  let settings;try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch(_){settings={};}
+  let enabled=Array.isArray(settings.enabled)?settings.enabled.filter(id=>themes.some(t=>t.id===id)):themes.map(t=>t.id);
+  let active=enabled.includes(settings.active)?settings.active:enabled[0]||'royal';
+  const saveStyles=()=>{try{localStorage.setItem(storageKey,JSON.stringify({enabled,active}));}catch(_){}};
+  const intro=text('p','12 صورة شهرية. افتح الشهر للمشاركة أو الحفظ.');
+  const toolbar=document.createElement('div');toolbar.className='mc-year-themes';
+  const choices=document.createElement('div');choices.className='mc-year-theme-choices';
+  const manage=button('إدارة الأنماط',()=>{manager.hidden=!manager.hidden;});
+  manage.classList.add('mc-theme-manage');
+  const manager=document.createElement('div');manager.className='mc-year-theme-manager';manager.hidden=true;
+  const grid=document.createElement('div');grid.className='mc-months';
+  const paint=()=>{
+    p.dataset.galleryTheme=active;
+    choices.replaceChildren();
+    for(const theme of themes.filter(t=>enabled.includes(t.id))){
+      const b=button(theme.name,()=>{active=theme.id;saveStyles();paint();});
+      b.classList.add('mc-theme-option');b.setAttribute('aria-pressed',String(active===theme.id));b.title=theme.desc;choices.append(b);
+    }
+    manager.replaceChildren(text('p','إخفاء أي نمط لا يعجبك. يمكنك إرجاعه لاحقاً.'));
+    for(const theme of themes){
+      const line=document.createElement('label');line.className='mc-theme-check';
+      const check=document.createElement('input');check.type='checkbox';check.checked=enabled.includes(theme.id);
+      check.onchange=()=>{
+        if(!check.checked&&enabled.length===1){check.checked=true;return;}
+        enabled=check.checked?[...enabled,theme.id]:enabled.filter(id=>id!==theme.id);
+        if(!enabled.includes(active))active=enabled[0];saveStyles();paint();
+      };
+      line.append(check,text('span',theme.name+' — '+theme.desc));manager.append(line);
+    }
+    manager.append(button('إظهار الأنماط الثلاثة',()=>{enabled=themes.map(t=>t.id);saveStyles();paint();}));
+  };
+  toolbar.append(choices,manage);p.append(intro,toolbar,manager,grid);paint();
+  const s=read();
+  for(let month=1;month<=12;month++){
+    const b=button('',()=>preview(year,month)),img=document.createElement('img');
+    img.alt='تقويم '+C.months[month-1]+' '+year;img.loading='lazy';b.dataset.calendarMonth=month;
+    const imageWrap=document.createElement('span');imageWrap.className='mc-month-art';imageWrap.append(img);
+    const info=document.createElement('span');info.className='mc-month-info';
+    info.append(text('strong',C.months[month-1]),text('small',String(month).padStart(2,'0')+' / '+year));
+    b.append(imageWrap,info);grid.append(b);
+  }
+  (async()=>{for(let month=1;month<=12;month++){
+    if(token!==sequence||!p.isConnected)return;
+    const b=grid.querySelector('[data-calendar-month="'+month+'"]');
+    try{const canvas=await R.render(model(year,month),s,.25);
+      if(token!==sequence||!p.isConnected)return;b.querySelector('img').src=canvas.toDataURL('image/png');
+    }catch(e){b.append(text('small',e.message));}
+  }})();
  }
  function preview(year,month){const p=show(C.months[month-1]+' '+year,()=>yearView(year)),token=sequence,actions=document.createElement('div'),img=document.createElement('img'),status=text('p','جاري تجهيز التقويم…');let file,url,sharing=false;actions.className='mc-actions';img.className='mc-preview';img.alt='مواقيت الصلاة لمدينة الحويجة وضواحيها لشهر '+C.months[month-1]+' '+year;const share=button('مشاركة التقويم',async()=>{if(!file||sharing)return;sharing=true;share.disabled=true;try{await navigator.share({files:[file],title:img.alt});status.textContent='التقويم جاهز للمشاركة والحفظ.';}catch(e){status.textContent=e.name==='AbortError'?'تم إلغاء المشاركة.':'تعذرت المشاركة؛ يمكنك حفظ الصورة ومشاركتها من الصور.';}finally{sharing=false;share.disabled=false;}}),download=button('حفظ الصورة على الهاتف',()=>{if(!file||!url)return;const a=document.createElement('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();status.textContent='تم طلب حفظ صورة التقويم.';});share.disabled=download.disabled=true;actions.append(share,download,button('تغيير التصميم',()=>designs(year,month,()=>preview(year,month))),button('تنسيق الخط للتقويم',()=>format(year,month,()=>preview(year,month))));const chosen=C.designs.find(d=>d.id===read().design);p.append(actions,text('small','التصميم '+chosen.number+' — '+chosen.name),img,status);status.setAttribute('role','status');
   let activeUrl;const release=()=>{if(activeUrl){URL.revokeObjectURL(activeUrl);activeUrl=null;}};const observer=new MutationObserver(()=>{if(!p.isConnected){release();observer.disconnect();}});observer.observe(document.body,{childList:true,subtree:true});
