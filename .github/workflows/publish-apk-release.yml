@@ -8,7 +8,11 @@ on:
     paths:
       - '.github/workflows/publish-apk-release.yml'
 permissions:
-  contents: read
+  contents: write
+  actions: read
+concurrency:
+  group: publish-aoqat-v1.53
+  cancel-in-progress: false
 jobs:
   publish:
     runs-on: ubuntu-22.04
@@ -39,12 +43,21 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
+          gh auth status
+          gh api "repos/$GH_REPO" --jq '{name,permissions}'
           cat > release/notes.txt <<'NOTES'
           الإصدار 1.53 التجريبي: شاشة بدء جديدة بتدرج أبيض وتركوازي، منبّه صلاة بواجهة ملء الشاشة وغفوة عبر زرّي الصوت، إشعارات الصلاة بصوت القناة المختارة في إعدادات الهاتف، ودمج أحدث محتوى الويب ضمن الحزمة. المصحف المعتمد فقط (604 صفحات) وقاعدة المواقيت دون إنترنت؛ استبعاد النسخ المصورة القديمة والملونة من الحزمة لتقليل الحجم. تنبيه: التحديث الجزئي الصغير ومعالجة زر الطاقة والغفوة والتأكد الميداني من أذان العصر لا تزال تتطلب اختبارات إضافية. ثبّت التحديث فوق النسخة الحالية للحفاظ على إعداداتك.
           NOTES
-          if gh release view v1.53 >/dev/null 2>&1; then
-            gh release upload v1.53 release/aoqat-v1.53.apk release/aoqat-v1.53.sha256 --clobber
-          else
-            gh release create v1.53 release/aoqat-v1.53.apk release/aoqat-v1.53.sha256 --target "${{ github.event.workflow_run.head_sha || github.sha }}" --title 'أوقات الصلاة في الحويجة 1.53' --notes-file release/notes.txt
+          if ! gh release view v1.53 >/dev/null 2>&1; then
+            gh release create v1.53 --target main --title 'أوقات الصلاة في الحويجة 1.53' --notes-file release/notes.txt
           fi
+          for attempt in 1 2 3; do
+            if gh release upload v1.53 release/aoqat-v1.53.apk release/aoqat-v1.53.sha256 --clobber; then
+              break
+            fi
+            if [ "$attempt" -eq 3 ]; then exit 1; fi
+            sleep 15
+          done
+          gh release view v1.53 --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.53.apk'
 # Publish trigger for verified v1.53 APK from successful build 40368561273
