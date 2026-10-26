@@ -18,24 +18,25 @@
  function yearView(year){
   const p=show('تقاويم سنة '+year,open),token=sequence;
   p.classList.add('mc-year-view');
-  const themes=[{id:'royal',name:'الملكي',desc:'زمردي وذهبي'},{id:'modern',name:'العصري',desc:'أبيض وأخضر'},{id:'horizontal',name:'الأفقي',desc:'بطاقات عريضة'}],storageKey='aoqatYearGalleryStylesV1';
+  const themes=[{id:'royal',name:'المعرض',desc:'معرض صور واسع بخلفية عاجية'},{id:'modern',name:'المجلّة',desc:'بطاقات تحريرية بترتيب مميز'},{id:'horizontal',name:'الفهرس',desc:'قائمة أنيقة ومختصرة'}],storageKey='aoqatYearGalleryStylesV1';
   let settings;try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch(_){settings={};}
   let enabled=Array.isArray(settings.enabled)?settings.enabled.filter(id=>themes.some(t=>t.id===id)):themes.map(t=>t.id);
   let active=enabled.includes(settings.active)?settings.active:enabled[0]||'royal';
   const saveStyles=()=>{try{localStorage.setItem(storageKey,JSON.stringify({enabled,active}));}catch(_){}};
-  const intro=text('p','12 صورة شهرية. افتح الشهر للمشاركة أو الحفظ.');
+  const intro=text('p','تقاويم الأشهر الاثني عشر — اختر طريقة العرض المناسبة لك.');
   const toolbar=document.createElement('div');toolbar.className='mc-year-themes';
   const choices=document.createElement('div');choices.className='mc-year-theme-choices';
-  const manage=button('إدارة الأنماط',()=>{manager.hidden=!manager.hidden;});
-  manage.classList.add('mc-theme-manage');
+  const manage=button('إدارة الأنماط',()=>{manager.hidden=!manager.hidden;manage.setAttribute('aria-expanded',String(!manager.hidden));});
+  manage.classList.add('mc-theme-manage');manage.setAttribute('aria-expanded','false');
   const manager=document.createElement('div');manager.className='mc-year-theme-manager';manager.hidden=true;
-  const grid=document.createElement('div');grid.className='mc-months';
+  const grid=document.createElement('div');grid.className='mc-months';const currentTheme=text('div','');currentTheme.className='mc-current-theme';currentTheme.setAttribute('role','status');
   const paint=()=>{
     p.dataset.galleryTheme=active;
+    const selected=themes.find(t=>t.id===active);currentTheme.textContent='✓ النمط المختار: '+selected.name+' — '+selected.desc;
     choices.replaceChildren();
     for(const theme of themes.filter(t=>enabled.includes(t.id))){
-      const b=button(theme.name,()=>{active=theme.id;saveStyles();paint();});
-      b.classList.add('mc-theme-option');b.setAttribute('aria-pressed',String(active===theme.id));b.title=theme.desc;choices.append(b);
+      const b=button((active===theme.id?'✓ ':'')+theme.name,()=>{active=theme.id;saveStyles();paint();});
+      b.classList.add('mc-theme-option');b.setAttribute('aria-pressed',String(active===theme.id));b.setAttribute('aria-label',theme.name+(active===theme.id?'، النمط المختار':''));b.title=theme.desc;choices.append(b);
     }
     manager.replaceChildren(text('p','إخفاء أي نمط لا يعجبك. يمكنك إرجاعه لاحقاً.'));
     for(const theme of themes){
@@ -50,14 +51,14 @@
     }
     manager.append(button('إظهار الأنماط الثلاثة',()=>{enabled=themes.map(t=>t.id);saveStyles();paint();}));
   };
-  toolbar.append(choices,manage);p.append(intro,toolbar,manager,grid);paint();
+  toolbar.append(choices,manage);p.append(intro,toolbar,currentTheme,manager,grid);paint();
   const s=read();
   for(let month=1;month<=12;month++){
     const b=button('',()=>preview(year,month)),img=document.createElement('img');
     img.alt='تقويم '+C.months[month-1]+' '+year;img.loading='lazy';b.dataset.calendarMonth=month;
     const imageWrap=document.createElement('span');imageWrap.className='mc-month-art';imageWrap.append(img);
     const info=document.createElement('span');info.className='mc-month-info';
-    info.append(text('strong',C.months[month-1]),text('small',String(month).padStart(2,'0')+' / '+year));
+    info.append(text('span','الشهر '+String(month).padStart(2,'0')),text('strong',C.months[month-1]),text('small',String(month).padStart(2,'0')+' / '+year),text('em','عرض التقويم ←'));
     b.append(imageWrap,info);grid.append(b);
   }
   (async()=>{for(let month=1;month<=12;month++){
