@@ -553,3 +553,49 @@ html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .
   background:#fffdf7!important;background-image:none!important;color:#173d3c!important;
   border:1px solid #c9b992!important;
 }
+
+
+/* Reference-faithful gallery 1: isolated emerald/gold composition.
+   Scoped to the yearly view; does not affect prayer data or other screens. */
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"]{
+  background:#073a39!important;color:#fff9e9!important;
+  padding:12px 10px 20px!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-gallery-stage{
+  background:radial-gradient(ellipse at 45% 8%,#13544d 0%,#063737 78%)!important;
+  border:1px solid #bba06b!important;border-radius:13px!important;
+  padding:12px 8px 17px!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-months{
+  display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:7px!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-months>button{
+  display:flex!important;flex-direction:column!important;
+  background:linear-gradient(145deg,#063b3b,#0a5049)!important;
+  background-image:none!important;color:#fff9e9!important;
+  border:1px solid #c5a76e!important;border-radius:10px!important;
+  box-shadow:inset 0 0 0 2px rgba(226,199,139,.13)!important;
+  padding:5px 4px 8px!important;gap:5px!important;min-width:0!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-month-art{
+  width:100%!important;background:#fdfaf0!important;border:2px solid #d7b77a!important;
+  border-radius:7px!important;padding:3px!important;box-sizing:border-box!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-month-info{
+  background:transparent!important;padding:2px 0!important;gap:2px!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-month-info strong{
+  color:#fff9e9!important;font-size:clamp(10px,2.8vw,15px)!important;line-height:1.4!important;
+  text-shadow:none!important;overflow-wrap:anywhere!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-month-info small{
+  color:#e7d8ae!important;font-size:10px!important;
+}
+html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-gallery-search input{
+  background:#f9f5e9!important;color:#143c3a!important;border:2px solid #d2b777!important;
+  border-radius:26px!important;min-height:43px!important;
+}
+@media(max-width:370px){
+ html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-months{gap:5px!important}
+ html body #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme="luxgrid"] .mc-month-info strong{font-size:10px!important}
+}
