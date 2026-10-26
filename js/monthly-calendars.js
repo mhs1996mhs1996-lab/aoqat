@@ -109,6 +109,26 @@
     p.dataset.galleryTheme=active;
     decoration.textContent='';
     stage.style.setProperty('--mc-scene-art',illustration(active,focused));
+    // Explicit, gallery-owned paint for the reference's dark emerald month cards.
+    // The hosting app has highly specific button/theme styles; setting these on
+    // the isolated annual gallery is safer than affecting the other nine templates.
+    grid.querySelectorAll('[data-calendar-month]').forEach(card=>{
+      const isGrid=active==='luxgrid';
+      const set=(el,property,value)=>el.style.setProperty(property,value,'important');
+      if(isGrid){
+        set(card,'background','linear-gradient(150deg,#073c3d,#07534b)');
+        set(card,'background-image','linear-gradient(150deg,#073c3d,#07534b)');
+        set(card,'color','#fff9e9');set(card,'border','1px solid #c8a76b');
+        set(card,'border-radius','9px');set(card,'box-shadow','none');
+        const title=card.querySelector('.mc-month-info strong');
+        if(title)set(title,'color','#fff9e9');
+        const date=card.querySelector('.mc-month-info small');
+        if(date)set(date,'color','#dbcba0');
+      }else{
+        for(const key of ['background','background-image','color','border','border-radius','box-shadow'])card.style.removeProperty(key);
+        for(const el of card.querySelectorAll('.mc-month-info strong,.mc-month-info small'))el.style.removeProperty('color');
+      }
+    });
     const chosen=themes.find(t=>t.id===active);
     currentTheme.textContent='✓ '+chosen.name+' — '+chosen.desc;
     choices.replaceChildren();
