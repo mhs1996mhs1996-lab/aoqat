@@ -511,3 +511,45 @@ body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-g
   #monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-months>button{min-height:145px!important}
   #monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-gallery-stage{padding:22px 7px 10px!important}
 }
+
+
+/* V10: isolate annual gallery from application theme overrides.
+   Toolbar is neutral; the selected gallery owns all artwork colors. */
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5{
+  background:#f9f7f0!important;background-image:none!important;
+  color:#173d3c!important;--wt-panel:#f9f7f0;--wt-text:#173d3c;--wt-border:#dfd7c5;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-year-themes,
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-year-theme-choices,
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-year-theme-manager{
+  background:#fffdf7!important;background-image:none!important;color:#173d3c!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-toggle,
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-manage,
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-option,
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-year-theme-manager button{
+  background:#fffdf7!important;background-image:none!important;color:#173d3c!important;
+  border:1px solid #c9b992!important;box-shadow:none!important;text-shadow:none!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-option[aria-pressed=true]{
+  background:#173d3c!important;background-image:none!important;color:#fffdf7!important;
+  border-color:#d7b573!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-gallery-stage{
+  background-color:transparent;isolation:isolate;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-gallery-stage .mc-months>button{
+  background-image:var(--mc-card-art,none);
+  text-shadow:none;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-gallery-stage .mc-months>button{
+  background-image:var(--mc-month-landscape)!important;
+  text-shadow:0 2px 5px #001c25!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-gallery-stage .mc-months>button{
+  background:transparent!important;background-image:none!important;
+}
+html body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-gallery-search input{
+  background:#fffdf7!important;background-image:none!important;color:#173d3c!important;
+  border:1px solid #c9b992!important;
+}
