@@ -81,9 +81,91 @@ class PrayerAlarmService:Service(){private var player:MediaPlayer?=null;private 
     }
     override fun onDestroy(){PrayerAlarmAudio.restore(this);PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
-class PrayerAlarmActivity:Activity(){private val receiver=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){if(!i.getBooleanExtra("active",true))finish()}}
-    override fun onCreate(b:Bundle?){super.onCreate(b);if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}else{window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)};val id=intent.getStringExtra("id")?:run{finish();return};val count=intent.getIntExtra("count",0);val preview=intent.getBooleanExtra("preview",false);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(0xfffff9ed.toInt())};layout.addView(TextView(this).apply{text=PrayerAlarm.item(this@PrayerAlarmActivity,id).optString("label",PrayerAlarm.names[id]);textSize=34f;gravity=Gravity.CENTER});
-        for((label,action)in listOf("إيقاف" to "STOP","غفوة" to "SNOOZE")){layout.addView(Button(this).apply{text=label;textSize=25f;isEnabled=action!="SNOOZE"||!preview&&count<PrayerAlarm.item(this@PrayerAlarmActivity,id).optInt("count",3);setOnClickListener{sendBroadcast(Intent(this@PrayerAlarmActivity,PrayerAlarmActionReceiver::class.java).setAction(action).putExtra("id",id).putExtra("count",count).putExtra("preview",preview));finish()}})};setContentView(layout);ContextCompat.registerReceiver(this,receiver,IntentFilter("com.aoqat.calendar.PRAYER_ALARM_ACTIVE"),ContextCompat.RECEIVER_NOT_EXPORTED)}
+class PrayerAlarmActivity:Activity(){
+    private val receiver=object:BroadcastReceiver(){
+        override fun onReceive(c:Context,i:Intent){if(!i.getBooleanExtra("active",true))finish()}
+    }
+    private var prayerId=""
+    private var snoozeCount=0
+    private var preview=false
+    private fun decide(action:String){
+        sendBroadcast(Intent(this,PrayerAlarmActionReceiver::class.java)
+            .setAction(action).putExtra("id",prayerId).putExtra("count",snoozeCount)
+            .putExtra("preview",preview))
+        finish()
+    }
+    override fun onCreate(b:Bundle?){
+        super.onCreate(b)
+        if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}
+        else window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        prayerId=intent.getStringExtra("id")?:run{finish();return}
+        snoozeCount=intent.getIntExtra("count",0)
+        preview=intent.getBooleanExtra("preview",false)
+        if(!preview&&!PrayerAlarm.settings(this).optBoolean("enabled")){finish();return}
+        val bg=android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            intArrayOf(0xff718b9c.toInt(),0xff286a98.toInt(),0xff887a84.toInt()))
+        val panel=LinearLayout(this).apply{
+            orientation=LinearLayout.VERTICAL
+            gravity=Gravity.CENTER_HORIZONTAL
+            setPadding(32,48,32,35)
+            background=bg
+        }
+        val now=java.time.ZonedDateTime.now()
+        val fmt=java.time.format.DateTimeFormatter.ofPattern("h:mm",java.util.Locale("ar"))
+        val clock=TextView(this).apply{
+            text=now.format(fmt);textSize=78f;gravity=Gravity.CENTER
+            setTextColor(0xffe3fff7.toInt())
+        }
+        panel.addView(clock,LinearLayout.LayoutParams(-1,0,1.1f))
+        panel.addView(TextView(this).apply{
+            text=now.format(java.time.format.DateTimeFormatter.ofPattern("EEEE، d MMMM",java.util.Locale("ar")))
+            textSize=20f;gravity=Gravity.CENTER;setTextColor(android.graphics.Color.WHITE)
+        })
+        val label=if(prayerId=="third")PrayerAlarm.names[prayerId]?:"الصلاة" else PrayerTimes.names[prayerId]?:"الصلاة"
+        panel.addView(TextView(this).apply{
+            text="حان موعد أذان $label لمدينة الحويجة"
+            textSize=26f;gravity=Gravity.CENTER;setTextColor(android.graphics.Color.WHITE)
+            setPadding(0,36,0,28)
+        },LinearLayout.LayoutParams(-1,0,1f))
+        val snoozeMin=PrayerAlarm.item(this,prayerId).optInt("snooze",10).coerceIn(1,30)
+        panel.addView(Button(this).apply{
+            text="التذكير بعد $snoozeMin دقائق"
+            textSize=18f
+            isEnabled=!preview&&snoozeCount<PrayerAlarm.item(this@PrayerAlarmActivity,prayerId).optInt("count",3)
+            setOnClickListener{decide("SNOOZE")}
+        },LinearLayout.LayoutParams(-1,-2))
+        panel.addView(TextView(this).apply{
+            text="اسحب لإيقاف المنبه"
+            textSize=20f;gravity=Gravity.CENTER;setTextColor(android.graphics.Color.WHITE)
+            setPadding(0,25,0,12)
+        },LinearLayout.LayoutParams(-1,0,0.7f))
+        val stop=Button(this).apply{
+            text="◯  اسحب للإيقاف"
+            textSize=20f
+            setOnClickListener{decide("STOP")}
+        }
+        var downX=0f
+        stop.setOnTouchListener{_,event->
+            when(event.actionMasked){
+                android.view.MotionEvent.ACTION_DOWN->{downX=event.x;true}
+                android.view.MotionEvent.ACTION_UP->{
+                    if(kotlin.math.abs(event.x-downX)>70)decide("STOP") else stop.performClick()
+                    true
+                }
+                else->true
+            }
+        }
+        panel.addView(stop,LinearLayout.LayoutParams(-1,-2))
+        setContentView(panel)
+        ContextCompat.registerReceiver(this,receiver,IntentFilter("com.aoqat.calendar.PRAYER_ALARM_ACTIVE"),ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean{
+        if(code==android.view.KeyEvent.KEYCODE_VOLUME_UP||code==android.view.KeyEvent.KEYCODE_VOLUME_DOWN){
+            decide("SNOOZE");return true
+        }
+        return super.onKeyDown(code,event)
+    }
     override fun onDestroy(){try{unregisterReceiver(receiver)}catch(_:Exception){};super.onDestroy()}
 }
-
