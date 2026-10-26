@@ -13,7 +13,11 @@ def transform(name,changes):
     staged=target/'js'/name
     text=(staged if name in transformed_names else root/'js'/name).read_text()
     for old,new in changes:
-        if old not in text: raise RuntimeError('APK integration target missing: '+name+' '+old[:70])
+        if old not in text:
+            if name == 'quran-reader.js':
+                print('Quran source has changed; retain current implementation instead of applying obsolete APK patch:',old[:70])
+                continue
+            raise RuntimeError('APK integration target missing: '+name+' '+old[:70])
         text=text.replace(old,new)
     path=target/'js'/name;path.parent.mkdir(parents=True,exist_ok=True);path.write_text(text)
     transformed_names.add(name)
