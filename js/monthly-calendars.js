@@ -21,10 +21,13 @@
   const themes=[
     {id:'luxgrid',name:'1 الشبكة الفاخرة',desc:'شبكة بطاقات مذهبة مع البحث'},
     {id:'arch',name:'2 الشرائح الأنيقة',desc:'قوس إسلامي وفوانيس وتنقل بالسحب'},
+    {id:'modernlist',name:'3 القائمة الحديثة',desc:'قائمة بيضاء مصغرة لكل شهر'},
     {id:'seasons',name:'4 الخلفيات الشهرية',desc:'مناظر طبيعية موسمية مختلفة'},
     {id:'colorcards',name:'5 البطاقات الملونة',desc:'أرقام سداسية وألوان متدرجة'},
+    {id:'timeline',name:'6 الخط الزمني',desc:'بطاقات متتابعة مع خط زمني'},
     {id:'shelf',name:'7 الرف الجميل',desc:'رف خشبي مع التقاويم ككتب'},
     {id:'flip',name:'8 التقويم التفاعلي',desc:'تقويم معلّق بحلقات مع تقليب'},
+    {id:'circles',name:'9 الدوائر العصرية',desc:'دوائر أنيقة بصور الأشهر'},
     {id:'fullscreen',name:'10 العرض الكامل',desc:'إطار مصوّر وشريط معاينات'}
   ];
 
@@ -57,6 +60,8 @@
   const storageKey='aoqatYearGalleryStylesV5';
   let settings={};try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}')||{};}catch(_){}
   let enabled=Array.isArray(settings.enabled)?settings.enabled.filter(id=>themes.some(t=>t.id===id)):themes.map(t=>t.id);
+  // New presets should also appear for people who previously enabled all seven presets.
+  if(Array.isArray(settings.enabled)&&settings.enabled.length===7&&['modernlist','timeline','circles'].every(id=>!settings.enabled.includes(id)))enabled=themes.map(t=>t.id);
   if(!enabled.length)enabled=themes.map(t=>t.id);
   let active=enabled.includes(settings.active)?settings.active:enabled[0],focused=1,search='';
   const saveStyles=()=>{try{localStorage.setItem(storageKey,JSON.stringify({enabled,active}));}catch(_){}};
