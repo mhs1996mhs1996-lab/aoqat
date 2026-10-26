@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 86 // Reliable adhan focus, native Azkar reminders and unified compass
-        versionName '1.51'
+        versionCode 87 // Native splash, prayer alarm screen and system notification fixes
+        versionName '1.52'
     }
 
     compileOptions {
