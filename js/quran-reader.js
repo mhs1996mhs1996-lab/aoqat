@@ -135,7 +135,7 @@
     document.body.classList.toggle('quran-reader-immersive',on);
   }
   // Gallery-style horizontal swipe: move two already prepared pages with the finger.
-  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false;
+  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false;
   function galleryReset(){
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
     const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
@@ -166,7 +166,24 @@
       current.style.transform='translate3d('+(commit?direction*width:0)+'px,0,0)';
       neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
     });
-    setTimeout(()=>{galleryBusy=false;galleryReset();if(commit&&root?.isConnected)go(target);},185);
+    const settle=()=>{
+      if(!galleryBusy)return;
+      galleryBusy=false;
+      if(commit&&root?.isConnected&&state.page!==target){
+        // Keep the already rendered and fitted neighbor; do not rebuild it after the swipe.
+        current.remove();
+        neighbor.id='adVerses';
+        neighbor.classList.remove('aq-gallery-neighbor');
+        neighbor.style.removeProperty('position');neighbor.style.removeProperty('top');neighbor.style.removeProperty('left');
+        neighbor.style.removeProperty('z-index');neighbor.style.removeProperty('pointer-events');
+        neighbor.style.removeProperty('visibility');neighbor.style.removeProperty('will-change');
+        neighbor.style.removeProperty('transition');neighbor.style.removeProperty('transform');
+        galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
+        go(target);
+      }else galleryReset();
+    };
+    neighbor.addEventListener('transitionend',settle,{once:true});
+    setTimeout(settle,195);
   }
   function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
@@ -304,14 +321,14 @@
     dragOffset=0;
     clearTurn();
     const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
-    const cached=!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
+    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* The incoming gallery page is already fitted and displayed. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=(phoneMode()||mobileTrial())?'qcf2-phone':official?(official.tajwidEdition?'tajwid-hafs':official.imageDirectory?'hafs-pocket':'hafs-1441'):'text';
     if(Number.isInteger(state.lastVerse))root.querySelectorAll(`[data-qr-verse="${state.lastVerse}"]`).forEach(e=>e.classList.add('aq-selected'));
-    fit();if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
+    if(!adopted)fit();if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
 
   function fit(){
