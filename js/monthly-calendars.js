@@ -66,8 +66,7 @@
   const focusMonth=(n)=>{
     focused=(n+11)%12+1;
     grid.querySelectorAll('[data-calendar-month]').forEach(el=>el.classList.toggle('mc-featured',Number(el.dataset.calendarMonth)===focused));
-    grid.querySelector('[data-calendar-month="'+focused+'"]')?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'smooth'});
-    Array.from(monthNav.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
+    Array.from(navNumbers.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
   };
   const monthNav=document.createElement('div');monthNav.className='mc-month-nav';
   const previous=button('‹',()=>focusMonth(focused-1));previous.setAttribute('aria-label','الشهر السابق');
@@ -75,10 +74,9 @@
   const navNumbers=document.createElement('div');navNumbers.className='mc-month-nav-numbers';
   for(let month=1;month<=12;month++){const b=button(String(month).padStart(2,'0'),()=>focusMonth(month));b.setAttribute('aria-label',C.months[month-1]);navNumbers.append(b);}
   monthNav.append(previous,navNumbers,next);p.append(monthNav);
-  const originalPaint=paint;
   // Navigation is shown only on layouts 2, 8 and 10.
   const updateNav=()=>{monthNav.hidden=!['arch','flip','fullscreen'].includes(active);};
-  choices.addEventListener('click',()=>requestAnimationFrame(updateNav));
+  choices.addEventListener('click',()=>requestAnimationFrame(()=>{updateNav();focusMonth(focused);}));
   manager.addEventListener('change',()=>requestAnimationFrame(updateNav));
   updateNav();focusMonth(1);
   (async()=>{for(let month=1;month<=12;month++){
