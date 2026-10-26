@@ -18,10 +18,10 @@
  function yearView(year){
   const p=show('تقاويم سنة '+year,open),token=sequence;
   p.classList.add('mc-year-view');
-  const themes=[{id:'slider',name:'الشرائح',desc:'تصفح أفقي بصورة كبيرة لكل شهر'},{id:'tiles',name:'البطاقات',desc:'شبكة مرتبة ببطاقات فاتحة وأرقام الأشهر'},{id:'rows',name:'القائمة',desc:'صفوف مختصرة بأسماء الأشهر ومعاينة صغيرة'}],storageKey='aoqatYearGalleryStylesV3';
+  const themes=[{id:'luxgrid',name:'1 الشبكة الفاخرة',desc:'12 شهراً بشبكة زمردية'},{id:'arch',name:'2 الشرائح الأنيقة',desc:'عرض شهر داخل قوس فاخر'},{id:'seasons',name:'4 الخلفيات الشهرية',desc:'بطاقات بألوان الفصول'},{id:'colorcards',name:'5 البطاقات الملونة',desc:'ألوان مميزة لكل شهر'},{id:'shelf',name:'7 الرف الجميل',desc:'تقاويم مرتبة على رفوف'},{id:'flip',name:'8 التقويم التفاعلي',desc:'تقويم كبير مع أزرار الأشهر'},{id:'fullscreen',name:'10 العرض الكامل',desc:'معاينة واسعة وشريط أشهر'}],storageKey='aoqatYearGalleryStylesV4';
   let settings;try{settings=JSON.parse(localStorage.getItem(storageKey)||'{}');}catch(_){settings={};}
   let enabled=Array.isArray(settings.enabled)?settings.enabled.filter(id=>themes.some(t=>t.id===id)):themes.map(t=>t.id);
-  let active=enabled.includes(settings.active)?settings.active:enabled[0]||'slider';
+  let active=enabled.includes(settings.active)?settings.active:enabled[0]||'luxgrid';
   const saveStyles=()=>{try{localStorage.setItem(storageKey,JSON.stringify({enabled,active}));}catch(_){}};
   const intro=text('p','اختر الشهر لعرض تصاميمه وحفظه أو مشاركته.');
   const toolbar=document.createElement('div');toolbar.className='mc-year-themes';
@@ -49,7 +49,7 @@
       };
       line.append(check,text('span',theme.name+' — '+theme.desc));manager.append(line);
     }
-    manager.append(button('إظهار الأنماط الثلاثة',()=>{enabled=themes.map(t=>t.id);saveStyles();paint();}));
+    manager.append(button('إظهار جميع الأنماط',()=>{enabled=themes.map(t=>t.id);saveStyles();paint();}));
   };
   toolbar.append(choices,manage);p.append(intro,toolbar,currentTheme,manager,grid);paint();
   const s=read();
@@ -61,6 +61,26 @@
     info.append(text('span','الشهر '+String(month).padStart(2,'0')),text('strong',C.months[month-1]),text('small',String(month).padStart(2,'0')+' / '+year),text('em','فتح الشهر'));
     b.append(imageWrap,info);grid.append(b);
   }
+  // The interactive layouts keep the same twelve preview buttons and original month opening action.
+  let focused=1;
+  const focusMonth=(n)=>{
+    focused=(n+11)%12+1;
+    grid.querySelectorAll('[data-calendar-month]').forEach(el=>el.classList.toggle('mc-featured',Number(el.dataset.calendarMonth)===focused));
+    grid.querySelector('[data-calendar-month="'+focused+'"]')?.scrollIntoView?.({block:'nearest',inline:'nearest',behavior:'smooth'});
+    Array.from(monthNav.children).forEach((b,i)=>b.setAttribute('aria-pressed',String(i+1===focused)));
+  };
+  const monthNav=document.createElement('div');monthNav.className='mc-month-nav';
+  const previous=button('‹',()=>focusMonth(focused-1));previous.setAttribute('aria-label','الشهر السابق');
+  const next=button('›',()=>focusMonth(focused+1));next.setAttribute('aria-label','الشهر التالي');
+  const navNumbers=document.createElement('div');navNumbers.className='mc-month-nav-numbers';
+  for(let month=1;month<=12;month++){const b=button(String(month).padStart(2,'0'),()=>focusMonth(month));b.setAttribute('aria-label',C.months[month-1]);navNumbers.append(b);}
+  monthNav.append(previous,navNumbers,next);p.append(monthNav);
+  const originalPaint=paint;
+  // Navigation is shown only on layouts 2, 8 and 10.
+  const updateNav=()=>{monthNav.hidden=!['arch','flip','fullscreen'].includes(active);};
+  choices.addEventListener('click',()=>requestAnimationFrame(updateNav));
+  manager.addEventListener('change',()=>requestAnimationFrame(updateNav));
+  updateNav();focusMonth(1);
   (async()=>{for(let month=1;month<=12;month++){
     if(token!==sequence||!p.isConnected)return;
     const b=grid.querySelector('[data-calendar-month="'+month+'"]');
