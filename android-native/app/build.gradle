@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 87 // Native splash, prayer alarm screen and system notification fixes
-        versionName '1.52'
+        versionCode 88 // Retain only one offline phone Mushaf edition
+        versionName '1.53'
     }
 
     compileOptions {
