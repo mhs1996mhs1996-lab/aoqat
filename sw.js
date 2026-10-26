@@ -1,9 +1,9 @@
-const CACHE_NAME = "aoqat-pwa-v153-annual-gallery-reference-v6";
+const CACHE_NAME = "aoqat-pwa-v154-annual-gallery-artwork-v7";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
-  "/js/monthly-calendars.js?v=annual-gallery-reference-v6-20261026",
-  "/css/monthly-calendars.css?v=annual-gallery-reference-v6-20261026",
+  "/js/monthly-calendars.js?v=annual-gallery-artwork-v7-20261026",
+  "/css/monthly-calendars.css?v=annual-gallery-artwork-v7-20261026",
   "/js/prayer-alert-methods.js?v=2",
   "/js/web-quiet-core.js?v=1",
   "/js/web-quiet-settings.js?v=1",
