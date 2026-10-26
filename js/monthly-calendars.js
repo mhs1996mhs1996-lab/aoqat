@@ -137,7 +137,10 @@
   };
   toolbar.append(choices,manage);stage.append(scene,searchBar,grid,monthNav);
   p.append(toggleThemes,toolbar,currentTheme,manager,stage);
-  const settingsMonthly=read();
+  // The annual gallery uses its own consistent navy/gold preview, independent of
+  // the user's editable monthly template and palette. Opening a month still uses
+  // the original saved settings, so no monthly design/export behavior is changed.
+  const galleryPreviewSettings=C.designDefaults('navy-gold');
   for(let month=1;month<=12;month++){
     const b=button('',()=>preview(year,month)),img=document.createElement('img');
     img.alt='تقويم '+C.months[month-1]+' '+year;img.loading='lazy';b.dataset.calendarMonth=month;
@@ -159,7 +162,7 @@
     if(token!==sequence||!p.isConnected)return;
     const b=grid.querySelector('[data-calendar-month="'+month+'"]');
     try{
-      const canvas=await R.render(model(year,month),settingsMonthly,.25);
+      const canvas=await R.render(model(year,month),galleryPreviewSettings,.25);
       if(token!==sequence||!p.isConnected)return;
       const src=canvas.toDataURL('image/png');
       b.querySelector('img').src=src;
