@@ -148,7 +148,7 @@
     if(!galleryNeighbor){
       if(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))return;
       const neighbor=document.createElement('div');neighbor.className=current.className+' aq-gallery-neighbor';
-      neighbor.innerHTML=pageHTML(target);neighbor.style.cssText='position:absolute!important;top:0;left:0;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';
+      neighbor.innerHTML=pageHTML(target);neighbor.style.cssText='position:absolute!important;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';neighbor.style.top=current.offsetTop+'px';neighbor.style.left=current.offsetLeft+'px';
       paper.append(neighbor);fitText(paper,neighbor,target);neighbor.style.visibility='visible';galleryNeighbor=neighbor;
     }
     const width=paper.clientWidth,offset=Math.max(-width,Math.min(width,dx));
