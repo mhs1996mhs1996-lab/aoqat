@@ -15,10 +15,10 @@ class MushafAssetStore(private val context: Context) {
         fun assetPath(uri: Uri): String? {
             if (uri.scheme != "https" || uri.host != "aoqat.vercel.app" || uri.port != -1 || uri.query != null || uri.fragment != null) return null
             val path = uri.encodedPath?.removePrefix("/") ?: return null
-            if (path in listOf("assets/mushaf-phone-hafs-ready.json", "assets/mushaf-phone-hafs.json.gz", "assets/mushaf-hafs-pocket-ready.json", "assets/mushaf-hafs-pocket.json.gz")) return path
-            val match = Regex("assets/(mushaf-phone-hafs|mushaf-hafs-pocket)/([0-9]{3})\\.(json\\.gz|webp)").matchEntire(path) ?: return null
-            val number = match.groupValues[2].toInt()
-            if (number !in 1..604 || (match.groupValues[1] == "mushaf-phone-hafs") != (match.groupValues[3] == "json.gz")) return null
+            if (path == "assets/mushaf-phone-hafs-ready.json" || path == "assets/mushaf-phone-hafs.json.gz") return path
+            val match = Regex("assets/mushaf-phone-hafs/([0-9]{3})\\.json\\.gz").matchEntire(path) ?: return null
+            val number = match.groupValues[1].toInt()
+            if (number !in 1..604) return null
             return path
         }
         fun decode(bytes: ByteArray): ByteArray = if (bytes.size >= 2 && bytes[0] == 31.toByte() && bytes[1] == 139.toByte())
