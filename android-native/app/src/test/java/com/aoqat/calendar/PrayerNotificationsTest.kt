@@ -75,7 +75,8 @@ class PrayerNotificationsTest {
         val n = PrayerNotifications.notification(c, "fajr", false)
         assertEquals("حان موعد صلاة الفجر", n.extras.getString(Notification.EXTRA_TITLE))
         assertEquals("حان موعد صلاة الجمعة", PrayerNotifications.title("dhuhr", true))
-        val channel = (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).getNotificationChannel("prayer_due_v1")
-        assertNull(channel.sound)
+        val channel = (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).getNotificationChannel("prayer_due_system_v2")
+        assertNotNull(channel)
+        assertNotNull(channel.sound)
     }
 }
