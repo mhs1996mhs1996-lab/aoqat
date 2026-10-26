@@ -24,7 +24,7 @@ jobs:
   build-apk:
     if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[web-only]')
     runs-on: ubuntu-22.04
-    timeout-minutes: 20
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -155,3 +155,4 @@ jobs:
 
 
 # Rebuild requested 2026-10-26: full offline Android APK, preserve app and web source
+# Allow 60 minutes for 604-page offline packaging and APK artifact upload
