@@ -79,6 +79,10 @@ transform('azkar-reminders.js', [
  ("host.querySelector('[data-azkar-permission]').hidden=", "host.querySelector('[data-azkar-permission]').hidden=!window.AndroidNative?.configureAdhan&&"),
  ('السماح بإشعارات المتصفح', 'أذونات الإشعارات والعمل بالخلفية'),
  ('المواعيد بتوقيت العراق. تعمل التنبيهات أثناء فتح الموقع، وصوت إشعار الهاتف حسب إعدادات الجهاز والمتصفح.', 'المواعيد بتوقيت العراق. التنبيهات تعمل دون إنترنت وبالخلفية، بصوت إشعار قصير حسب إعدادات الهاتف.')])
+# APK-only Friday quiet UI: one control applies silent + Do Not Disturb together.
+transform('adhan-settings.js', [
+ ('<label>وضع الهاتف<select data-friday="quietMode"><option value="silent" ${f.quietMode===\'silent\'?\'selected\':\'\'}>صامت</option><option value="dnd" ${f.quietMode===\'dnd\'?\'selected\':\'\'}>عدم الإزعاج</option></select></label>', '<p class="ad-note">عند تفعيل الصامت أثناء الجمعة يُفعّل الصامت وعدم الإزعاج معاً، ثم يُستعاد وضع الهاتف السابق بعد الخطبة.</p>')])
+
 transform('adhan-settings.js', [
  ('native ? "أذان مكة — محمد خليل رمل" : "أذان مسجد قباء — عبدالمجيد السريحي"', '"أذان مسجد قباء — عبدالمجيد السريحي"')])
 
