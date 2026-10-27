@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v166-quran-offline-prefetch";
+const CACHE_NAME = "aoqat-pwa-v167-quran-shell-consistent";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -101,7 +101,8 @@ const APP_SHELL = [
   "/js/modal-panels.js?v=10",
   "/js/tomorrow-alarm.js?v=9",
   "/js/push-notifications.js?v=9",
-  "/js/quran-reader.js?v=phone-only-v2-20261026",
+  "/js/quran-reader.js",
+  "/js/quran-reader.js?v=quran-foreground-0653057",
   "/js/iqama-timing.js?v=1",
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
