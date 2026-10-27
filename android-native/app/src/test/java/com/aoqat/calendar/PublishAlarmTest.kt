@@ -21,6 +21,12 @@ class PublishAlarmTest {
   AlarmScheduler.setEnabled(c,false);AlarmScheduler.scheduleSnooze(c)
   assertTrue(shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms.isEmpty())
  }
+ @Test fun powerScreenOffSnoozesWithSavedDuration(){on();AlarmScheduler.setSnoozeMinutes(c,4)
+  val controller=Robolectric.buildService(AlarmSoundService::class.java).create()
+  c.sendBroadcast(Intent(Intent.ACTION_SCREEN_OFF));shadowOf(Looper.getMainLooper()).idle()
+  assertTrue(shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms.any{it.triggerAtTime-System.currentTimeMillis() in 239000L..240000L})
+  controller.destroy()
+ }
  @Test fun volumeKeySnoozesPublishingWithUserDuration(){on();AlarmScheduler.setSnoozeMinutes(c,6)
   val activity=Robolectric.buildActivity(AlarmActivity::class.java).create().start().resume().get()
   assertTrue(activity.onKeyDown(android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent(0,android.view.KeyEvent.KEYCODE_VOLUME_DOWN)))

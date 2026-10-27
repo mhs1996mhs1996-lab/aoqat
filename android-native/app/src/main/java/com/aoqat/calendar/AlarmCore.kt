@@ -335,7 +335,7 @@ class AlarmSoundService : Service() {
             AlarmScheduler.scheduleSnooze(c);stopSelf()
         }
     }}
-    override fun onCreate(){super.onCreate();androidx.core.content.ContextCompat.registerReceiver(this,screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)}
+    override fun onCreate(){super.onCreate();if(Build.VERSION.SDK_INT>=33)registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF))}
     private var player: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var vibrator: Vibrator? = null
