@@ -112,24 +112,35 @@
     // Explicit, gallery-owned paint for the reference's dark emerald month cards.
     // The hosting app has highly specific button/theme styles; setting these on
     // the isolated annual gallery is safer than affecting the other nine templates.
-    grid.querySelectorAll('[data-calendar-month]').forEach(card=>{
-      const isGrid=active==='luxgrid';
-      const set=(el,property,value)=>el.style.setProperty(property,value,'important');
-      if(isGrid){
-        set(card,'background','linear-gradient(150deg,#073c3d,#07534b)');
-        set(card,'background-image','linear-gradient(150deg,#073c3d,#07534b)');
-        set(card,'color','#fff9e9');set(card,'border','1px solid #c8a76b');
-        set(card,'border-radius','9px');set(card,'box-shadow','none');
-        const title=card.querySelector('.mc-month-info strong');
-        if(title)set(title,'color','#fff9e9');
-        const date=card.querySelector('.mc-month-info small');
-        if(date)set(date,'color','#dbcba0');
-      }else{
-        for(const key of ['background','background-image','color','border','border-radius','box-shadow'])card.style.removeProperty(key);
-        for(const el of card.querySelectorAll('.mc-month-info strong,.mc-month-info small'))el.style.removeProperty('color');
-      }
-    });
-    const chosen=themes.find(t=>t.id===active);
+    const palettes={
+       luxgrid:['linear-gradient(150deg,#073c3d,#07534b)','#fff9e9','1px solid #c8a76b'],
+       arch:['#fff9e9','#143a3e','3px solid #d5b06c'],
+       modernlist:['#fffdf8','#153f3f','1px solid #cbd6cf'],
+       seasons:['linear-gradient(0deg,#092c34b8,transparent 85%),var(--mc-month-landscape)','#fff','2px solid #f5e6c0'],
+       colorcards:['#fffdf8','#153f3f','1px solid #cbd6cf'],
+       timeline:['#fffdf8','#153f3f','1px solid #cbd6cf'],
+       shelf:['#f6ead3','#352719','3px ridge #bc935c'],
+       flip:['#fff9ea','#153e3a','1px solid #d5c7a8'],
+       circles:['transparent','#143a3e','none'],
+       fullscreen:['#fff9ee','#123e3e','3px solid #d3ad67']
+     };
+     const palette=palettes[active]||palettes.luxgrid;
+     grid.querySelectorAll('[data-calendar-month]').forEach(card=>{
+       const set=(el,key,value)=>el.style.setProperty(key,value,'important');
+       const background=palette[0];
+       set(card,'background',background);
+       set(card,'background-image',background.includes('gradient(')||background.includes('var(')?background:'none');
+       set(card,'color',palette[1]);set(card,'border',palette[2]);
+       set(card,'box-shadow',active==='shelf'?'0 8px 0 #704021':'none');
+       if(active==='luxgrid')set(card,'border-radius','9px');
+       else card.style.removeProperty('border-radius');
+       for(const el of card.querySelectorAll('.mc-month-info,.mc-month-info span,.mc-month-info strong,.mc-month-info small'))set(el,'color',palette[1]);
+       if(active==='luxgrid'){
+         const date=card.querySelector('.mc-month-info small');
+         if(date)set(date,'color','#dbcba0');
+       }
+     });
+     const chosen=themes.find(t=>t.id===active);
     currentTheme.textContent='✓ '+chosen.name+' — '+chosen.desc;
     choices.replaceChildren();
     for(const theme of themes.filter(t=>enabled.includes(t.id))){
