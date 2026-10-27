@@ -1,0 +1,25 @@
+name: Check Quran reader independently
+on:
+  push:
+    branches: [fix/quran-reader-isolated-20261027]
+    paths:
+      - 'js/quran-reader.js'
+      - 'tests/quran-*.cjs'
+      - '.github/workflows/check-quran-reader.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quran-browser:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Quran source
+        run: node --test tests/quran-pages.test.cjs tests/quran-responsive-pages.test.cjs
+      - name: Install browser test dependencies
+        run: npm install --no-save --package-lock=false playwright
+      - name: Run Quran reader browser tests
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
