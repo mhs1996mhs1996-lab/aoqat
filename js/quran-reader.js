@@ -223,7 +223,8 @@
         neighbor.style.removeProperty('visibility');neighbor.style.removeProperty('will-change');
         neighbor.style.removeProperty('transition');neighbor.style.removeProperty('transform');
         galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
-        galleryClearReady();
+        // Preserve the prepared reverse page rather than rebuilding it.
+        for(const [p,entry] of galleryReady){if(Math.abs(p-target)>1){entry.node.remove();galleryReady.delete(p);}}
         go(target);
       }else galleryReset();
     };
@@ -399,7 +400,8 @@
       const rows=phonePages.get(page)?.lines.length||15;
       text.style.setProperty('--native-rows',rows);
       text.style.setProperty('--native-zoom',1);
-      text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
+      // Do not calculate per-verse SVG bounding boxes on every page turn.
+      return;
     }
     text.classList.remove('aq-native-page');
     const height=paper.clientHeight-28,width=paper.clientWidth-20,key=[page,width,height,state.font].join(':');
@@ -430,7 +432,20 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){
+      // Keep the already rendered opposite page ready for a quick reverse swipe.
+      const paper=$('aqPaper');
+      for(const [p,entry] of galleryReady){
+        if(Math.abs(p-state.page)>1||entry.width!==paper?.clientWidth||entry.height!==paper?.clientHeight){
+          entry.node.remove();galleryReady.delete(p);
+        }
+      }
+      for(const p of [state.page+1,state.page-1]){
+        if(p<1||p>TOTAL)continue;
+        phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});
+      }
+      gallerySchedule();return;
+    }
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
