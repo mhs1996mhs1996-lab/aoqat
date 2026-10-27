@@ -190,9 +190,10 @@
         galleryReady.get(target)?.node.remove();galleryReady.delete(target);
         galleryPrepare(target);
       }
-      if(!galleryReady.has(target))return;
+      const prepared=galleryReady.get(target);
+      if(!prepared)return;
       galleryReady.delete(target);
-      galleryNeighbor=ready.node;
+      galleryNeighbor=prepared.node;
     }
     const width=paper.clientWidth,offset=Math.max(-width,Math.min(width,dx));
     current.style.willChange='transform';current.style.transform='translate3d('+offset+'px,0,0)';
@@ -429,7 +430,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){Promise.all([phonePage(p)]).then(()=>{if(root?.isConnected&&state.page===p-1||root?.isConnected&&state.page===p+1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
