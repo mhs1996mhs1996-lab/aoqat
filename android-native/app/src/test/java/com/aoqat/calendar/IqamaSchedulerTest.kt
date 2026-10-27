@@ -23,9 +23,15 @@ class IqamaSchedulerTest {
         val date = LocalDate.now().plusDays(1)
         context.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit()
             .putBoolean("enabled", true)
-            .putString("minutes", "{\"fajr\":20}")
-            .putString("rows", "[{\"gregorian_month\":${date.monthValue},\"gregorian_day\":${date.dayOfMonth},\"fajr\":\"4:43\",\"dhuhr\":\"11:59\",\"asr\":\"3:22\",\"maghrib\":\"5:53\",\"isha\":\"7:13\"}]").commit()
-        return date.atTime(4,43).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            .putString("minutes", "{\\"fajr\\":20}").commit()
+        // Scheduler uses the actual offline database, not the legacy iqama_schedule.rows cache.
+        val rows = PrayerTimes.rows(context)
+        val row = (0 until rows.length()).map { rows.getJSONObject(it) }.first {
+            it.optInt("gregorian_month") == date.monthValue && it.optInt("gregorian_day") == date.dayOfMonth
+        }
+        val fajr = PrayerTimes.minutes(row.getString("fajr"), "fajr")!!
+        return date.atStartOfDay().plusMinutes(fajr.toLong())
+            .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
 
     @Test fun cachedPrayerSchedulesAnAlarmClockWithoutActivityOrNetwork() {
