@@ -23,7 +23,7 @@ class IqamaSchedulerTest {
         val date = LocalDate.now().plusDays(1)
         context.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit()
             .putBoolean("enabled", true)
-            .putString("minutes", "{\\"fajr\\":20}").commit()
+            .putString("minutes", """{"fajr":20}""").commit()
         // Scheduler uses the actual offline database, not the legacy iqama_schedule.rows cache.
         val rows = PrayerTimes.rows(context)
         val row = (0 until rows.length()).map { rows.getJSONObject(it) }.first {
