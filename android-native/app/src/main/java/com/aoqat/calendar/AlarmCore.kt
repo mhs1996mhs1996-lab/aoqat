@@ -430,7 +430,7 @@ class AlarmActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
-        }
+        } else window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
 
         if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED))
         if(!AlarmScheduler.enabled(this)){finish();return}
@@ -440,7 +440,7 @@ class AlarmActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(42, 70, 42, 70)
-            setBackgroundColor(Color.rgb(8, 31, 43))
+            background=android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TL_BR,intArrayOf(0xff083130.toInt(),0xff0e4c42.toInt(),0xff052024.toInt()))
         }
         val title = TextView(this).apply {
             text = "⏰ مواقيت الغد جاهزة"
@@ -472,6 +472,14 @@ class AlarmActivity : Activity() {
                 finish()
             }
         }
+        root.addView(android.widget.TextClock(this).apply{
+            format12Hour="h:mm";format24Hour="HH:mm";textSize=80f;gravity=Gravity.CENTER
+            setTextColor(0xfff9f1d5.toInt());setPadding(0,0,0,32)
+        },ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT)
+        root.addView(TextView(this).apply{
+            text=java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEEE، d MMMM",java.util.Locale("ar")))
+            textSize=20f;gravity=Gravity.CENTER;setTextColor(Color.WHITE);setPadding(0,0,0,36)
+        },ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT)
         root.addView(title, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         root.addView(body, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         root.addView(snooze, ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
