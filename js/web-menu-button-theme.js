@@ -14,7 +14,7 @@
  document.head.appendChild(modeStyle);
  let queued=false;
  function paint(){queued=false;const p=palette();document.querySelectorAll(roots).forEach(root=>root.querySelectorAll('button').forEach(button=>{
-  if(button.matches(skip)||button.closest('#aqReader'))return;
+  if(button.matches(skip)||button.closest('#aqReader,#monthlyCalendars'))return;
   if(button.matches('[data-global-mode]')){
    const selected=[...(button.closest('#adSection-modes')?.querySelectorAll('[data-prayer][data-mode][aria-pressed="true"]')||[])];
    const active=selected.length===5&&new Set(selected.map(b=>b.dataset.prayer)).size===5&&selected.every(b=>b.dataset.mode===button.dataset.globalMode);
