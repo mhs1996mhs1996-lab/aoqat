@@ -52,123 +52,123 @@ body.design-menu-open #settingsContentDialog #monthlyCalendars .web-calendar-gri
 
 /* Annual gallery v15: one authoritative design system. All selectors scoped to
    .mc-year-v5; monthly template editor, export and home styles remain above. */
-#monthlyCalendars.mc-year-v5{--mc-ink:#143a39;direction:rtl;padding:9px!important;background:#f7f7f1!important;color:var(--mc-ink)!important;line-height:1.5!important;filter:none!important}
-#monthlyCalendars.mc-year-v5>p{font-size:12px;margin:0 0 8px;text-align:center;color:#47615b}
-#monthlyCalendars.mc-year-v5 .mc-theme-toggle,#monthlyCalendars.mc-year-v5 .mc-theme-option,
-#monthlyCalendars.mc-year-v5 .mc-theme-manage,#monthlyCalendars.mc-year-v5 .mc-year-theme-manager button{font:inherit!important;box-shadow:none!important;text-shadow:none!important;background-image:none!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-toggle{display:block!important;width:100%!important;min-height:39px!important;margin:0 0 8px!important;padding:7px!important;background:#f7f4e9!important;color:#183c3e!important;border:1px solid #d4c6a7!important;border-radius:12px!important;font-size:13px!important}
-#monthlyCalendars.mc-year-v5 .mc-year-themes{display:none!important;background:#f9f8f2!important;padding:7px!important;border:1px solid #dbd4bf!important;border-radius:12px!important;margin:0 0 7px!important}
-#monthlyCalendars.mc-year-v5 .mc-year-themes[data-expanded=true]{display:flex!important;align-items:center;flex-wrap:wrap;gap:6px!important}
-#monthlyCalendars.mc-year-v5 .mc-year-theme-choices{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;flex:1 1 100%}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-option{display:block!important;width:100%!important;min-width:0!important;min-height:35px!important;margin:0!important;padding:5px 4px!important;border-radius:8px!important;border:1px solid #d5d3c6!important;background:#fff!important;color:#234742!important;font-size:12px!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-option[aria-pressed=true]{background:#0c4b4c!important;color:white!important;border-color:#cbb078!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-theme-manage{display:block!important;width:100%!important;min-height:32px!important;margin:0!important;padding:4px!important;background:#eeeadd!important;color:#21413d!important;border:1px solid #c7bfac!important;border-radius:7px!important}
-#monthlyCalendars.mc-year-v5 .mc-current-theme{font-size:11px;text-align:center;color:#365d57;margin:2px 0 8px}
-#monthlyCalendars.mc-year-v5 .mc-year-theme-manager{background:#fffef9;border:1px solid #d6d1c0;border-radius:10px;padding:10px;margin-bottom:10px;color:#224540}
-#monthlyCalendars.mc-year-v5 .mc-year-theme-manager[hidden],#monthlyCalendars.mc-year-v5 .mc-month-nav[hidden],#monthlyCalendars.mc-year-v5 .mc-gallery-search[hidden]{display:none!important}
-#monthlyCalendars.mc-year-v5 .mc-theme-check{display:flex;align-items:center;gap:7px;padding:5px 0;font-size:12px}
-#monthlyCalendars.mc-year-v5 .mc-gallery-stage{position:relative;isolation:isolate;overflow:hidden;border-radius:17px;padding:10px!important;min-height:0!important;box-shadow:0 4px 16px #163c3426!important;color:#fff}
-#monthlyCalendars.mc-year-v5 .mc-scene{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-#monthlyCalendars.mc-year-v5 .mc-decor{position:absolute;inset:0;background-image:var(--mc-scene-art);background-size:cover;background-position:center;opacity:.6}
-#monthlyCalendars.mc-year-v5 .mc-gallery-stage>.mc-months,#monthlyCalendars.mc-year-v5 .mc-gallery-stage>.mc-gallery-search,#monthlyCalendars.mc-year-v5 .mc-gallery-stage>.mc-month-nav{position:relative;z-index:1}
-#monthlyCalendars.mc-year-v5 .mc-months{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px!important;margin:0!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-months>button{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:center!important;position:relative!important;gap:6px!important;margin:0!important;padding:8px!important;width:100%!important;min-height:0!important;height:auto!important;min-width:0!important;border-radius:11px!important;box-shadow:none!important;background:#fff!important;background-image:none!important;color:#153f3f!important;border:1px solid #d8d6ca!important;overflow:hidden!important;text-align:center!important}
-#monthlyCalendars.mc-year-v5 .mc-month-art{display:block;box-sizing:border-box;width:100%;min-width:0;padding:4px;border-radius:7px;background:#fff;overflow:hidden}
-#monthlyCalendars.mc-year-v5 .mc-month-art img{display:block;width:100%;height:auto;max-height:none!important;object-fit:contain;filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
-#monthlyCalendars.mc-year-v5 .mc-month-info{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:1px 0;color:inherit!important}
-#monthlyCalendars.mc-year-v5 .mc-month-info span{font-size:11px;color:inherit!important}
-#monthlyCalendars.mc-year-v5 .mc-month-info strong{font-size:clamp(12px,3.6vw,19px);line-height:1.4;color:inherit!important}
-#monthlyCalendars.mc-year-v5 .mc-month-info small{font-size:11px;color:inherit!important;opacity:.85}
-#monthlyCalendars.mc-year-v5 .mc-month-info em{display:none;font-style:normal;color:inherit!important}
-#monthlyCalendars.mc-year-v5 .mc-gallery-search{margin-bottom:10px}
-#monthlyCalendars.mc-year-v5 .mc-gallery-search input{box-sizing:border-box;width:100%;height:42px!important;min-height:42px!important;border:2px solid #d6be85!important;border-radius:30px!important;padding:7px 16px!important;background:#faf8ee!important;color:#183b3e!important;font-size:14px!important;box-shadow:none!important}
-#monthlyCalendars.mc-year-v5 .mc-month-nav{display:flex;align-items:center;gap:6px;margin-top:13px;padding:5px}
-#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers{display:flex;flex:1;gap:5px;overflow-x:auto;scrollbar-width:thin}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-month-nav>button{width:38px!important;min-width:38px!important;flex:0 0 38px!important;height:40px!important;min-height:40px!important;margin:0!important;padding:2px!important;background:#034449!important;color:#fff!important;border:1px solid #ddc28c!important;border-radius:50%!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5 .mc-month-nav-numbers>button{min-width:48px!important;width:48px!important;flex:0 0 48px!important;margin:0!important;padding:4px!important;border-radius:9px!important;border:1px solid #d6c18d!important;background:#fcf8eb!important;color:#164647!important;font-size:11px!important}
-#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers>button[aria-pressed=true]{outline:2px solid #e1bc67;outline-offset:-2px}
-#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers img{display:block;height:33px;width:100%;object-fit:contain;background:#fff}
-#monthlyCalendars.mc-year-v5 .mc-months>button[hidden]{display:none!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5{--mc-ink:#143a39;direction:rtl;padding:9px!important;background:#f7f7f1!important;color:var(--mc-ink)!important;line-height:1.5!important;filter:none!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5>p{font-size:12px;margin:0 0 8px;text-align:center;color:#47615b}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-toggle,#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-option,
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-manage,#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-year-theme-manager button{font:inherit!important;box-shadow:none!important;text-shadow:none!important;background-image:none!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-toggle{display:block!important;width:100%!important;min-height:39px!important;margin:0 0 8px!important;padding:7px!important;background:#f7f4e9!important;color:#183c3e!important;border:1px solid #d4c6a7!important;border-radius:12px!important;font-size:13px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-year-themes{display:none!important;background:#f9f8f2!important;padding:7px!important;border:1px solid #dbd4bf!important;border-radius:12px!important;margin:0 0 7px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-year-themes[data-expanded=true]{display:flex!important;align-items:center;flex-wrap:wrap;gap:6px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-year-theme-choices{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px!important;flex:1 1 100%}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-option{display:block!important;width:100%!important;min-width:0!important;min-height:35px!important;margin:0!important;padding:5px 4px!important;border-radius:8px!important;border:1px solid #d5d3c6!important;background:#fff!important;color:#234742!important;font-size:12px!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-option[aria-pressed=true]{background:#0c4b4c!important;color:white!important;border-color:#cbb078!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-manage{display:block!important;width:100%!important;min-height:32px!important;margin:0!important;padding:4px!important;background:#eeeadd!important;color:#21413d!important;border:1px solid #c7bfac!important;border-radius:7px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-current-theme{font-size:11px;text-align:center;color:#365d57;margin:2px 0 8px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-year-theme-manager{background:#fffef9;border:1px solid #d6d1c0;border-radius:10px;padding:10px;margin-bottom:10px;color:#224540}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-year-theme-manager[hidden],#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav[hidden],#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-search[hidden]{display:none!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-theme-check{display:flex;align-items:center;gap:7px;padding:5px 0;font-size:12px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-stage{position:relative;isolation:isolate;overflow:hidden;border-radius:17px;padding:10px!important;min-height:0!important;box-shadow:0 4px 16px #163c3426!important;color:#fff}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-scene{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-decor{position:absolute;inset:0;background-image:var(--mc-scene-art);background-size:cover;background-position:center;opacity:.6}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-stage>.mc-months,#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-stage>.mc-gallery-search,#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-stage>.mc-month-nav{position:relative;z-index:1}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-months{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px!important;margin:0!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-months>button{box-sizing:border-box!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:center!important;position:relative!important;gap:6px!important;margin:0!important;padding:8px!important;width:100%!important;min-height:0!important;height:auto!important;min-width:0!important;border-radius:11px!important;box-shadow:none!important;background:#fff!important;background-image:none!important;color:#153f3f!important;border:1px solid #d8d6ca!important;overflow:hidden!important;text-align:center!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-art{display:block;box-sizing:border-box;width:100%;min-width:0;padding:4px;border-radius:7px;background:#fff;overflow:hidden}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-art img{display:block;width:100%;height:auto;max-height:none!important;object-fit:contain;filter:none!important;mix-blend-mode:normal!important;opacity:1!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-info{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:0;padding:1px 0;color:inherit!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-info span{font-size:11px;color:inherit!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-info strong{font-size:clamp(12px,3.6vw,19px);line-height:1.4;color:inherit!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-info small{font-size:11px;color:inherit!important;opacity:.85}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-info em{display:none;font-style:normal;color:inherit!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-search{margin-bottom:10px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-gallery-search input{box-sizing:border-box;width:100%;height:42px!important;min-height:42px!important;border:2px solid #d6be85!important;border-radius:30px!important;padding:7px 16px!important;background:#faf8ee!important;color:#183b3e!important;font-size:14px!important;box-shadow:none!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav{display:flex;align-items:center;gap:6px;margin-top:13px;padding:5px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers{display:flex;flex:1;gap:5px;overflow-x:auto;scrollbar-width:thin}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav>button{width:38px!important;min-width:38px!important;flex:0 0 38px!important;height:40px!important;min-height:40px!important;margin:0!important;padding:2px!important;background:#034449!important;color:#fff!important;border:1px solid #ddc28c!important;border-radius:50%!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers>button{min-width:48px!important;width:48px!important;flex:0 0 48px!important;margin:0!important;padding:4px!important;border-radius:9px!important;border:1px solid #d6c18d!important;background:#fcf8eb!important;color:#164647!important;font-size:11px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers>button[aria-pressed=true]{outline:2px solid #e1bc67;outline-offset:-2px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-month-nav-numbers img{display:block;height:33px;width:100%;object-fit:contain;background:#fff}
+#monthlyCalendars#monthlyCalendars.mc-year-v5 .mc-months>button[hidden]{display:none!important}
 
 /* 1. Dark emerald framed grid, 12 independent calendar cards. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-gallery-stage{background:radial-gradient(ellipse at 50% 0%,#105a55,#032f34 90%)!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-months{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-months>button{background:linear-gradient(135deg,#094c49,#064341)!important;color:#fff9e9!important;border:1px solid #cfb272!important;border-radius:9px!important;padding:4px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-month-art{border:1px solid #d3b879;padding:3px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-month-info strong{font-size:clamp(10px,2.8vw,14px)}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-gallery-stage{background:radial-gradient(ellipse at 50% 0%,#105a55,#032f34 90%)!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-months{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-months>button{background:linear-gradient(135deg,#094c49,#064341)!important;color:#fff9e9!important;border:1px solid #cfb272!important;border-radius:9px!important;padding:4px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-month-art{border:1px solid #d3b879;padding:3px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-month-info strong{font-size:clamp(10px,2.8vw,14px)}
 
 /* 2. Ivory arched card with pendant lanterns and gold border. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-gallery-stage{background:radial-gradient(ellipse at 50% 20%,#21716b,#053c41 80%)!important;padding:39px 12px 14px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:before,#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:after{content:'✦';position:absolute;top:8px;font-size:35px;color:#e8c57d;text-shadow:0 0 10px #efc77a}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:before{right:7%}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:after{left:7%}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene .mc-decor{opacity:.2}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-months,#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months,#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-months{grid-template-columns:1fr!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-months>button:not(.mc-featured),
-#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months>button:not(.mc-featured),
-#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-months>button:not(.mc-featured){display:none!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-months>button.mc-featured{background:#fff9e9!important;color:#143a3e!important;border:3px solid #d5b06c!important;border-radius:48% 48% 13px 13px / 13% 13% 13px 13px!important;padding:55px 13px 13px!important;box-shadow:0 0 0 6px #f8dfb74d!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-month-info{order:-1}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-month-info strong{font-size:26px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-month-art{background:#fff;border:1px solid #d4b87e;padding:8px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-gallery-stage{background:radial-gradient(ellipse at 50% 20%,#21716b,#053c41 80%)!important;padding:39px 12px 14px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:before,#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:after{content:'✦';position:absolute;top:8px;font-size:35px;color:#e8c57d;text-shadow:0 0 10px #efc77a}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:before{right:7%}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene:after{left:7%}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-scene .mc-decor{opacity:.2}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-months,#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months,#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-months{grid-template-columns:1fr!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-months>button:not(.mc-featured),
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months>button:not(.mc-featured),
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-months>button:not(.mc-featured){display:none!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-months>button.mc-featured{background:#fff9e9!important;color:#143a3e!important;border:3px solid #d5b06c!important;border-radius:48% 48% 13px 13px / 13% 13% 13px 13px!important;padding:55px 13px 13px!important;box-shadow:0 0 0 6px #f8dfb74d!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-month-info{order:-1}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-month-info strong{font-size:26px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=arch] .mc-month-art{background:#fff;border:1px solid #d4b87e;padding:8px}
 
 /* 3. Ivory modern list. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-gallery-stage{background:#06464b!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-months,#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months,#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months{grid-template-columns:1fr}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-months>button{flex-direction:row!important;align-items:center!important;gap:10px!important;text-align:right!important;background:#fffdf8!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-month-art{width:58px;flex:0 0 58px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-month-info{align-items:flex-start;flex:1}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-months>button:after{content:'❮';color:#0a4b52;font-size:17px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-gallery-stage{background:#06464b!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-months,#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months,#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months{grid-template-columns:1fr}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-months>button{flex-direction:row!important;align-items:center!important;gap:10px!important;text-align:right!important;background:#fffdf8!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-month-art{width:58px;flex:0 0 58px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-month-info{align-items:flex-start;flex:1}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=modernlist] .mc-months>button:after{content:'❮';color:#0a4b52;font-size:17px}
 
 /* 4. Individual seasonal landscape thumbnails. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-gallery-stage{background:#074448!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-months>button{min-height:180px!important;justify-content:end!important;background-image:linear-gradient(0deg,#092c34b8,transparent 85%),var(--mc-month-landscape)!important;background-position:center!important;background-size:cover!important;color:#fff!important;border:2px solid #f5e6c0!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-month-art{display:none}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-month-info strong{font-size:19px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-gallery-stage{background:#074448!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-months>button{min-height:180px!important;justify-content:end!important;background-image:linear-gradient(0deg,#092c34b8,transparent 85%),var(--mc-month-landscape)!important;background-position:center!important;background-size:cover!important;color:#fff!important;border:2px solid #f5e6c0!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-month-art{display:none}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=seasons] .mc-month-info strong{font-size:19px}
 
 /* 5. Clean white rows with colored hexagonal month numbers. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-gallery-stage{background:#f2f5f2!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button{flex-direction:row!important;align-items:center!important;gap:8px!important;min-height:74px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-month-art{order:3;width:49px;flex:0 0 49px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-month-info{order:2;align-items:flex-start;flex:1;text-align:right}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-month-number{order:-1;display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;color:white!important;background:#0b7590;clip-path:polygon(50% 0,94% 25%,94% 75%,50% 100%,6% 75%,6% 25%)}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button:nth-child(5n+2) .mc-month-number{background:#2aa5a4}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button:nth-child(5n+3) .mc-month-number{background:#dc9d34}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button:nth-child(5n+4) .mc-month-number{background:#a95193}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-gallery-stage{background:#f2f5f2!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button{flex-direction:row!important;align-items:center!important;gap:8px!important;min-height:74px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-month-art{order:3;width:49px;flex:0 0 49px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-month-info{order:2;align-items:flex-start;flex:1;text-align:right}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-month-number{order:-1;display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;color:white!important;background:#0b7590;clip-path:polygon(50% 0,94% 25%,94% 75%,50% 100%,6% 75%,6% 25%)}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button:nth-child(5n+2) .mc-month-number{background:#2aa5a4}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button:nth-child(5n+3) .mc-month-number{background:#dc9d34}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=colorcards] .mc-months>button:nth-child(5n+4) .mc-month-number{background:#a95193}
 
 /* 6. Timeline with visible numbered milestones. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-gallery-stage{background:#e5f1ea!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months{position:relative;gap:11px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months:before{content:'';position:absolute;right:22px;top:0;bottom:0;width:3px;background:#4e9583}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months>button{flex-direction:row!important;align-items:center!important;width:calc(100% - 43px)!important;margin-right:43px!important;gap:8px!important;background:#fffdf7!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-month-art{width:64px;flex:0 0 64px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-month-info{align-items:flex-start;flex:1}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-month-number{position:absolute;right:-49px;top:50%;transform:translateY(-50%);display:grid;place-items:center;background:#13816e;color:white!important;border-radius:50%;border:2px solid #fff;width:43px;height:43px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-gallery-stage{background:#e5f1ea!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months{position:relative;gap:11px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months:before{content:'';position:absolute;right:22px;top:0;bottom:0;width:3px;background:#4e9583}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-months>button{flex-direction:row!important;align-items:center!important;width:calc(100% - 43px)!important;margin-right:43px!important;gap:8px!important;background:#fffdf7!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-month-art{width:64px;flex:0 0 64px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-month-info{align-items:flex-start;flex:1}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=timeline] .mc-month-number{position:absolute;right:-49px;top:50%;transform:translateY(-50%);display:grid;place-items:center;background:#13816e;color:white!important;border-radius:50%;border:2px solid #fff;width:43px;height:43px}
 
 /* 7. Wooden library shelf. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-gallery-stage{background:repeating-linear-gradient(to bottom,#2b1b14 0 204px,#88542d 205px 216px,#d5a06b 217px 225px,#2b1b14 226px 236px)!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-months{grid-template-columns:repeat(3,minmax(0,1fr));gap:17px 7px!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-months>button{background:#f6ead3!important;border:3px ridge #bc935c!important;box-shadow:0 8px 0 #704021!important;padding:4px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-month-info strong{font-size:11px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-gallery-stage{background:repeating-linear-gradient(to bottom,#2b1b14 0 204px,#88542d 205px 216px,#d5a06b 217px 225px,#2b1b14 226px 236px)!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-months{grid-template-columns:repeat(3,minmax(0,1fr));gap:17px 7px!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-months>button{background:#f6ead3!important;border:3px ridge #bc935c!important;box-shadow:0 8px 0 #704021!important;padding:4px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-month-info strong{font-size:11px}
 
 /* 8. Binder ring flip-style calendar. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-gallery-stage{background:linear-gradient(#0c5f59,#064146)!important;padding-top:22px!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months>button.mc-featured{background:#fff9ea!important;color:#153e3a!important;border-top:16px solid #e3d2ac!important;padding:10px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-month-info{order:-1}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-month-info strong{font-size:25px}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months>button.mc-featured:before{content:'◉  ◉  ◉  ◉  ◉';position:absolute;top:-26px;left:0;right:0;color:#c6a168;font-size:15px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-gallery-stage{background:linear-gradient(#0c5f59,#064146)!important;padding-top:22px!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months>button.mc-featured{background:#fff9ea!important;color:#153e3a!important;border-top:16px solid #e3d2ac!important;padding:10px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-month-info{order:-1}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-month-info strong{font-size:25px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=flip] .mc-months>button.mc-featured:before{content:'◉  ◉  ◉  ◉  ◉';position:absolute;top:-26px;left:0;right:0;color:#c6a168;font-size:15px}
 
 /* 9. White circular collection with seasonal illustration backgrounds. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-gallery-stage{background:#faf9f3!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-months{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px 6px!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-months>button{background:transparent!important;border:none!important;padding:3px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-month-art{aspect-ratio:1;background-image:var(--mc-month-landscape);background-size:cover;background-position:center;border-radius:50%;border:3px solid #d8bd81;padding:0}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-month-art img{opacity:0!important;height:100%}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-month-info strong{font-size:12px}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-gallery-stage{background:#faf9f3!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-months{grid-template-columns:repeat(3,minmax(0,1fr));gap:11px 6px!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-months>button{background:transparent!important;border:none!important;padding:3px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-month-art{aspect-ratio:1;background-image:var(--mc-month-landscape);background-size:cover;background-position:center;border-radius:50%;border:3px solid #d8bd81;padding:0}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-month-art img{opacity:0!important;height:100%}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=circles] .mc-month-info strong{font-size:12px}
 
 /* 10. Large ivory coastal month presentation. */
-#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-gallery-stage{background:linear-gradient(#8ccbe0,#117b92,#064850)!important}
-body.design-menu-open #settingsContentDialog #monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-months>button.mc-featured{background:#fff9ee!important;color:#123e3e!important;border:3px solid #d3ad67!important;border-radius:45% 45% 15px 15px / 9% 9% 15px 15px!important;padding:30px 12px 12px!important}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-month-info{order:-1}
-#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-month-info strong{font-size:25px}
-@media(min-width:700px){#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-months,#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-months{grid-template-columns:repeat(4,minmax(0,1fr))}}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-gallery-stage{background:linear-gradient(#8ccbe0,#117b92,#064850)!important}
+body.design-menu-open #settingsContentDialog #monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-months>button.mc-featured{background:#fff9ee!important;color:#123e3e!important;border:3px solid #d3ad67!important;border-radius:45% 45% 15px 15px / 9% 9% 15px 15px!important;padding:30px 12px 12px!important}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-month-info{order:-1}
+#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=fullscreen] .mc-month-info strong{font-size:25px}
+@media(min-width:700px){#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=luxgrid] .mc-months,#monthlyCalendars#monthlyCalendars.mc-year-v5[data-gallery-theme=shelf] .mc-months{grid-template-columns:repeat(4,minmax(0,1fr))}}
