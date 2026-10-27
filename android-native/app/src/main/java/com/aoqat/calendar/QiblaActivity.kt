@@ -19,19 +19,19 @@ class QiblaActivity:Activity(),SensorEventListener{
     override fun onCreate(b:Bundle?){
         super.onCreate(b)
         sensor=getSystemService(SENSOR_SERVICE) as SensorManager
-        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutDirection=android.view.View.LAYOUT_DIRECTION_RTL;setPadding(24,24,24,24);setBackgroundColor(android.graphics.Color.rgb(255,250,240))}
+        val root=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;layoutDirection=android.view.View.LAYOUT_DIRECTION_RTL;setPadding(24,24,24,24);background=android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,intArrayOf(0xfffcf8ef.toInt(),0xfff1ead9.toInt()))}
         val header=LinearLayout(this).apply{gravity=Gravity.CENTER_VERTICAL}
         header.addView(Button(this).apply{id=android.R.id.button1;text="‹ رجوع";setOnClickListener{finish()}})
         header.addView(TextView(this).apply{text="اتجاه القبلة";textSize=24f;setTextColor(android.graphics.Color.rgb(27,52,65));gravity=Gravity.CENTER},LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1f))
         root.addView(header)
         val content=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
         arrow=TextView(this).apply{text="↑";contentDescription="اتجاه القبلة";textSize=82f;setTextColor(android.graphics.Color.rgb(36,128,82));gravity=Gravity.CENTER}
-        arrow.background=android.graphics.drawable.GradientDrawable().apply{shape=android.graphics.drawable.GradientDrawable.OVAL;setColor(0xffe6f0e8.toInt());setStroke(6,0xffb49a5a.toInt())}
+        arrow.background=android.graphics.drawable.GradientDrawable().apply{shape=android.graphics.drawable.GradientDrawable.OVAL;setColor(0xfff9f5e9.toInt());setStroke(5,0xffb49a5a.toInt())}
         val diameter=(280*resources.displayMetrics.density).toInt()
         content.addView(arrow,LinearLayout.LayoutParams(diameter,diameter))
         info=TextView(this).apply{text="نحتاج الموقع وحساس الاتجاه. أبعد الهاتف عن المعادن.";textSize=17f;setTextColor(android.graphics.Color.rgb(27,52,65));gravity=Gravity.CENTER}
         content.addView(info)
-        content.addView(Button(this).apply{text="تحديد الموقع وتحديث القبلة";setOnClickListener{locate()}})
+        content.addView(Button(this).apply{text="تحديد القبلة بموقعي";setTextColor(android.graphics.Color.WHITE);backgroundTintList=android.content.res.ColorStateList.valueOf(0xff2563a8.toInt());setOnClickListener{locate()}})
         root.addView(content,LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,0,1f))
         setContentView(root);locate()
     }
