@@ -5,6 +5,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:8771',{waitUntil:'domcontentloaded'});
  await page.evaluate(()=>{if(!('serviceWorker' in navigator))throw Error('ServiceWorker unsupported');});
+ // The offline test also verifies the service worker can register successfully.
  await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;});
  await page.waitForFunction(()=>navigator.serviceWorker.controller);
  const cacheName=require('node:fs').readFileSync('sw.js','utf8').match(/const CACHE_NAME = "([^"]+)"/)[1];
