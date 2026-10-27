@@ -29,7 +29,7 @@ class IqamaSchedulerTest {
         val row = (0 until rows.length()).map { rows.getJSONObject(it) }.first {
             it.optInt("gregorian_month") == date.monthValue && it.optInt("gregorian_day") == date.dayOfMonth
         }
-        val fajr = PrayerTimes.minutes(row.getString("fajr"), "fajr")!!
+        val fajr = PrayerTimes.minutes(row.optString("fajr"), "fajr")\n            ?: error("Missing valid offline fajr for $date")
         return date.atStartOfDay().plusMinutes(fajr.toLong())
             .atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
     }
