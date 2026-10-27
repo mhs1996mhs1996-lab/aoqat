@@ -80,7 +80,7 @@
       // The approved phone Mushaf is the only reading edition.
       meta={...m,pages:phone.pages};state.layout='phone';state.mobileTrial=false;state.phoneRevision=1;
       // Start disk prefetch after the reader is mounted; never delay first render.
-      setTimeout(()=>{if(root?.isConnected)void cacheAllPhonePages();},1500);
+      // Disable competing full-library download while the user is reading.
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
@@ -122,7 +122,7 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target))){const from=state.page;Promise.all([phonePage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryDrag(target>from?1:-1);if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target))){const from=state.page;Promise.all([phonePage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&phonePages.has(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
@@ -188,7 +188,7 @@
       if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
         // Recover if the idle pre-render timer did not finish before touch.
         galleryReady.get(target)?.node.remove();galleryReady.delete(target);
-        galleryPrepare(target);
+        return;
       }
       const prepared=galleryReady.get(target);
       if(!prepared)return;
@@ -430,7 +430,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
@@ -574,7 +574,7 @@
     host=element;const token=element;document.body.classList.add('quran-reader-open');shell();root.inert=true;notice('تحميل المصحف…');
     try{await load();if(host!==token||!token.isConnected)return;
       const url=new URL(location.href),shared=Number(url.searchParams.get('quranPage'));if(Number.isInteger(shared)&&shared>=1&&shared<=604){state.layout='phone';state.page=shared;save();url.searchParams.delete('quranPage');url.searchParams.delete('quranLayout');history.replaceState(history.state,'',url.href);}
-      root.inert=false;renderPage();notice('');void cacheAllPhonePages();
+      root.inert=false;renderPage();notice('');void Promise.resolve();
     }catch(_){if(host===token&&token.isConnected){root.inert=false;$('adVerses').innerHTML='<p>تعذر تحميل المصحف. اتصل بالإنترنت لأول تحميل.</p><button type="button" id="aqRetry">إعادة المحاولة</button>';$('aqRetry').onclick=()=>open(token);}}
   }
   function close(){clearTimeout(warmTask);save();clearTimeout(pressTimer);pointer=null;clearTurn();immersive(false);host=null;resize?.disconnect();request?.abort();request=null;stopAudio();document.body.classList.remove('quran-reader-open');}
