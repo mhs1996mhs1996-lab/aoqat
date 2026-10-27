@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v165-quran-phone-only-v2";
+const CACHE_NAME = "aoqat-pwa-v166-quran-offline-prefetch";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -139,6 +139,19 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.pathname === "/rest/v1/annual_prayer_times") return;
+  // Serve preloaded Mushaf pages from the persistent cache on every subsequent turn.
+  if(url.origin===self.location.origin && /^\\/assets\\/mushaf-phone-hafs\\/\\d{3}\\.json\\.gz$/.test(url.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open('aoqat-mushaf-phone-hafs');
+      const hit=await cache.match(event.request);
+      if(hit)return hit;
+      const response=await fetch(event.request);
+      if(response.ok)await cache.put(event.request,response.clone());
+      return response;
+    })());
+    return;
+  }
+
   // Online visits receive the deployed page; offline visits keep the full local shell.
   if (event.request.mode === "navigate" && url.origin === self.location.origin) {
     event.respondWith((async()=>{
