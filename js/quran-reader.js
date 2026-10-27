@@ -141,8 +141,9 @@
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
     galleryBusy=true;
     const direction=galleryDirection,width=paper.clientWidth;
-    current.style.transition='transform 170ms ease-out';
-    neighbor.style.transition='transform 170ms ease-out';
+    // Use a consistent, slower settling curve to avoid a visible snap at release.
+    current.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
+    neighbor.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
     requestAnimationFrame(()=>{
       current.style.transform='translate3d('+(commit?direction*width:0)+'px,0,0)';
       neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
@@ -164,7 +165,7 @@
       }else galleryReset();
     };
     neighbor.addEventListener('transitionend',settle,{once:true});
-    setTimeout(settle,195);
+    setTimeout(settle,310);
   }
   function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
