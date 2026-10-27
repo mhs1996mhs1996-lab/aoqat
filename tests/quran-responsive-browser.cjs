@@ -23,7 +23,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await panel('settings');await page.locator('#aqFont').evaluate(e=>{e.value='66';e.dispatchEvent(new Event('input',{bubbles:true}));});
  assert.ok(await heading.count()>0,'Surah heading must survive reading-size changes');
  await page.locator('#aqFont').evaluate(e=>{e.value='44';e.dispatchEvent(new Event('input',{bubbles:true}));});await page.locator('#aqCloseSheet').click();
- await jump(3);await page.evaluate(()=>document.body.classList.add('quran-reader-immersive'));await page.mouse.move(100,350);await page.mouse.down();await page.mouse.move(170,350,{steps:3});await page.mouse.up();await ready();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'4');// Regression: rapid sequential swipes must never leave the reader stuck on an earlier page.
+ await jump(3);await page.evaluate(()=>document.body.classList.add('quran-reader-immersive'));await page.mouse.move(100,350);await page.mouse.down();await page.mouse.move(170,350,{steps:3});await page.mouse.up();await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.page==='4'&&document.querySelector('#aqReader')?.dataset.ready==='true',null,{timeout:10000});// Regression: rapid sequential swipes must never leave the reader stuck on an earlier page.
  await jump(120);
  for(let n=121;n<=130;n++){
    await ready();
