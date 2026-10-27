@@ -56,7 +56,10 @@
     offlineWarmStarted=true;
     try{
       const cache=await caches.open('aoqat-mushaf-phone-hafs');
-      for(let p=1;p<=TOTAL;p++){
+      // Fill the persistent cache around the current reading position first,
+      // rather than forcing readers to wait behind hundreds of earlier pages.
+      const order=Array.from({length:TOTAL},(_,i)=>i+1).sort((a,b)=>Math.abs(a-state.page)-Math.abs(b-state.page));
+      for(const p of order){
         if(!root?.isConnected){offlineWarmStarted=false;return;}
         const url=`${phone.directory}/${String(p).padStart(3,'0')}.json.gz`;
         if(await cache.match(url))continue;
@@ -171,7 +174,7 @@
     galleryPrepareTimer=setTimeout(()=>{
       if(!root?.isConnected||pointer||galleryBusy)return;
       for(const p of [state.page+1,state.page-1])galleryPrepare(p);
-    },100);
+    },0);
   }
   function galleryReset(){
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
