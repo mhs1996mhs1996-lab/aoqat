@@ -47,7 +47,7 @@
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
   async function compressed(url){const r=await fetch(url);if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
   async function loadPhone(){const ready=await fetch('assets/mushaf-phone-hafs-ready.json');if(!ready.ok)throw Error('Phone Mushaf unavailable');const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');return data;}
-  async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);if(phonePages.size>8)phonePages.delete(phonePages.keys().next().value);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
+  async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
   async function load(){
     if(!loading)loading=Promise.all([fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();}),fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();}),loadPhone()]).then(async ([q,m,f])=>{phone=f;
       if(q.length!==114||m.pages.length!==604)throw Error();quran=q;meta=m;
@@ -173,7 +173,8 @@
   function qcfLoad(page,force=false){
     if(qcfData.has(page))return Promise.resolve(qcfData.get(page));
     if(qcfPending.has(page))return qcfPending.get(page);
-    if(qcfErrors.has(page)&&!force)return Promise.reject(qcfErrors.get(page));
+    // Retry failed QCF requests rather than permanently blocking a page.
+    if(qcfErrors.has(page))qcfErrors.delete(page);
     if(force)qcfErrors.delete(page);
     const job=(async()=>{
       const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?words=true&word_fields=code_v2%2Ctext_uthmani&per_page=50&mushaf=1';
@@ -196,7 +197,7 @@
       }
       const sorted=[...lines].sort((a,b)=>a[0]-b[0]);
       const rows=sorted.map(x=>x[1]);rows.lineNumbers=sorted.map(x=>x[0]);
-      qcfData.set(page,rows);if(qcfData.size>16)qcfData.delete(qcfData.keys().next().value);
+      qcfData.set(page,rows);
       return rows;
     })().catch(e=>{qcfErrors.set(page,e);throw e}).finally(()=>qcfPending.delete(page));
     qcfPending.set(page,job);return job;
