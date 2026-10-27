@@ -40,7 +40,10 @@ class IqamaSchedulerTest {
         if (android.os.Build.VERSION.SDK_INT >= 31) org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
         IqamaNativeScheduler.scheduleCached(context)
         val alarms = shadowOf(manager).scheduledAlarms
-        val fajr = alarms.first { shadowOf(it.operation).savedIntent.getStringExtra("prayerId") == "fajr" }
+        val fajr = alarms.first {
+            val scheduled = shadowOf(it.operation).savedIntent
+            scheduled.getStringExtra("prayerId") == "fajr" && scheduled.getLongExtra("prayerAt", 0L) == expected
+        }
         assertEquals(expected, fajr.triggerAtTime)
         assertEquals("NATIVE_START", shadowOf(fajr.operation).savedIntent.action)
         assertEquals(expected, shadowOf(fajr.operation).savedIntent.getLongExtra("prayerAt", 0L))
