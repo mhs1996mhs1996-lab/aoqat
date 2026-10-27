@@ -96,7 +96,7 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))){const from=state.page;Promise.all([phonePage(target),target>=3?qcfLoad(target):Promise.resolve()]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryDrag(target>from?1:-1);if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target))){const from=state.page;Promise.all([phonePage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryDrag(target>from?1:-1);if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
@@ -128,7 +128,7 @@
   function galleryPrepare(page){
     const paper=$('aqPaper'),current=$('adVerses');
     if(!paper||!current||!phoneMode()||galleryBusy||page<1||page>TOTAL)return;
-    if(galleryReady.has(page)||!phonePages.has(page)||(page>=3&&!qcfData.has(page)))return;
+    if(galleryReady.has(page)||!phonePages.has(page))return;
     const node=document.createElement('div');
     node.className=current.className+' aq-gallery-neighbor';
     node.innerHTML=pageHTML(page);
@@ -157,7 +157,7 @@
     if(target<1||target>604){galleryReset();return;}
     if(galleryDirection!==direction){galleryReset();galleryDirection=direction;}
     if(!galleryNeighbor){
-      if(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))return;
+      if(!phonePages.has(target))return;
       const ready=galleryReady.get(target);
       if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
         // Recover if the idle pre-render timer did not finish before touch.
@@ -283,7 +283,8 @@
     }).join('');
   }
   function pageHTML(page){
-    if(phoneMode()&&page>=3)return qcfHTML(page);
+    // Render the bundled original QCF2 outlines, not network-fetched page fonts.
+    // The local SVG paths are produced at build time from the original QCF2 glyphs.
     if(phoneMode()||mobileTrial()){
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
@@ -313,7 +314,7 @@
       phonePage(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل تنسيق بداية السورة؛ حاول مجدداً.</p>';root.dataset.ready='error';}});
       return;
     }
-    if(phoneMode()&&state.page>=3&&!qcfData.has(state.page)){
+    if(false&&phoneMode()&&state.page>=3&&!qcfData.has(state.page)){
       const target=state.page;
       $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل خط QCF V2 الأصلي…</p>';
       root.dataset.ready='false';
@@ -350,7 +351,7 @@
   }
   function fitText(paper,text,page){
 
-    if(phoneMode()&&page>=3){
+    if(false&&phoneMode()&&page>=3){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page','aq-qcf-opening');
       text.classList.add('aq-qcf-page');
       text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
@@ -402,7 +403,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){Promise.all([phonePage(p),p>=3?qcfLoad(p):Promise.resolve()]).then(()=>{if(root?.isConnected&&state.page===p-1||root?.isConnected&&state.page===p+1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){Promise.all([phonePage(p)]).then(()=>{if(root?.isConnected&&state.page===p-1||root?.isConnected&&state.page===p+1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
