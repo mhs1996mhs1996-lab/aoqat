@@ -13,7 +13,7 @@ import android.widget.TextView
 /** Local, lightweight launch surface; no network, fonts or Quran assets required. */
 class StartupScreen(context: Context) : FrameLayout(context) {
     init {
-        background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.WHITE, Color.rgb(219, 250, 247), Color.rgb(39, 187, 181)))
+        background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(248, 245, 235), Color.rgb(249, 247, 240), Color.rgb(237, 232, 213)))
         isClickable = true
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
         val column = LinearLayout(context).apply {
@@ -31,7 +31,7 @@ class StartupScreen(context: Context) : FrameLayout(context) {
             text = "أوقات الصلاة في الحويجة"
             textSize = 25f
             gravity = Gravity.CENTER
-            setTextColor(Color.rgb(6, 71, 76))
+            setTextColor(Color.rgb(18, 76, 66))
             setPadding(0, dp(30), 0, dp(12))
         })
     }
