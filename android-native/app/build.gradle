@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 89 // Friday quiet selector and ivory startup update
-        versionName '1.54'
+        versionCode 90 // Refresh all current web assets and native modifications
+        versionName '1.55'
     }
 
     compileOptions {
