@@ -55,10 +55,15 @@ object FridaySchedule {
         val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager;val p=c.getSharedPreferences("friday_quiet",Context.MODE_PRIVATE)
         try {
             if(!p.getBoolean("active",false))p.edit().putInt("ringer",am.ringerMode).putInt("filter",nm.currentInterruptionFilter).putBoolean("active",true).commit()
-            // A single Friday quiet control applies both ringer silence and DND, preserving alarms.
-            nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALARMS)
-            am.ringerMode=AudioManager.RINGER_MODE_SILENT
-            p.edit().putString("mode","combined").putLong("end",t.end).commit()
+            // One selector, two exclusive modes; do not activate both.
+            val mode=if(f.optString("quietMode","silent")=="dnd") "dnd" else "silent"
+            if(p.getString("mode","")!=mode) {
+                restore(c)
+                p.edit().putInt("ringer",am.ringerMode).putInt("filter",nm.currentInterruptionFilter).putBoolean("active",true).commit()
+            }
+            if(mode=="dnd") nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALARMS)
+            else am.ringerMode=AudioManager.RINGER_MODE_SILENT
+            p.edit().putString("mode",mode).putLong("end",t.end).commit()
         }catch(_:SecurityException){restore(c)}
     }
     fun restoreIfExpired(c: Context){val p=c.getSharedPreferences("friday_quiet",Context.MODE_PRIVATE);if(p.getBoolean("active",false)&&p.getLong("end",0)<=System.currentTimeMillis())restore(c)}
