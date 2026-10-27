@@ -220,7 +220,17 @@
       galleryBusy=false;
       if(commit&&root?.isConnected&&state.page!==target){
         // Keep the already rendered and fitted neighbor; do not rebuild it after the swipe.
-        current.remove();
+        // Retain the page we just left as a ready-to-use reverse swipe target.
+        const previousPage=state.page;
+        for(const [p,entry] of galleryReady){if(p!==target&&p!==previousPage){entry.node.remove();galleryReady.delete(p);}}
+        galleryReady.get(previousPage)?.node.remove();
+        galleryReady.delete(previousPage);
+        current.removeAttribute('id');
+        current.classList.add('aq-gallery-neighbor');
+        current.style.cssText='position:absolute!important;z-index:5;pointer-events:none;visibility:visible;will-change:transform;';
+        current.style.top=neighbor.offsetTop+'px';current.style.left=neighbor.offsetLeft+'px';
+        current.style.transform='translate3d(-200vw,0,0)';
+        galleryReady.set(previousPage,{node:current,width:paper.clientWidth,height:paper.clientHeight});
         neighbor.id='adVerses';
         neighbor.classList.remove('aq-gallery-neighbor');
         neighbor.style.removeProperty('position');neighbor.style.removeProperty('top');neighbor.style.removeProperty('left');
@@ -228,7 +238,6 @@
         neighbor.style.removeProperty('visibility');neighbor.style.removeProperty('will-change');
         neighbor.style.removeProperty('transition');neighbor.style.removeProperty('transform');
         galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
-        galleryClearReady();
         go(target);
       }else galleryReset();
     };
@@ -435,7 +444,23 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){
+      // Keep already fitted neighbor DOM across turns. Recreating the SVG page
+      // after every swipe caused synchronous layout and visible stalls.
+      const paper=$('aqPaper');
+      for(const [p,entry] of galleryReady){
+        if(Math.abs(p-state.page)>1||entry.width!==paper?.clientWidth||entry.height!==paper?.clientHeight){
+          entry.node.remove();galleryReady.delete(p);
+        }
+      }
+      for(const p of [state.page+1,state.page-1,state.page+2,state.page-2]){
+        if(p<1||p>TOTAL)continue;
+        phonePage(p).then(()=>{
+          if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();
+        }).catch(()=>{});
+      }
+      gallerySchedule();return;
+    }
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
