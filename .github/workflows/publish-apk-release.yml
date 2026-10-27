@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     permissions:
@@ -30,6 +30,7 @@ jobs:
           RUN_ID="${{ github.event.workflow_run.id || '0' }}"
           test "$RUN_ID" != 0 || { echo 'Only completed build runs may publish'; exit 1; }
           test "$(gh api repos/$GH_REPO/actions/runs/$RUN_ID/jobs --jq '.jobs[] | select(.name == "build-apk") | .conclusion')" = success
+          test "$(gh api repos/$GH_REPO/actions/runs/$RUN_ID/jobs --jq '.jobs[] | select(.name == "release-checks") | .conclusion')" = success
           mkdir -p release
           gh run download "$RUN_ID" --name aoqat-android-v1.56-build91 --dir release
           mv release/app-debug.apk release/aoqat-v1.56.apk

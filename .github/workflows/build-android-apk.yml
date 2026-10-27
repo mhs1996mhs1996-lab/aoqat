@@ -154,3 +154,19 @@ jobs:
 
 # Rebuild requested 2026-10-26: full offline Android APK, preserve app and web source
 # Allow 60 minutes for 604-page offline packaging and APK artifact upload
+
+  release-checks:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify changed interface, calendars and native integrations
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/interface-pages-browser.cjs
+          node tests/font-retention-browser.cjs
+          node tests/prayer-alert-methods-browser.cjs
+          node tests/apk-services-browser.cjs
+          node tests/apk-reminders-focus-browser.cjs
+          node tests/apk-day-rollover-browser.cjs
+          node tests/monthly-calendars-browser.cjs
