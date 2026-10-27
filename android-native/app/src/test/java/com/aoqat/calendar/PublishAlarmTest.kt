@@ -38,6 +38,10 @@ class PublishAlarmTest {
  @Test fun disablingCancelsSnoozeAndRejectsRacingReceiver(){on();AlarmScheduler.scheduleSnooze(c);val am=c.getSystemService(Context.ALARM_SERVICE)as AlarmManager;assertFalse(shadowOf(am).scheduledAlarms.isEmpty());AlarmScheduler.setEnabled(c,false);assertTrue(shadowOf(am).scheduledAlarms.isEmpty());AlarmReceiver().onReceive(c,Intent(c,AlarmReceiver::class.java).putExtra("at",System.currentTimeMillis()));assertNull(shadowOf(c as Application).nextStartedService)}
  @Test fun eachOccurrenceRingsOnlyOnceAndRejectsLateBroadcasts(){on();val at=System.currentTimeMillis();assertFalse(AlarmScheduler.claim(c,0));assertFalse(AlarmScheduler.claim(c,at-180000));assertTrue(AlarmScheduler.claim(c,at));assertFalse(AlarmScheduler.claim(c,at))}
  @Test fun notificationHasLockScreenActionAndDismissStopsTheService(){on();val n=AlarmUi.buildAlarmNotification(c);assertNotNull(n.fullScreenIntent);assertNotNull(n.deleteIntent);assertEquals("STOP",shadowOf(n.deleteIntent).savedIntent.action);assertNull((c.getSystemService(Context.NOTIFICATION_SERVICE)as NotificationManager).getNotificationChannel(AlarmUi.CHANNEL_ID).sound);val activity=Robolectric.buildActivity(AlarmActivity::class.java).create().start().resume().get();AlarmActionReceiver().onReceive(c,Intent().setAction("STOP"));shadowOf(Looper.getMainLooper()).idle();assertTrue(activity.isFinishing);assertTrue(AlarmScheduler.enabled(c))}
+ @Test fun snoozeDeadlineSurvivesRefreshAndIsClearedOnDisable(){on();AlarmScheduler.setSnoozeMinutes(c,5);AlarmScheduler.scheduleSnooze(c)
+  val p=c.getSharedPreferences("publish_alarm_settings",0);val deadline=p.getLong("snoozeUntil",0)
+  assertTrue(deadline>System.currentTimeMillis());AlarmScheduler.setEnabled(c,false);assertFalse(p.contains("snoozeUntil"))
+ }
  @Test fun staleWebOnCannotEnableANewNativeAlarm(){assertFalse(AlarmScheduler.migrate(c,true));assertFalse(AlarmScheduler.enabled(c))}
  @Test fun aSavedOffChoiceCannotBeOverwrittenByOldBrowserPreferences(){assertFalse(AlarmScheduler.migrate(c,false));assertFalse(AlarmScheduler.migrate(c,true))}
 }

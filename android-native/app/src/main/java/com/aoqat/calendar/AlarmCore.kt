@@ -39,10 +39,10 @@ object AlarmScheduler {
     fun snoozeMinutes(c:Context)=prefs(c).getInt("snoozeMinutes",10).coerceIn(1,30)
     fun setSnoozeMinutes(c:Context,minutes:Int){prefs(c).edit().putInt("snoozeMinutes",minutes.coerceIn(1,30)).commit()}
     @Synchronized fun migrate(c:Context,legacy:Boolean):Boolean{if(!prefs(c).contains("enabled")){prefs(c).edit().putBoolean("enabled",false).commit()};return enabled(c)}
-    @Synchronized fun setEnabled(c:Context,on:Boolean){prefs(c).edit().putBoolean("enabled",on).commit();if(on)scheduleFromDatabase(c)else cancel(c)}
+    @Synchronized fun setEnabled(c:Context,on:Boolean){prefs(c).edit().putBoolean("enabled",on).commit();if(on)scheduleFromDatabase(c)else {prefs(c).edit().remove("snoozeUntil").commit();cancel(c)}}
     @Synchronized fun claim(c:Context,at:Long):Boolean {
         if(!enabled(c)||at<=0||System.currentTimeMillis()-at !in 0 until 120000L||prefs(c).getLong("delivered",0)==at)return false
-        return prefs(c).edit().putLong("delivered",at).commit()
+        return prefs(c).edit().putLong("delivered",at).remove("snoozeUntil").commit()
     }
 
     @Synchronized fun scheduleFromDatabase(context: Context) {
@@ -71,8 +71,11 @@ object AlarmScheduler {
         AlarmSoundService.stop(context)
     }
 
-    fun scheduleSnooze(context: Context, minutes: Long = snoozeMinutes(context).toLong()) {
-        scheduleExactMillis(context, System.currentTimeMillis() + minutes.coerceIn(1,30) * 60_000L)
+    @Synchronized fun scheduleSnooze(context: Context, minutes: Long = snoozeMinutes(context).toLong()) {
+        if(!enabled(context))return
+        val until=System.currentTimeMillis()+minutes.coerceIn(1,30)*60_000L
+        prefs(context).edit().putLong("snoozeUntil",until).commit()
+        scheduleExactMillis(context,until)
     }
 
     private fun targetForDate(context: Context, date: LocalDate): LocalDateTime? {
@@ -86,8 +89,9 @@ object AlarmScheduler {
         return date.atTime(hour, minute).plusMinutes(DELAY_MINUTES)
     }
 
-    private fun scheduleExact(context: Context, target: LocalDateTime) {
-        scheduleExactMillis(context, target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+    @Synchronized private fun scheduleExact(context: Context, target: LocalDateTime) {
+        val snooze=prefs(context).getLong("snoozeUntil",0)
+        scheduleExactMillis(context, if(snooze>System.currentTimeMillis())snooze else target.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
 
     @Synchronized private fun scheduleExactMillis(context: Context, millis: Long) {
