@@ -117,6 +117,36 @@
   }
   // Gallery-style horizontal swipe: move two already prepared pages with the finger.
   let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false;
+  // Build and fit adjacent pages while idle, never in the pointermove handler.
+  const galleryReady=new Map();
+  let galleryPrepareTimer=0;
+  function galleryClearReady(){
+    clearTimeout(galleryPrepareTimer);
+    for(const entry of galleryReady.values())entry.node.remove();
+    galleryReady.clear();
+  }
+  function galleryPrepare(page){
+    const paper=$('aqPaper'),current=$('adVerses');
+    if(!paper||!current||!phoneMode()||galleryBusy||pointer||page<1||page>TOTAL)return;
+    if(galleryReady.has(page)||!phonePages.has(page)||(page>=3&&!qcfData.has(page)))return;
+    const node=document.createElement('div');
+    node.className=current.className+' aq-gallery-neighbor';
+    node.innerHTML=pageHTML(page);
+    node.style.cssText='position:absolute!important;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';
+    node.style.top=current.offsetTop+'px';node.style.left=current.offsetLeft+'px';
+    paper.append(node);
+    fitText(paper,node,page);
+    node.style.visibility='visible';
+    node.style.transform='translate3d(-200vw,0,0)';
+    galleryReady.set(page,{node,width:paper.clientWidth,height:paper.clientHeight});
+  }
+  function gallerySchedule(){
+    clearTimeout(galleryPrepareTimer);
+    galleryPrepareTimer=setTimeout(()=>{
+      if(!root?.isConnected||pointer||galleryBusy)return;
+      for(const p of [state.page+1,state.page-1])galleryPrepare(p);
+    },100);
+  }
   function galleryReset(){
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
     const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
@@ -128,9 +158,10 @@
     if(galleryDirection!==direction){galleryReset();galleryDirection=direction;}
     if(!galleryNeighbor){
       if(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))return;
-      const neighbor=document.createElement('div');neighbor.className=current.className+' aq-gallery-neighbor';
-      neighbor.innerHTML=pageHTML(target);neighbor.style.cssText='position:absolute!important;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';neighbor.style.top=current.offsetTop+'px';neighbor.style.left=current.offsetLeft+'px';
-      paper.append(neighbor);fitText(paper,neighbor,target);neighbor.style.visibility='visible';galleryNeighbor=neighbor;
+      const ready=galleryReady.get(target);
+      if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight)return;
+      galleryReady.delete(target);
+      galleryNeighbor=ready.node;
     }
     const width=paper.clientWidth,offset=Math.max(-width,Math.min(width,dx));
     current.style.willChange='transform';current.style.transform='translate3d('+offset+'px,0,0)';
@@ -160,6 +191,7 @@
         neighbor.style.removeProperty('visibility');neighbor.style.removeProperty('will-change');
         neighbor.style.removeProperty('transition');neighbor.style.removeProperty('transform');
         galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
+        galleryClearReady();
         go(target);
       }else galleryReset();
     };
@@ -365,7 +397,7 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){phonePage(p).catch(()=>{});if(p>=3)qcfLoad(p).catch(()=>{});}return;}
+    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){Promise.all([phonePage(p),p>=3?qcfLoad(p):Promise.resolve()]).then(()=>{if(root?.isConnected&&state.page===p-1||root?.isConnected&&state.page===p+1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
