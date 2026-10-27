@@ -1,4 +1,6 @@
 """Apply APK-only integration to the tested web UI; leave repository web files intact."""
+# v1.54/build89: re-run APK assembly after updating workflow artifact names.
+# The release workflow must consume this run, never a previously built APK.
 from pathlib import Path
 import sys
 import hashlib
