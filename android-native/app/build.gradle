@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 88 // Retain only one offline phone Mushaf edition
-        versionName '1.53'
+        versionCode 89 // Friday quiet selector and ivory startup update
+        versionName '1.54'
     }
 
     compileOptions {
