@@ -200,7 +200,16 @@ transform('compact-design-menu.js', [("()=>setTimeout(()=>{arrange();installExcl
 transform('web-menu-order.js', [("()=>setTimeout(install,100)", "install")])
 transform('design-side-menu.js', [("()=>setTimeout(()=>{syncActionWidth();hideEmptyStrips();},80)", "()=>{syncActionWidth();hideEmptyStrips();}")])
 
+# APK defaults remain separate from the hosted web interface and saved user choices.
+transform('compact-design-menu.js', [("let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}\n    const items=", "let state={};try{state={clock:true,date:true,adhan:true,iqama:true,...(JSON.parse(localStorage.getItem(KEY)||'{}')||{})};}catch(_){state={clock:true,date:true,adhan:true,iqama:true};}\n    const items=")])
+transform('interface-clock.js', [('#liveClockTime{font-size:12.5px}#liveClockDate{font-size:11px}', '#liveClockTime{font-size:16px}#liveClockDate{font-size:14px}')])
+transform('prayer-countdown.js', [
+ ('.next-prayer span,.iqama-status span{font-size:9px}', '#nextPrayerLabel,#iqamaLabel{font-size:12px}.next-prayer span,.iqama-status span{font-size:12px}'),
+ ('.next-prayer b,.iqama-status b{font-size:12px}', '.next-prayer b,.iqama-status b{font-size:15px}'),
+ ('.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}', '.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:wrap!important}')])
+
 # Include current calendar/search services in Android and use its image sharing bridge.
+transform('web-menu-order.js', [('if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={', 'window.AoqatWebSettingsNavigation={')])
 transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configureAdhan)return;', '')])
 transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', ''), ('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
 transform('monthly-calendars.js', [

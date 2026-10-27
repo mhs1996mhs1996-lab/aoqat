@@ -260,7 +260,7 @@
     }
     return true;
   }
-  if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={
+  window.AoqatWebSettingsNavigation={
     main:mainView,sub:openSub,panel:(id,title)=>openPanel(title,id,'settings'),interface:openInterfacePart,
     adhan:()=>{adhanIqamaView();openAdhanServices();},bag:openMuslimBagSection,
     drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
