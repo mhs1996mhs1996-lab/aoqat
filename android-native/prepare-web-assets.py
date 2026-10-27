@@ -202,7 +202,7 @@ transform('design-side-menu.js', [("()=>setTimeout(()=>{syncActionWidth();hideEm
 
 # Include current calendar/search services in Android and use its image sharing bridge.
 transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configureAdhan)return;', '')])
-transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', '')])
+transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', ''), ('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
 transform('monthly-calendars.js', [
  ('if(window.AndroidNative?.configureAdhan)return;', ''),
  ('await navigator.share({files:[file],title:img.alt});', "if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});"),
