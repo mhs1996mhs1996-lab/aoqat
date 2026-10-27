@@ -166,7 +166,7 @@ jobs:
           node tests/interface-pages-browser.cjs
           node tests/font-retention-browser.cjs
           node tests/prayer-alert-methods-browser.cjs
-          node tests/apk-services-browser.cjs
+          node tests/apk-release-browser.cjs
           node tests/apk-reminders-focus-browser.cjs
           node tests/apk-day-rollover-browser.cjs
           node tests/monthly-calendars-browser.cjs

@@ -200,6 +200,14 @@ transform('compact-design-menu.js', [("()=>setTimeout(()=>{arrange();installExcl
 transform('web-menu-order.js', [("()=>setTimeout(install,100)", "install")])
 transform('design-side-menu.js', [("()=>setTimeout(()=>{syncActionWidth();hideEmptyStrips();},80)", "()=>{syncActionWidth();hideEmptyStrips();}")])
 
+# Include current calendar/search services in Android and use its image sharing bridge.
+transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configureAdhan)return;', '')])
+transform('monthly-calendars.js', [
+ ('if(window.AndroidNative?.configureAdhan)return;', ''),
+ ('await navigator.share({files:[file],title:img.alt});', "if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});"),
+ ('const can=!!navigator.share', 'const can=!!window.AndroidNative?.sharePrayerImage||!!navigator.share'),
+ ("download=button('حفظ الصورة على الهاتف',()=>{if(!file||!url)return;", "download=button('حفظ الصورة على الهاتف',async()=>{if(!file||!url)return;if(window.AndroidNative?.savePrayerImage){download.disabled=true;try{await window.aoqatNativeImageAction('savePrayerImage',file);status.textContent='تم حفظ صورة التقويم على الجهاز.';}catch(_){status.textContent='تعذر حفظ الصورة. أعد المحاولة.';}finally{download.disabled=false;}return;}")])
+
 html=(target/'index.html').read_text()
 static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
 dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())

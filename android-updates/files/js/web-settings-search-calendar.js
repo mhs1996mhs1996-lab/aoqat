@@ -1,4 +1,4 @@
-(function(){'use strict';if(window.AndroidNative?.configureAdhan)return;
+(function(){'use strict';
  const $=id=>document.getElementById(id),normal=s=>String(s).normalize('NFKD').replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').toLowerCase().replace(/\s+/g,' ').trim();
  const catalog=new Map();let queued=false,calendarDate=new Date(),calendarMonth=new Date(calendarDate.getFullYear(),calendarDate.getMonth(),1),calendarToken=0;
  const nav=()=>window.AoqatWebSettingsNavigation;
