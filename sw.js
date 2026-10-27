@@ -140,7 +140,7 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (url.pathname === "/rest/v1/annual_prayer_times") return;
   // Serve preloaded Mushaf pages from the persistent cache on every subsequent turn.
-  if(url.origin===self.location.origin && new RegExp('^/assets/mushaf-phone-hafs/[0-9]{3}\\.json\\.gz
+  if(url.origin===self.location.origin && url.pathname.startsWith('/assets/mushaf-phone-hafs/') && url.pathname.endsWith('.json.gz') && url.pathname.split('/').pop().length===11){
     event.respondWith((async()=>{
       const cache=await caches.open('aoqat-mushaf-phone-hafs');
       const hit=await cache.match(event.request);
