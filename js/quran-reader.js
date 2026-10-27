@@ -61,7 +61,7 @@
         const url=`${phone.directory}/${String(p).padStart(3,'0')}.json.gz`;
         if(await cache.match(url))continue;
         // Keep the browser responsive and avoid competing with an active page turn.
-        while(pointer||phoneRequests.size>0)await new Promise(r=>setTimeout(r,120));
+        while(pointer||galleryBusy||phoneRequests.size>0)await new Promise(r=>setTimeout(r,120));
         const response=await fetch(url);
         if(!response.ok)throw Error('Offline Mushaf page '+p+' unavailable');
         await cache.put(url,response);
