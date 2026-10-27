@@ -171,6 +171,8 @@
   }
   function gallerySchedule(){
     clearTimeout(galleryPrepareTimer);
+    if(!root?.isConnected||pointer||galleryBusy)return;
+    // Prepare the next frame, not after an extra timer delay.
     galleryPrepareTimer=setTimeout(()=>{
       if(!root?.isConnected||pointer||galleryBusy)return;
       for(const p of [state.page+1,state.page-1])galleryPrepare(p);
