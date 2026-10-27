@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 90 // Refresh all current web assets and native modifications
-        versionName '1.55'
+        versionCode 91 // Refresh all current web assets and native modifications
+        versionName '1.56'
     }
 
     compileOptions {

@@ -25,8 +25,10 @@ class QiblaActivity:Activity(),SensorEventListener{
         header.addView(TextView(this).apply{text="اتجاه القبلة";textSize=24f;setTextColor(android.graphics.Color.rgb(27,52,65));gravity=Gravity.CENTER},LinearLayout.LayoutParams(0,LinearLayout.LayoutParams.WRAP_CONTENT,1f))
         root.addView(header)
         val content=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER}
-        arrow=TextView(this).apply{text="↑";contentDescription="اتجاه القبلة";textSize=110f;setTextColor(android.graphics.Color.rgb(36,128,82));gravity=Gravity.CENTER}
-        content.addView(arrow)
+        arrow=TextView(this).apply{text="↑";contentDescription="اتجاه القبلة";textSize=82f;setTextColor(android.graphics.Color.rgb(36,128,82));gravity=Gravity.CENTER}
+        arrow.background=android.graphics.drawable.GradientDrawable().apply{shape=android.graphics.drawable.GradientDrawable.OVAL;setColor(0xffe6f0e8.toInt());setStroke(6,0xffb49a5a.toInt())}
+        val diameter=(280*resources.displayMetrics.density).toInt()
+        content.addView(arrow,LinearLayout.LayoutParams(diameter,diameter))
         info=TextView(this).apply{text="نحتاج الموقع وحساس الاتجاه. أبعد الهاتف عن المعادن.";textSize=17f;setTextColor(android.graphics.Color.rgb(27,52,65));gravity=Gravity.CENTER}
         content.addView(info)
         content.addView(Button(this).apply{text="تحديد الموقع وتحديث القبلة";setOnClickListener{locate()}})

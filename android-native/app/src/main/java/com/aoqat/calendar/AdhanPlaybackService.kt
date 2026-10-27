@@ -58,6 +58,10 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private var prayerAt=0L
     private var prayerId=""
     private var prepared=false
+    private val progress=object:Runnable{override fun run(){
+        if(!preview&&audioStarted&&prepared)try{getSharedPreferences("adhan_resume",MODE_PRIVATE).edit().putLong("at",prayerAt).putString("id",prayerId).putInt("position",player?.currentPosition?:0).apply()}catch(_:Exception){}
+        handler.postDelayed(this,5000)
+    }}
     private val customStop=object:Runnable{override fun run(){
         val p=player?:return
         if(p.currentPosition>=config.optInt("customEnd",35).coerceIn(1,180)*1000){successful=true;stopSelf()}
@@ -97,6 +101,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         if(special&&!preview){val f=config.optJSONObject("friday")?:JSONObject();config.put("enabled",f.optBoolean("enabled")&&f.optBoolean(if(prayer=="fridayFirst")"firstSound" else "secondSound",true));config.put("modes",JSONObject().put("friday","sound"));config.put("afterSilent",0);config.put("overrideSilent",true);config.put("vibrate",false);config.put("screen",false);config.put("flip",false)}
         val mode=if(preview)"sound" else config.optJSONObject("modes")?.optString(if(special)"friday" else prayer,"sound")?:"sound"
         if(!preview && (!config.optBoolean("enabled") || mode=="silent")){stopSelf();return START_NOT_STICKY}
+        if(!preview&&prayerAt>0&&System.currentTimeMillis()-prayerAt !in 0L..600000L){stopSelf();return START_NOT_STICKY}
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback_silent_v2","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -133,14 +138,19 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 setOnCompletionListener{successful=true;stopSelf()};setOnErrorListener{_,_,_->Toast.makeText(this@AdhanPlaybackService,"تعذر تشغيل الصوت المختار؛ اختر ملفًا صوتيًا صالحًا",Toast.LENGTH_LONG).show();stopSelf();true}
                 setOnPreparedListener { ready ->
                     if(player!==ready||manuallyStopped)return@setOnPreparedListener
-                    prepared=true;startPreparedAudio()
+                    prepared=true
+                    val saved=getSharedPreferences("adhan_resume",MODE_PRIVATE)
+                    if(!preview&&saved.getLong("at",0)==prayerAt&&saved.getString("id","")==prayerId){
+                        ready.seekTo(saved.getInt("position",0).coerceAtLeast(0))
+                    }
+                    startPreparedAudio();handler.post(progress)
                 }
                 prepareAsync()
                 handler.postDelayed({if(player===preparing&&!prepared)stopSelf()},10000L)
             }
             handler.postDelayed({stopSelf()},9*60*1000L)
         }catch(e:Exception){android.util.Log.e("Adhan","Audio playback failed",e);Toast.makeText(this,"تعذر تشغيل الأذان؛ جرّب اختيار صوت آخر",Toast.LENGTH_LONG).show();stopSelf()}
-        return START_NOT_STICKY
+        return if(preview)START_NOT_STICKY else START_REDELIVER_INTENT
     }
     private fun vibrate(){vibrator=getSystemService(VIBRATOR_SERVICE) as Vibrator;val p=when(config.optString("pattern")){"long"->longArrayOf(0,1000);"pulse"->longArrayOf(0,250,150,250,150,250);else->longArrayOf(0,250)};vibrator?.vibrate(VibrationEffect.createWaveform(p,-1))}
     private fun cleanup(){

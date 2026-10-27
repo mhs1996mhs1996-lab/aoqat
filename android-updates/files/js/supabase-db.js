@@ -1,0 +1,301 @@
+"use strict";
+
+const SUPABASE_URL = "https://ytdvhiijxxaqofduorwm.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_dQRoxdwRJDDgWLze1U4ZqA_aaVlKC-1";
+
+const GREGORIAN_MONTHS = ["كانون الثاني","شباط","آذار","نيسان","أيار","حزيران","تموز","آب","أيلول","تشرين الأول","تشرين الثاني","كانون الأول"];
+const ARABIC_DAY_NAMES = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+
+function dbStatus(message, type = "") {
+    const el = document.getElementById("databaseStatus");
+    if (!el) return;
+    el.textContent = message;
+    el.className = "database-status" + (type ? " " + type : "");
+}
+function dbHeaders(extra = {}) { return {apikey:SUPABASE_PUBLISHABLE_KEY,Authorization:`Bearer ${SUPABASE_PUBLISHABLE_KEY}`,"Content-Type":"application/json",...extra}; }
+function setSelectValue(id,value){const el=document.getElementById(id);if(!el)return false;const wanted=String(value);const exists=Array.from(el.options||[]).some(o=>o.value===wanted);if(exists){el.value=wanted;return true;}return false;}
+function updateDateFromGregorian(){
+    const year=Number(document.getElementById("gregorianYear")?.value),monthIndex=GREGORIAN_MONTHS.indexOf(document.getElementById("gregorianMonth")?.value);
+    const daySelect=document.getElementById("gregorianDay");if(!year||monthIndex<0||!daySelect)return null;
+    const lastDay=new Date(year,monthIndex+1,0,12).getDate(),day=Math.max(1,Math.min(lastDay,Number(daySelect.value)||1));
+    for(const option of daySelect.options)option.disabled=Number(option.value)>lastDay;
+    setSelectValue("gregorianDay",day);
+    const selected=new Date(year,monthIndex,day,12),dayName=ARABIC_DAY_NAMES[selected.getDay()];
+    setSelectValue("dayName",dayName);
+    try{
+        const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"];
+        const parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{year:"numeric",month:"numeric",day:"numeric"}).formatToParts(selected),h={};for(const part of parts)h[part.type]=part.value;
+        const values={hijriDay:h.day,hijriMonth:months[Number(h.month)-1],hijriYear:h.year};
+        for(const [id,value] of Object.entries(values)){const el=document.getElementById(id);if(el&&!Array.from(el.options).some(o=>o.value===String(value)))el.add(new Option(String(value),String(value)));setSelectValue(id,value);}
+    }catch(error){console.warn("Hijri date conversion unavailable",error);}
+    if(typeof updateAll==="function")updateAll();return {year,month:monthIndex+1,day,dayName};
+}
+function setTodayDateAutomatically(){const now=new Date();const day=now.getDate(),monthIndex=now.getMonth(),year=now.getFullYear(),dayName=ARABIC_DAY_NAMES[now.getDay()];setSelectValue("gregorianDay",day);setSelectValue("gregorianMonth",GREGORIAN_MONTHS[monthIndex]);setSelectValue("gregorianYear",year);setSelectValue("dayName",dayName);try{const months=["محرم","صفر","ربيع الأول","ربيع الآخر","جمادى الأولى","جمادى الآخرة","رجب","شعبان","رمضان","شوال","ذو القعدة","ذو الحجة"],parts=new Intl.DateTimeFormat("en-US-u-ca-islamic-umalqura",{year:"numeric",month:"numeric",day:"numeric"}).formatToParts(new Date(year,monthIndex,day,12)),h={};for(const p of parts)h[p.type]=p.value;setSelectValue("hijriDay",h.day);setSelectValue("hijriMonth",months[Number(h.month)-1]);setSelectValue("hijriYear",h.year);}catch(_){}if(typeof updateAll==="function")updateAll();return{day,month:monthIndex+1,year,dayName};}
+/* Local database rows first; network refresh never blocks an available row. */
+const PRAYER_FIELDS=["fajr","sunrise","dhuhr","asr","maghrib","isha"];
+function validPrayerRow(row){
+    return !!row&&(!row.location_name||row.location_name==="الحويجة وضواحيها")&&PRAYER_FIELDS.every(id=>/^(?:[01]?\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(String(row[id]||"")));
+}
+function savedPrayerRows(){try{const rows=JSON.parse(localStorage.getItem("aoqatAnnualPrayerRowsV1")||"[]");return Array.isArray(rows)?rows.filter(validPrayerRow):[];}catch(_){return[];}}
+function cachedAnnualPrayer(month,day){
+    const sources=[savedPrayerRows()];
+    try{sources.push(JSON.parse(localStorage.getItem("aoqatAdhanRows")||"[]"));}catch(_){}
+    try{if(window.AndroidNative?.readPrayerRows)sources.unshift(JSON.parse(window.AndroidNative.readPrayerRows()));}catch(_){}
+    sources.push(window.AoqatPrayerBackupRows||[]);
+    for(const rows of sources){const row=Array.isArray(rows)&&rows.find(r=>Number(r.gregorian_month)===month&&Number(r.gregorian_day)===day&&validPrayerRow(r));if(row)return row;}
+    return null;
+}
+function availablePrayerRows(applyChoice=true){
+    const merged=new Map((window.AoqatPrayerBackupRows||[]).filter(validPrayerRow).map(r=>[`${r.gregorian_month}-${r.gregorian_day}`,r]));
+    try{const native=JSON.parse(window.AndroidNative?.readPrayerRows?.()||"[]");for(const r of native)if(validPrayerRow(r))merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);}catch(_){}
+    try{for(const r of JSON.parse(localStorage.getItem("aoqatAdhanRows")||"[]"))if(validPrayerRow(r))merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);}catch(_){}
+    for(const r of savedPrayerRows())merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);
+    return applyChoice&&window.AoqatPrayerTimeChoice ? [...merged.values()].map(window.AoqatPrayerTimeChoice.applyRow) : [...merged.values()];
+}
+function storePrayerRows(rows){
+    const merged=new Map(savedPrayerRows().map(r=>[`${r.gregorian_month}-${r.gregorian_day}`,r]));
+    for(const r of rows)if(validPrayerRow(r))merged.set(`${r.gregorian_month}-${r.gregorian_day}`,r);
+    const value=JSON.stringify([...merged.values()]);localStorage.setItem("aoqatAnnualPrayerRowsV1",value);localStorage.setItem("aoqatAdhanRows",JSON.stringify(availablePrayerRows(false)));
+    window.AndroidNative?.cachePrayerRows?.(value);
+    if(typeof Event!=="undefined")window.dispatchEvent?.(new Event("aoqatPrayerRowsUpdated"));
+}
+async function prayerFetch(url){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+    try{const r=await fetch(url,{headers:dbHeaders(),signal:controller.signal});if(!r.ok)throw Error("Prayer data unavailable");return await r.json();}finally{clearTimeout(timer);}
+}
+async function readAnnualPrayer(month,day,force=false){
+    const cached=cachedAnnualPrayer(month,day);if(cached&&!force)return cached;
+    const url=new URL(`${SUPABASE_URL}/rest/v1/annual_prayer_times`);
+    url.searchParams.set("select","*");url.searchParams.set("location_name","eq.الحويجة وضواحيها");url.searchParams.set("gregorian_month",`eq.${month}`);url.searchParams.set("gregorian_day",`eq.${day}`);url.searchParams.set("limit","1");
+    try{const rows=await prayerFetch(url),row=Array.isArray(rows)&&rows.find(r=>Number(r.gregorian_month)===month&&Number(r.gregorian_day)===day&&validPrayerRow(r));if(row){storePrayerRows([row]);return row;}}catch(_){}
+    return cachedAnnualPrayer(month,day);
+}
+let prayerSyncPending=null;
+function prayerWindow(now=new Date()){return Array.from({length:8},(_,i)=>{const d=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i,12);return{month:d.getMonth()+1,day:d.getDate()};});}
+function syncPrayerWindow(force=false){
+    if(prayerSyncPending)return prayerSyncPending;
+    const dates=prayerWindow(),last=Number(localStorage.getItem("aoqatPrayerSyncAtV1")||0),saved=savedPrayerRows();
+    if(!force&&Date.now()-last<7*86400000&&dates.slice(0,2).every(d=>saved.some(r=>Number(r.gregorian_month)===d.month&&Number(r.gregorian_day)===d.day)))return Promise.resolve(false);
+    if(typeof navigator!=="undefined"&&navigator.onLine===false)return Promise.resolve(false);
+    prayerSyncPending=(async()=>{try{
+        const url=new URL(`${SUPABASE_URL}/rest/v1/annual_prayer_times`);url.searchParams.set("select","gregorian_month,gregorian_day,location_name,fajr,sunrise,dhuhr,asr,maghrib,isha");url.searchParams.set("location_name","eq.الحويجة وضواحيها");url.searchParams.set("or","("+dates.map(d=>`and(gregorian_month.eq.${d.month},gregorian_day.eq.${d.day})`).join(",")+")");url.searchParams.set("limit","8");
+        const rows=await prayerFetch(url);
+        if(!Array.isArray(rows)||rows.length!==8||!rows.every(validPrayerRow)||!dates.every(d=>rows.some(r=>Number(r.gregorian_month)===d.month&&Number(r.gregorian_day)===d.day)))throw Error("Incomplete prayer window");
+        storePrayerRows(rows);localStorage.setItem("aoqatPrayerSyncAtV1",String(Date.now()));await loadPrayerFromDatabase(true);return true;
+    }catch(error){console.warn("Prayer background sync kept saved data",error);return false;}finally{prayerSyncPending=null;}})();return prayerSyncPending;
+}
+window.aoqatRefreshNativePrayerRows=()=>{if(!window.AndroidNative?.readPrayerRows)return;try{const rows=JSON.parse(window.AndroidNative.readPrayerRows());localStorage.setItem("aoqatAnnualPrayerRowsV1",JSON.stringify(rows.filter(validPrayerRow)));localStorage.setItem("aoqatAdhanRows",JSON.stringify(rows.filter(validPrayerRow)));window.dispatchEvent(new Event("aoqatPrayerRowsUpdated"));loadPrayerFromDatabase(true);}catch(_){}};
+function setupPrayerBackgroundSync(){
+    const sync=()=>syncPrayerWindow();window.addEventListener("online",sync);document.addEventListener("visibilitychange",()=>{if(!document.hidden)sync();});
+    setInterval(sync,15*60000);sync();
+}
+
+let prayerLoadRequest=0;
+async function loadPrayerFromDatabase(silent=false){try{if(!silent)dbStatus("جاري تحميل مواقيت اليوم...");const monthName=document.getElementById("gregorianMonth")?.value;const month=GREGORIAN_MONTHS.indexOf(monthName)+1;const day=Number(document.getElementById("gregorianDay")?.value);if(!month||!day)throw new Error("التاريخ الميلادي غير مكتمل");const request=++prayerLoadRequest;const row=(silent&&cachedAnnualPrayer(month,day))||await readAnnualPrayer(month,day,!silent);if(request!==prayerLoadRequest)return false;if(!row){dbStatus("لا توجد مواقيت محفوظة لهذا التاريخ؛ اتصل بالإنترنت","error");return false;}const values=window.AoqatPrayerTimeChoice?.applyRow(row)||row;Object.entries(values).forEach(([id,value])=>{const el=document.getElementById(id);if(el&&value!=null){if(!Array.from(el.options).some(o=>o.value===String(value)))el.add(new Option(String(value),String(value)));el.value=String(value);}});if(typeof updateAll==="function")updateAll();dbStatus("تم تحميل مواقيت تاريخ اليوم تلقائياً ✓","success");return true;}catch(error){console.error(error);dbStatus("تعذر تحميل مواقيت اليوم","error");if(!silent)alert("تعذر تحميل المواقيت من قاعدة البيانات. تحقق من اتصال الإنترنت.");return false;}}
+function currentAnnualPrayerRecord(){const monthName=document.getElementById("gregorianMonth").value;return{gregorian_day:Number(document.getElementById("gregorianDay").value),gregorian_month:GREGORIAN_MONTHS.indexOf(monthName)+1,fajr:document.getElementById("fajr").value,sunrise:document.getElementById("sunrise").value,dhuhr:document.getElementById("dhuhr").value,asr:document.getElementById("asr").value,maghrib:document.getElementById("maghrib").value,isha:document.getElementById("isha").value};}
+async function savePrayerToDatabase(){try{dbStatus("جاري الحفظ...");const record=window.AoqatPrayerTimeChoice?.unapplyRow(currentAnnualPrayerRecord())||currentAnnualPrayerRecord();const response=await fetch(`${SUPABASE_URL}/rest/v1/annual_prayer_times?on_conflict=gregorian_month,gregorian_day`,{method:"POST",headers:dbHeaders({Prefer:"resolution=merge-duplicates,return=representation"}),body:JSON.stringify(record)});if(!response.ok)throw new Error(await response.text());dbStatus("تم حفظ المواقيت في قاعدة البيانات ✓","success");}catch(error){console.error(error);dbStatus("تعذر الحفظ","error");alert("تعذر الحفظ في قاعدة البيانات.");}}
+function setupAutomaticDateChangeLoading(){
+
+    const changed=()=>{updateDateFromGregorian();loadPrayerFromDatabase(true);};
+    for(const id of ["gregorianDay","gregorianMonth","gregorianYear"])document.getElementById(id)?.addEventListener("change",changed);
+    const panel=document.getElementById("datePanel");
+    if(panel&&!document.getElementById("returnDateToToday")){
+        const button=document.createElement("button");button.id="returnDateToToday";button.type="button";button.className="main-action";button.textContent="إرجاع التاريخ إلى اليوم";
+        button.style.cssText="margin-top:14px;min-height:42px;border:0;border-radius:12px;background:#147c89;color:#fff;font-family:inherit;font-size:15px;padding:10px 14px;cursor:pointer";
+        button.addEventListener("click",()=>{setTodayDateAutomatically();updateDateFromGregorian();loadPrayerFromDatabase(true);});panel.appendChild(button);
+    }
+}
+
+/* عرض الهاتف: نستخدم zoom بدل transform حتى تبقى المعاينة ظاهرة ومكانها صحيح */
+function setupMobileResponsiveView(){
+    if(document.getElementById("mobileResponsiveStyles")) return;
+
+    const style=document.createElement("style");
+    style.id="mobileResponsiveStyles";
+    style.textContent=`
+      @media(max-width:800px){
+        html,body{overflow-x:hidden!important}
+        .topbar{min-height:auto!important;padding:9px 10px!important;gap:8px!important}
+        .brand{gap:8px!important;min-width:0!important}.brand-icon{font-size:27px!important}.brand h1{font-size:17px!important;margin:0!important;white-space:nowrap}.brand p{display:none!important}
+        .top-export{padding:9px 11px!important;font-size:13px!important;white-space:nowrap}
+        .app{width:100%!important;padding:6px!important;gap:8px!important;grid-template-columns:1fr!important}
+        .workspace,.sidebar{width:100%!important;min-width:0!important}.workspace{order:1!important}.sidebar{order:2!important}
+        .preview-header{padding:5px 3px 7px!important}.preview-header h2{font-size:16px!important}.preview-header span{font-size:10px!important}
+        .previewBox{width:100%!important;min-height:0!important;height:auto!important;padding:6px!important;overflow:hidden!important;display:block!important;text-align:center!important}
+        .design{margin:0 auto!important;transform:none!important;transform-origin:top center!important}
+        .panel{padding:10px!important}.panel h2,.font-title h2{font-size:16px!important}
+        .main-action{height:40px!important;font-size:14px!important}label{font-size:12px!important}select,input[type=number],input[type=text],textarea{min-height:34px!important;font-size:13px!important}
+        .font-controls{grid-template-columns:1fr 1fr!important}.drag-info{min-height:0!important;flex-direction:column!important;align-items:stretch!important}#resetPositions,#saveDesignAdjustments{width:100%!important;min-width:0!important}
+      }
+      @media(max-width:420px){.brand h1{font-size:15px!important}.brand-icon{font-size:23px!important}.preview-header span{display:none!important}.font-controls{grid-template-columns:1fr!important}}
+    `;
+    document.head.appendChild(style);
+
+    const previewBox=document.querySelector(".previewBox");
+    const design=document.getElementById("design");
+    if(!previewBox||!design) return;
+
+    const DESIGN_WIDTH=1024;
+
+    const resize=()=>{
+      if(window.innerWidth>800){
+        design.style.zoom="1";
+        design.style.transform="none";
+        design.style.margin="0 auto";
+        return;
+      }
+
+      const cs=getComputedStyle(previewBox);
+      const padding=parseFloat(cs.paddingLeft||0)+parseFloat(cs.paddingRight||0);
+      const available=Math.max(220, previewBox.clientWidth-padding-2);
+      const scale=Math.min(1, available/DESIGN_WIDTH);
+
+      design.style.transform="none";
+      design.style.zoom=String(scale);
+      design.style.margin="0 auto";
+    };
+
+    resize();
+    requestAnimationFrame(resize);
+    setTimeout(resize,150);
+    setTimeout(resize,500);
+    window.addEventListener("resize",resize,{passive:true});
+    window.addEventListener("orientationchange",()=>setTimeout(resize,150),{passive:true});
+    document.fonts?.ready?.then(resize).catch(()=>{});
+}
+
+/* تثبيت البرنامج كتطبيق على الهاتف PWA */
+function setupPWAInstallation(){
+    if(document.querySelector('link[rel="manifest"]')) return;
+
+    const manifest=document.createElement("link");
+    manifest.rel="manifest";
+    manifest.href="/manifest.webmanifest";
+    document.head.appendChild(manifest);
+
+    const theme=document.createElement("meta");
+    theme.name="theme-color";
+    theme.content="#07151e";
+    document.head.appendChild(theme);
+
+    const appleCapable=document.createElement("meta");
+    appleCapable.name="apple-mobile-web-app-capable";
+    appleCapable.content="yes";
+    document.head.appendChild(appleCapable);
+
+    const appleStatus=document.createElement("meta");
+    appleStatus.name="apple-mobile-web-app-status-bar-style";
+    appleStatus.content="black-translucent";
+    document.head.appendChild(appleStatus);
+
+    const appleTitle=document.createElement("meta");
+    appleTitle.name="apple-mobile-web-app-title";
+    appleTitle.content="تقاويم الصلاة";
+    document.head.appendChild(appleTitle);
+
+    const icon=document.createElement("link");
+    icon.rel="icon";
+    icon.href="/assets/icons/app-icon.svg";
+    icon.type="image/svg+xml";
+    document.head.appendChild(icon);
+
+    if("serviceWorker" in navigator){
+        window.addEventListener("load",()=>{
+            navigator.serviceWorker.register("/sw.js",{updateViaCache:"none"}).then(reg=>{
+                document.addEventListener("visibilitychange",()=>{if(!document.hidden&&navigator.onLine)reg.update().catch(()=>{});});
+            }).catch(err=>console.error("SW registration failed",err));
+        });
+    }
+
+    let deferredPrompt=null;
+    const installBtn=document.createElement("button");
+    installBtn.id="installAppBtn";
+    installBtn.type="button";
+    installBtn.textContent="📲 تثبيت التطبيق";
+    installBtn.style.cssText="display:none;border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;color:#fff;background:#b58a22;cursor:pointer;white-space:nowrap";
+
+    const topbar=document.querySelector(".topbar");
+    if(topbar) topbar.appendChild(installBtn);
+
+    const standalone=window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone===true;
+    const isiOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+
+    if(isiOS && !standalone){
+        installBtn.style.display="inline-flex";
+        installBtn.addEventListener("click",()=>{
+            alert("لتثبيت التطبيق على iPhone: افتح زر المشاركة في Safari ثم اختر «إضافة إلى الشاشة الرئيسية».");
+        });
+    }
+
+    window.addEventListener("beforeinstallprompt",event=>{
+        event.preventDefault();
+        deferredPrompt=event;
+        installBtn.style.display="inline-flex";
+    });
+
+    installBtn.addEventListener("click",async()=>{
+        if(!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt=null;
+        installBtn.style.display="none";
+    });
+
+    window.addEventListener("appinstalled",()=>{
+        deferredPrompt=null;
+        installBtn.style.display="none";
+    });
+}
+
+/* حفظ تعديلات التصميم: المواضع + تنسيق العناصر */
+function setupDesignSaveSystem(){
+    const STORAGE_KEY="prayerDesignerSavedAdjustmentsV1";
+    const dragInfo=document.querySelector(".drag-info");
+    if(!dragInfo||document.getElementById("saveDesignAdjustments")) return;
+
+    const button=document.createElement("button");
+    button.id="saveDesignAdjustments";
+    button.type="button";
+    button.textContent="💾 حفظ تعديلات التصميم";
+    button.style.cssText="border:0;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:700;color:#fff;background:#168d4a;cursor:pointer";
+    dragInfo.appendChild(button);
+
+    const getElements=()=>Array.from(document.querySelectorAll(".draggable"));
+
+    const save=()=>{
+        const items=getElements().map((el,index)=>({
+            index,
+            x:el.dataset.x||"0",
+            y:el.dataset.y||"0",
+            style:el.getAttribute("style")||""
+        }));
+        localStorage.setItem(STORAGE_KEY,JSON.stringify(items));
+        const oldText=button.textContent;
+        button.textContent="✅ تم حفظ التعديلات";
+        setTimeout(()=>button.textContent=oldText,1600);
+    };
+
+    const load=()=>{
+        try{
+            const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+            if(!Array.isArray(saved)) return;
+            const elements=getElements();
+            saved.forEach(item=>{
+                const el=elements[item.index];
+                if(!el) return;
+                el.dataset.x=String(item.x??0);
+                el.dataset.y=String(item.y??0);
+                if(item.style) el.setAttribute("style",item.style);
+                else el.removeAttribute("style");
+            });
+        }catch(error){
+            console.error("تعذر تحميل تعديلات التصميم المحفوظة",error);
+        }
+    };
+
+    button.addEventListener("click",save);
+    load();
+}
+
+async function setupSupabaseDatabase(){document.getElementById("savePrayerDbBtn")?.addEventListener("click",savePrayerToDatabase);document.getElementById("loadPrayerDbBtn")?.addEventListener("click",()=>loadPrayerFromDatabase(false));setupAutomaticDateChangeLoading();setupMobileResponsiveView();setupPWAInstallation();setupDesignSaveSystem();setTodayDateAutomatically();await loadPrayerFromDatabase(true);setupPrayerBackgroundSync();}
+

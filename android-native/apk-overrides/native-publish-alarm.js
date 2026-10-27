@@ -11,6 +11,11 @@
   function draw(){b.setAttribute('aria-pressed',String(enabled));b.dataset.enabled=String(enabled);b.dataset.androidAlarmEnabled=enabled?'1':'0';b.className='switch-control-btn'+(enabled?' enabled is-on':'');b.textContent='🔔 تنبيه النشر على الهاتف: '+(enabled?'تشغيل':'إيقاف');}
   b.onclick=()=>{enabled=!enabled;localStorage.setItem(KEY,enabled?'1':'0');if(enabled)N.enableAlarm();else N.disableAlarm();draw();};
   panel.insertBefore(b,document.getElementById('tomorrowSwitchStatus'));draw();
+  const label=document.createElement('label');label.textContent='مدة غفوة تنبيه النشر';
+  const select=document.createElement('select');select.id='publishSnoozeMinutes';
+  for(let m=1;m<=30;m++)select.add(new Option(m+' دقائق',m));
+  select.value=String(N.readPublishSnoozeMinutes?.()||10);
+  select.onchange=()=>N.configurePublishSnoozeMinutes?.(Number(select.value));label.append(select);b.after(label);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});else mount();window.addEventListener('aoqatModulesReady',mount);
 })();

@@ -1,0 +1,119 @@
+"use strict";
+(function(){
+  function install(){
+    if(document.getElementById('designSideMenuBtn')) return true;
+    const sidebar=document.querySelector('.sidebar');
+    if(!sidebar) return false;
+
+    const style=document.createElement('style');
+    style.id='designSideMenuStyles';
+    style.textContent=`
+      #designSideMenuBtn{position:fixed;top:11px;right:12px;z-index:10020;width:31px;height:31px;border:1px solid rgba(255,255,255,.16);border-radius:8px;background:linear-gradient(145deg,#1b5147,#123c35);color:transparent;font-size:0;line-height:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.5px;box-shadow:0 2px 8px #0003;cursor:pointer;padding:0}#designSideMenuBtn .menu-bar{display:block;width:13px;height:1.4px;border-radius:999px;background:#fff;box-shadow:0 0 2px rgba(255,255,255,.2);transition:transform .2s ease,opacity .2s ease}
+      body.design-menu-open #designSideMenuBtn{top:5px;right:7px;width:28px;height:28px;border-radius:7px;font-size:0;box-shadow:0 2px 5px #0003}body.design-menu-open #designSideMenuBtn .menu-bar:nth-child(1){transform:translateY(4.5px) rotate(45deg)}body.design-menu-open #designSideMenuBtn .menu-bar:nth-child(2){opacity:0}body.design-menu-open #designSideMenuBtn .menu-bar:nth-child(3){transform:translateY(-4.5px) rotate(-45deg)}
+      #designSideMenuBackdrop{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.38);opacity:0;pointer-events:none;transition:opacity .22s ease}
+      body.design-menu-open #designSideMenuBackdrop{opacity:1;pointer-events:auto}
+      .preview-header{display:none!important}
+      .drag-info{display:none!important}body.design-menu-open .previewBox::before,body.design-menu-open .previewBox::after,body.design-menu-open .workspace::before,body.design-menu-open .workspace::after{display:none!important;content:none!important}
+      .sidebar{position:fixed!important;top:0!important;right:0!important;bottom:auto!important;z-index:10010!important;width:min(74vw,312px)!important;max-width:312px!important;height:auto!important;min-height:0!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain;background:transparent!important;padding:0!important;margin:0!important;box-sizing:border-box!important;transform:translateX(105%)!important;transition:transform .24s ease!important;box-shadow:none!important}
+      body.design-menu-open .sidebar{transform:none!important;overflow:visible!important;max-height:none!important;padding:0!important}
+      html.design-menu-scroll-locked{overflow:hidden!important;overscroll-behavior:none!important}
+      body.design-menu-open{overflow:hidden!important}
+      body.design-menu-open .workspace{pointer-events:none!important}
+      body.design-menu-open .sidebar,body.design-menu-open .web-sub-body{overscroll-behavior:contain!important}
+      body.design-menu-open .sidebar>.panel:not(.main-panel){display:none!important}
+      body.design-menu-open .sidebar .main-panel{width:max-content!important;max-width:calc(100% - 6px)!important;margin:28px 3px 0 auto!important;padding:3px!important;height:auto!important;min-height:0!important}
+      body.design-menu-open .sidebar .main-panel>h2{margin:0 0 2px!important;font-size:14px!important;line-height:1!important}
+      body.design-menu-open .sidebar .main-panel>.main-action,body.design-menu-open .sidebar .main-panel>#topExportJpg,body.design-menu-open #datePrayerGroup>.main-action,body.design-menu-open #backgroundFontGroup>.main-action{width:var(--design-action-width,auto)!important;min-width:var(--design-action-width,0)!important;max-width:100%!important;min-height:25px!important;height:25px!important;margin:0 0 1px auto!important;padding:2px 5px!important;font-size:11.5px!important;line-height:1!important;border-radius:6px!important;white-space:nowrap!important}
+      body.design-menu-open #datePrayerGroup,body.design-menu-open #backgroundFontGroup{width:var(--design-action-width,auto)!important;max-width:100%!important;margin:0 0 1px auto!important}
+      body.design-menu-open .sidebar .main-panel>.inline-control-panel{margin:0 0 1px!important;padding:3px!important}
+      body.design-menu-open .sidebar .main-panel>.inline-control-panel:not(.inline-open){display:none!important;margin:0!important;padding:0!important;border:0!important;min-height:0!important;height:0!important;box-shadow:none!important}body.design-menu-open .sidebar .main-panel>.inline-control-panel:empty{display:none!important}body.design-menu-open .sidebar .main-panel::after{display:none!important;content:none!important}body.design-menu-open .sidebar .main-panel>*:last-child:not(#topExportJpg):not(.main-action):not(#backgroundFontGroup):not(#datePrayerGroup){display:none!important}body.design-menu-open .sidebar>.drag-info{display:none!important;width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;overflow:hidden!important}
+      body.design-menu-open #datePrayerSubmenu,body.design-menu-open #backgroundFontSubmenu{margin:0!important}
+      body.design-menu-open #datePrayerSubmenu>.main-action,body.design-menu-open #backgroundFontSubmenu>.main-action{width:100%!important;min-height:24px!important;height:24px!important;margin:0 0 1px!important;padding:2px 5px!important;font-size:11px!important}
+      @media(max-width:800px){
+        .topbar.web-interface-header{margin-top:50px!important;margin-bottom:5px!important}
+        .topbar.web-interface-header #saveToPhoneBtn,.topbar.web-interface-header #exportBtn{position:fixed!important;top:11px!important;left:12px!important;right:auto!important;transform:none!important;z-index:9990!important;margin:0!important}
+        body.design-menu-open .topbar.web-interface-header #saveToPhoneBtn,body.design-menu-open .topbar.web-interface-header #exportBtn{z-index:9990!important}
+        .workspace{padding-top:0!important}
+      }
+      @media(max-width:420px){.sidebar{width:74vw!important;max-width:312px!important}}
+      @media(min-width:801px){#designSideMenuBtn{top:12px;right:12px}body.design-menu-open #designSideMenuBtn{top:5px;right:7px}}
+    `;
+    document.head.appendChild(style);
+
+    const btn=document.createElement('button');
+    btn.id='designSideMenuBtn';btn.type='button';btn.setAttribute('aria-label','الأعدادات');btn.setAttribute('aria-expanded','false');btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';
+    const backdrop=document.createElement('div');backdrop.id='designSideMenuBackdrop';
+    document.body.append(backdrop,btn);
+
+    function syncActionWidth(){
+      const main=sidebar.querySelector('.main-panel');
+      if(!main)return;
+      const items=[document.getElementById('backgroundFontMainBtn'),document.getElementById('datePrayerMainBtn'),main.querySelector('[data-open-panel="switchPanel"]'),document.getElementById('topExportJpg')].filter(Boolean);
+      if(items.length<4)return;
+      main.style.removeProperty('--design-action-width');
+      items.forEach(el=>{el.style.removeProperty('width');el.style.removeProperty('min-width');});
+      const max=Math.ceil(Math.max(...items.map(el=>el.scrollWidth))+8);
+      main.style.setProperty('--design-action-width',Math.min(max,sidebar.clientWidth-16)+'px');
+    }
+
+    function hideEmptyStrips(){
+      const main=sidebar.querySelector('.main-panel');
+      if(!main)return;
+      Array.from(main.children).forEach(el=>{
+        if(!el.classList.contains('inline-control-panel'))return;
+        const hasVisibleContent=Array.from(el.children).some(child=>!child.hidden&&getComputedStyle(child).display!=='none');
+        if(!hasVisibleContent)el.style.setProperty('display','none','important');
+      });
+    }
+
+    // Lock only background gestures; retain native scrolling inside each menu.
+    let scrollLock=null,touchPoint=null;
+    const overlaySelector='.sidebar,#settingsContentDialog,#adhanServicesDialog';
+    function syncScrollLock(){
+      const open=document.body.classList.contains('design-menu-open');
+      if(open&&!scrollLock){
+        scrollLock={x:window.scrollX,y:window.scrollY};
+        document.documentElement.classList.add('design-menu-scroll-locked');
+      }else if(!open&&scrollLock){
+        const saved=scrollLock;scrollLock=null;touchPoint=null;
+        document.documentElement.classList.remove('design-menu-scroll-locked');
+        window.scrollTo(saved.x,saved.y);
+      }
+    }
+    window.addEventListener('touchstart',e=>{
+      if(scrollLock&&e.touches.length===1)touchPoint={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    },{capture:true,passive:true});
+    window.addEventListener('touchmove',e=>{
+      if(!scrollLock)return;
+      const inside=e.target.closest?.(overlaySelector);
+      if(!inside){if(e.cancelable)e.preventDefault();e.stopPropagation();return;}
+      if(e.touches.length!==1||!touchPoint)return;
+      const next={x:e.touches[0].clientX,y:e.touches[0].clientY},dy=touchPoint.y-next.y,dx=touchPoint.x-next.x;
+      touchPoint=next;
+      // Horizontal reader gestures and zoom retain their existing behavior.
+      if(Math.abs(dx)>Math.abs(dy))return;
+      let canScroll=false;
+      for(let el=e.target;el instanceof Element&&inside.contains(el);el=el.parentElement){
+        const style=getComputedStyle(el);
+        if(/auto|scroll/.test(style.overflowY)&&el.scrollHeight>el.clientHeight+1&&
+          ((dy>0&&el.scrollTop<el.scrollHeight-el.clientHeight-1)||(dy<0&&el.scrollTop>0))){canScroll=true;break;}
+      }
+      if(!canScroll&&e.cancelable)e.preventDefault();
+      // A menu gesture must not reach the design's global drag handlers.
+      e.stopPropagation();
+    },{capture:true,passive:false});
+    window.addEventListener('touchend',()=>{touchPoint=null;},{capture:true,passive:true});
+    window.addEventListener('touchcancel',()=>{touchPoint=null;},{capture:true,passive:true});
+    new MutationObserver(syncScrollLock).observe(document.body,{attributes:true,attributeFilter:['class']});
+    syncScrollLock();
+
+    function setOpen(open){document.body.classList.toggle('design-menu-open',open);syncScrollLock();btn.setAttribute('aria-expanded',String(open));btn.innerHTML='<span class="menu-bar"></span><span class="menu-bar"></span><span class="menu-bar"></span>';if(open)setTimeout(()=>{syncActionWidth();hideEmptyStrips();const drag=sidebar.querySelector(':scope > .drag-info');if(drag){drag.hidden=true;drag.style.setProperty('display','none','important');}},30);else{const drag=sidebar.querySelector(':scope > .drag-info');if(drag)drag.hidden=false;}}
+    btn.addEventListener('click',()=>setOpen(!document.body.classList.contains('design-menu-open')));
+    backdrop.addEventListener('click',()=>setOpen(false));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')setOpen(false);});
+    window.addEventListener('aoqatModulesReady',()=>{syncActionWidth();hideEmptyStrips();});
+    setTimeout(()=>{syncActionWidth();hideEmptyStrips();},1200);
+    return true;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{let n=0,t=setInterval(()=>{if(install()||++n>40)clearInterval(t)},100)},{once:true});else install();
+})();

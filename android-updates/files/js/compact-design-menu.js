@@ -1,0 +1,256 @@
+"use strict";
+(function(){
+  const ORDER=['#backgroundFontGroup','#datePrayerGroup'];
+
+  function addStyles(){
+    if(document.getElementById('compactDesignMenuStyles'))return;
+    const s=document.createElement('style');s.id='compactDesignMenuStyles';
+    s.textContent=`
+      .sidebar .main-panel{padding:8px!important;text-align:right!important}.sidebar .main-panel>h2{margin:0 0 6px!important;font-size:15px!important;line-height:1.2!important}
+      .sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#prayerIqamaGroup>.main-action,#backgroundFontGroup>.main-action{width:max-content!important;max-width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;margin:0 0 4px auto!important;padding:5px 10px!important;border-radius:8px!important;font-size:12.5px!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;box-shadow:none!important;white-space:nowrap!important}
+      .sidebar .main-panel>.main-action span,.sidebar .main-panel>#topExportJpg span,#datePrayerGroup>.main-action span,#prayerIqamaGroup>.main-action span,#backgroundFontGroup>.main-action span{line-height:1!important;white-space:nowrap!important}.sidebar .main-panel>.inline-control-panel{margin:0 0 4px!important;padding:9px!important}.sidebar .main-panel>#topExportJpg{background:#176f9f!important;width:max-content!important;min-width:0!important;max-width:100%!important;min-height:26px!important;height:26px!important;padding:2px 7px!important;font-size:10.5px!important;border-radius:6px!important}
+      #datePrayerGroup,#prayerIqamaGroup,#backgroundFontGroup{width:100%;margin:0 0 4px!important;padding:0!important}#datePrayerGroup>#datePrayerMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#0d7890,#13a2a0)!important;border-color:#39b8b0!important}#prayerIqamaGroup>#prayerIqamaMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border-color:#56b395!important}#backgroundFontGroup>#backgroundFontMainBtn{margin:0 0 0 auto!important;background:linear-gradient(135deg,#9a6424,#c58a35)!important;border-color:#e0ad62!important}
+      #datePrayerSubmenu,#prayerIqamaSubmenu,#backgroundFontSubmenu{display:none!important;position:static!important;z-index:auto!important;top:auto!important;left:auto!important;right:auto!important;transform:none!important;width:100%!important;min-width:0!important;max-width:100%!important;padding:3px 0 0!important;margin:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important}
+      #datePrayerGroup.group-open>#datePrayerSubmenu,#prayerIqamaGroup.group-open>#prayerIqamaSubmenu,#backgroundFontGroup.group-open>#backgroundFontSubmenu{display:block!important}#datePrayerSubmenu>.main-action,#prayerIqamaSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;max-width:100%!important;min-width:0!important;min-height:34px!important;height:34px!important;margin:0 0 5px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11.5px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;box-shadow:none!important;white-space:nowrap!important}#datePrayerSubmenu>.main-action:last-child,#prayerIqamaSubmenu>.main-action:last-child,#backgroundFontSubmenu>.main-action:last-child{margin-bottom:0!important}
+      #datePrayerMainBtn .group-arrow,#prayerIqamaMainBtn .group-arrow,#backgroundFontMainBtn .group-arrow{margin-right:4px!important;font-size:10px;opacity:.8;transition:transform .18s ease}#datePrayerGroup.group-open #datePrayerMainBtn .group-arrow,#prayerIqamaGroup.group-open #prayerIqamaMainBtn .group-arrow,#backgroundFontGroup.group-open #backgroundFontMainBtn .group-arrow{transform:rotate(180deg)}
+      /* Clear visual separation between every icon and the controls that belong to it. */
+      #backgroundFontGroup,#datePrayerGroup{border:1px solid rgba(122,170,181,.22)!important;border-radius:12px!important;padding:6px!important;margin-bottom:8px!important;background:rgba(8,25,35,.38)!important}
+      #backgroundFontSubmenu,#datePrayerSubmenu,#prayerIqamaSubmenu{gap:7px!important}
+      #backgroundFontGroup.group-open>#backgroundFontSubmenu,#datePrayerGroup.group-open>#datePrayerSubmenu,#prayerIqamaGroup.group-open>#prayerIqamaSubmenu{display:flex!important;flex-direction:column!important;gap:7px!important;margin-top:6px!important;padding:8px!important;border:1px solid rgba(126,180,191,.32)!important;border-radius:10px!important;background:rgba(10,30,41,.72)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)!important}
+      #backgroundFontSubmenu>.main-action,#datePrayerSubmenu>.main-action,#prayerIqamaSubmenu>.main-action,#datePrayerSubmenu>#prayerIqamaGroup{margin:0!important}
+      #datePrayerSubmenu>#prayerIqamaGroup{width:100%!important;padding:6px!important;border:1px solid rgba(86,179,149,.38)!important;border-radius:10px!important;background:rgba(23,107,92,.12)!important}
+      #datePrayerSubmenu>#prayerIqamaGroup.group-open{padding:7px!important;background:rgba(23,107,92,.20)!important;box-shadow:0 3px 10px rgba(0,0,0,.12)!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{margin:0!important}
+      /* Main design-data icons: distinct identity + tidy framed contents when expanded. Visual only. */
+      #backgroundFontGroup>#backgroundFontMainBtn{background:linear-gradient(135deg,#9a6424,#c58a35)!important;border:1px solid #e0ad62!important;box-shadow:0 3px 10px rgba(154,100,36,.24)!important}
+      #datePrayerGroup>#datePrayerMainBtn{background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border:1px solid #56b395!important;box-shadow:0 3px 10px rgba(23,107,92,.24)!important}
+      #backgroundFontGroup.group-open,#datePrayerGroup.group-open{padding:6px!important;border-radius:11px!important;background:rgba(7,24,34,.72)!important;border:1px solid rgba(143,196,204,.28)!important;box-shadow:0 7px 18px rgba(0,0,0,.24)!important}
+      #backgroundFontGroup.group-open>#backgroundFontMainBtn,#datePrayerGroup.group-open>#datePrayerMainBtn{margin-bottom:6px!important}
+      #backgroundFontGroup.group-open>#backgroundFontSubmenu,#datePrayerGroup.group-open>#datePrayerSubmenu{padding:7px!important;border-radius:9px!important;background:linear-gradient(160deg,rgba(22,43,55,.96),rgba(13,31,43,.96))!important;border:1px solid rgba(120,177,191,.30)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)!important}
+      /* Distinct colors for every submenu icon/button. Visual only; no click behavior changes. */
+      #backgroundFontSubmenu>.main-action:nth-child(1){background:linear-gradient(135deg,#7b3fa1,#a55bc1)!important;border:1px solid #bd78d1!important;color:#fff!important}
+      #backgroundFontSubmenu>.main-action:nth-child(2){background:linear-gradient(135deg,#176f9f,#2489bb)!important;border:1px solid #46a1c8!important;color:#fff!important}
+      #backgroundFontSubmenu>.main-action:nth-child(3){background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border:1px solid #dda14f!important;color:#fff!important}
+      #datePrayerSubmenu>#prayerIqamaGroup>#prayerIqamaMainBtn{width:100%!important;max-width:100%!important;min-height:34px!important;height:34px!important;margin:0 0 5px!important;padding:5px 9px!important;border-radius:7px!important;font-size:11.5px!important;background:linear-gradient(135deg,#176b5c,#2f8f73)!important;border:1px solid #56b395!important;color:#fff!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important}\n      #datePrayerSubmenu>.main-action:nth-of-type(1){background:linear-gradient(135deg,#0d7890,#13a2a0)!important;border:1px solid #39b8b0!important;color:#fff!important}
+      #datePrayerSubmenu>.main-action:nth-child(2){background:linear-gradient(135deg,#2e7d4f,#43a565)!important;border:1px solid #62ba7b!important;color:#fff!important}
+      #datePrayerSubmenu>.main-action:nth-child(3){background:linear-gradient(135deg,#9b6a16,#c58b24)!important;border:1px solid #d6a144!important;color:#fff!important}
+      #datePrayerSubmenu>.main-action:nth-child(4){background:linear-gradient(135deg,#a74468,#c75b7f)!important;border:1px solid #d77a98!important;color:#fff!important}
+      #backgroundFontSubmenu>.main-action *,#datePrayerSubmenu>.main-action *{color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open{display:block!important;position:fixed!important;z-index:10050!important;top:50%!important;left:50%!important;right:auto!important;transform:translate(-50%,-50%)!important;width:min(90vw,360px)!important;max-width:calc(100vw - 24px)!important;max-height:78vh!important;overflow-y:auto!important;margin:0!important;padding:38px 12px 12px!important;border-radius:12px!important;background:rgba(3,18,27,.96)!important;backdrop-filter:blur(14px)!important;-webkit-backdrop-filter:blur(14px)!important;border:1px solid rgba(255,255,255,.20)!important;box-shadow:0 18px 46px rgba(0,0,0,.68)!important}body.design-detail-open::after{content:"";position:fixed;inset:0;z-index:10005;background:rgba(0,8,14,.52);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open{background:linear-gradient(160deg,rgba(10,42,55,.985),rgba(8,31,44,.985))!important;border-color:rgba(104,190,205,.38)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open label{color:#eaf6f8!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open select,body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="text"],body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="number"]{background:#17394a!important;border-color:#4d7283!important;color:#fff!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.025)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="color"]{background:#17394a!important;border-color:#4d7283!important;padding:5px!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .main-action,body.design-menu-open .sidebar .inline-control-panel.inline-open button:not(.design-popup-close):not(.color-swatch):not(.interface-visibility-btn){background:#24485a!important;border-color:#54798a!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn{background:#29495a!important;border-color:#587b8b!important}.interface-visibility-btn.is-on{background:#168b52!important;border-color:#45ad78!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open hr{border-color:rgba(119,174,193,.25)!important}
+      /* High-contrast visual identity for design-data popups */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open{background:linear-gradient(155deg,#182235 0%,#101827 52%,#211b34 100%)!important;border:1px solid #6d7593!important;box-shadow:0 20px 50px rgba(0,0,0,.72),inset 0 0 0 1px rgba(255,255,255,.035)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open label{color:#f4f1ff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open select,body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="text"],body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="number"]{background:#27324a!important;border:1px solid #7c87a9!important;color:#fff!important;box-shadow:none!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="color"]{background:#27324a!important;border:1px solid #7c87a9!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .main-action,body.design-menu-open .sidebar .inline-control-panel.inline-open button:not(.design-popup-close):not(.color-swatch):not(.interface-visibility-btn){background:linear-gradient(135deg,#3a4660,#303a52)!important;border:1px solid #74809f!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn{background:#303b53!important;border:1px solid #75819f!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on{background:linear-gradient(135deg,#079447,#12b35d)!important;border-color:#55d88e!important;color:#fff!important;box-shadow:0 3px 10px rgba(0,150,72,.25)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on strong{background:rgba(255,255,255,.20)!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on) strong{background:#59647b!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open hr{border-color:#555f7a!important}
+      /* Warm cream identity for design-data popups */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open{background:linear-gradient(155deg,#fffaf0 0%,#f7eedc 55%,#efe1c6 100%)!important;border:1px solid #d7bf91!important;box-shadow:0 20px 50px rgba(0,0,0,.48),inset 0 0 0 1px rgba(255,255,255,.8)!important;color:#102d39!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open label,body.design-menu-open .sidebar .inline-control-panel.inline-open h1,body.design-menu-open .sidebar .inline-control-panel.inline-open h2,body.design-menu-open .sidebar .inline-control-panel.inline-open h3,body.design-menu-open .sidebar .inline-control-panel.inline-open strong{color:#153642!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open select,body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="text"],body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="number"]{background:#e8f0ee!important;border:1px solid #78999b!important;color:#12343f!important;box-shadow:0 1px 2px rgba(0,0,0,.06)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open input[type="color"]{background:#edf3ef!important;border:1px solid #78999b!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .main-action,body.design-menu-open .sidebar .inline-control-panel.inline-open button:not(.design-popup-close):not(.color-swatch):not(.interface-visibility-btn){background:linear-gradient(135deg,#174b55,#226572)!important;border:1px solid #2f7680!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .main-action *,body.design-menu-open .sidebar .inline-control-panel.inline-open button:not(.design-popup-close):not(.color-swatch):not(.interface-visibility-btn) *{color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn{background:#dfe9e5!important;border:1px solid #82a39f!important;color:#153642!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn span{color:#153642!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn strong{background:#829793!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on{background:linear-gradient(135deg,#078e48,#13ad60)!important;border-color:#087d43!important;color:#fff!important;box-shadow:0 3px 10px rgba(0,128,67,.22)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on span,body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on strong{color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on strong{background:rgba(255,255,255,.20)!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open hr{border-color:#d5c6aa!important}
+      /* Unified toggle palette: visual only; keeps every button's existing behavior */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .compact-toggle.is-on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .toggle-btn.is-on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .toggle-btn.on,
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button.active[data-toggle],
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="true"],
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .compact-toggle:not(.is-on),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .toggle-btn:not(.is-on):not(.on),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-toggle]:not(.active),
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"],
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
+      /* Global design-menu ON/OFF appearance.  Uses the visible Arabic state so legacy controls
+         get the same palette as the four interface visibility controls without changing their logic. */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button.unified-toggle-on{
+        background:linear-gradient(135deg,#078b46,#10a95b)!important;
+        border-color:#08753e!important;color:#fff!important;
+      }
+      body.design-menu-open .sidebar .inline-control-panel.inline-open button.unified-toggle-off{
+        background:#70817f!important;border-color:#859593!important;color:#fff!important;
+      }
+      /* Readability + unified ON/OFF states inside cream design panels */
+      body.design-menu-open .sidebar .inline-control-panel.inline-open,body.design-menu-open .sidebar .inline-control-panel.inline-open p,body.design-menu-open .sidebar .inline-control-panel.inline-open small,body.design-menu-open .sidebar .inline-control-panel.inline-open div:not(.color-swatch){color:#173743!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open [style*="color"]{color:#173743!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="true"],body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn.is-on *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="true"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="true"] *{color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on),body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"],body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
+      body.design-menu-open .sidebar .inline-control-panel.inline-open .interface-visibility-btn:not(.is-on) *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[data-enabled="false"] *,body.design-menu-open .sidebar .inline-control-panel.inline-open button[aria-pressed="false"] *{color:#fff!important}
+      #interfaceVisibilityControls,#designVisibilityControls,#designEditTools{margin:8px 0 0!important}
+      /* Separate each tool group visually so an opened section never blends into the next icon. */
+      body.design-menu-open #backgroundPanel #backgroundDesignTools,
+      body.design-menu-open #backgroundPanel #interfaceVisibilityControls,
+      body.design-menu-open #backgroundPanel #designVisibilityControls{
+        margin:10px 0!important;padding:8px!important;border:1px solid #d8c49d!important;border-radius:12px!important;
+        background:rgba(255,255,255,.42)!important;box-shadow:0 3px 10px rgba(74,55,28,.08)!important;
+      }
+      body.design-menu-open #backgroundPanel #backgroundDesignTools + #interfaceVisibilityControls,
+      body.design-menu-open #backgroundPanel #interfaceVisibilityControls + #designVisibilityControls{
+        margin-top:12px!important;
+      }
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid,
+      body.design-menu-open #backgroundPanel .visibility-section-body{
+        margin-top:7px!important;padding:8px!important;border-radius:9px!important;
+        background:rgba(246,237,219,.72)!important;border:1px solid rgba(196,169,119,.45)!important;
+      }
+      body.design-menu-open #backgroundPanel .visibility-section:not(.visibility-section-open) .visibility-section-body{margin-top:0!important;padding:0!important;border:0!important}
+      #designEditTools .design-edit-tools-body{display:flex!important;flex-direction:column!important;gap:6px!important}
+      #designEditTools .design-edit-tools-body>.main-action,#designEditTools .design-edit-tools-body>button,#designEditTools .design-edit-tools-body>.drag-info,#designEditTools .design-edit-tools-body>.drag-info>button{width:100%!important;max-width:100%!important;margin:0!important;min-height:36px!important}
+      #designEditTools .design-edit-tools-body>.drag-info{padding:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
+      #designEditTools .design-edit-tools-body>.drag-info>span{display:none!important}
+      /* Design edit tools: slim, distinct colors. Visual-only; no behavior changes. */
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid{gap:5px!important;padding-top:6px!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid>button,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools .bg-tools-grid>.main-action,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle{min-height:30px!important;height:30px!important;padding:3px 10px!important;border-radius:7px!important;font-size:12px!important;font-weight:800!important;box-shadow:0 1px 3px rgba(20,45,55,.10)!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #changeBackgroundBtn{background:linear-gradient(135deg,#176f9f,#2489bb)!important;border-color:#2d91bd!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #saveDesignAdjustments{background:linear-gradient(135deg,#6b3fa0,#8c55b4)!important;border-color:#9a68bc!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #resetPositions{background:linear-gradient(135deg,#b36a18,#d08a2e)!important;border-color:#d89843!important;color:#fff!important}
+      /* النص السفلي له مدخل واحد فقط داخل الإعدادات؛ أخفِ النسخة القديمة داخل واجهة البرنامج. */
+      body.design-menu-open #backgroundPanel [data-open-panel="footerPanel"]{display:none!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle:not(.is-on)[aria-pressed="false"]{background:#70817f!important;border-color:#859593!important;color:#fff!important}
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle.is-on,
+      body.design-menu-open #backgroundPanel #backgroundDesignTools #manualEditToggle[aria-pressed="true"]{background:linear-gradient(135deg,#078b46,#10a95b)!important;border-color:#08753e!important;color:#fff!important}
+      .visibility-section-toggle{width:100%!important;min-height:32px!important;height:32px!important;margin:0!important;padding:3px 10px!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:8px!important;color:#fff!important;font-weight:800!important;font-size:12.5px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;cursor:pointer!important;box-shadow:0 1px 4px rgba(20,45,55,.13)!important;transition:transform .16s ease,filter .16s ease!important}
+      .visibility-section-toggle:active{transform:scale(.992)!important}
+      #designEditTools .visibility-section-toggle{background:linear-gradient(135deg,#087f78,#0aa59a)!important;border-color:#0fb5a8!important}
+      #interfaceVisibilityControls .visibility-section-toggle{background:linear-gradient(135deg,#1d5f9e,#2f86c6)!important;border-color:#4397d2!important}
+      #designVisibilityControls .visibility-section-toggle{background:linear-gradient(135deg,#6b3fa0,#9657bd)!important;border-color:#a36bc5!important}
+      .visibility-section-toggle span{color:#fff!important}.visibility-section-toggle .visibility-arrow{font-size:9px!important;opacity:.9;transition:transform .18s ease}.visibility-section-toggle[aria-expanded="true"] .visibility-arrow{transform:rotate(180deg)}
+      .visibility-section-body{display:none!important;padding-top:6px!important}.visibility-section-open>.visibility-section-body{display:block!important}
+      .design-popup-close{position:absolute!important;top:7px!important;left:7px!important;z-index:2!important;width:27px!important;height:27px!important;min-width:27px!important;min-height:27px!important;margin:0!important;padding:0!important;border:1px solid rgba(255,255,255,.2)!important;border-radius:7px!important;background:#16594f!important;color:#fff!important;font-size:18px!important;font-weight:800!important;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important;cursor:pointer!important}
+      body.design-detail-open .sidebar .main-panel>h2,body.design-detail-open .sidebar .main-panel>#backgroundFontGroup,body.design-detail-open .sidebar .main-panel>#datePrayerGroup,body.design-detail-open .sidebar .main-panel>[data-open-panel="switchPanel"],body.design-detail-open .sidebar .main-panel>#topExportJpg{visibility:hidden!important;pointer-events:none!important}
+      @media(max-width:800px){.sidebar .main-panel{padding:7px!important}.sidebar .main-panel>.main-action,.sidebar .main-panel>#topExportJpg,#datePrayerGroup>.main-action,#backgroundFontGroup>.main-action{width:max-content!important;max-width:100%!important;min-width:0!important;min-height:32px!important;height:32px!important;margin:0 0 3px auto!important;padding:4px 8px!important;font-size:12px!important;border-radius:7px!important}#datePrayerSubmenu,#backgroundFontSubmenu{width:100%!important;min-width:0!important;max-width:100%!important;margin:0!important}#datePrayerSubmenu>.main-action,#backgroundFontSubmenu>.main-action{width:100%!important;max-width:100%!important;min-width:0!important;min-height:32px!important;height:32px!important;font-size:11px!important}}
+    `;document.head.appendChild(s);
+  }
+
+  function closeGroups(except=null){['datePrayerGroup','prayerIqamaGroup','backgroundFontGroup'].forEach(id=>{const g=document.getElementById(id);if(g&&g!==except&&!(except&&g.contains(except)))g.classList.remove('group-open');});}
+  function closePanels(except=null){document.querySelectorAll('.inline-control-panel.inline-open').forEach(p=>{if(p===except)return;p.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${p.id}"]`)?.classList.remove('inline-active');});if(!except)document.body.classList.remove('design-detail-open');}
+  function addClose(panel){if(!panel||panel.querySelector(':scope > .design-popup-close'))return;const x=document.createElement('button');x.type='button';x.className='design-popup-close';x.setAttribute('aria-label','رجوع');x.setAttribute('title','رجوع');x.textContent='‹';x.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();panel.classList.remove('inline-open','active-panel','collapsed');document.querySelector(`[data-open-panel="${panel.id}"]`)?.classList.remove('inline-active');document.body.classList.remove('design-detail-open');});panel.prepend(x);}
+
+  function createGroup(id,buttonId,submenuId,label,icon){
+    const main=document.querySelector('.sidebar .main-panel');let group=document.getElementById(id);if(group)return group;
+    group=document.createElement('div');group.id=id;const mainBtn=document.createElement('button');mainBtn.type='button';mainBtn.id=buttonId;mainBtn.className='main-action';mainBtn.innerHTML=`${icon} <span>${label}</span><span class="group-arrow">▼</span>`;const submenu=document.createElement('div');submenu.id=submenuId;group.append(mainBtn,submenu);
+    mainBtn.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const open=!group.classList.contains('group-open');closePanels();closeGroups(group);group.classList.toggle('group-open',open);});main.appendChild(group);return group;
+  }
+  function syncLegacyToggleColors(){
+    document.querySelectorAll('body.design-menu-open .sidebar .inline-control-panel.inline-open').forEach(panel=>{
+      const walker=document.createTreeWalker(panel,NodeFilter.SHOW_TEXT);
+      const rows=new Map();let node;
+      while((node=walker.nextNode())){
+        const text=(node.nodeValue||'').trim();
+        let word='';
+        if(text==='تشغيل'||/(?:^|[:：\\s])تشغيل$/.test(text))word='تشغيل';
+        else if(text==='إيقاف'||/(?:^|[:：\\s])إيقاف$/.test(text))word='إيقاف';
+        if(!word)continue;
+        let el=node.parentElement;
+        const row=el?.closest('button,[role="button"],.main-action,.compact-toggle,.toggle-btn')||el?.parentElement;
+        if(row&&row!==panel)rows.set(row,word);
+      }
+      rows.forEach((word,row)=>{
+        const on=word==='تشغيل';
+        row.classList.toggle('unified-toggle-on',on);
+        row.classList.toggle('unified-toggle-off',!on);
+        row.style.setProperty('background',on?'linear-gradient(135deg,#078b46,#10a95b)':'#70817f','important');
+        row.style.setProperty('border-color',on?'#08753e':'#859593','important');
+        row.style.setProperty('color','#fff','important');
+        row.querySelectorAll('*').forEach(ch=>ch.style.setProperty('color','#fff','important'));
+      });
+    });
+  }
+  const toggleColorObserver=new MutationObserver(()=>syncLegacyToggleColors());
+  toggleColorObserver.observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class','aria-pressed']});
+  document.addEventListener('click',()=>setTimeout(syncLegacyToggleColors,0),true);
+  setTimeout(syncLegacyToggleColors,0);
+
+  function consolidateDataPrayer(){
+    const date=document.querySelector('[data-open-panel="datePanel"]'),prayer=document.querySelector('[data-open-panel="prayerPanel"]'),iqama=document.querySelector('[data-open-panel="iqamaPanel"]'),switchBtn=document.querySelector('[data-open-panel="switchPanel"]');
+    if(!date||!prayer||!iqama)return false;
+    createGroup('datePrayerGroup','datePrayerMainBtn','datePrayerSubmenu','بيانات التاريخ والصلاة','🕌');
+    const dateMenu=document.getElementById('datePrayerSubmenu');
+    createGroup('prayerIqamaGroup','prayerIqamaMainBtn','prayerIqamaSubmenu','بيانات الصلاة و الإقامة','🕌');
+    const prayerGroup=document.getElementById('prayerIqamaGroup');
+    const prayerMenu=document.getElementById('prayerIqamaSubmenu');
+    [prayer,iqama].forEach(x=>{if(x.parentElement!==prayerMenu)prayerMenu.appendChild(x)});
+    [prayerGroup,date,switchBtn].filter(Boolean).forEach(x=>{if(x.parentElement!==dateMenu)dateMenu.appendChild(x)});
+    return true;
+  }
+  function addInterfaceVisibilityControls(){
+    const panel=document.getElementById('backgroundPanel');if(!panel||document.getElementById('interfaceVisibilityControls'))return false;
+    const box=document.createElement('div');box.id='interfaceVisibilityControls';box.className='visibility-section';box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>👁️ إظهار عناصر واجهة البرنامج</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid"></div></div>';
+    const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
+    const grid=box.querySelector('.interface-visibility-grid'),KEY='aoqatInterfaceVisibilityV1';
+    let state={};try{state={clock:true,date:true,adhan:true,iqama:true,...(JSON.parse(localStorage.getItem(KEY)||'{}')||{})};}catch(_){}
+    const items=[['clock','الساعة','.interface-clock-card'],['date','التاريخ','.interface-date-card'],['adhan','باقي على الصلاة','.next-prayer'],['iqama','باقي على الإقامة','.iqama-status']];
+    const apply=()=>{items.forEach(([k,,sel])=>{document.querySelectorAll(sel).forEach(el=>el.style.setProperty('display',state[k]===true&&!el.hidden?'inline-flex':'none','important'));});const sep=document.getElementById('countdownSeparator');if(sep)sep.style.setProperty('display',(state.adhan===true&&state.iqama===true&&!sep.hidden)?'block':'none','important');};
+    items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]===true;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=!(state[k]===true);localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
+    panel.appendChild(box);apply();setInterval(apply,1000);return true;
+  }
+  function addDesignVisibilityControls(){
+    const panel=document.getElementById('backgroundPanel');if(!panel)return false;
+    let box=document.getElementById('designVisibilityControls');
+    if(!box){
+      box=document.createElement('div');box.id='designVisibilityControls';box.className='visibility-section';
+      box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>🖼️ إظهار / إخفاء التصاميم</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid design-visibility-grid"></div></div>';
+      const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
+      panel.appendChild(box);
+    }
+    const grid=box.querySelector('.design-visibility-grid'),KEY='aoqatDesignVisibilityV1';
+    let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}
+    const slides=Array.from(document.querySelectorAll('.design-carousel-track > .design-slide')).filter(slide=>!slide.dataset.legacySlide&&!slide.querySelector('#design')&&!slide.classList.contains('removed-design-storage')&&!slide.closest('.removed-design-storage'));
+    if(!slides.length)return false;
+    const canonical=['designRef','design2','design3','design4'];
+    slides.sort((a,b)=>canonical.indexOf(a.firstElementChild?.id)-canonical.indexOf(b.firstElementChild?.id));
+    slides.forEach((slide,i)=>{slide.dataset.visibilityKey=slide.firstElementChild?.id||'design-'+(i+1);const key=slide.dataset.visibilityKey;if(!(key in state)&&('design-'+(i+1)) in state)state[key]=state['design-'+(i+1)];});
+    const enabledSlides=()=>slides.filter(slide=>state[slide.dataset.visibilityKey]!==false);
+    const apply=()=>{
+      if(!enabledSlides().length){state[slides[0].dataset.visibilityKey]=true;localStorage.setItem(KEY,JSON.stringify(state));}
+      slides.forEach(slide=>slide.dataset.designDisabled=state[slide.dataset.visibilityKey]===false?'true':'false');
+      window.dispatchEvent(new CustomEvent('prayerDesignVisibilityChanged',{detail:{state}}));
+    };
+    grid.innerHTML='';
+    slides.forEach((slide,i)=>{
+      const key=slide.dataset.visibilityKey,b=document.createElement('button');b.type='button';b.className='interface-visibility-btn design-visibility-btn';
+      const draw=()=>{const on=state[key]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>التصميم '+(i+1)+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};
+      b.onclick=()=>{const on=state[key]!==false;if(on&&enabledSlides().length===1)return;state[key]=!on;localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);
+    });
+    apply();return true;
+  }
+  function consolidateBackgroundFont(){addInterfaceVisibilityControls();addDesignVisibilityControls();const a=document.querySelector('[data-open-panel="fontPanel"]'),b=document.querySelector('[data-open-panel="backgroundPanel"]'),e=document.getElementById('topExportJpg');if(!a||!b)return false;createGroup('backgroundFontGroup','backgroundFontMainBtn','backgroundFontSubmenu','واجهة البرنامج الرئيسية','🎨');const s=document.getElementById('backgroundFontSubmenu');[b,a,e].filter(Boolean).forEach(x=>{if(x.parentElement!==s)s.appendChild(x)});return true;}
+  function arrange(){const main=document.querySelector('.sidebar .main-panel');if(!main)return false;addStyles();const d=consolidateDataPrayer(),s=consolidateBackgroundFont();ORDER.forEach(sel=>{const item=main.querySelector(sel)||document.querySelector(sel);if(!item)return;main.appendChild(item);const id=item.dataset?.openPanel;if(id){const p=document.getElementById(id);if(p&&p.parentElement===main)main.appendChild(p);}});document.querySelectorAll('.inline-control-panel').forEach(addClose);return d&&s&&ORDER.every(sel=>!!document.querySelector(sel));}
+
+  function installExclusivePopupBehavior(){
+    if(document.documentElement.dataset.exclusiveDesignPopups)return;document.documentElement.dataset.exclusiveDesignPopups='1';
+    document.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-open-panel]');if(!btn)return;
+      const panel=document.getElementById(btn.dataset.openPanel);if(!panel)return;
+      closeGroups();closePanels(panel);addClose(panel);document.body.classList.add('design-detail-open');
+    },true);
+  }
+  function init(){window.addEventListener('prayerDesignChanged',()=>{if(document.querySelectorAll('.design-visibility-btn').length!==4)addDesignVisibilityControls();});let tries=0;arrange();installExclusivePopupBehavior();const timer=setInterval(()=>{tries++;if(arrange()||tries>=60)clearInterval(timer);},150);window.addEventListener('aoqatModulesReady',()=>{arrange();installExclusivePopupBehavior();});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
+

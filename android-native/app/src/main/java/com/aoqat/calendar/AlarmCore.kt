@@ -36,7 +36,9 @@ object AlarmScheduler {
 
     private fun prefs(c:Context)=c.getSharedPreferences("publish_alarm_settings",Context.MODE_PRIVATE)
     fun enabled(c:Context)=prefs(c).getBoolean("enabled",false)
-    @Synchronized fun migrate(c:Context,legacy:Boolean):Boolean{if(!prefs(c).contains("enabled")){prefs(c).edit().putBoolean("enabled",legacy).commit();if(legacy)scheduleFromDatabase(c)};return enabled(c)}
+    fun snoozeMinutes(c:Context)=prefs(c).getInt("snoozeMinutes",10).coerceIn(1,30)
+    fun setSnoozeMinutes(c:Context,minutes:Int){prefs(c).edit().putInt("snoozeMinutes",minutes.coerceIn(1,30)).commit()}
+    @Synchronized fun migrate(c:Context,legacy:Boolean):Boolean{if(!prefs(c).contains("enabled")){prefs(c).edit().putBoolean("enabled",false).commit()};return enabled(c)}
     @Synchronized fun setEnabled(c:Context,on:Boolean){prefs(c).edit().putBoolean("enabled",on).commit();if(on)scheduleFromDatabase(c)else cancel(c)}
     @Synchronized fun claim(c:Context,at:Long):Boolean {
         if(!enabled(c)||at<=0||System.currentTimeMillis()-at !in 0 until 120000L||prefs(c).getLong("delivered",0)==at)return false
@@ -69,8 +71,8 @@ object AlarmScheduler {
         AlarmSoundService.stop(context)
     }
 
-    fun scheduleSnooze(context: Context, minutes: Long = 10L) {
-        scheduleExactMillis(context, System.currentTimeMillis() + minutes * 60_000L)
+    fun scheduleSnooze(context: Context, minutes: Long = snoozeMinutes(context).toLong()) {
+        scheduleExactMillis(context, System.currentTimeMillis() + minutes.coerceIn(1,30) * 60_000L)
     }
 
     private fun targetForDate(context: Context, date: LocalDate): LocalDateTime? {
@@ -285,8 +287,8 @@ object AlarmUi {
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("⏰ مواقيت الغد جاهزة")
-            .setContentText("اضغط إيقاف التنبيه أو غفوة 10 دقائق")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("تم تبديل التوقيت إلى اليوم التالي. اختر إيقاف التنبيه أو غفوة 10 دقائق."))
+            .setContentText("اضغط إيقاف التنبيه أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق")
+            .setStyle(NotificationCompat.BigTextStyle().bigText("تم تبديل التوقيت إلى اليوم التالي. اختر إيقاف التنبيه أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق."))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -296,7 +298,7 @@ object AlarmUi {
             .setDeleteIntent(stopPending)
             .setContentIntent(fullPending)
             .setFullScreenIntent(fullPending, true)
-            .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة 10 دقائق", snoozePending)
+            .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق", snoozePending)
             .addAction(android.R.drawable.ic_media_pause, "إيقاف التنبيه", stopPending)
             .build()
     }
@@ -317,7 +319,7 @@ class AlarmActionReceiver : BroadcastReceiver() {
             "SNOOZE" -> {
                 AlarmSoundService.stop(context)
                 AlarmUi.dismiss(context)
-                AlarmScheduler.scheduleSnooze(context, 10)
+                AlarmScheduler.scheduleSnooze(context)
             }
             else -> {
                 AlarmSoundService.stop(context)
@@ -328,6 +330,12 @@ class AlarmActionReceiver : BroadcastReceiver() {
 }
 
 class AlarmSoundService : Service() {
+    private val screenOff=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){
+        if(i.action==Intent.ACTION_SCREEN_OFF&&AlarmScheduler.enabled(c)){
+            AlarmScheduler.scheduleSnooze(c);stopSelf()
+        }
+    }}
+    override fun onCreate(){super.onCreate();androidx.core.content.ContextCompat.registerReceiver(this,screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)}
     private var player: MediaPlayer? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var vibrator: Vibrator? = null
@@ -374,6 +382,7 @@ class AlarmSoundService : Service() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(screenOff)
         stopHandler.removeCallbacks(safetyStop)
         try { player?.stop() } catch (_: Exception) { }
         player?.release(); player = null
@@ -405,6 +414,12 @@ class AlarmSoundService : Service() {
 }
 
 class AlarmActivity : Activity() {
+    private var snoozed=false
+    private fun snooze(){if(snoozed||!AlarmScheduler.enabled(this))return;snoozed=true;AlarmScheduler.scheduleSnooze(this);AlarmSoundService.stop(this);finish()}
+    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean{
+        if(code==android.view.KeyEvent.KEYCODE_VOLUME_UP||code==android.view.KeyEvent.KEYCODE_VOLUME_DOWN){snooze();return true}
+        return super.onKeyDown(code,event)
+    }
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
@@ -415,6 +430,7 @@ class AlarmActivity : Activity() {
 
         if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED))
         if(!AlarmScheduler.enabled(this)){finish();return}
+
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -436,11 +452,11 @@ class AlarmActivity : Activity() {
             setPadding(0, 30, 0, 50)
         }
         val snooze = Button(this).apply {
-            text = "غفوة 10 دقائق"
+            text = "غفوة ${AlarmScheduler.snoozeMinutes(this@AlarmActivity)} دقائق"
             textSize = 18f
             setOnClickListener {
                 AlarmSoundService.stop(this@AlarmActivity)
-                AlarmScheduler.scheduleSnooze(this@AlarmActivity, 10)
+                AlarmScheduler.scheduleSnooze(this@AlarmActivity)
                 finish()
             }
         }

@@ -11,10 +11,11 @@ permissions:
   contents: write
   actions: read
 concurrency:
-  group: publish-aoqat-v1.55
+  group: publish-aoqat-v1.56
   cancel-in-progress: false
 jobs:
   publish:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-22.04
     timeout-minutes: 30
     permissions:
@@ -30,14 +31,14 @@ jobs:
           test "$RUN_ID" != 0 || { echo 'Only completed build runs may publish'; exit 1; }
           test "$(gh api repos/$GH_REPO/actions/runs/$RUN_ID/jobs --jq '.jobs[] | select(.name == "build-apk") | .conclusion')" = success
           mkdir -p release
-          gh run download "$RUN_ID" --name aoqat-android-v1.55-build90 --dir release
-          mv release/app-debug.apk release/aoqat-v1.55.apk
+          gh run download "$RUN_ID" --name aoqat-android-v1.56-build91 --dir release
+          mv release/app-debug.apk release/aoqat-v1.56.apk
       - name: Verify release bytes and signing certificate
         run: |
-          test -s release/aoqat-v1.55.apk
-          sha256sum release/aoqat-v1.55.apk > release/aoqat-v1.55.sha256
+          test -s release/aoqat-v1.56.apk
+          sha256sum release/aoqat-v1.56.apk > release/aoqat-v1.56.sha256
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
-          "$signer" verify --print-certs release/aoqat-v1.55.apk > release/signature.txt
+          "$signer" verify --print-certs release/aoqat-v1.56.apk > release/signature.txt
           grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' release/signature.txt
       - name: Publish installation file
         env:
@@ -48,17 +49,17 @@ jobs:
           gh auth status
           gh api "repos/$GH_REPO" --jq '{name,permissions}'
           cat > release/notes.txt <<'NOTES'
-          الإصدار 1.55 التجريبي: شاشة بدء عاجية وزمردية، واختيار مستقل بين الصامت وعدم الإزعاج لصلاة الجمعة، منبّه صلاة بواجهة ملء الشاشة وغفوة عبر زرّي الصوت، إشعارات الصلاة بصوت القناة المختارة في إعدادات الهاتف، ودمج أحدث محتوى الويب ضمن الحزمة. المصحف المعتمد فقط (604 صفحات) وقاعدة المواقيت دون إنترنت؛ استبعاد النسخ المصورة القديمة والملونة من الحزمة لتقليل الحجم. تنبيه: التحديث الجزئي الصغير ومعالجة زر الطاقة والغفوة والتأكد الميداني من أذان العصر لا تزال تتطلب اختبارات إضافية. ثبّت التحديث فوق النسخة الحالية للحفاظ على إعداداتك.
+          الإصدار 1.56: دمج أحدث التقاويم والبوصلة، شاشة بدء خضراء وشعار أكبر، إظهار عناصر الواجهة الأربعة افتراضياً، غفوة نشر قابلة للتخصيص بأزرار الصوت وزر الطاقة، واستئناف الأذان بعد إعادة تشغيل عملية الصوت بواسطة النظام. دعم تحديثات جزئية لمحتوى الواجهة فقط؛ تغييرات Android تتطلب APK. المصحف والمواقيت محفوظة دون إنترنت. الاختبارات الآلية لا تستبدل اختبار الرنين على أجهزة الشركات المختلفة.
           NOTES
-          if ! gh release view v1.55 >/dev/null 2>&1; then
-            gh release create v1.55 --target main --title 'أوقات الصلاة في الحويجة 1.55' --notes-file release/notes.txt
+          if ! gh release view v1.56 >/dev/null 2>&1; then
+            gh release create v1.56 --target "${{ github.event.workflow_run.head_sha }}" --title 'أوقات الصلاة في الحويجة 1.56' --notes-file release/notes.txt
           fi
           for attempt in 1 2 3; do
-            if gh release upload v1.55 release/aoqat-v1.55.apk release/aoqat-v1.55.sha256 --clobber; then
+            if gh release upload v1.56 release/aoqat-v1.56.apk release/aoqat-v1.56.sha256 --clobber; then
               break
             fi
             if [ "$attempt" -eq 3 ]; then exit 1; fi
             sleep 15
           done
-          gh release view v1.55 --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.55.apk'
-# Publish trigger for verified v1.55 APK from successful build 40368561273
+          gh release view v1.56 --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.56.apk'
+# Publish trigger for verified v1.56 APK from successful build 40368561273

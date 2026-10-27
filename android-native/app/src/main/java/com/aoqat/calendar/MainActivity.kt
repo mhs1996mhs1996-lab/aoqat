@@ -446,13 +446,15 @@ class MainActivity : Activity() {
         webView.addJavascriptInterface(AndroidBridge(), "AndroidNative")
 
         val mushafStore = MushafAssetStore(this)
+        val webUpdates = WebUpdates(this)
+        webUpdates.check()
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, phoneBackCallback)
         }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? {
-                return if (request.method == "GET") mushafStore.response(request.url) else null
+                return if (request.method == "GET") (webUpdates.response(request.url) ?: mushafStore.response(request.url)) else null
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
@@ -730,6 +732,8 @@ class MainActivity : Activity() {
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
         @JavascriptInterface fun adhanPermissions(){runOnUiThread{requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(!nm.isNotificationPolicyAccessGranted)startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))else if(Build.VERSION.SDK_INT>=34&&!nm.canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))else Toast.makeText(this@MainActivity,"أذونات الأذان وشاشة القفل متاحة",Toast.LENGTH_LONG).show()}}
 
+        @JavascriptInterface fun readPublishSnoozeMinutes():Int=AlarmScheduler.snoozeMinutes(this@MainActivity)
+        @JavascriptInterface fun configurePublishSnoozeMinutes(minutes:Int){AlarmScheduler.setSnoozeMinutes(this@MainActivity,minutes)}
         @JavascriptInterface fun stopPublishAlarm(){AlarmSoundService.stop(this@MainActivity)}
         @JavascriptInterface fun readPublishAlarmEnabled(legacy:Boolean):Boolean=AlarmScheduler.migrate(this@MainActivity,legacy)
 
