@@ -125,7 +125,7 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&phonePages.has(target)){galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}else if(phoneMode()&&(!phonePages.has(target))){const from=state.page;Promise.all([phonePage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&phonePages.has(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}else if(phoneMode()&&(!phonePages.has(target))){const from=state.page;Promise.all([phonePage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
@@ -191,9 +191,10 @@
       if(!phonePages.has(target))return;
       const ready=galleryReady.get(target);
       if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
-        // Recover if the idle pre-render timer did not finish before touch.
-        galleryReady.get(target)?.node.remove();galleryReady.delete(target);
-        galleryPrepare(target);
+        // Never build an SVG page during pointermove: that blocks the touch frame.
+        // Let the release handler commit once the adjacent page is prepared.
+        if(ready){ready.node.remove();galleryReady.delete(target);}
+        return;
       }
       const prepared=galleryReady.get(target);
       if(!prepared)return;
