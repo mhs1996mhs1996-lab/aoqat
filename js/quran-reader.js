@@ -48,6 +48,30 @@
   async function compressed(url){const r=await fetch(url);if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
   async function loadPhone(){const ready=await fetch('assets/mushaf-phone-hafs-ready.json');if(!ready.ok)throw Error('Phone Mushaf unavailable');const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');return data;}
   async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
+  // Store every page on disk for offline turns, without retaining 604 DOM trees in RAM.
+  // Adjacent pages still take priority through phonePage() during navigation.
+  let offlineWarmStarted=false;
+  async function cacheAllPhonePages(){
+    if(offlineWarmStarted||!phone?.directory||!('caches' in window))return;
+    offlineWarmStarted=true;
+    try{
+      const cache=await caches.open('aoqat-mushaf-phone-hafs');
+      for(let p=1;p<=TOTAL;p++){
+        if(!root?.isConnected){offlineWarmStarted=false;return;}
+        const url=`${phone.directory}/${String(p).padStart(3,'0')}.json.gz`;
+        if(await cache.match(url))continue;
+        // Keep the browser responsive and avoid competing with an active page turn.
+        while(pointer||phoneRequests.size>0)await new Promise(r=>setTimeout(r,120));
+        const response=await fetch(url);
+        if(!response.ok)throw Error('Offline Mushaf page '+p+' unavailable');
+        await cache.put(url,response);
+        await new Promise(r=>setTimeout(r,25));
+      }
+    }catch(e){
+      offlineWarmStarted=false;
+      console.warn('Mushaf offline preparation paused:',e);
+    }
+  }
   async function load(){
     if(!loading)loading=Promise.all([fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error();return r.json();}),fetch('assets/quran-pages.json').then(r=>{if(!r.ok)throw Error();return r.json();}),loadPhone()]).then(async ([q,m,f])=>{phone=f;
       if(q.length!==114||m.pages.length!==604)throw Error();quran=q;meta=m;
@@ -55,6 +79,8 @@
       if(verses.length!==6236)throw Error();
       // The approved phone Mushaf is the only reading edition.
       meta={...m,pages:phone.pages};state.layout='phone';state.mobileTrial=false;state.phoneRevision=1;
+      // Start disk prefetch after the reader is mounted; never delay first render.
+      setTimeout(()=>{if(root?.isConnected)void cacheAllPhonePages();},1500);
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
