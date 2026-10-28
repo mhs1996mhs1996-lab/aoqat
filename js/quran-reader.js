@@ -408,7 +408,18 @@
     // The opening pair has just eight authentic printed content rows. Center
     // them together in an ornamental folio rather than 8/15 top-anchored rows.
     const html=rows.map((row,n)=>{
-      if(row.s)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
+      if(row.s){
+        if(page<=2){
+          // Printed Madinah Mushaf opening spread: a separate decorated surah
+          // title above the centered verses (do not repeat the metadata banner).
+          const title=page===1?'سُورَةُ الْفَاتِحَةِ':'سُورَةُ الْبَقَرَةِ';
+          return '<div class="aq-native-heading aq-qcf-heading aq-qcf-opening-heading" role="heading" aria-level="2">'+
+            '<span class="aq-qcf-opening-ornament" aria-hidden="true">❀ ❁ ❀</span>'+
+            '<span class="aq-qcf-opening-title">'+title+'</span>'+
+            '<span class="aq-qcf-opening-ornament" aria-hidden="true">❀ ❁ ❀</span></div>';
+        }
+        return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
+      }
       if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
         ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
