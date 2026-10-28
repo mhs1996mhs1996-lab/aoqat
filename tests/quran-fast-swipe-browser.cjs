@@ -3,9 +3,9 @@ const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
 const {readFileSync}=require('node:fs');
 const html=readFileSync('index.html','utf8'),sw=readFileSync('sw.js','utf8');
-assert.ok(html.includes('js/quran-reader.js?v=qcf-ornate-frame-20261028'));
-assert.ok(sw.includes('js/quran-reader.js?v=qcf-ornate-frame-20261028'));
-assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
+assert.ok(html.includes('js/quran-reader.js?v=qcf-font-lru-fast-20261028'));
+assert.ok(sw.includes('js/quran-reader.js?v=qcf-font-lru-fast-20261028'));
+assert.ok(sw.includes('aoqat-pwa-v175-qcf-basmala-fast-20261028'));
 (async()=>{
  const server=spawn('python3',['-m','http.server','8795'],{stdio:'ignore'});
  let browser;
