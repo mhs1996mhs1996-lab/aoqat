@@ -28,7 +28,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
    await page.mouse.move(175,350,{steps:3});
    await page.mouse.up();
  }
- await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.page==='124'&&document.querySelector('#aqReader')?.dataset.ready==='true',null,{timeout:10000});
+ await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.page==='124'&&document.querySelector('#aqReader')?.dataset.ready==='true',null,{timeout:10000}).catch(async error=>{const snapshot=await page.locator('#aqReader').evaluate(e=>({page:e.dataset.page,ready:e.dataset.ready,visibleLines:e.querySelectorAll('#adVerses .aq-native-line').length}));throw Error('Rapid Quran swipe failed: '+JSON.stringify(snapshot),{cause:error});});
  assert.equal(await page.locator('#adVerses .aq-native-line').count()>0,true,'rapid swipes must leave a ready page');
  await jump(120);
  for(let n=121;n<=130;n++){
