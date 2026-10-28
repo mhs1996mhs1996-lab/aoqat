@@ -31,7 +31,7 @@ const {spawn}=require('node:child_process');
    console.log('QCF_PAGE_'+n+'_IMAGE='+screenshot.toString('base64'));
    const geometry=await page.locator('#aqPaper').evaluate(p=>{
      const rect=x=>{const r=x.getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:r.height};};
-     return {paper:rect(p),block:rect(p.querySelector('.aq-qcf-opening-inner')),heading:rect(p.querySelector('.aq-qcf-opening-heading')),first:rect(p.querySelector('.aq-qcf-line')),last:rect([...p.querySelectorAll('.aq-qcf-line')].at(-1))};
+     return {paper:rect(p),block:rect(p.querySelector('.aq-qcf-opening-inner')),heading:rect(p.querySelector('.aq-qcf-opening-top')),count:p.querySelector('.aq-qcf-opening-top .aq-surah-info-count')?.textContent,kind:p.querySelector('.aq-qcf-opening-top .aq-surah-info-kind')?.textContent,first:rect(p.querySelector('.aq-qcf-line')),last:rect([...p.querySelectorAll('.aq-qcf-line')].at(-1))};
    });
    console.log('QCF_PAGE_'+n+'_GEOMETRY='+JSON.stringify(geometry));
    await page.evaluate(()=>document.body.classList.remove('quran-reader-immersive'));

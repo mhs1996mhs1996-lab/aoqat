@@ -405,31 +405,11 @@
   function qcfHTML(page){
     const rows=qcfData.get(page);
     if(!rows)return '';
-    // The opening pair has just eight authentic printed content rows. Center
-    // them together in an ornamental folio rather than 8/15 top-anchored rows.
+    // The first two Mushaf pages keep their original 7 / 286 ayah metadata
+    // in the top surah bar. Only the Quran text occupies the centered folio.
+    // Do not move or remove the reader's existing surah-information header.
     const html=rows.map((row,n)=>{
-      if(row.s){
-        if(page<=2){
-          // Printed Madinah Mushaf opening spread: a separate decorated surah
-          // title above the centered verses (do not repeat the metadata banner).
-          const title=page===1?'سُورَةُ الْفَاتِحَةِ':'سُورَةُ الْبَقَرَةِ';
-          // SVG ornaments are stable on Android Chrome; decorative Unicode
-          // flowers were rendered as tiny bullets on the user's device.
-          const ornament='<svg class="aq-qcf-opening-ornament" viewBox="0 0 180 54" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
-            '<g fill="none" stroke="#a68963" stroke-width="1.4">'+
-            '<path d="M0 27h180" opacity=".25"/>'+
-            '<g transform="translate(37 27)"><circle r="18"/><circle r="13"/>'+
-            '<ellipse rx="5" ry="15"/><ellipse rx="5" ry="15" transform="rotate(45)"/>'+
-            '<ellipse rx="5" ry="15" transform="rotate(90)"/><ellipse rx="5" ry="15" transform="rotate(135)"/>'+
-            '<circle r="4" fill="#c8b395"/></g>'+
-            '<g transform="translate(110 27)"><circle r="12"/>'+
-            '<path d="M0-17Q8-8 17 0Q8 8 0 17Q-8 8-17 0Q-8-8 0-17Z"/>'+
-            '<circle r="5" fill="#c8b395"/></g></g></svg>';
-          return '<div class="aq-native-heading aq-qcf-heading aq-qcf-opening-heading" role="heading" aria-level="2">'+
-            ornament+'<span class="aq-qcf-opening-title">'+title+'</span>'+ornament+'</div>';
-        }
-        return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
-      }
+      if(row.s)return page<=2?'':'<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
       if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
         ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
@@ -441,7 +421,19 @@
             '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+esc(code)+'</span>';
         }).join('')+'</div>';
     }).join('');
-    return page<=2?'<div class="aq-qcf-opening-inner">'+html+'</div>':html;
+    if(page<=2){
+      // Small symmetric vector ornaments live at the EDGE of the info bar,
+      // leaving the ayah count, surah name and Makki/Madani label readable.
+      const flower='<svg class="aq-qcf-opening-corner" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
+        '<g fill="none" stroke="#a88c63" stroke-width="1.05">'+
+        '<circle cx="14" cy="14" r="10"/><circle cx="14" cy="14" r="3.4" fill="#dbc7a7"/>'+
+        '<path d="M14 1L18 10L27 14L18 18L14 27L10 18L1 14L10 10Z"/>'+
+        '<circle cx="14" cy="14" r="6.5" stroke-dasharray="1.5 2"/></g></svg>';
+      const header='<div class="aq-qcf-opening-top aq-native-heading aq-qcf-heading" role="group" aria-label="معلومات السورة">'+
+        flower+surahBanner(page)+flower+'</div>';
+      return header+'<div class="aq-qcf-opening-inner">'+html+'</div>';
+    }
+    return html;
   }
   function pageHTML(page){
     if(isQcf())return qcfHTML(page);
