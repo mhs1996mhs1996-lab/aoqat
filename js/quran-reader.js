@@ -380,15 +380,13 @@
   function qcfHTML(page){
     const rows=qcfData.get(page);
     if(!rows)return '';
-    return rows.map((row,n)=>{
-      // In the standard Madinah Mushaf, the two facing opening pages contain
-      // eight content rows in a framed central block, not eight rows at the top
-      // of an otherwise blank 15-row page. Keep every authentic QCF glyph.
-      const opening=page<=2?';--aq-opening-slot:'+(n+4):'';
-      if(row.s)return '<div class="aq-native-heading aq-qcf-heading" style="'+(page<=2?'--aq-opening-slot:'+(n+4):'')+'">'+surahBanner(row.s)+'</div>';
-      if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah" style="'+(page<=2?'--aq-opening-slot:'+(n+4):'')+'">'+esc(quran[0].verses[0].text)+'</div>';
+    // The opening pair has just eight authentic printed content rows. Center
+    // them together in an ornamental folio rather than 8/15 top-anchored rows.
+    const html=rows.map((row,n)=>{
+      if(row.s)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
+      if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
-        ';--aq-qcf-row:'+(n+1)+opening+'" aria-label="السطر '+arabic(n+1)+'">'+
+        ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
         row.v.map(([i,code,end])=>{
           const v=verses[i];
           return '<span class="aq-qcf-word'+(end?' aq-qcf-marker':'')+
@@ -397,6 +395,7 @@
             '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+esc(code)+'</span>';
         }).join('')+'</div>';
     }).join('');
+    return page<=2?'<div class="aq-qcf-opening-inner">'+html+'</div>':html;
   }
   function pageHTML(page){
     if(isQcf())return qcfHTML(page);
@@ -510,10 +509,11 @@
         for(const line of lines){
           line.style.setProperty('font-size',startingSize+'px','important');
           // Measure once per page/viewport/zoom, while the page is staged.
-          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(width-6)/measured));
+          const allowed=Math.max(40,Math.min(width-6,line.clientWidth-4));
+          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(allowed-3)/measured));
           line.style.setProperty('font-size',fitted.toFixed(2)+'px','important');
-          if(line.scrollWidth>width+2){
-            const smaller=Math.max(11,fitted*(width-4)/line.scrollWidth);
+          if(line.scrollWidth>allowed+2){
+            const smaller=Math.max(11,fitted*(allowed-3)/line.scrollWidth);
             line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
           }
           sizes.push(parseFloat(line.style.fontSize));
