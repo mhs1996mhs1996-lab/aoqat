@@ -154,7 +154,7 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!hasReadyPage(target))){const from=state.page;Promise.all([ensureReadyPage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&hasReadyPage(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true,speed);}else if(phoneMode()&&(!hasReadyPage(target))){const from=state.page;Promise.all([ensureReadyPage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true,speed);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&hasReadyPage(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true,speed);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
@@ -268,15 +268,18 @@
     current.style.willChange='transform';current.style.transform='translate3d('+offset+'px,0,0)';
     galleryNeighbor.style.transform='translate3d('+(offset-direction*width)+'px,0,0)';
   }
-  function galleryFinish(target,commit){
+  function galleryFinish(target,commit,swipeSpeed=0){
     const paper=$('aqPaper'),current=$('adVerses'),neighbor=galleryNeighbor;
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
     galleryBusy=true;
     const direction=galleryDirection,width=paper.clientWidth;
     // Prevent the hidden offscreen staging transform from flashing on screen.
     neighbor.style.visibility='visible';
-    current.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
-    neighbor.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
+    // A quick finger flick should not be held back by a long fixed 260ms
+    // animation. Keep the old timing for SVG; QCF gets a responsive finish.
+    const duration=isQcf()?(commit&&swipeSpeed>=.7?160:commit&&swipeSpeed>=.4?195:225):260;
+    current.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
+    neighbor.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
     galleryAnimationFrame=requestAnimationFrame(()=>{
       galleryAnimationFrame=0;
       if(!galleryBusy)return;
@@ -328,7 +331,7 @@
     };
     gallerySettle=settle;
     neighbor.addEventListener('transitionend',settle,{once:true});
-    gallerySettleTimer=setTimeout(settle,310);
+    gallerySettleTimer=setTimeout(settle,duration+65);
   }
   function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform=isQcf()?'translate3d(0,0,0)':'';}
   // Web QCF V2 experiment: word glyph codes and verse mappings are bundled,
