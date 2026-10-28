@@ -325,3 +325,17 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-i
 /* Final visibility guard: toolbar-open mode fully occludes quick save; reading mode retains it. */
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.quran-reader-open.quran-reader-immersive #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+
+
+/* QCF V2: a prepared page must have the same exact geometry during the
+   finger drag, during the settling animation and after DOM adoption.
+   Previously it changed from an absolutely placed gallery neighbour to a
+   flex item at settle(), causing a visible secondary shift after the swipe.
+   Keep both nodes on the same stable layer; the JS continues to move ONLY
+   their compositor transforms. Scoped to web QCF, not original SVG or APK. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] #aqPaper>.aq-page-text{
+  position:absolute!important;
+  top:6px!important;
+  left:max(9px, calc((100% - 640px)/2))!important;
+  margin:0!important;
+}

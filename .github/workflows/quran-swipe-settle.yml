@@ -1,0 +1,33 @@
+name: Verify Quran QCF swipe settles without a second page shift
+on:
+  push:
+    branches:
+      - fix/quran-qcf-post-swipe-shift-20261028
+    paths:
+      - css/quran-reader.css
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-swipe-settle.yml
+  pull_request:
+    paths:
+      - css/quran-reader.css
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-swipe-settle.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qcf-swipe-stability:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chrome browser driver
+        run: npm install --no-save --package-lock=false playwright
+      - name: Check page stops moving after the swipe and handoff
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Check complete QCF reader, bookmarks and random access
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Check approved SVG and offline PWA behavior
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
