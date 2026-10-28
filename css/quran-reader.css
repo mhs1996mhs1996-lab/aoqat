@@ -346,6 +346,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
    banner SVG; there are no corner flowers floating on top of Makki/Madani.
    All three real data fields remain readable inside its central cartouche. */
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-page.aq-qcf-opening{
+  /* Generic Quran page adds .22px synthetic stroke. Native QCF V2 glyphs
+     must use their OWN genuine weight, with no inherited thickening. */
+  -webkit-text-stroke:0!important;
   display:grid!important;
   position:relative!important;
   grid-template-columns:minmax(0,1fr)!important;
@@ -494,6 +497,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   gap:clamp(0px,.2vw,2px)!important;
   font-family:var(--aq-qcf-font),serif!important;
   font-weight:400!important;
+  -webkit-text-stroke:0!important;
   line-height:1.3!important;
   overflow:visible!important;
   white-space:nowrap!important;
@@ -503,14 +507,28 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   min-height:0!important;
   width:100%!important;
   margin:0!important;
-  /* Al-Baqarah's separate Basmala must match the REGULAR visual weight
-     of the QCF V2 words, like the first line of Al-Fatiha. The earlier
-     synthetic bold 700 + text stroke made it much darker and thicker than
-     every other verse. Leave all true per-page QCF glyph lines unchanged. */
-  font:400 clamp(29px,7.9vw,35px)/1.4 AoqatQuran,serif!important;
+  /* For page 2, use the exact page-1 QCF V2 Basmala word glyphs.
+     That guarantees the same actual font outlines as Al-Fatiha. Fitting
+     assigns one common size to all QCF lines on pages 1 and 2. */
+  font-family:var(--aq-qcf-font,AoqatQuran),serif!important;
+  font-size:clamp(29px,7.9vw,35px)!important;
+  font-weight:400!important;
+  line-height:1.3!important;
   -webkit-text-stroke:0!important;
-  text-rendering:initial!important;
+  text-rendering:auto!important;
   color:var(--qr-ink)!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"]
+.aq-qcf-opening>.aq-qcf-opening-inner>.aq-qcf-authentic-bismillah .aq-qcf-basmala-word{
+  font-family:inherit!important;
+  font-weight:400!important;
+  -webkit-text-stroke:0!important;
+  flex:0 0 auto!important;
+  white-space:pre!important;
+  letter-spacing:0!important;
+  color:var(--qr-ink)!important;
+  cursor:default!important;
+  pointer-events:none!important;
 }
 @media(max-height:600px){
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top{

@@ -1,0 +1,43 @@
+name: Quran opening uniform QCF glyphs and Basmala visual test
+on:
+  push:
+    branches:
+      - fix/quran-uniform-glyphs-opening-20261028
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-font-diagnostics.cjs
+      - tests/quran-opening-pages-browser.cjs
+      - .github/workflows/quran-opening-uniform-glyphs.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-font-diagnostics.cjs
+      - tests/quran-opening-pages-browser.cjs
+      - .github/workflows/quran-opening-uniform-glyphs.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qcf-uniform-words:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser test harness
+        run: npm install --no-save --package-lock=false playwright
+      - name: Record exact QCF glyph rows and fitted text sizes for opening pages
+        run: node tests/quran-opening-font-diagnostics.cjs
+      - name: Verify opening layout and all genuine ayat
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Verify fast QCF flicks unchanged
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: Verify original SVG and offline PWA
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs

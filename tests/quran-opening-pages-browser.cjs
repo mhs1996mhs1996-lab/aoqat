@@ -64,9 +64,12 @@ const {spawn}=require('node:child_process');
      })),
      firstLine:frame?.querySelector('.aq-qcf-line')&&rect(frame.querySelector('.aq-qcf-line')),
      basmala:!!frame?.querySelector('.aq-qcf-bismillah'),
+     genuineBasmalaWords:[...frame.querySelectorAll('.aq-qcf-authentic-bismillah .aq-qcf-basmala-word')].map(el=>el.textContent.codePointAt(0).toString(16)),
+     basmalaAria:frame.querySelector('.aq-qcf-authentic-bismillah')?.getAttribute('aria-label'),
      basmalaStyle:frame?.querySelector('.aq-qcf-bismillah')&&{
        fontSize:parseFloat(getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).fontSize),
        fontWeight:getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).fontWeight,
+       family:getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).fontFamily,
        stroke:parseFloat(getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).webkitTextStrokeWidth)||0,
        bounds:rect(frame.querySelector('.aq-qcf-bismillah')),
        scrollWidth:frame.querySelector('.aq-qcf-bismillah').scrollWidth,
@@ -74,7 +77,13 @@ const {spawn}=require('node:child_process');
      },
      firstLineFont:parseFloat(getComputedStyle(frame.querySelector('.aq-qcf-line')).fontSize),
      wordIds:[...new Set([...frame.querySelectorAll('.aq-qcf-word')].map(el=>Number(el.dataset.qrVerse)))],
-     lines:[...frame.querySelectorAll('.aq-qcf-line')].map(line=>({...rect(line),clientW:line.clientWidth,scrollW:line.scrollWidth})),
+     lines:[...frame.querySelectorAll('.aq-qcf-line')].map(line=>({
+       ...rect(line),clientW:line.clientWidth,scrollW:line.scrollWidth,
+       fontSize:parseFloat(getComputedStyle(line).fontSize),
+       fontWeight:getComputedStyle(line).fontWeight,
+       fontFamily:getComputedStyle(line).fontFamily,
+       webkitStroke:getComputedStyle(line).webkitTextStrokeWidth
+     })),
      frameBackground:getComputedStyle(frame).backgroundColor
     };
    });
@@ -113,12 +122,24 @@ const {spawn}=require('node:child_process');
        'Al-Baqarah Basmala must use regular weight like the Quran lines');
      assert.ok(layout.basmalaStyle.stroke<=.01,
        'Do not artificially outline the Basmala while Quran glyphs have no text stroke');
-     assert.ok(layout.basmalaStyle.fontSize>=28&&layout.basmalaStyle.fontSize<=36,
+     assert.ok(layout.basmalaStyle.fontSize>=18&&layout.basmalaStyle.fontSize<=36,
        'Keep Al-Baqarah Basmala proportionate to surrounding QCF verses: '+JSON.stringify(layout.basmalaStyle));
+     assert.ok(layout.basmalaStyle.family.includes('AqQcfV2Page1'),
+       'Basmala must use the SAME authentic Fatiha QCF V2 font, not substituted AoqatQuran');
+     assert.deepEqual(layout.genuineBasmalaWords,['fc41','fc42','fc43','fc44'],
+       'Copy exactly Fatiha Basmala four word glyphs, without its verse-1 marker');
+     assert.ok(layout.basmalaAria?.includes('ٱللَّهِ'),'Unnumbered Basmala must remain accessible as Quran text');
+     assert.ok(Math.abs(layout.basmalaStyle.fontSize-layout.firstLineFont)<.05,
+       'Basmala and Baqarah verse words must have the SAME measured font size');
      assert.ok(layout.basmalaStyle.scrollWidth<=layout.basmalaStyle.clientWidth+3,
        'Basmala must remain fully visible on narrow screens');
    }
    assert.equal(layout.wordIds.length,n===1?7:5,'Missing or duplicate Quran verses in opening page '+n);
+   const allFontSizes=layout.lines.map(line=>line.fontSize);
+   assert.ok(Math.max(...allFontSizes)-Math.min(...allFontSizes)<=.05,
+     'ALL opening lines must use one measured QCF size (Fatiha 2/7 and Baqarah): '+JSON.stringify(allFontSizes));
+   assert.ok(layout.lines.every(line=>line.fontWeight==='400'&&(!line.webkitStroke||line.webkitStroke==='0px')),
+     'All QCF opening lines must have regular natural font weight and zero extra outlines');
    assert.ok(Math.abs((layout.frame.y+layout.frame.h/2)-(layout.paper.y+layout.paper.h/2))<layout.paper.h*.15,
     'ONLY the Quran text should be visually centered in the opening page: '+JSON.stringify(layout));
    assert.ok(layout.firstLine.y>layout.heading.b+14,'Opening text must begin below the decorative banner');
