@@ -272,7 +272,7 @@ async function switchMode(target){
  message(target==='qcf'?'جاري تحميل خط QCF V2 وبياناته…':'جاري تجهيز SVG الحالي…');
  try{
   await makeStage(n,target);
-  if(ticket!==modeToken)return;
+  if(ticket!==modeToken||page!==n)return;
   const old=node(n,mode);if(old){old.remove();staged.delete(mode+'-'+n);}
   mode=target;disposeFar();displayCurrent();warmNearby();
   message(mode==='qcf'?'الخط الأصلي QCF V2 — اسحب للتجربة':'رسومات SVG الحالية — اسحب للتجربة');
