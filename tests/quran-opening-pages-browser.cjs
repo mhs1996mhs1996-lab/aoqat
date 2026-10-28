@@ -50,7 +50,10 @@ const {spawn}=require('node:child_process');
      paper:rect(paper),frame:frame&&rect(frame),
      display:getComputedStyle(container).display,
      rowCount:frame?.children.length,
-     title:frame?.querySelector('.aq-surah-info-name')?.textContent,
+     title:frame?.querySelector('.aq-qcf-opening-title')?.textContent,
+     ornaments:frame?.querySelectorAll('.aq-qcf-opening-ornament').length||0,
+     heading:frame?.querySelector('.aq-qcf-opening-heading')&&rect(frame.querySelector('.aq-qcf-opening-heading')), 
+     firstLine:frame?.querySelector('.aq-qcf-line')&&rect(frame.querySelector('.aq-qcf-line')),
      basmala:!!frame?.querySelector('.aq-qcf-bismillah'),
      wordIds:[...new Set([...frame.querySelectorAll('.aq-qcf-word')].map(el=>Number(el.dataset.qrVerse)))],
      lines:[...frame.querySelectorAll('.aq-qcf-line')].map(line=>({...rect(line),clientW:line.clientWidth,scrollW:line.scrollWidth})),
@@ -59,12 +62,16 @@ const {spawn}=require('node:child_process');
    });
    assert.equal(layout.display,'flex','Opening Mushaf must be a vertically centered folio');
    assert.equal(layout.rowCount,8,'The opening pair must preserve the original eight printed rows');
-   assert.ok(layout.title.includes(n===1?'الفاتحة':'البقرة'),'Wrong surah opening heading');
+   assert.ok(layout.title.includes(n===1?'الْفَاتِحَةِ':'الْبَقَرَةِ'),'Wrong surah opening heading');
+   assert.equal(layout.ornaments,2,'Decorated Quran title needs symmetric ornamental flanks');
+   assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening requires a separate surah title with clear space above the verses');
    assert.equal(layout.basmala,n===2,'Al-Baqarah needs its own Basmala; Al-Fatiha contains Basmala in first verse');
    assert.equal(layout.wordIds.length,n===1?7:5,'Missing or duplicate Quran verses in opening page '+n);
-   assert.ok(Math.abs((layout.frame.y+layout.frame.h/2)-(layout.paper.y+layout.paper.h/2))<layout.paper.h*.075,
-    'First two pages should be centered, not glued to the top: '+JSON.stringify(layout));
+   assert.ok(layout.heading.y>layout.paper.y+layout.paper.h*.05&&layout.heading.y<layout.paper.y+layout.paper.h*.48,
+    'The surah banner must float above a centered opening folio, not stick to the top: '+JSON.stringify(layout));
+   assert.ok(layout.firstLine.y>layout.heading.b+14,'Opening text must begin below the decorative banner');
    assert.ok(layout.frame.h<layout.paper.h*.93,'Opening text and decoration must not fill or overflow screen');
+   assert.ok(layout.frame.b<=layout.paper.b+8,'Opening verses must remain inside the page area');
    for(let i=0;i<layout.lines.length;i++){
     const line=layout.lines[i];
     assert.ok(line.scrollW<=line.clientW+6,'QCF line spills horizontally outside framed opening: '+JSON.stringify({n,i,line}));
