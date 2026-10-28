@@ -47,7 +47,27 @@
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
   async function compressed(url){const r=await fetch(url);if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
   async function loadPhone(){const ready=await fetch('assets/mushaf-phone-hafs-ready.json');if(!ready.ok)throw Error('Phone Mushaf unavailable');const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');return data;}
-  async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
+  // A QCF-outline page can be hundreds of KB compressed and much larger parsed.
+  // Keep a small LRU working set; the service worker retains downloaded pages on disk.
+  function trimPhonePages(){
+    if(phonePages.size<=18)return;
+    for(const p of phonePages.keys()){
+      if(phonePages.size<=18)break;
+      if(Math.abs(p-state.page)<=3||galleryReady.has(p))continue;
+      phonePages.delete(p);
+    }
+  }
+  async function phonePage(page){
+    if(phonePages.has(page)){
+      const data=phonePages.get(page);phonePages.delete(page);phonePages.set(page,data);
+      return data;
+    }
+    if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{
+      if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');
+      phonePages.set(page,data);trimPhonePages();return data;
+    }).finally(()=>phoneRequests.delete(page)));
+    return phoneRequests.get(page);
+  }
   // Store every page on disk for offline turns, without retaining 604 DOM trees in RAM.
   // Adjacent pages still take priority through phonePage() during navigation.
   let offlineWarmStarted=false;
@@ -445,7 +465,21 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){
+      galleryClearReady();
+      const current=state.page;
+      for(const p of [current+1,current-1])if(p>=1&&p<=TOTAL){
+        phonePage(p).then(()=>{if(root?.isConnected&&state.page===current)gallerySchedule();}).catch(()=>{});
+      }
+      gallerySchedule();
+      // Read data for a short run of upcoming pages in the background.
+      // Only the immediate neighbors are turned into DOM nodes.
+      warmTask=setTimeout(()=>{
+        if(!root?.isConnected||pointer||galleryBusy||state.page!==current)return;
+        for(const p of [current+2,current+3,current-2])if(p>=1&&p<=TOTAL)phonePage(p).catch(()=>{});
+      },250);
+      return;
+    }
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
