@@ -50,10 +50,12 @@ const {spawn}=require('node:child_process');
      paper:rect(paper),frame:frame&&rect(frame),
      display:getComputedStyle(container).display,
      rowCount:frame?.children.length,
-     title:frame?.querySelector('.aq-qcf-opening-title')?.textContent,
-     ornaments:frame?.querySelectorAll('.aq-qcf-opening-ornament').length||0,
-     heading:frame?.querySelector('.aq-qcf-opening-heading')&&rect(frame.querySelector('.aq-qcf-opening-heading')),
-     headingTitle:frame?.querySelector('.aq-qcf-opening-title')&&rect(frame.querySelector('.aq-qcf-opening-title')),
+     heading:container.querySelector('.aq-qcf-opening-top')&&rect(container.querySelector('.aq-qcf-opening-top')),
+     title:container.querySelector('.aq-qcf-opening-top .aq-surah-info-name')?.textContent,
+     count:container.querySelector('.aq-qcf-opening-top .aq-surah-info-count')?.textContent,
+     kind:container.querySelector('.aq-qcf-opening-top .aq-surah-info-kind')?.textContent,
+     ornaments:container.querySelectorAll('.aq-qcf-opening-top .aq-qcf-opening-corner').length,
+     headerCount:container.querySelectorAll('.aq-qcf-opening-top .aq-surah-info-clean').length,
      firstLine:frame?.querySelector('.aq-qcf-line')&&rect(frame.querySelector('.aq-qcf-line')),
      basmala:!!frame?.querySelector('.aq-qcf-bismillah'),
      wordIds:[...new Set([...frame.querySelectorAll('.aq-qcf-word')].map(el=>Number(el.dataset.qrVerse)))],
@@ -61,17 +63,20 @@ const {spawn}=require('node:child_process');
      frameBackground:getComputedStyle(frame).backgroundColor
     };
    });
-   assert.equal(layout.display,'flex','Opening Mushaf must be a vertically centered folio');
-   assert.equal(layout.rowCount,8,'The opening pair must preserve the original eight printed rows');
-   assert.ok(layout.title.includes(n===1?'الْفَاتِحَةِ':'الْبَقَرَةِ'),'Wrong surah opening heading');
-   assert.equal(layout.ornaments,2,'Decorated Quran title needs symmetric ornamental flanks');
-   assert.ok(Math.abs((layout.headingTitle.x+layout.headingTitle.w/2)-(layout.heading.x+layout.heading.w/2))<=2,
-    'Decorated surah title must be horizontally centered within its banner: '+JSON.stringify(layout));
-   assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening requires a separate surah title with clear space above the verses');
+   assert.equal(layout.display,'grid','Opening page needs independent top surah header and centered Quran verses');
+   assert.equal(layout.rowCount,7,'Keep the seven Quran content rows separate from the top metadata header');
+   assert.ok(layout.title.includes(n===1?'الفاتحة':'البقرة'),'Wrong opening surah name');
+   assert.equal(layout.count,n===1?'٧ آية':'٢٨٦ آية','Do not delete the authentic number of surah verses');
+   assert.equal(layout.kind,n===1?'مكية':'مدنية','Do not delete Makki/Madani classification');
+   assert.equal(layout.headerCount,1,'Keep ONE metadata frame at the TOP, never duplicate surah banners');
+   assert.equal(layout.ornaments,2,'Surah metadata bar needs subtle ornaments on both edges');
+   assert.ok(layout.heading.y>=layout.paper.y-2&&layout.heading.y<layout.paper.y+28,
+    'Metadata frame MUST stay at the TOP of the Mushaf page, not move to the middle: '+JSON.stringify(layout));
+   assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening metadata must stay clear of the centered verses');
    assert.equal(layout.basmala,n===2,'Al-Baqarah needs its own Basmala; Al-Fatiha contains Basmala in first verse');
    assert.equal(layout.wordIds.length,n===1?7:5,'Missing or duplicate Quran verses in opening page '+n);
-   assert.ok(layout.heading.y>layout.paper.y+layout.paper.h*.05&&layout.heading.y<layout.paper.y+layout.paper.h*.48,
-    'The surah banner must float above a centered opening folio, not stick to the top: '+JSON.stringify(layout));
+   assert.ok(Math.abs((layout.frame.y+layout.frame.h/2)-(layout.paper.y+layout.paper.h/2))<layout.paper.h*.15,
+    'ONLY the Quran text should be visually centered in the opening page: '+JSON.stringify(layout));
    assert.ok(layout.firstLine.y>layout.heading.b+14,'Opening text must begin below the decorative banner');
    assert.ok(layout.frame.h<layout.paper.h*.93,'Opening text and decoration must not fill or overflow screen');
    assert.ok(layout.frame.b<=layout.paper.b+8,'Opening verses must remain inside the page area');
@@ -81,7 +86,7 @@ const {spawn}=require('node:child_process');
     if(i)assert.ok(layout.lines[i-1].b<=line.y+2,
      'QCF opening verses overlap vertically: '+JSON.stringify({n,i,prev:layout.lines[i-1],line}));
    }
-   console.log('PASS opening Quran page '+n+' '+layout.title+': eight authentic rows centered, '+layout.wordIds.length+' verses, no glyph overflow');
+   console.log('PASS opening Quran page '+n+' '+layout.title+': top metadata '+layout.count+'/'+layout.kind+', '+layout.wordIds.length+' authentic verses centered, no glyph overflow');
   }
   for(const [w,h] of [[390,844],[412,915],[320,568]]){
    await page.setViewportSize({width:w,height:h});
@@ -96,6 +101,6 @@ const {spawn}=require('node:child_process');
    console.log('PASS QCF opening 1/2 and normal page 3 swipes on '+w+'x'+h);
   }
   assert.deepEqual(errors,[],'Unexpected browser JavaScript errors');
-  console.log('PASS: opening Al-Fatiha and Al-Baqarah are centered, authentic and legible at three mobile viewport sizes');
+  console.log('PASS: opening Al-Fatiha and Al-Baqarah keep surah metadata at TOP while only Quran text stays CENTERED at three mobile sizes');
  }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1);});
