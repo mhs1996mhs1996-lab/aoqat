@@ -1,0 +1,51 @@
+name: Quran ornate opening surah plaque and preservation regressions
+on:
+  push:
+    branches:
+      - fix/quran-opening-ornate-header-20261028
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-opening-snapshot-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-ornate-header.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-opening-snapshot-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-ornate-header.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  opening-mushaf-decor:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chrome browser harness
+        run: npm install --no-save --package-lock=false playwright
+      - name: Verify one full ornamental header, visible metadata and no stickers or overlaps
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Capture browser screenshots of Quran pages 1 and 2
+        run: node tests/quran-opening-snapshot-browser.cjs
+      - name: Verify fast Quran swipes remain unchanged
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: Verify QCF raster and page stability
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Verify Quran bookmarks, notes, verse selection, direct jumps and SVG fallback
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Verify existing SVG Quran and offline web features
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
