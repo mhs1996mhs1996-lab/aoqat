@@ -390,11 +390,15 @@
       if(qcfFontFaces.size<=QCF_FONT_CACHE_LIMIT)break;
       if(!hot(p)){
         document.fonts.delete(font);qcfFontFaces.delete(p);
+        // Never retain a page layout with its required per-page QCF font gone.
+        // renderPage() relies on qcfData.has(page) to decide whether glyphs
+        // are display-ready; stale data without FontFace causes font fallback.
+        qcfData.delete(p);
       }
     }
   }
   function qcfLoad(page){
-    if(qcfData.has(page)){
+    if(qcfData.has(page)&&qcfFontFaces.has(page)){
       // Keep recently used text and its specific font resident for quick
       // consecutive/reverse flips instead of repeated font decoding.
       const rows=qcfData.get(page);qcfData.delete(page);qcfData.set(page,rows);
