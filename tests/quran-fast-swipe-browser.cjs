@@ -60,11 +60,17 @@ assert.ok(sw.includes('aoqat-pwa-v175-qcf-basmala-fast-20261028'));
    const y=paper.y+paper.height*.52;
    await page.evaluate(()=>{
     window.__qcfAdded=0;
+    window.__testPointerActive=false;
+    const paper=document.querySelector('#aqPaper');
+    // Warmup can legitimately stage an adjacent page BEFORE pointerdown.
+    // Count DOM work only from the moment the finger actually touches paper.
+    paper.addEventListener('pointerdown',()=>{window.__testPointerActive=true;},{once:true,capture:true});
     window.__qcfObserver=new MutationObserver(records=>{
+     if(!window.__testPointerActive)return;
      for(const record of records)for(const node of record.addedNodes)
       if(node.nodeType===1&&node.classList.contains('aq-gallery-neighbor'))window.__qcfAdded++;
     });
-    window.__qcfObserver.observe(document.querySelector('#aqPaper'),{childList:true});
+    window.__qcfObserver.observe(paper,{childList:true});
    });
    // The touchmove path must NOT allocate/reflow a new QCF page.
    await page.mouse.move(paper.x+paper.width*.18,y);
@@ -72,9 +78,9 @@ assert.ok(sw.includes('aoqat-pwa-v175-qcf-basmala-fast-20261028'));
    await page.mouse.move(paper.x+paper.width*.48,y,{steps:5});
    const added=await page.evaluate(()=>{
     const observer=window.__qcfObserver;
-    for(const record of observer.takeRecords())for(const node of record.addedNodes)
+    if(window.__testPointerActive)for(const record of observer.takeRecords())for(const node of record.addedNodes)
       if(node.nodeType===1&&node.classList.contains('aq-gallery-neighbor'))window.__qcfAdded++;
-    const count=window.__qcfAdded;observer.disconnect();return count;
+    const count=window.__qcfAdded;window.__testPointerActive=false;observer.disconnect();return count;
    });
    assert.equal(added,0,'A heavy Quran neighbor was built during pointermove');
    await page.mouse.up();await ready(121);
