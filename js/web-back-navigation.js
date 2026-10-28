@@ -6,10 +6,19 @@
   const byId = id => document.getElementById(id);
   const leaves = () => [...document.querySelectorAll('.ad-leaf-window')].filter(visible)
     .sort((a, b) => Number(a.style.getPropertyValue('--leaf-level')) - Number(b.style.getPropertyValue('--leaf-level')));
+  // Nested settings may be displayed above their parent even when the parent
+  // remains visible. Close the deepest active child before its parent.
+  const nestedSettings = ['adSilentSettings', 'adSection-notifications', 'adSection-modes', 'adSection-sound'];
   // Reuse each screen's existing back handler, including saving and cleanup.
   function back() {
     if (visible(byId('adAzkarPage'))&&window.aoqatCloseAzkarCategory?.())return true;
     if (visible(byId('aqSheet'))) { byId('aqCloseSheet')?.click(); return true; }
+    for (const id of nestedSettings) {
+      const panel = byId(id);
+      if (!visible(panel)) continue;
+      const button = panel.querySelector('[data-subwindow-back], .web-back, [data-ad-back]');
+      if (button) { button.click(); return true; }
+    }
     for (const leaf of leaves().reverse()) {
       const button = leaf.querySelector(':scope > header [data-subwindow-back]');
       if (button) { button.click(); return true; }
