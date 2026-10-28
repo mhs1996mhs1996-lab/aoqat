@@ -107,12 +107,16 @@ const {spawn}=require('node:child_process');
    assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening metadata must stay clear of the centered verses');
    assert.equal(layout.basmala,n===2,'Al-Baqarah needs its own Basmala; Al-Fatiha contains Basmala in first verse');
    if(n===2){
-     assert.ok(layout.basmalaStyle.fontSize>=Math.max(33,layout.firstLineFont*.95),
-       'Al-Baqarah Basmala must match the readable size of adjacent QCF verses: '+JSON.stringify(layout.basmalaStyle));
-     assert.ok(layout.basmalaStyle.stroke>=.2,
-       'Al-Baqarah Basmala must have sufficient stroke weight');
+     // The previous 700 synthetic bold + stroke made the Baqarah Basmala
+     // visibly much heavier than Al-Fatiha and the actual QCF verse words.
+     assert.equal(layout.basmalaStyle.fontWeight,'400',
+       'Al-Baqarah Basmala must use regular weight like the Quran lines');
+     assert.ok(layout.basmalaStyle.stroke<=.01,
+       'Do not artificially outline the Basmala while Quran glyphs have no text stroke');
+     assert.ok(layout.basmalaStyle.fontSize>=28&&layout.basmalaStyle.fontSize<=36,
+       'Keep Al-Baqarah Basmala proportionate to surrounding QCF verses: '+JSON.stringify(layout.basmalaStyle));
      assert.ok(layout.basmalaStyle.scrollWidth<=layout.basmalaStyle.clientWidth+3,
-       'Enlarged Basmala must remain fully visible on narrow screens');
+       'Basmala must remain fully visible on narrow screens');
    }
    assert.equal(layout.wordIds.length,n===1?7:5,'Missing or duplicate Quran verses in opening page '+n);
    assert.ok(Math.abs((layout.frame.y+layout.frame.h/2)-(layout.paper.y+layout.paper.h/2))<layout.paper.h*.15,

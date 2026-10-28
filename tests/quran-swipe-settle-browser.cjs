@@ -3,10 +3,10 @@ const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
 const {readFileSync}=require('node:fs');
 const html=readFileSync('index.html','utf8'),sw=readFileSync('sw.js','utf8');
-for(const asset of ['css/quran-reader.css?v=compact-header-basmala-20261028','js/quran-reader.js?v=qcf-font-lru-fast-20261028']){
+for(const asset of ['css/quran-reader.css?v=baqarah-basmala-regular-20261028','js/quran-reader.js?v=qcf-font-lru-fast-20261028']){
  assert.ok(html.includes(asset)&&sw.includes(asset),'QCF update must bypass old offline caches: '+asset);
 }
-assert.ok(sw.includes('aoqat-pwa-v175-qcf-basmala-fast-20261028'),'Installed web app must refresh cache after a new QCF update');
+assert.ok(sw.includes('aoqat-pwa-v176-qcf-basmala-regular-20261028'),'Installed web app must refresh cache after a new QCF update');
 (async()=>{
  const server=spawn('python3',['-m','http.server','8793'],{stdio:'ignore'});
  let browser;

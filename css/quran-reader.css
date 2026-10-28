@@ -503,12 +503,13 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   min-height:0!important;
   width:100%!important;
   margin:0!important;
-  /* Al-Baqarah's Basmala used the small generic AoqatQuran (22px) text;
-     enlarge and strengthen ONLY this opening line so it matches the visual
-     weight of the neighboring QCF V2 verses. Al-Fatiha uses actual QCF glyphs. */
-  font:700 clamp(35px,9.3vw,43px)/1.3 AoqatQuran,serif!important;
-  -webkit-text-stroke:.28px currentColor!important;
-  text-rendering:optimizeLegibility!important;
+  /* Al-Baqarah's separate Basmala must match the REGULAR visual weight
+     of the QCF V2 words, like the first line of Al-Fatiha. The earlier
+     synthetic bold 700 + text stroke made it much darker and thicker than
+     every other verse. Leave all true per-page QCF glyph lines unchanged. */
+  font:400 clamp(29px,7.9vw,35px)/1.4 AoqatQuran,serif!important;
+  -webkit-text-stroke:0!important;
+  text-rendering:initial!important;
   color:var(--qr-ink)!important;
 }
 @media(max-height:600px){
