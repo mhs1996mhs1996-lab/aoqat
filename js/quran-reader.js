@@ -210,7 +210,7 @@
     cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
     gallerySettle=null;galleryBusy=false;
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
-    const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
+    const current=$('adVerses');if(current){current.style.transition='';current.style.transform=isQcf()?'translate3d(0,0,0)':'';current.style.willChange='';}
   }
   function galleryDrag(dx){
     const paper=$('aqPaper'),current=$('adVerses');if(!paper||!current||!phoneMode()||galleryBusy)return;
@@ -268,7 +268,12 @@
         neighbor.style.removeProperty('position');neighbor.style.removeProperty('top');neighbor.style.removeProperty('left');
         neighbor.style.removeProperty('z-index');neighbor.style.removeProperty('pointer-events');
         neighbor.style.removeProperty('visibility');neighbor.style.removeProperty('will-change');
-        neighbor.style.removeProperty('transition');neighbor.style.removeProperty('transform');
+        neighbor.style.removeProperty('transition');
+        // Keep the QCF page on its existing GPU layer at the *same* zero
+        // translation. Switching transform to 'none' at handoff forces font
+        // rerasterization and can look like a second tiny move after the swipe.
+        if(isQcf())neighbor.style.transform='translate3d(0,0,0)';
+        else neighbor.style.removeProperty('transform');
         galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
         galleryClearReady();
         go(target);
@@ -278,7 +283,7 @@
     neighbor.addEventListener('transitionend',settle,{once:true});
     gallerySettleTimer=setTimeout(settle,310);
   }
-  function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
+  function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform=isQcf()?'translate3d(0,0,0)':'';}
   // Web QCF V2 experiment: word glyph codes and verse mappings are bundled,
   // instead of relying on a network API when the user opens a Quran page.
   const qcfData=new Map(),qcfPending=new Map(),qcfFontFaces=new Map();
@@ -407,7 +412,11 @@
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
     root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=isQcf()?'qcf2-font':'qcf2-phone';
     if(Number.isInteger(state.lastVerse))root.querySelectorAll(`[data-qr-verse="${state.lastVerse}"]`).forEach(e=>e.classList.add('aq-selected'));
-    if(!adopted)fit();if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
+    if(!adopted)fit();
+    // QCF glyphs must remain rasterized in the same compositor layer before,
+    // during and after the swipe, including the initial and direct-jump page.
+    if(isQcf())$('adVerses').style.transform='translate3d(0,0,0)';
+    if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
 
   function fit(){
