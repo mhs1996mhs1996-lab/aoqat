@@ -429,11 +429,15 @@
     if(phoneMode()||mobileTrial()){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-qcf-page','aq-qcf-opening');
       text.classList.add('aq-native-page');
-      text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
-      text.style.height=(paper.clientHeight-12)+'px';
+      // Default size remains a fitted, full-screen page. Explicit reading zoom
+      // enlarges the whole SVG page, allowing native scrolling without reflowing
+      // or regenerating its Quran glyph paths.
+      const zoom=Math.max(1,state.font/44);
+      text.style.setProperty('width',((paper.clientWidth-18)*zoom)+'px','important');
+      text.style.height=((paper.clientHeight-12)*zoom)+'px';
       const rows=phonePages.get(page)?.lines.length||15;
       text.style.setProperty('--native-rows',rows);
-      text.style.setProperty('--native-zoom',1);
+      text.style.setProperty('--native-zoom',zoom);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
