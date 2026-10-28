@@ -35,6 +35,8 @@ jobs:
         run: npm install --no-save --package-lock=false playwright
       - name: Opening Al-Fatiha and Al-Baqarah visual geometry, real QCF words, and swipes
         run: node tests/quran-opening-pages-browser.cjs
+      - name: Capture actual opening pages from Chromium
+        run: node tests/quran-opening-snapshot-browser.cjs
       - name: Fast and back-to-back swipes with prepainted page reuse
         run: node tests/quran-fast-swipe-browser.cjs
       - name: Stable QCF glyphs after swipe
