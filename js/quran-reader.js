@@ -188,7 +188,10 @@
       if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
         // Recover if the idle pre-render timer did not finish before touch.
         galleryReady.get(target)?.node.remove();galleryReady.delete(target);
-        return;
+        // The page data is already in memory: prepare the fitted DOM once,
+        // before moving either page, rather than dropping the swipe.
+        galleryPrepare(target);
+        if(!galleryReady.has(target))return;
       }
       const prepared=galleryReady.get(target);
       if(!prepared)return;
@@ -204,6 +207,8 @@
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
     galleryBusy=true;
     const direction=galleryDirection,width=paper.clientWidth;
+    // Prevent the hidden offscreen staging transform from flashing on screen.
+    neighbor.style.visibility='visible';
     current.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
     neighbor.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
     requestAnimationFrame(()=>{
