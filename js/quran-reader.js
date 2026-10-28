@@ -149,15 +149,20 @@
       if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
       if(Math.hypot(dx,dy)>12)clearTimeout(pressTimer);
-      if(phoneMode()&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4)galleryDrag(dx);
+      if(phoneMode()&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4){
+        if(isQcf())qcfQueueDrag(dx);
+        else galleryDrag(dx);
+      }
     });
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
-      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
+      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);
+      if(isQcf())qcfFlushDrag(dx);
+      pointer=null;
       if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true,speed);}else if(phoneMode()&&(!hasReadyPage(target))){const from=state.page;Promise.all([ensureReadyPage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true,speed);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&hasReadyPage(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true,speed);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
-    $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
+    $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);qcfCancelDrag();pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
     $('aqPaper').addEventListener('contextmenu',e=>e.preventDefault());
     $('aqPaper').addEventListener('click',e=>{if(performance.now()<ignoreClickUntil||!$('aqSheet').hidden)return;immersive(!document.body.classList.contains('quran-reader-immersive'));});
     root.addEventListener('keydown',e=>{
@@ -177,6 +182,26 @@
   let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false,gallerySettle=null,gallerySettleTimer=0,galleryAnimationFrame=0;
   // Favor the page ahead of the most recent swipe, while retaining the reverse page.
   let galleryLastDirection=1;
+  // Pointer events can arrive far more frequently than display frames.
+  // Move the two already-painted QCF pages at most once per animation frame.
+  let qcfDragFrame=0,qcfQueuedDx=null;
+  function qcfCancelDrag(){
+    if(qcfDragFrame)cancelAnimationFrame(qcfDragFrame);
+    qcfDragFrame=0;qcfQueuedDx=null;
+  }
+  function qcfQueueDrag(dx){
+    qcfQueuedDx=dx;
+    if(qcfDragFrame)return;
+    qcfDragFrame=requestAnimationFrame(()=>{
+      qcfDragFrame=0;
+      const latest=qcfQueuedDx;qcfQueuedDx=null;
+      if(pointer&&latest!==null&&!galleryBusy)galleryDrag(latest);
+    });
+  }
+  function qcfFlushDrag(dx){
+    qcfCancelDrag();
+    if(pointer&&!galleryBusy&&Math.abs(dx)>12)galleryDrag(dx);
+  }
   // Build and fit adjacent pages while idle, never in the pointermove handler.
   const galleryReady=new Map();
   let galleryPrepareTimer=0;
@@ -277,7 +302,7 @@
     neighbor.style.visibility='visible';
     // A quick finger flick should not be held back by a long fixed 260ms
     // animation. Keep the old timing for SVG; QCF gets a responsive finish.
-    const duration=isQcf()?(commit&&swipeSpeed>=.7?160:commit&&swipeSpeed>=.4?195:225):260;
+    const duration=isQcf()?(commit&&swipeSpeed>=1.1?115:commit&&swipeSpeed>=.65?145:commit&&swipeSpeed>=.4?175:210):260;
     current.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
     neighbor.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
     galleryAnimationFrame=requestAnimationFrame(()=>{
@@ -333,7 +358,7 @@
     neighbor.addEventListener('transitionend',settle,{once:true});
     gallerySettleTimer=setTimeout(settle,duration+65);
   }
-  function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform=isQcf()?'translate3d(0,0,0)':'';}
+  function clearTurn(){qcfCancelDrag();galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform=isQcf()?'translate3d(0,0,0)':'';}
   // Web QCF V2 experiment: word glyph codes and verse mappings are bundled,
   // instead of relying on a network API when the user opens a Quran page.
   const qcfData=new Map(),qcfPending=new Map(),qcfFontFaces=new Map(),qcfFitCache=new Map();
@@ -380,7 +405,9 @@
   function qcfHTML(page){
     const rows=qcfData.get(page);
     if(!rows)return '';
-    return rows.map((row,n)=>{
+    // The opening pair has just eight authentic printed content rows. Center
+    // them together in an ornamental folio rather than 8/15 top-anchored rows.
+    const html=rows.map((row,n)=>{
       if(row.s)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
       if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
@@ -393,6 +420,7 @@
             '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+esc(code)+'</span>';
         }).join('')+'</div>';
     }).join('');
+    return page<=2?'<div class="aq-qcf-opening-inner">'+html+'</div>':html;
   }
   function pageHTML(page){
     if(isQcf())return qcfHTML(page);
@@ -481,8 +509,9 @@
     }
 
     if(isQcf()){
-      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page','aq-qcf-opening');
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page');
       text.classList.add('aq-qcf-page');
+      text.classList.toggle('aq-qcf-opening',page<=2);
       const zoom=Math.max(1,state.font/44);
       const width=Math.max(50,(paper.clientWidth-18)*zoom),height=(paper.clientHeight-12)*zoom;
       text.style.setProperty('width',width+'px','important');
@@ -491,7 +520,10 @@
       zoomBanner(zoom);
       const rows=qcfData.get(page)?.length||15;
       text.style.setProperty('--native-rows',rows);
-      const startingSize=Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
+      // The opening pair is framed and centered, so its eight authentic rows
+      // need a modest font instead of overstretched full-width lines.
+      const startingSize=page<=2?Math.min(32*zoom,Math.max(20*zoom,height/15*0.82)):
+        Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
       const fitKey=[page,paper.clientWidth,paper.clientHeight,state.font].join(':');
       const lines=text.querySelectorAll('.aq-qcf-line');
       const memo=qcfFitCache.get(fitKey);
@@ -502,10 +534,11 @@
         for(const line of lines){
           line.style.setProperty('font-size',startingSize+'px','important');
           // Measure once per page/viewport/zoom, while the page is staged.
-          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(width-6)/measured));
+          const allowed=Math.max(40,Math.min(width-6,line.clientWidth-4));
+          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(allowed-3)/measured));
           line.style.setProperty('font-size',fitted.toFixed(2)+'px','important');
-          if(line.scrollWidth>width+2){
-            const smaller=Math.max(11,fitted*(width-4)/line.scrollWidth);
+          if(line.scrollWidth>allowed+2){
+            const smaller=Math.max(11,fitted*(allowed-3)/line.scrollWidth);
             line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
           }
           sizes.push(parseFloat(line.style.fontSize));

@@ -1,0 +1,47 @@
+name: Quran opening folios and rapid-flick regression (web only)
+on:
+  push:
+    branches:
+      - fix/quran-opening-pages-fast-gestures-20261028
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-fast-gestures.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-fast-gestures.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quran-visual-navigation:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser harness
+        run: npm install --no-save --package-lock=false playwright
+      - name: Opening Al-Fatiha and Al-Baqarah visual geometry, real QCF words, and swipes
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Fast and back-to-back swipes with prepainted page reuse
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: Stable QCF glyphs after swipe
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Quran integration, verse actions, bookmarks and jump navigation
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Existing SVG reader and offline PWA regressions
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
