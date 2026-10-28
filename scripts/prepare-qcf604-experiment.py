@@ -18,7 +18,7 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_COMMIT = "dad9cf67588ab66c914c155924d8a3699704a03d"
 SOURCE = "https://raw.githubusercontent.com/manaf/KFGQPC-Madinah-Mushaf/" + SOURCE_COMMIT
-OUTPUT = ROOT / "assets" / "qcf604-experiment.json.gz"
+OUTPUT = ROOT / "experiments" / "qcf604-layouts.json.gz"
 TOTAL = 604
 
 
