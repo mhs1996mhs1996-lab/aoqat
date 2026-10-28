@@ -2,13 +2,14 @@ name: Verify QCF post-swipe glyph and compositor stability
 on:
   push:
     branches:
-      - fix/quran-qcf-post-swipe-raster-20261028
+      - fix/quran-fast-swipe-prefetch-20261028
     paths:
       - index.html
       - sw.js
       - js/quran-reader.js
       - css/quran-reader.css
       - tests/quran-swipe-settle-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
       - .github/workflows/quran-swipe-settle.yml
   pull_request:
     paths:
@@ -17,6 +18,7 @@ on:
       - js/quran-reader.js
       - css/quran-reader.css
       - tests/quran-swipe-settle-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
       - .github/workflows/quran-swipe-settle.yml
   workflow_dispatch:
 permissions:
@@ -29,6 +31,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Chrome browser driver
         run: npm install --no-save --package-lock=false playwright
+      - name: Verify no heavyweight QCF page layout during rapid finger swipes
+        run: node tests/quran-fast-swipe-browser.cjs
       - name: Check page stops moving after the swipe and handoff
         run: node tests/quran-swipe-settle-browser.cjs
       - name: Check complete QCF reader, bookmarks and random access
