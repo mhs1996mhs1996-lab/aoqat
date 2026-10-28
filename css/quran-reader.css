@@ -346,6 +346,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
    banner SVG; there are no corner flowers floating on top of Makki/Madani.
    All three real data fields remain readable inside its central cartouche. */
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-page.aq-qcf-opening{
+  /* Generic Quran page adds .22px synthetic stroke. Native QCF V2 glyphs
+     must use their OWN genuine weight, with no inherited thickening. */
+  -webkit-text-stroke:0!important;
   display:grid!important;
   position:relative!important;
   grid-template-columns:minmax(0,1fr)!important;
@@ -494,6 +497,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   gap:clamp(0px,.2vw,2px)!important;
   font-family:var(--aq-qcf-font),serif!important;
   font-weight:400!important;
+  -webkit-text-stroke:0!important;
   line-height:1.3!important;
   overflow:visible!important;
   white-space:nowrap!important;
