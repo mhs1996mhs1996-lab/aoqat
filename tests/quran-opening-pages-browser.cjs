@@ -56,6 +56,9 @@ const {spawn}=require('node:child_process');
      kind:container.querySelector('.aq-qcf-opening-top .aq-surah-info-kind')?.textContent,
      ornaments:container.querySelectorAll('.aq-qcf-opening-top .aq-qcf-opening-corner').length,
      headerCount:container.querySelectorAll('.aq-qcf-opening-top .aq-surah-info-clean').length,
+     metadata:[...container.querySelectorAll('.aq-qcf-opening-top .aq-surah-info-clean>span')].map(el=>({
+       text:el.textContent,rect:rect(el),scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,visibility:getComputedStyle(el).visibility
+     })),
      firstLine:frame?.querySelector('.aq-qcf-line')&&rect(frame.querySelector('.aq-qcf-line')),
      basmala:!!frame?.querySelector('.aq-qcf-bismillah'),
      wordIds:[...new Set([...frame.querySelectorAll('.aq-qcf-word')].map(el=>Number(el.dataset.qrVerse)))],
@@ -69,6 +72,10 @@ const {spawn}=require('node:child_process');
    assert.equal(layout.count,n===1?'٧ آية':'٢٨٦ آية','Do not delete the authentic number of surah verses');
    assert.equal(layout.kind,n===1?'مكية':'مدنية','Do not delete Makki/Madani classification');
    assert.equal(layout.headerCount,1,'Keep ONE metadata frame at the TOP, never duplicate surah banners');
+   assert.equal(layout.metadata.length,3,'Opening header must display all three surah information fields');
+   assert.ok(layout.metadata.every(m=>m.rect.w>20&&m.rect.h>10&&m.visibility==='visible'&&
+     m.scrollWidth<=m.clientWidth+2),
+    'Metadata must be readable and not visually clipped: '+JSON.stringify(layout.metadata));
    assert.equal(layout.ornaments,2,'Surah metadata bar needs subtle ornaments on both edges');
    assert.ok(layout.heading.y>=layout.paper.y-2&&layout.heading.y<layout.paper.y+28,
     'Metadata frame MUST stay at the TOP of the Mushaf page, not move to the middle: '+JSON.stringify(layout));
