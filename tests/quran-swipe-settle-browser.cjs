@@ -52,7 +52,14 @@ assert.ok(sw.includes('aoqat-pwa-v169-qcf-fast-swipe-20261028'),'Installed web a
      (function sample(){
       if(!window.__qcfRecord)return;
       const node=document.querySelector('#adVerses');
-      const incoming=document.querySelector('#aqPaper .aq-gallery-neighbor');
+      const paper=document.querySelector('#aqPaper');
+      // Neighbors stay cached after a swipe. Only the one within one page-width
+      // of the active sheet is participating in the current transition;
+      // other prepainted nodes remain far offscreen at -200vw.
+      const candidates=[...paper.querySelectorAll(':scope>.aq-gallery-neighbor')];
+      const activeLeft=node?.getBoundingClientRect().x||0;
+      const incoming=candidates.find(candidate=>
+       Math.abs(candidate.getBoundingClientRect().x-activeLeft)<=paper.clientWidth*1.25)||null;
       const rect=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};
       window.__qcfStabilityFrames.push({t:performance.now(),page:document.querySelector('#aqReader')?.dataset.page,active:rect(node),incoming:rect(incoming),activeWord:rect(node?.querySelector('.aq-qcf-word')),incomingWord:rect(incoming?.querySelector('.aq-qcf-word')),activeTransform:node?getComputedStyle(node).transform:null,incomingTransform:incoming?getComputedStyle(incoming).transform:null});
       requestAnimationFrame(sample);
