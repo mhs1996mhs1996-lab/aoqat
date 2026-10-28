@@ -70,7 +70,7 @@ const svgData=new Map(),qcfData=new Map(),fontPromises=new Map(),fontFaces=new M
 let requestedTarget=null;
 let codeManifestPromise=null;
 async function codeManifest(){
- if(!codeManifestPromise)codeManifestPromise=compressed('assets/qcf604-experiment.json.gz').then(data=>{
+ if(!codeManifestPromise)codeManifestPromise=compressed('experiments/qcf604-layouts.json.gz').then(data=>{
   if(data.pageCount!==604||Object.keys(data.pages||{}).length!==604)throw Error('فهرس QCF غير مكتمل');
   return data.pages;
  }).catch(e=>{codeManifestPromise=null;throw Error('بيانات التجربة الكاملة غير متوفرة: '+e.message);});
