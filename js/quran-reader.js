@@ -128,6 +128,10 @@
     root.addEventListener('contextmenu',e=>{if(e.target.closest('#aqSheet')&&!e.target.matches('input,textarea'))e.preventDefault();});
     $('aqPaper').addEventListener('pointerdown',e=>{
       if(!e.isPrimary)return;
+      // Keep the gesture anchored to the permanent paper node. Settling the
+      // previous turn removes the SVG element originally hit by this pointer;
+      // without capture, Chrome can cancel the new rapid swipe mid-gesture.
+      try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
       // A fast second swipe must finish the previous turn instead of being lost.
       if(galleryBusy)gallerySettle?.();
       if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
