@@ -154,7 +154,7 @@
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!hasReadyPage(target))){const from=state.page;Promise.all([ensureReadyPage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&hasReadyPage(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true,speed);}else if(phoneMode()&&(!hasReadyPage(target))){const from=state.page;Promise.all([ensureReadyPage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true,speed);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&hasReadyPage(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true,speed);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
     $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
@@ -175,6 +175,8 @@
   }
   // Gallery-style horizontal swipe: move two already prepared pages with the finger.
   let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false,gallerySettle=null,gallerySettleTimer=0,galleryAnimationFrame=0;
+  // Favor the page ahead of the most recent swipe, while retaining the reverse page.
+  let galleryLastDirection=1;
   // Build and fit adjacent pages while idle, never in the pointermove handler.
   const galleryReady=new Map();
   let galleryPrepareTimer=0;
@@ -183,10 +185,25 @@
     for(const entry of galleryReady.values())entry.node.remove();
     galleryReady.clear();
   }
+  function galleryPruneReady(){
+    const paper=$('aqPaper');if(!paper)return;
+    for(const [page,entry] of galleryReady){
+      if(page===state.page||Math.abs(page-state.page)>2||
+         entry.width!==paper.clientWidth||entry.height!==paper.clientHeight||
+         !entry.node.isConnected){
+        entry.node.remove();galleryReady.delete(page);
+      }
+    }
+  }
   function galleryPrepare(page){
     const paper=$('aqPaper'),current=$('adVerses');
     if(!paper||!current||!phoneMode()||galleryBusy||page<1||page>TOTAL)return;
-    if(galleryReady.has(page)||!hasReadyPage(page))return;
+    const prior=galleryReady.get(page);
+    if(prior){
+      if(prior.width===paper.clientWidth&&prior.height===paper.clientHeight&&prior.node.isConnected)return;
+      prior.node.remove();galleryReady.delete(page);
+    }
+    if(!hasReadyPage(page))return;
     const node=document.createElement('div');
     node.className=current.className+' aq-gallery-neighbor';
     node.innerHTML=pageHTML(page);
@@ -200,10 +217,23 @@
   }
   function gallerySchedule(){
     clearTimeout(galleryPrepareTimer);
-    galleryPrepareTimer=setTimeout(()=>{
-      if(!root?.isConnected||pointer||galleryBusy)return;
-      for(const p of [state.page+1,state.page-1])galleryPrepare(p);
-    },0);
+    const activePage=state.page;
+    const prepareIdle=()=>{
+      if(!root?.isConnected||pointer||galleryBusy||state.page!==activePage)return;
+      const targets=isQcf()
+        ?[activePage+galleryLastDirection,activePage-galleryLastDirection,activePage+2*galleryLastDirection]
+        :[activePage+1,activePage-1];
+      // One fully fitted page per task; do not monopolize the main thread
+      // with multiple layouts between two rapid finger gestures.
+      for(const p of targets){
+        if(p<1||p>TOTAL||galleryReady.has(p)||!hasReadyPage(p))continue;
+        galleryPrepare(p);
+        if(isQcf())galleryPrepareTimer=setTimeout(prepareIdle,24);
+        else prepareIdle();
+        break;
+      }
+    };
+    galleryPrepareTimer=setTimeout(prepareIdle,0);
   }
   function galleryReset(){
     clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
@@ -221,10 +251,11 @@
       if(!hasReadyPage(target))return;
       const ready=galleryReady.get(target);
       if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
-        // Recover if the idle pre-render timer did not finish before touch.
+        // QCF glyph layout is expensive: NEVER create and measure it while the
+        // user's finger moves. Warmup runs between gestures instead.
+        if(isQcf())return;
+        // Preserve the previous SVG fallback behavior.
         galleryReady.get(target)?.node.remove();galleryReady.delete(target);
-        // The page data is already in memory: prepare the fitted DOM once,
-        // before moving either page, rather than dropping the swipe.
         galleryPrepare(target);
         if(!galleryReady.has(target))return;
       }
@@ -237,15 +268,18 @@
     current.style.willChange='transform';current.style.transform='translate3d('+offset+'px,0,0)';
     galleryNeighbor.style.transform='translate3d('+(offset-direction*width)+'px,0,0)';
   }
-  function galleryFinish(target,commit){
+  function galleryFinish(target,commit,swipeSpeed=0){
     const paper=$('aqPaper'),current=$('adVerses'),neighbor=galleryNeighbor;
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
     galleryBusy=true;
     const direction=galleryDirection,width=paper.clientWidth;
     // Prevent the hidden offscreen staging transform from flashing on screen.
     neighbor.style.visibility='visible';
-    current.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
-    neighbor.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
+    // A quick finger flick should not be held back by a long fixed 260ms
+    // animation. Keep the old timing for SVG; QCF gets a responsive finish.
+    const duration=isQcf()?(commit&&swipeSpeed>=.7?160:commit&&swipeSpeed>=.4?195:225):260;
+    current.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
+    neighbor.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
     galleryAnimationFrame=requestAnimationFrame(()=>{
       galleryAnimationFrame=0;
       if(!galleryBusy)return;
@@ -262,7 +296,21 @@
       gallerySettle=null;galleryBusy=false;
       if(commit&&root?.isConnected&&state.page!==target){
         // Keep the already rendered and fitted neighbor; do not rebuild it after the swipe.
-        current.remove();
+        // For QCF, recycle the *previous* rendered page as the reverse-swipe
+        // buffer. Removing it and re-creating it after every turn was the main
+        // source of reflows during rapid back-and-forth reading.
+        if(isQcf()){
+          current.removeAttribute('id');
+          current.classList.add('aq-gallery-neighbor');
+          current.style.setProperty('position','absolute','important');
+          current.style.zIndex='5';
+          current.style.pointerEvents='none';
+          current.style.visibility='visible';
+          current.style.transition='none';
+          current.style.transform='translate3d(-200vw,0,0)';
+          galleryReady.get(state.page)?.node.remove();
+          galleryReady.set(state.page,{node:current,width:paper.clientWidth,height:paper.clientHeight});
+        }else current.remove();
         neighbor.id='adVerses';
         neighbor.classList.remove('aq-gallery-neighbor');
         neighbor.style.removeProperty('position');neighbor.style.removeProperty('top');neighbor.style.removeProperty('left');
@@ -274,19 +322,21 @@
         // rerasterization and can look like a second tiny move after the swipe.
         if(isQcf())neighbor.style.transform='translate3d(0,0,0)';
         else neighbor.style.removeProperty('transform');
-        galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
-        galleryClearReady();
+        galleryNeighbor=null;galleryLastDirection=direction;galleryDirection=0;galleryAdopted=true;
+        // Do not wipe the pre-fitted QCF neighbors. The next fast swipe needs
+        // the already painted pages, not a fresh hundreds-of-spans rebuild.
+        if(!isQcf())galleryClearReady();
         go(target);
       }else galleryReset();
     };
     gallerySettle=settle;
     neighbor.addEventListener('transitionend',settle,{once:true});
-    gallerySettleTimer=setTimeout(settle,310);
+    gallerySettleTimer=setTimeout(settle,duration+65);
   }
   function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform=isQcf()?'translate3d(0,0,0)':'';}
   // Web QCF V2 experiment: word glyph codes and verse mappings are bundled,
   // instead of relying on a network API when the user opens a Quran page.
-  const qcfData=new Map(),qcfPending=new Map(),qcfFontFaces=new Map();
+  const qcfData=new Map(),qcfPending=new Map(),qcfFontFaces=new Map(),qcfFitCache=new Map();
   let qcfManifestPromise=null;
   function qcfManifest(){
     if(!qcfManifestPromise)qcfManifestPromise=compressed('experiments/qcf604-web-verse-layouts.json.gz').then(data=>{
@@ -442,15 +492,26 @@
       const rows=qcfData.get(page)?.length||15;
       text.style.setProperty('--native-rows',rows);
       const startingSize=Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
-      for(const line of text.querySelectorAll('.aq-qcf-line')){
-        line.style.setProperty('font-size',startingSize+'px','important');
-        // Measure during idle staging, never during a pointermove frame.
-        const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(width-6)/measured));
-        line.style.setProperty('font-size',fitted.toFixed(2)+'px','important');
-        if(line.scrollWidth>width+2){
-          const smaller=Math.max(11,fitted*(width-4)/line.scrollWidth);
-          line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
+      const fitKey=[page,paper.clientWidth,paper.clientHeight,state.font].join(':');
+      const lines=text.querySelectorAll('.aq-qcf-line');
+      const memo=qcfFitCache.get(fitKey);
+      if(memo&&memo.length===lines.length){
+        lines.forEach((line,i)=>line.style.setProperty('font-size',memo[i]+'px','important'));
+      }else{
+        const sizes=[];
+        for(const line of lines){
+          line.style.setProperty('font-size',startingSize+'px','important');
+          // Measure once per page/viewport/zoom, while the page is staged.
+          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(width-6)/measured));
+          line.style.setProperty('font-size',fitted.toFixed(2)+'px','important');
+          if(line.scrollWidth>width+2){
+            const smaller=Math.max(11,fitted*(width-4)/line.scrollWidth);
+            line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
+          }
+          sizes.push(parseFloat(line.style.fontSize));
         }
+        if(qcfFitCache.size>=36)qcfFitCache.delete(qcfFitCache.keys().next().value);
+        qcfFitCache.set(fitKey,sizes);
       }
       return;
     }
@@ -499,10 +560,14 @@
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
     if(phoneMode()){
-      galleryClearReady();
+      if(isQcf())galleryPruneReady();
+      else galleryClearReady();
       trimQcfCaches();
       const current=state.page;
-      for(const p of [current+1,current-1])if(p>=1&&p<=TOTAL){
+      const wanted=isQcf()?
+        [current+galleryLastDirection,current-galleryLastDirection,current+2*galleryLastDirection]:
+        [current+1,current-1];
+      for(const p of wanted)if(p>=1&&p<=TOTAL){
         ensureReadyPage(p).then(()=>{
           if(root?.isConnected&&state.page===current)gallerySchedule();
         }).catch(()=>{});
