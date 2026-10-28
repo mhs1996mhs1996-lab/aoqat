@@ -432,7 +432,9 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   background:transparent!important;
   padding:0 2px!important;
   gap:clamp(4px,.7vh,11px)!important;
-  transform:translateY(clamp(-148px,-9.5vh,-22px))!important;
+  /* The entire block is vertically centered by the parent. Extra upward
+     offset would reproduce the old top-clustered layout on phone screens. */
+  transform:translateY(0)!important;
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-inner::before,
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-inner::after{
