@@ -1,6 +1,12 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
+const {readFileSync}=require('node:fs');
+const html=readFileSync('index.html','utf8'),sw=readFileSync('sw.js','utf8');
+for(const asset of ['css/quran-reader.css?v=qcf-stable-layer-20261028','js/quran-reader.js?v=qcf-raster-stable-20261028']){
+ assert.ok(html.includes(asset)&&sw.includes(asset),'QCF update must bypass old offline caches: '+asset);
+}
+assert.ok(sw.includes('aoqat-pwa-v168-qcf-swipe-stable-20261028'),'Installed web app must refresh cache after a new QCF update');
 (async()=>{
  const server=spawn('python3',['-m','http.server','8793'],{stdio:'ignore'});
  let browser;
@@ -84,6 +90,13 @@ const {spawn}=require('node:child_process');
     assert.ok(Math.abs(finish.active.x-before.x)<=2&&Math.abs(finish.active.y-before.y)<=2,
       'QCF page origin should remain anchored while changing pages: '+JSON.stringify({width,height,from,before,finish}));
     assert.equal(await page.locator('#adVerses .aq-qcf-word').count()>0,true);
+    // Pixel-level verification: the actual Quran ink must not re-rasterize or
+    // shimmer after the transition is complete (rect tests alone miss this).
+    const inkBefore=await page.locator('#adVerses').screenshot({animations:'disabled'});
+    await page.waitForTimeout(120);
+    const inkAfter=await page.locator('#adVerses').screenshot({animations:'disabled'});
+    assert.equal(Buffer.compare(inkBefore,inkAfter),0,
+      'QCF glyph pixels changed after swipe settled at page '+(from+1));
     console.log('PASS QCF stable after swipe: '+from+'->'+(from+1)+', viewport='+width+'x'+height+', handoff delta='+delta.x.toFixed(1)+'px/'+delta.y.toFixed(1)+'px');
    }
   }
