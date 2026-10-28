@@ -18,7 +18,7 @@ const {spawn}=require('node:child_process');
   // First-time external API and font loads are intentionally timed separately from swipes.
   await page.locator('#fontMode').click();
   try{
-   await page.waitForFunction(()=>document.querySelector('#fontMode').getAttribute('aria-pressed')==='true',{timeout:45000});
+   await page.waitForFunction(()=>document.querySelector('#fontMode').getAttribute('aria-pressed')==='true',null,{timeout:45000});
   }catch(e){throw Error('QCF V2 failed to load in an actual browser: '+await page.locator('#loading').textContent());}
   assert.equal(await page.locator('#paper .stage[data-kind="qcf"][data-page="1"] .qword').count()>0,true,'QCF page must contain glyphs, not SVG outlines');
   for(let n=2;n<=20;n++){
