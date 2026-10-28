@@ -483,7 +483,7 @@
       return '<div class="aq-qcf-line aq-qcf-bismillah aq-qcf-authentic-bismillah" '+
         'style="--aq-qcf-font:AqQcfV2Page1" role="text" aria-label="'+
         esc(quran[0].verses[0].text)+'">'+
-        words.map(([,code])=>'<span class="aq-qcf-word aq-qcf-basmala-word" aria-hidden="true">'+
+        words.map(([,code])=>'<span class="aq-qcf-basmala-word" aria-hidden="true">'+
           esc(code)+'</span>').join('')+'</div>';
     }
     // Graceful offline/web fallback only when the extra font is unavailable.
