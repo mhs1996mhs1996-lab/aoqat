@@ -96,6 +96,8 @@ def main() -> None:
     assert len(seen_indices) == 6236, f'Missing verse mappings: {6236-len(seen_indices)}'
     assert len(seen_markers) == 6236, f'Missing verse endings: {6236-len(seen_markers)}'
     assert [int(k) for k in sorted(pages, key=int)] == list(range(1, TOTAL + 1))
+    # Stabilize JSON/gzip bytes regardless of parallel source fetch completion order.
+    pages = {str(n): pages[str(n)] for n in range(1, TOTAL + 1)}
     manifest = {
         "edition": "QCF V2 Hafs web trial with authentic per-word verse mapping",
         "sourceCommit": SOURCE_COMMIT,
