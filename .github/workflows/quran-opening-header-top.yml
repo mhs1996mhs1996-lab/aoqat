@@ -1,0 +1,51 @@
+name: Quran opening metadata top, verses centered (web-only)
+on:
+  push:
+    branches:
+      - fix/quran-opening-header-metadata-top-20261028
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-opening-snapshot-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-header-top.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-opening-snapshot-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-header-top.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  top-header-visual:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser test dependencies
+        run: npm install --no-save --package-lock=false playwright
+      - name: Verify restored number of verses, Meccan/Medinan label and surah name stay at TOP on three phones
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Capture full Quran opening screenshots and header/text coordinates
+        run: node tests/quran-opening-snapshot-browser.cjs
+      - name: Verify fast QCF flicks reuse prepainted pages
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: Verify Quran glyphs remain stationary after swipe
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Verify QCF page jumps, notes, bookmarks and SVG fallback
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Verify legacy SVG Quran and offline web application behavior
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
