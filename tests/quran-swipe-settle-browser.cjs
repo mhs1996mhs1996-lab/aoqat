@@ -1,6 +1,12 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
+const {readFileSync}=require('node:fs');
+const html=readFileSync('index.html','utf8'),sw=readFileSync('sw.js','utf8');
+for(const asset of ['css/quran-reader.css?v=qcf-stable-layer-20261028','js/quran-reader.js?v=qcf-raster-stable-20261028']){
+ assert.ok(html.includes(asset)&&sw.includes(asset),'QCF update must bypass old offline caches: '+asset);
+}
+assert.ok(sw.includes('aoqat-pwa-v168-qcf-swipe-stable-20261028'),'Installed web app must refresh cache after a new QCF update');
 (async()=>{
  const server=spawn('python3',['-m','http.server','8793'],{stdio:'ignore'});
  let browser;
@@ -31,14 +37,14 @@ const {spawn}=require('node:child_process');
    await ready(n);
    await page.waitForFunction(n=>!!document.querySelector('#aqPaper .aq-gallery-neighbor')&&document.querySelector('#aqReader')?.dataset.page===String(n),n,{timeout:40000});
   }
-  for(const [width,height] of [[390,844],[320,568],[844,390]]){
+  for(const [width,height] of [[390,844],[393,853],[320,568],[844,390]]){
    await page.setViewportSize({width,height});
    for(const from of [120,450]){
     await jump(from);
     const paper=await page.locator('#aqPaper').boundingBox();
     const before=await page.locator('#adVerses').evaluate(e=>{
      const a=e.getBoundingClientRect(),line=e.querySelector('.aq-qcf-line')?.getBoundingClientRect();
-     return {x:a.x,y:a.y,w:a.width,h:a.height,lineY:line?.y};
+     return {x:a.x,y:a.y,w:a.width,h:a.height,lineY:line?.y,transform:getComputedStyle(e).transform};
     });
     await page.evaluate(()=>{
      window.__qcfStabilityFrames=[];
@@ -48,7 +54,7 @@ const {spawn}=require('node:child_process');
       const node=document.querySelector('#adVerses');
       const incoming=document.querySelector('#aqPaper .aq-gallery-neighbor');
       const rect=e=>{if(!e)return null;const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};};
-      window.__qcfStabilityFrames.push({t:performance.now(),page:document.querySelector('#aqReader')?.dataset.page,active:rect(node),incoming:rect(incoming)});
+      window.__qcfStabilityFrames.push({t:performance.now(),page:document.querySelector('#aqReader')?.dataset.page,active:rect(node),incoming:rect(incoming),activeWord:rect(node?.querySelector('.aq-qcf-word')),incomingWord:rect(incoming?.querySelector('.aq-qcf-word')),activeTransform:node?getComputedStyle(node).transform:null,incomingTransform:incoming?getComputedStyle(incoming).transform:null});
       requestAnimationFrame(sample);
      })();
     });
@@ -74,15 +80,27 @@ const {spawn}=require('node:child_process');
     const after=samples.filter(f=>Number(f.page)===from+1&&!f.incoming);
     const first=after[0],last=after.at(-1);
     assert.ok(first&&last,'Missing stable page samples after DOM adoption');
+    assert.ok(before.transform!=='none'&&finish.activeTransform!=='none'&&last.activeTransform!=='none',
+      'QCF compositor layer was torn down at swipe settle: '+JSON.stringify({before,finish,last}));
+    assert.ok(first.activeWord&&last.activeWord,'Missing visible QCF glyph bounds after swipe');
+    assert.ok(Math.abs(last.activeWord.x-first.activeWord.x)<=1&&Math.abs(last.activeWord.y-first.activeWord.y)<=1,
+      'QCF glyphs move after the page settles: '+JSON.stringify({width,height,from,first,last}));
     assert.ok(Math.abs(last.active.x-first.active.x)<=1&&Math.abs(last.active.y-first.active.y)<=1,
       'QCF page keeps moving after the swipe settles: '+JSON.stringify({width,height,from,first,last}));
     assert.ok(Math.abs(finish.active.x-before.x)<=2&&Math.abs(finish.active.y-before.y)<=2,
       'QCF page origin should remain anchored while changing pages: '+JSON.stringify({width,height,from,before,finish}));
     assert.equal(await page.locator('#adVerses .aq-qcf-word').count()>0,true);
+    // Pixel-level verification: the actual Quran ink must not re-rasterize or
+    // shimmer after the transition is complete (rect tests alone miss this).
+    const inkBefore=await page.locator('#adVerses').screenshot({animations:'disabled'});
+    await page.waitForTimeout(120);
+    const inkAfter=await page.locator('#adVerses').screenshot({animations:'disabled'});
+    assert.equal(Buffer.compare(inkBefore,inkAfter),0,
+      'QCF glyph pixels changed after swipe settled at page '+(from+1));
     console.log('PASS QCF stable after swipe: '+from+'->'+(from+1)+', viewport='+width+'x'+height+', handoff delta='+delta.x.toFixed(1)+'px/'+delta.y.toFixed(1)+'px');
    }
   }
   assert.deepEqual(errors,[]);
-  console.log('PASS: no late QCF image/page movement after swipe, 3 viewport sizes and 2 distant page ranges');
+  console.log('PASS: QCF glyph and page stay on compositor after swipe, 4 viewport sizes and 2 distant page ranges');
  }finally{await browser?.close();server.kill();}
 })().catch(e=>{console.error(e);process.exit(1);});

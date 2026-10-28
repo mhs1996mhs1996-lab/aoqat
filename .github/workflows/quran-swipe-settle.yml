@@ -1,14 +1,20 @@
-name: Verify Quran QCF swipe settles without a second page shift
+name: Verify QCF post-swipe glyph and compositor stability
 on:
   push:
     branches:
-      - fix/quran-qcf-post-swipe-shift-20261028
+      - fix/quran-qcf-post-swipe-raster-20261028
     paths:
+      - index.html
+      - sw.js
+      - js/quran-reader.js
       - css/quran-reader.css
       - tests/quran-swipe-settle-browser.cjs
       - .github/workflows/quran-swipe-settle.yml
   pull_request:
     paths:
+      - index.html
+      - sw.js
+      - js/quran-reader.js
       - css/quran-reader.css
       - tests/quran-swipe-settle-browser.cjs
       - .github/workflows/quran-swipe-settle.yml
