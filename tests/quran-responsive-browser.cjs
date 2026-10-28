@@ -22,13 +22,14 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  // Every gesture must advance exactly once, even while the prior turn settles.
  for(const n of [120,121,122,123,124]){await jump(n);await ready();}
  await jump(120);await ready();await page.waitForTimeout(400);
+ await page.evaluate(()=>{window.__qrSwipeTrace=[];for(const type of ['pointerdown','pointermove','pointerup'])document.querySelector('#aqPaper').addEventListener(type,e=>{if(type==='pointermove'&&e.clientX!==175)return;window.__qrSwipeTrace.push({type,page:document.querySelector('#aqReader')?.dataset.page,x:e.clientX});},{capture:true});});
  for(let n=121;n<=124;n++){
    await page.mouse.move(100,350);
    await page.mouse.down();
    await page.mouse.move(175,350,{steps:3});
    await page.mouse.up();
  }
- await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.page==='124'&&document.querySelector('#aqReader')?.dataset.ready==='true',null,{timeout:10000}).catch(async error=>{const snapshot=await page.locator('#aqReader').evaluate(e=>({page:e.dataset.page,ready:e.dataset.ready,visibleLines:e.querySelectorAll('#adVerses .aq-native-line').length}));throw Error('Rapid Quran swipe failed: '+JSON.stringify(snapshot),{cause:error});});
+ await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.page==='124'&&document.querySelector('#aqReader')?.dataset.ready==='true',null,{timeout:10000}).catch(async error=>{const snapshot=await page.locator('#aqReader').evaluate(e=>({page:e.dataset.page,ready:e.dataset.ready,visibleLines:e.querySelectorAll('#adVerses .aq-native-line').length,trace:window.__qrSwipeTrace}));throw Error('Rapid Quran swipe failed: '+JSON.stringify(snapshot),{cause:error});});
  assert.equal(await page.locator('#adVerses .aq-native-line').count()>0,true,'rapid swipes must leave a ready page');
  await jump(120);
  for(let n=121;n<=130;n++){
