@@ -1,4 +1,6 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
+// A malformed Mushaf URL expression previously made the entire service worker invalid.
+new (require('node:vm').Script)(require('node:fs').readFileSync('sw.js','utf8'),{filename:'sw.js'});
 (async()=>{const server=spawn('python3',['-m','http.server','8771'],{stdio:'ignore'});let browser;try{
  await require('./sw-update-browser.cjs')();
  await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
