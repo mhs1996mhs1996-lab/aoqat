@@ -49,8 +49,13 @@ assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
    await page.setViewportSize({width,height});
    await jump(120);
    // Both adjacent QCF pages and one lookahead page must exist while idle.
-   await page.waitForFunction(()=>document.querySelectorAll('#aqPaper>.aq-gallery-neighbor').length>=3,null,{timeout:40000});
-   await page.evaluate(()=>{window.__oldQcfPage=document.querySelector('#adVerses')});
+   await page.waitForFunction(()=>document.querySelectorAll('#aqPaper>.aq-gallery-neighbor').length>=4,null,{timeout:40000});
+   await page.evaluate(()=>{
+     window.__oldQcfPage=document.querySelector('#adVerses');
+     window.__firstQcfFont=[...document.fonts].find(font=>font.family==='AqQcfV2Page120');
+   });
+   assert.ok(await page.evaluate(()=>!!window.__firstQcfFont),
+     'Expected the starting Quran QCF font to be loaded before rapid turns');
    const paper=await page.locator('#aqPaper').boundingBox();
    const y=paper.y+paper.height*.52;
    await page.evaluate(()=>{
@@ -76,6 +81,8 @@ assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
    assert.ok(await page.evaluate(()=>window.__oldQcfPage.isConnected&&window.__oldQcfPage.classList.contains('aq-gallery-neighbor')),
     'Previous fitted QCF page must be retained as the reverse swipe buffer');
    await swipe(-1);await ready(120);
+   assert.ok(await page.evaluate(()=>[...document.fonts].includes(window.__firstQcfFont)),
+     'A fast reverse turn should reuse the already loaded Quran font instead of redecoding it');
    assert.ok(await page.evaluate(()=>document.querySelector('#adVerses')===window.__oldQcfPage),
     'Fast reverse swipe must reuse the exact same fitted Quran DOM node');
    for(let n=121;n<=128;n++){
@@ -83,7 +90,7 @@ assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
     await ready(n);
     // The page cache is bounded; do not grow 604 DOM trees while reading.
     const count=await page.locator('#aqPaper>.aq-gallery-neighbor').count();
-    assert.ok(count<=4,'Too many prepared page DOM trees: '+count);
+    assert.ok(count<=5,'Too many prepared page DOM trees: '+count);
    }
    await swipe(-1);await ready(127);
    // Rapid consecutive flicks: start the next gesture before the settlement
