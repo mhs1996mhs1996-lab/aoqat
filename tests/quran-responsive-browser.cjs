@@ -22,7 +22,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  // Every gesture must advance exactly once, even while the prior turn settles.
  for(const n of [120,121,122,123,124]){await jump(n);await ready();}
  await jump(120);await ready();await page.waitForTimeout(400);
- await page.evaluate(()=>{window.__qrSwipeTrace=[];for(const type of ['pointerdown','pointermove','pointerup'])document.querySelector('#aqPaper').addEventListener(type,e=>{if(type==='pointermove'&&e.clientX!==175)return;window.__qrSwipeTrace.push({type,page:document.querySelector('#aqReader')?.dataset.page,x:e.clientX});},{capture:true});});
+ await page.evaluate(()=>{window.__qrSwipeTrace=[];for(const type of ['pointerdown','pointermove','pointerup','pointercancel','lostpointercapture'])document.querySelector('#aqPaper').addEventListener(type,e=>{if(type==='pointermove'&&e.clientX!==175)return;window.__qrSwipeTrace.push({type,page:document.querySelector('#aqReader')?.dataset.page,x:e.clientX});},{capture:true});});
  for(let n=121;n<=124;n++){
    await page.mouse.move(100,350);
    await page.mouse.down();
