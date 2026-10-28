@@ -496,7 +496,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
 @media(max-height:650px){
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-inner{
     gap:2px!important;
-    transform:translateY(-12px)!important;
+    transform:translateY(0)!important;
   }
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-inner>.aq-qcf-opening-heading{
     min-height:34px!important;
