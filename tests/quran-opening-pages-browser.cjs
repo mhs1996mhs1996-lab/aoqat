@@ -54,7 +54,10 @@ const {spawn}=require('node:child_process');
      title:container.querySelector('.aq-qcf-opening-top .aq-surah-info-name')?.textContent,
      count:container.querySelector('.aq-qcf-opening-top .aq-surah-info-count')?.textContent,
      kind:container.querySelector('.aq-qcf-opening-top .aq-surah-info-kind')?.textContent,
-     ornaments:container.querySelectorAll('.aq-qcf-opening-top .aq-qcf-opening-corner').length,
+     ornaments:container.querySelectorAll('.aq-qcf-opening-top .aq-qcf-opening-art .aq-qcf-floral').length,
+     joinedArtwork:container.querySelector('.aq-qcf-opening-art')&&rect(container.querySelector('.aq-qcf-opening-art')),
+     pastedCornerCount:container.querySelectorAll('.aq-qcf-opening-corner').length,
+     headerBackground:getComputedStyle(container.querySelector('.aq-qcf-opening-info')).backgroundColor,
      headerCount:container.querySelectorAll('.aq-qcf-opening-top .aq-surah-info-clean').length,
      metadata:[...container.querySelectorAll('.aq-qcf-opening-top .aq-surah-info-clean>span')].map(el=>({
        text:el.textContent,rect:rect(el),scrollWidth:el.scrollWidth,clientWidth:el.clientWidth,visibility:getComputedStyle(el).visibility
@@ -76,7 +79,17 @@ const {spawn}=require('node:child_process');
    assert.ok(layout.metadata.every(m=>m.rect.w>20&&m.rect.h>10&&m.visibility==='visible'&&
      m.scrollWidth<=m.clientWidth+2),
     'Metadata must be readable and not visually clipped: '+JSON.stringify(layout.metadata));
-   assert.equal(layout.ornaments,2,'Surah metadata bar needs subtle ornaments on both edges');
+   assert.equal(layout.ornaments,2,'The integrated ornament must have two mirrored floral wings');
+   assert.equal(layout.pastedCornerCount,0,'The banner must not contain pasted-on corner flowers');
+   assert.ok(layout.joinedArtwork&&Math.abs(layout.heading.x-layout.joinedArtwork.x)<2&&
+     Math.abs(layout.heading.w-layout.joinedArtwork.w)<2&&
+     Math.abs(layout.heading.h-layout.joinedArtwork.h)<2,
+    'The ornamental artwork must be the entire surah container, not a small sticker: '+JSON.stringify(layout));
+   // On tiny phones the three real labels must stay within the central
+   // cartouche (19%–81% of the bar), outside the floral wings.
+   assert.ok(layout.metadata.every(m=>m.rect.x>=layout.heading.x+layout.heading.w*.18-2&&
+     m.rect.x+m.rect.w<=layout.heading.x+layout.heading.w*.82+2),
+     'Surah data intrudes into floral wings: '+JSON.stringify(layout.metadata));
    assert.ok(layout.heading.y>=layout.paper.y-2&&layout.heading.y<layout.paper.y+28,
     'Metadata frame MUST stay at the TOP of the Mushaf page, not move to the middle: '+JSON.stringify(layout));
    assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening metadata must stay clear of the centered verses');
