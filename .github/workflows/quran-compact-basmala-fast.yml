@@ -1,0 +1,49 @@
+name: Verify compact Quran banner, Al-Baqarah Basmala and fast swipe cache
+on:
+  push:
+    branches:
+      - fix/quran-compact-header-basmala-fast-swipe-20261028
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-compact-basmala-fast.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-compact-basmala-fast.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compact-mushaf:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chrome harness
+        run: npm install --no-save --package-lock=false playwright
+      - name: Assert compact ornamental header, full surah metadata and bold legible Baqarah Basmala
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Capture both full Quran opening screenshots
+        run: node tests/quran-opening-snapshot-browser.cjs
+      - name: Check bounded prefetched QCF pages, retained fonts and rapid turns
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: Check settled Quran glyph stability
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Check Quran bookmarks, jumps 102/450/604, notes and original SVG
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Check original SVG reader and offline PWA
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
