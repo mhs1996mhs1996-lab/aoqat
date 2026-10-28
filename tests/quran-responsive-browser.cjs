@@ -18,6 +18,18 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await panel('search');await page.locator('#aqSearch').fill('الناس');await page.waitForSelector('[data-result]');await page.locator('[data-result]').first().click();await ready();assert.ok(await page.locator('.aq-selected').count()>0);
  await jump(604);const headingSize=await page.locator('.aq-surah-count').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));await panel('settings');await page.locator('#aqFont').evaluate(e=>{e.value='66';e.dispatchEvent(new Event('input',{bubbles:true}));});assert.ok(await page.locator('.aq-surah-count').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize))>headingSize*1.4,'surah count and classification scale with reading zoom');await page.locator('#aqFont').evaluate(e=>{e.value='44';e.dispatchEvent(new Event('input',{bubbles:true}));});await page.locator('#aqCloseSheet').click();
  await jump(3);await page.evaluate(()=>document.body.classList.add('quran-reader-immersive'));await page.mouse.move(100,350);await page.mouse.down();await page.mouse.move(170,350,{steps:3});await page.mouse.up();await ready();assert.equal(await page.locator('#aqReader').getAttribute('data-page'),'4');// Regression: rapid sequential swipes must never leave the reader stuck on an earlier page.
+ // Prepare the next pages, then fire turns faster than the 260ms animation.
+ // Every gesture must advance exactly once, even while the prior turn settles.
+ for(const n of [120,121,122,123,124]){await jump(n);await ready();}
+ await jump(120);await ready();await page.waitForTimeout(400);
+ for(let n=121;n<=124;n++){
+   await page.mouse.move(100,350);
+   await page.mouse.down();
+   await page.mouse.move(175,350,{steps:3});
+   await page.mouse.up();
+ }
+ await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.page==='124'&&document.querySelector('#aqReader')?.dataset.ready==='true',null,{timeout:10000});
+ assert.equal(await page.locator('#adVerses .aq-native-line').count()>0,true,'rapid swipes must leave a ready page');
  await jump(120);
  for(let n=121;n<=130;n++){
    await ready();
