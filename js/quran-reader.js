@@ -415,16 +415,24 @@
     fitText(paper,text,state.page);
   }
   function fitText(paper,text,page){
+    function zoomBanner(zoom){
+      for(const selector of ['.aq-surah-info-count','.aq-surah-info-kind'])
+        text.querySelectorAll(selector).forEach(el=>el.style.setProperty('font-size','calc(clamp(11px,3vw,15px) * '+zoom+')','important'));
+      text.querySelectorAll('.aq-surah-info-name').forEach(el=>el.style.setProperty('font-size','calc(clamp(14px,3.7vw,19px) * '+zoom+')','important'));
+    }
 
     if(isQcf()){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page','aq-qcf-opening');
       text.classList.add('aq-qcf-page');
-      const width=Math.max(50,paper.clientWidth-18),height=paper.clientHeight-12;
+      const zoom=Math.max(1,state.font/44);
+      const width=Math.max(50,(paper.clientWidth-18)*zoom),height=(paper.clientHeight-12)*zoom;
       text.style.setProperty('width',width+'px','important');
       text.style.height=height+'px';
+      text.style.setProperty('--native-zoom',zoom);
+      zoomBanner(zoom);
       const rows=qcfData.get(page)?.length||15;
       text.style.setProperty('--native-rows',rows);
-      const startingSize=Math.min(35,Math.max(23,height/Math.max(1,rows)*.9));
+      const startingSize=Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
       for(const line of text.querySelectorAll('.aq-qcf-line')){
         line.style.setProperty('font-size',startingSize+'px','important');
         // Measure during idle staging, never during a pointermove frame.
@@ -449,6 +457,7 @@
       const rows=phonePages.get(page)?.lines.length||15;
       text.style.setProperty('--native-rows',rows);
       text.style.setProperty('--native-zoom',zoom);
+      zoomBanner(zoom);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
