@@ -503,14 +503,24 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   min-height:0!important;
   width:100%!important;
   margin:0!important;
-  /* Al-Baqarah's separate Basmala must match the REGULAR visual weight
-     of the QCF V2 words, like the first line of Al-Fatiha. The earlier
-     synthetic bold 700 + text stroke made it much darker and thicker than
-     every other verse. Leave all true per-page QCF glyph lines unchanged. */
-  font:400 clamp(29px,7.9vw,35px)/1.4 AoqatQuran,serif!important;
+  /* For page 2, use the exact page-1 QCF V2 Basmala word glyphs.
+     That guarantees the same actual font outlines as Al-Fatiha. Fitting
+     assigns one common size to all QCF lines on pages 1 and 2. */
+  font-family:var(--aq-qcf-font,AoqatQuran),serif!important;
+  font-size:clamp(29px,7.9vw,35px)!important;
+  font-weight:400!important;
+  line-height:1.3!important;
   -webkit-text-stroke:0!important;
-  text-rendering:initial!important;
+  text-rendering:auto!important;
   color:var(--qr-ink)!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"]
+.aq-qcf-opening>.aq-qcf-opening-inner>.aq-qcf-authentic-bismillah .aq-qcf-basmala-word{
+  font-family:inherit!important;
+  font-weight:400!important;
+  -webkit-text-stroke:0!important;
+  cursor:default!important;
+  pointer-events:none!important;
 }
 @media(max-height:600px){
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top{
