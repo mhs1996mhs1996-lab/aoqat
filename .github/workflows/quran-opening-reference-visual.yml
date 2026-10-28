@@ -1,0 +1,51 @@
+name: Quran opening reference visual and all reader regression checks
+on:
+  push:
+    branches:
+      - fix/quran-opening-match-reference-20261028
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-opening-snapshot-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-reference-visual.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-opening-pages-browser.cjs
+      - tests/quran-opening-snapshot-browser.cjs
+      - tests/quran-fast-swipe-browser.cjs
+      - tests/quran-swipe-settle-browser.cjs
+      - .github/workflows/quran-opening-reference-visual.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  opening-reference:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser tools
+        run: npm install --no-save --package-lock=false playwright
+      - name: Verify title, word counts, layout, and opening navigation
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Capture actual first two page screenshots and bounding boxes
+        run: node tests/quran-opening-snapshot-browser.cjs
+      - name: Fast back-to-back QCF swipes
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: No late shift or font shimmer
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Existing QCF bookmarks, page jump, and selected verses
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Existing SVG reader and offline PWA
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs

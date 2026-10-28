@@ -408,7 +408,28 @@
     // The opening pair has just eight authentic printed content rows. Center
     // them together in an ornamental folio rather than 8/15 top-anchored rows.
     const html=rows.map((row,n)=>{
-      if(row.s)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
+      if(row.s){
+        if(page<=2){
+          // Printed Madinah Mushaf opening spread: a separate decorated surah
+          // title above the centered verses (do not repeat the metadata banner).
+          const title=page===1?'سُورَةُ الْفَاتِحَةِ':'سُورَةُ الْبَقَرَةِ';
+          // SVG ornaments are stable on Android Chrome; decorative Unicode
+          // flowers were rendered as tiny bullets on the user's device.
+          const ornament='<svg class="aq-qcf-opening-ornament" viewBox="0 0 180 54" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
+            '<g fill="none" stroke="#a68963" stroke-width="1.4">'+
+            '<path d="M0 27h180" opacity=".25"/>'+
+            '<g transform="translate(37 27)"><circle r="18"/><circle r="13"/>'+
+            '<ellipse rx="5" ry="15"/><ellipse rx="5" ry="15" transform="rotate(45)"/>'+
+            '<ellipse rx="5" ry="15" transform="rotate(90)"/><ellipse rx="5" ry="15" transform="rotate(135)"/>'+
+            '<circle r="4" fill="#c8b395"/></g>'+
+            '<g transform="translate(110 27)"><circle r="12"/>'+
+            '<path d="M0-17Q8-8 17 0Q8 8 0 17Q-8 8-17 0Q-8-8 0-17Z"/>'+
+            '<circle r="5" fill="#c8b395"/></g></g></svg>';
+          return '<div class="aq-native-heading aq-qcf-heading aq-qcf-opening-heading" role="heading" aria-level="2">'+
+            ornament+'<span class="aq-qcf-opening-title">'+title+'</span>'+ornament+'</div>';
+        }
+        return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
+      }
       if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
         ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
