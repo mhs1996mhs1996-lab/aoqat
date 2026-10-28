@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f8f1e4">
-<title>تجربة سلاسة المصحف — الصفحات ١–٢٠</title>
+<title>تجربة المصحف QCF V2 — الوصول المباشر إلى ١–٦٠٤</title>
 <style>
 :root{color-scheme:light;font-family:Tahoma,Arial,sans-serif;background:#eee6d9;color:#332719}
 *{box-sizing:border-box}
@@ -18,7 +18,7 @@ button[aria-pressed="true"]{background:#dfc9a4;border-color:#94764b;font-weight:
 button:disabled{opacity:.4;cursor:default}
 #loading{min-height:24px;font-size:12px;text-align:center;color:#72532f;padding:5px}
 #loading[data-error="true"]{color:#9e3329}
-.paper{position:relative;background:#fffaf0;margin:0 auto;border-inline:1px solid #c9b28e;width:min(100%,640px);height:calc(100dvh - 206px);overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.paper{position:relative;background:#fffaf0;margin:0 auto;border-inline:1px solid #c9b28e;width:min(100%,640px);height:calc(100dvh - 252px);overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
 .stage{position:absolute;inset:5px 8px 4px;display:grid;grid-template-rows:repeat(var(--rows),minmax(0,1fr));will-change:transform;contain:layout style paint}
 .stage[data-hidden="true"]{visibility:hidden}
 .line{min-height:0;min-width:0;display:flex;align-items:center;justify-content:space-between;overflow:hidden;white-space:nowrap;direction:rtl;gap:0}
@@ -32,16 +32,18 @@ footer{background:#fffaf1;border-top:1px solid #d5c3a7;padding:8px 10px;min-heig
 #metrics{font-size:12px;line-height:1.6;text-align:center;color:#5d4a32;min-height:20px}
 #description{font-size:10px;line-height:1.6;text-align:center;color:#715f48;padding:3px 7px}
 #pageNumber{min-width:60px;text-align:center;font-weight:bold}
-@media(max-height:650px){header{min-height:80px;padding:4px 8px}.paper{height:calc(100dvh - 180px)}footer{min-height:68px}button{padding:5px 9px}}
+#jumpForm{margin:5px 0 1px;font-size:12px}
+#jumpPage{width:73px;text-align:center;border:1px solid #aa916d;background:#fffdf6;color:#493824;padding:6px;border-radius:8px}
+@media(max-height:650px){header{min-height:80px;padding:4px 8px}.paper{height:calc(100dvh - 226px)}footer{min-height:68px}button{padding:5px 9px}}
 </style>
 </head>
 <body>
 <header>
-<h1>تجربة تقليب المصحف — الصفحات ١ إلى ٢٠</h1>
+<h1>تجربة تقليب المصحف — الوصول إلى الصفحات ١–٦٠٤</h1>
 <div class="toolbar">
  <button id="svgMode" type="button" aria-pressed="true">SVG الحالي</button>
  <button id="fontMode" type="button" aria-pressed="false">خط QCF V2 الحقيقي</button>
- <button id="preload" type="button">تجهيز خطوط ١–٢٠</button>
+ <button id="preload" type="button">تجهيز الصفحات المجاورة</button>
 </div>
 <div id="loading" role="status">جارٍ تجهيز المقارنة…</div>
 </header>
@@ -49,27 +51,29 @@ footer{background:#fffaf1;border-top:1px solid #d5c3a7;padding:8px 10px;min-heig
 <footer>
  <div class="controls">
   <button id="prev" type="button">السابق</button>
-  <span id="pageNumber">١ / ٢٠</span>
+  <span id="pageNumber">١ / ٦٠٤</span>
   <button id="next" type="button">التالي</button>
  </div>
+ <form id="jumpForm" class="controls" aria-label="الانتقال إلى صفحة"><label for="jumpPage">انتقال مباشر إلى صفحة</label><input id="jumpPage" inputmode="numeric" autocomplete="off" type="text" value="102" aria-label="رقم الصفحة من 1 إلى 604"><button type="submit" id="jumpButton">اذهب</button></form>
  <div id="metrics">الوقت محسوب على جهازك بعد تجهيز الصفحات.</div>
- <div id="description">نسخة مقارنة منفصلة؛ لا تغيّر المصحف المعتمد. بيانات الحروف محلية؛ خطوط QCF V2 من Quran Foundation وتحتاج إنترنت أول مرة.</div>
+ <div id="description">نسخة اختبار منفصلة؛ البيانات النصية لـ٦٠٤ صفحات محلية. خط الصفحة المطلوبة يُحمّل أول مرة فقط؛ المصحف الأصلي وAPK بدون تغيير.</div>
 </footer>
 <script>
 (function(){
 'use strict';
-const TOTAL=20;
+const TOTAL=604;
 const FONT_CDN='https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p';
 const $=id=>document.getElementById(id);
 const paper=$('paper'),status=$('loading'),metric=$('metrics');
 let mode='svg',page=1,source=null,chapters=null,turnBusy=false,turnFinish=null,pointer=null,turnTimer=0,modeToken=0,layoutToken=0;
 const svgData=new Map(),qcfData=new Map(),fontPromises=new Map(),staged=new Map(),preparing=new Map();
+let requestedTarget=null;
 let codeManifestPromise=null;
 async function codeManifest(){
- if(!codeManifestPromise)codeManifestPromise=Promise.all([
-  fetch('assets/qcf20-experiment-01-10.json').then(r=>{if(!r.ok)throw Error('تعذر فتح بيانات الصفحات ١–١٠');return r.json();}),
-  fetch('assets/qcf20-experiment-11-20.json').then(r=>{if(!r.ok)throw Error('تعذر فتح بيانات الصفحات ١١–٢٠');return r.json();})
- ]).then(([a,b])=>({...a.rows,...b.rows})).catch(e=>{codeManifestPromise=null;throw e;});
+ if(!codeManifestPromise)codeManifestPromise=compressed('assets/qcf604-experiment.json.gz').then(data=>{
+  if(data.pageCount!==604||Object.keys(data.pages||{}).length!==604)throw Error('فهرس QCF غير مكتمل');
+  return data.pages;
+ }).catch(e=>{codeManifestPromise=null;throw Error('بيانات التجربة الكاملة غير متوفرة: '+e.message);});
  return codeManifestPromise;
 }
 let lastMeasure={dom:0,turn:0};
@@ -97,16 +101,15 @@ async function svgPage(n){
  const data=await compressed('assets/mushaf-phone-hafs/'+String(n).padStart(3,'0')+'.json.gz');
  if(data.page!==n||!data.lines.length)throw Error('بيانات SVG للصفحة '+n+' غير صحيحة');
  svgData.set(n,data);
- // Decode only nearby pages, never retain all 20 heavy SVG pages in RAM.
+ // Decode only nearby pages; never retain the whole 604-page SVG corpus in RAM.
  for(const old of [...svgData.keys()])if(Math.abs(old-page)>3&&svgData.size>7)svgData.delete(old);
  return data;
 }
 async function qcfWords(n){
  if(qcfData.has(n))return qcfData.get(n);
- // Glyph codes are pinned in two local manifests from the same QCF2 layout source
- // used to build the approved SVG edition. No runtime text/API fetch is needed.
- const codes=await codeManifest();const rows=codes[String(n)];
- if(!Array.isArray(rows)||rows.length<6||rows.some(line=>!Array.isArray(line)||!line.length||line.some(code=>typeof code!=='string'||!code.trim())))
+ // Authentic per-page QCF glyph codes, bundled in a single compact local manifest.
+ const codes=await codeManifest();const rows=codes[String(n)]?.lines;
+ if(!Array.isArray(rows)||rows.length<6||rows.some(row=>!row.s&&!row.b&&(!Array.isArray(row.v)||!row.v.length||row.v.some(code=>typeof code!=='string'||!code.trim()))))
   throw Error('بيانات QCF V2 للصفحة '+arabic(n)+' ناقصة؛ أوقفنا العرض منعاً لتشوه المصحف');
  qcfData.set(n,rows);return rows;
 }
@@ -168,23 +171,17 @@ async function makeStage(n,kind){
  if(staged.has(key))return staged.get(key);
  if(preparing.has(key))return preparing.get(key);
  const job=(async()=>{
-  const start=performance.now();
-  const data=await svgPage(n);
-  let words=null,fontName='';
-  if(kind==='qcf'){
-   [words,fontName]=await Promise.all([qcfWords(n),font(n)]);
-   const normal=data.lines.filter(x=>!x.s&&!x.b).length;
-   if(normal!==words.length)throw Error('اختلاف عدد الأسطر للصفحة '+arabic(n)+': SVG='+normal+'، QCF='+words.length);
-  }
+  const [data,fontName]=kind==='qcf'
+   ?await Promise.all([qcfWords(n).then(lines=>({lines})),font(n)])
+   :[await svgPage(n),''];
   const constructed=performance.now();
   const el=document.createElement('section');el.className='stage';el.dataset.kind=kind;el.dataset.page=String(n);el.dataset.hidden='true';
   el.style.setProperty('--rows',data.lines.length);
   el.style.transform='translate3d(-200vw,0,0)';
-  let rowIndex=0;
   for(const row of data.lines){
    if(row.s)el.append(heading(row));
    else if(row.b)el.append(basmala());
-   else el.append(kind==='qcf'?createQcfLine(words[rowIndex++],fontName):createSvgLine(row));
+   else el.append(kind==='qcf'?createQcfLine(row.v,fontName):createSvgLine(row));
   }
   paper.append(el);
   if(kind==='qcf')fitQcf(el);
