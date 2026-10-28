@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f8f1e4">
+<title>تجربة سلاسة المصحف — الصفحات ١–٢٠</title>
+<style>
+:root{color-scheme:light;font-family:Tahoma,Arial,sans-serif;background:#eee6d9;color:#332719}
+*{box-sizing:border-box}
+body{margin:0;height:100dvh;overflow:hidden}
+button,select{font:inherit}
+header{background:#fffaf1;padding:10px 12px 8px;border-bottom:1px solid #d5c3a7;min-height:92px}
+h1{font-size:16px;margin:0 0 8px;text-align:center}
+.toolbar,.controls{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:7px}
+button{border:1px solid #aa916d;background:#fffdf6;color:#493824;padding:8px 11px;border-radius:9px;cursor:pointer}
+button[aria-pressed="true"]{background:#dfc9a4;border-color:#94764b;font-weight:700}
+button:disabled{opacity:.4;cursor:default}
+#loading{min-height:24px;font-size:12px;text-align:center;color:#72532f;padding:5px}
+#loading[data-error="true"]{color:#9e3329}
+.paper{position:relative;background:#fffaf0;margin:0 auto;border-inline:1px solid #c9b28e;width:min(100%,640px);height:calc(100dvh - 206px);overflow:hidden;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.stage{position:absolute;inset:5px 8px 4px;display:grid;grid-template-rows:repeat(var(--rows),minmax(0,1fr));will-change:transform;contain:layout style paint}
+.stage[data-hidden="true"]{visibility:hidden}
+.line{min-height:0;min-width:0;display:flex;align-items:center;justify-content:space-between;overflow:hidden;white-space:nowrap;direction:rtl;gap:0}
+.line svg{display:block;width:100%;height:100%;max-height:100%;fill:#2d2925;overflow:visible}
+.line.centered{justify-content:center}
+.line.heading{justify-content:center;background:linear-gradient(90deg,#efe2c8,#fdf6e5,#efe2c8);border:2px double #baa17a;border-radius:7px;font-size:clamp(13px,3.4vw,19px);font-weight:bold}
+.line.basmala{justify-content:center;font-family:"Amiri",serif;font-size:clamp(18px,4.4vw,29px)}
+.line.qline{font-family:serif;font-size:29px;line-height:1;justify-content:space-between}
+.qword{display:inline-block;flex:0 0 auto;white-space:pre;line-height:1.15}
+footer{background:#fffaf1;border-top:1px solid #d5c3a7;padding:8px 10px;min-height:74px}
+#metrics{font-size:12px;line-height:1.6;text-align:center;color:#5d4a32;min-height:20px}
+#description{font-size:10px;line-height:1.6;text-align:center;color:#715f48;padding:3px 7px}
+#pageNumber{min-width:60px;text-align:center;font-weight:bold}
+@media(max-height:650px){header{min-height:80px;padding:4px 8px}.paper{height:calc(100dvh - 180px)}footer{min-height:68px}button{padding:5px 9px}}
+</style>
+</head>
+<body>
+<header>
+<h1>تجربة تقليب المصحف — الصفحات ١ إلى ٢٠</h1>
+<div class="toolbar">
+ <button id="svgMode" type="button" aria-pressed="true">SVG الحالي</button>
+ <button id="fontMode" type="button" aria-pressed="false">خط QCF V2 الحقيقي</button>
+ <button id="preload" type="button">تجهيز خطوط ١–٢٠</button>
+</div>
+<div id="loading" role="status">جارٍ تجهيز المقارنة…</div>
+</header>
+<main id="paper" class="paper" aria-label="صفحة المصحف التجريبية"></main>
+<footer>
+ <div class="controls">
+  <button id="prev" type="button">السابق</button>
+  <span id="pageNumber">١ / ٢٠</span>
+  <button id="next" type="button">التالي</button>
+ </div>
+ <div id="metrics">الوقت محسوب على جهازك بعد تجهيز الصفحات.</div>
+ <div id="description">نسخة مقارنة منفصلة؛ لا تغيّر المصحف المعتمد، ولا تعمل خارج الصفحات ١–٢٠. يحتاج الخط إلى اتصال أولي بالإنترنت.</div>
+</footer>
+<script>
+(function(){
+'use strict';
+const TOTAL=20;
+const FONT_CDN='https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p';
+const WORD_API='https://api.quran.com/api/v4/verses/by_page/';
+const $=id=>document.getElementById(id);
+const paper=$('paper'),status=$('loading'),metric=$('metrics');
+let mode='svg',page=1,source=null,chapters=null,turnBusy=false,turnFinish=null,pointer=null,turnTimer=0,modeToken=0,layoutToken=0;
+const svgData=new Map(),qcfData=new Map(),fontPromises=new Map(),staged=new Map(),preparing=new Map();
+let lastMeasure={dom:0,turn:0};
+function arabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
+function message(s,error){status.textContent=s;status.dataset.error=error?'true':'false';}
+function metricText(){metric.textContent='آخر تجهيز للصفحة: '+lastMeasure.dom.toFixed(1)+' مللي ثانية | آخر انتقال: '+lastMeasure.turn.toFixed(1)+' مللي ثانية';}
+async function compressed(url){
+ const r=await fetch(url);if(!r.ok)throw Error('تعذر تحميل '+url);
+ const bytes=new Uint8Array(await r.arrayBuffer());
+ if(bytes[0]===31&&bytes[1]===139){
+  if(!('DecompressionStream' in window))throw Error('المتصفح لا يدعم فك ضغط بيانات المصحف');
+  return new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json();
+ }
+ return JSON.parse(new TextDecoder().decode(bytes));
+}
+async function base(){
+ if(!source){
+  const [meta,q]=await Promise.all([compressed('assets/mushaf-phone-hafs.json.gz'),fetch('assets/quran.json').then(r=>{if(!r.ok)throw Error('تعذر تحميل الفهرس');return r.json();})]);
+  if(meta.pages.length!==604||q.length!==114)throw Error('بيانات المصحف غير مكتملة');
+  source=meta;chapters=q;
+ }
+}
+async function svgPage(n){
+ if(svgData.has(n))return svgData.get(n);
+ const data=await compressed('assets/mushaf-phone-hafs/'+String(n).padStart(3,'0')+'.json.gz');
+ if(data.page!==n||!data.lines.length)throw Error('بيانات SVG للصفحة '+n+' غير صحيحة');
+ svgData.set(n,data);
+ // Decode only nearby pages, never retain all 20 heavy SVG pages in RAM.
+ for(const old of [...svgData.keys()])if(Math.abs(old-page)>3&&svgData.size>7)svgData.delete(old);
+ return data;
+}
+async function qcfWords(n){
+ if(qcfData.has(n))return qcfData.get(n);
+ // Use page-specific QCF V2 code and line numbering, not generic Uthmani text.
+ const url=WORD_API+n+'?words=true&word_fields=code_v2%2Cline_v2%2Cv2_page%2Ctext_qpc_hafs&per_page=50&mushaf=1';
+ const r=await fetch(url);if(!r.ok)throw Error('بيانات الخط غير متاحة (HTTP '+r.status+')');
+ const json=await r.json();
+ const words=(json.verses||[]).flatMap(v=>(v.words||[]).map(w=>({ ...w,verse_key:v.verse_key})));
+ const selected=words.filter(w=>Number(w.v2_page)===n&&Number(w.line_v2)>0&&typeof w.code_v2==='string'&&w.code_v2.trim());
+ const unique=new Map();
+ for(const w of selected){const line=Number(w.line_v2);if(!unique.has(line))unique.set(line,[]);unique.get(line).push(w);}
+ const rows=[...unique].sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+ if(!rows.length||selected.length<8)throw Error('بيانات QCF V2 للصفحة '+arabic(n)+' ناقصة؛ أوقفنا العرض منعاً لتشوه المصحف');
+ qcfData.set(n,rows);return rows;
+}
+async function font(n){
+ if(fontPromises.has(n))return fontPromises.get(n);
+ const name='AoqatTrialQCF'+n;
+ const task=(async()=>{
+  if(!('FontFace' in window))throw Error('هذا المتصفح لا يدعم FontFace');
+  const face=new FontFace(name,"url('"+FONT_CDN+n+".woff2')",{style:'normal',weight:'400',display:'block'});
+  const loaded=await face.load();
+  document.fonts.add(loaded);
+  return name;
+ })().catch(e=>{fontPromises.delete(n);throw Error('تعذر تحميل خط الصفحة '+arabic(n)+': '+e.message);});
+ fontPromises.set(n,task);return task;
+}
+function heading(row){
+ const el=document.createElement('div');el.className='line heading';
+ const surah=chapters[row.s-1];el.textContent=surah?'سورة '+surah.name:'عنوان السورة';
+ return el;
+}
+function basmala(){
+ const el=document.createElement('div');el.className='line basmala';
+ el.textContent='بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';return el;
+}
+function createSvgLine(row){
+ const line=document.createElement('div');line.className='line'+(row.c?' centered':'');
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ const b=row.box;
+ svg.setAttribute('viewBox',[b[0]-b[2]*.018,b[1],b[2]*1.036,b[3]].join(' '));
+ svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+ svg.setAttribute('aria-hidden','true');
+ for(const pair of row.v){
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d',pair[1]);g.append(path);svg.append(g);
+ }
+ line.append(svg);return line;
+}
+function createQcfLine(words,fontName){
+ const line=document.createElement('div');line.className='line qline';line.style.fontFamily='"'+fontName+'",serif';
+ for(const w of words){const span=document.createElement('span');span.className='qword';span.style.fontFamily='"'+fontName+'",serif';span.textContent=w.code_v2;line.append(span);}
+ return line;
+}
+function fitQcf(node){
+ const lines=node.querySelectorAll('.qline');
+ const width=Math.max(50,paper.clientWidth-23);
+ for(const line of lines){
+  line.style.fontSize='35px';
+  // Two layout measurements per line, done only during staging, never on touch move.
+  const measured=Math.max(1,line.scrollWidth),size=Math.min(35,Math.max(15,35*(width-3)/measured));
+  line.style.fontSize=size.toFixed(2)+'px';
+  const overflow=line.scrollWidth-width;
+  if(overflow>1){line.style.fontSize=(size*width/(width+overflow+2)).toFixed(2)+'px';}
+ }
+}
+async function makeStage(n,kind){
+ await base();
+ const key=kind+'-'+n;
+ if(staged.has(key))return staged.get(key);
+ if(preparing.has(key))return preparing.get(key);
+ const job=(async()=>{
+  const start=performance.now();
+  const data=await svgPage(n);
+  let words=null,fontName='';
+  if(kind==='qcf'){
+   [words,fontName]=await Promise.all([qcfWords(n),font(n)]);
+   const normal=data.lines.filter(x=>!x.s&&!x.b).length;
+   if(normal!==words.length)throw Error('اختلاف عدد الأسطر للصفحة '+arabic(n)+': SVG='+normal+'، QCF='+words.length);
+  }
+  const constructed=performance.now();
+  const el=document.createElement('section');el.className='stage';el.dataset.kind=kind;el.dataset.page=String(n);el.dataset.hidden='true';
+  el.style.setProperty('--rows',data.lines.length);
+  el.style.transform='translate3d(-200vw,0,0)';
+  let rowIndex=0;
+  for(const row of data.lines){
+   if(row.s)el.append(heading(row));
+   else if(row.b)el.append(basmala());
+   else el.append(kind==='qcf'?createQcfLine(words[rowIndex++],fontName):createSvgLine(row));
+  }
+  paper.append(el);
+  if(kind==='qcf')fitQcf(el);
+  lastMeasure.dom=performance.now()-constructed;
+  metricText();
+  staged.set(key,el);
+  return el;
+ })().finally(()=>preparing.delete(key));
+ preparing.set(key,job);
+ return job;
+}
+function node(n,k=mode){return staged.get(k+'-'+n);}
+function updateButtons(){
+ $('prev').disabled=page<=1;$('next').disabled=page>=TOTAL;
+ $('pageNumber').textContent=arabic(page)+' / '+arabic(TOTAL);
+ $('svgMode').setAttribute('aria-pressed',String(mode==='svg'));
+ $('fontMode').setAttribute('aria-pressed',String(mode==='qcf'));
+}
+function displayCurrent(){
+ const current=node(page);if(!current)return;
+ current.dataset.hidden='false';current.style.transform='translate3d(0,0,0)';
+ current.style.transition='';current.style.zIndex='2';
+ updateButtons();
+}
+function disposeFar(){
+ for(const [key,el] of staged){
+  const n=Number(el.dataset.page),kind=el.dataset.kind;
+  if(kind!==mode||Math.abs(n-page)>1){el.remove();staged.delete(key);}
+ }
+}
+function warmNearby(){
+ const currentPage=page,currentMode=mode;
+ for(const n of [currentPage+1,currentPage-1]){
+  if(n<1||n>TOTAL)continue;
+  makeStage(n,currentMode).then(el=>{
+   if(mode===currentMode&&page===currentPage){el.dataset.hidden='false';el.style.zIndex='1';el.style.transform='translate3d('+(n>page?-paper.clientWidth:paper.clientWidth)+'px,0,0)';}
+  }).catch(e=>{if(currentPage===page&&mode===currentMode)message(e.message,true);});
+ }
+}
+function completeTurn(){
+ if(!turnBusy)return;
+ clearTimeout(turnTimer);turnTimer=0;
+ turnBusy=false;const finish=turnFinish;turnFinish=null;if(finish)finish();
+}
+async function turn(target,drag=0){
+ if(target<1||target>TOTAL)return;
+ if(turnBusy)completeTurn();
+ if(target===page)return;
+ const from=page,kind=mode,ticket=++layoutToken,direction=target>from?1:-1;
+ let incoming=node(target);
+ if(!incoming){
+  message('تجهيز الصفحة '+arabic(target)+' قبل التقليب…');
+  try{incoming=await makeStage(target,kind);}
+  catch(e){message(e.message,true);return;}
+  if(ticket!==layoutToken||mode!==kind||page!==from)return;
+ }
+ const current=node(from);
+ if(!current)return;
+ const start=performance.now(),width=paper.clientWidth;
+ turnBusy=true;incoming.dataset.hidden='false';incoming.style.zIndex='3';
+ incoming.style.transition='none';current.style.transition='none';
+ incoming.style.transform='translate3d('+(drag-direction*width)+'px,0,0)';
+ current.style.transform='translate3d('+drag+'px,0,0)';
+ // Prevent an earlier transitionend from cancelling a newer swipe.
+ turnFinish=()=>{
+  page=target;current.style.transition='none';
+  incoming.style.transition='none';
+  current.style.transform='translate3d(-200vw,0,0)';
+  incoming.style.transform='translate3d(0,0,0)';
+  lastMeasure.turn=performance.now()-start;metricText();
+  displayCurrent();disposeFar();warmNearby();message(kind==='qcf'?'خط QCF V2 جاهز — اسحب للتجربة':'رسومات SVG الحالية — اسحب للتجربة');
+ };
+ requestAnimationFrame(()=>{
+  if(!turnBusy||turnFinish===null)return;
+  incoming.style.transition='transform 190ms ease-out';current.style.transition='transform 190ms ease-out';
+  incoming.style.transform='translate3d(0,0,0)';
+  current.style.transform='translate3d('+(direction*width)+'px,0,0)';
+ });
+ turnTimer=setTimeout(completeTurn,235);
+}
+async function switchMode(target){
+ if(target===mode)return;
+ if(turnBusy)completeTurn();
+ const ticket=++modeToken,n=page;
+ message(target==='qcf'?'جاري تحميل خط QCF V2 وبياناته…':'جاري تجهيز SVG الحالي…');
+ try{
+  await makeStage(n,target);
+  if(ticket!==modeToken)return;
+  const old=node(n,mode);if(old){old.remove();staged.delete(mode+'-'+n);}
+  mode=target;disposeFar();displayCurrent();warmNearby();
+  message(mode==='qcf'?'الخط الأصلي QCF V2 — اسحب للتجربة':'رسومات SVG الحالية — اسحب للتجربة');
+ }catch(e){message(e.message+'؛ بقي عرض SVG دون تغيير.',true);}
+}
+paper.addEventListener('pointerdown',e=>{
+ if(!e.isPrimary)return;
+ try{paper.setPointerCapture(e.pointerId);}catch(_){}
+ if(turnBusy)completeTurn();
+ pointer={id:e.pointerId,x:e.clientX,y:e.clientY,start:performance.now(),dx:0,dragging:false};
+});
+paper.addEventListener('pointermove',e=>{
+ if(!pointer||pointer.id!==e.pointerId||turnBusy)return;
+ const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
+ if(Math.abs(dx)<12||Math.abs(dx)<Math.abs(dy)*1.3)return;
+ const target=page+(dx>0?1:-1),incoming=node(target),current=node(page);
+ pointer.dx=dx;pointer.dragging=true;
+ if(!incoming||!current)return; // Never generate SVG or a font while moving a finger.
+ const width=paper.clientWidth,offset=Math.max(-width,Math.min(width,dx));
+ incoming.dataset.hidden='false';incoming.style.zIndex='3';incoming.style.transition='none';
+ current.style.transition='none';current.style.transform='translate3d('+offset+'px,0,0)';
+ incoming.style.transform='translate3d('+(offset-(dx>0?1:-1)*width)+'px,0,0)';
+});
+paper.addEventListener('pointerup',e=>{
+ if(!pointer||pointer.id!==e.pointerId)return;
+ const p=pointer;pointer=null;
+ const dx=e.clientX-p.x,dy=e.clientY-p.y;
+ if(Math.abs(dx)>Math.min(48,paper.clientWidth*.13)&&Math.abs(dx)>Math.abs(dy)*1.3){
+  const target=page+(dx>0?1:-1);
+  if(target>=1&&target<=TOTAL){turn(target,Math.max(-paper.clientWidth,Math.min(paper.clientWidth,dx)));return;}
+ }
+ const current=node(page);if(current){current.style.transition='transform 160ms';current.style.transform='translate3d(0,0,0)';}
+ warmNearby();
+});
+paper.addEventListener('pointercancel',()=>{pointer=null;const current=node(page);if(current)current.style.transform='translate3d(0,0,0)';warmNearby();});
+$('next').onclick=()=>turn(page+1);
+$('prev').onclick=()=>turn(page-1);
+$('svgMode').onclick=()=>switchMode('svg');
+$('fontMode').onclick=()=>switchMode('qcf');
+$('preload').onclick=async()=>{
+ const button=$('preload');if(button.disabled)return;
+ button.disabled=true;let done=0,failed=[];
+ message('تحميل الخطوط وبيانات الصفحات ١–٢٠…');
+ // Limit concurrent requests; page fonts are cached in the current browser session.
+ let next=1;
+ async function worker(){
+  while(next<=TOTAL){
+   const n=next++;
+   try{await Promise.all([font(n),qcfWords(n)]);done++;}
+   catch(e){failed.push(arabic(n)+': '+e.message);}
+   message('تجهيز خطوط QCF V2: '+arabic(done)+' من '+arabic(TOTAL)+(failed.length?' — إخفاق '+arabic(failed.length):''),false);
+  }
+ }
+ await Promise.all([worker(),worker(),worker()]);
+ button.disabled=false;
+ if(failed.length)message('جهزت '+arabic(done)+' صفحة، وتعذّر تجهيز '+arabic(failed.length)+'. '+failed[0],true);
+ else message('الصفحات ١–٢٠ جاهزة بخط QCF V2. ابدأ التقليب لقياس السلاسة.');
+};
+(async()=>{
+ try{
+  await base();await makeStage(page,'svg');displayCurrent();warmNearby();
+  message('SVG جاهز. اختر خط QCF V2 للمقارنة، أو جهّز الصفحات ١–٢٠ أولاً.');
+ }catch(e){message('تعذر بدء التجربة: '+e.message,true);}
+})();
+})();
+</script>
+</body></html>
