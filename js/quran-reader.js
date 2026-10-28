@@ -47,7 +47,27 @@
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
   async function compressed(url){const r=await fetch(url);if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
   async function loadPhone(){const ready=await fetch('assets/mushaf-phone-hafs-ready.json');if(!ready.ok)throw Error('Phone Mushaf unavailable');const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');return data;}
-  async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
+  // A QCF-outline page can be hundreds of KB compressed and much larger parsed.
+  // Keep a small LRU working set; the service worker retains downloaded pages on disk.
+  function trimPhonePages(){
+    if(phonePages.size<=18)return;
+    for(const p of phonePages.keys()){
+      if(phonePages.size<=18)break;
+      if(Math.abs(p-state.page)<=3||galleryReady.has(p))continue;
+      phonePages.delete(p);
+    }
+  }
+  async function phonePage(page){
+    if(phonePages.has(page)){
+      const data=phonePages.get(page);phonePages.delete(page);phonePages.set(page,data);
+      return data;
+    }
+    if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{
+      if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');
+      phonePages.set(page,data);trimPhonePages();return data;
+    }).finally(()=>phoneRequests.delete(page)));
+    return phoneRequests.get(page);
+  }
   // Store every page on disk for offline turns, without retaining 604 DOM trees in RAM.
   // Adjacent pages still take priority through phonePage() during navigation.
   let offlineWarmStarted=false;
@@ -108,6 +128,12 @@
     root.addEventListener('contextmenu',e=>{if(e.target.closest('#aqSheet')&&!e.target.matches('input,textarea'))e.preventDefault();});
     $('aqPaper').addEventListener('pointerdown',e=>{
       if(!e.isPrimary)return;
+      // Keep the gesture anchored to the permanent paper node. Settling the
+      // previous turn removes the SVG element originally hit by this pointer;
+      // without capture, Chrome can cancel the new rapid swipe mid-gesture.
+      try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+      // A fast second swipe must finish the previous turn instead of being lost.
+      if(galleryBusy)gallerySettle?.();
       if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
@@ -142,7 +168,7 @@
     document.body.classList.toggle('quran-reader-immersive',on);
   }
   // Gallery-style horizontal swipe: move two already prepared pages with the finger.
-  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false;
+  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false,gallerySettle=null,gallerySettleTimer=0,galleryAnimationFrame=0;
   // Build and fit adjacent pages while idle, never in the pointermove handler.
   const galleryReady=new Map();
   let galleryPrepareTimer=0;
@@ -171,9 +197,12 @@
     galleryPrepareTimer=setTimeout(()=>{
       if(!root?.isConnected||pointer||galleryBusy)return;
       for(const p of [state.page+1,state.page-1])galleryPrepare(p);
-    },100);
+    },0);
   }
   function galleryReset(){
+    clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
+    cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
+    gallerySettle=null;galleryBusy=false;
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
     const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
   }
@@ -188,7 +217,10 @@
       if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
         // Recover if the idle pre-render timer did not finish before touch.
         galleryReady.get(target)?.node.remove();galleryReady.delete(target);
-        return;
+        // The page data is already in memory: prepare the fitted DOM once,
+        // before moving either page, rather than dropping the swipe.
+        galleryPrepare(target);
+        if(!galleryReady.has(target))return;
       }
       const prepared=galleryReady.get(target);
       if(!prepared)return;
@@ -204,15 +236,24 @@
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
     galleryBusy=true;
     const direction=galleryDirection,width=paper.clientWidth;
+    // Prevent the hidden offscreen staging transform from flashing on screen.
+    neighbor.style.visibility='visible';
     current.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
     neighbor.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
-    requestAnimationFrame(()=>{
+    galleryAnimationFrame=requestAnimationFrame(()=>{
+      galleryAnimationFrame=0;
+      if(!galleryBusy)return;
       current.style.transform='translate3d('+(commit?direction*width:0)+'px,0,0)';
       neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
     });
     const settle=()=>{
-      if(!galleryBusy)return;
-      galleryBusy=false;
+      // Ignore a delayed transitionend from a previously adopted page: it must
+      // never cancel a newer swipe's animation or steal its pending page turn.
+      if(!galleryBusy||gallerySettle!==settle)return;
+      neighbor.removeEventListener('transitionend',settle);
+      clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
+      cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
+      gallerySettle=null;galleryBusy=false;
       if(commit&&root?.isConnected&&state.page!==target){
         // Keep the already rendered and fitted neighbor; do not rebuild it after the swipe.
         current.remove();
@@ -227,8 +268,9 @@
         go(target);
       }else galleryReset();
     };
+    gallerySettle=settle;
     neighbor.addEventListener('transitionend',settle,{once:true});
-    setTimeout(settle,310);
+    gallerySettleTimer=setTimeout(settle,310);
   }
   function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
@@ -361,8 +403,8 @@
     const pageChanged=root.dataset.page!==String(state.page);
     dragOffset=0;
     clearTurn();
-    const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
-    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* The incoming gallery page is already fitted and displayed. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
+    const items=pageItems(),start=meta.pages[state.page-1].start;
+    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* Reuse the fitted incoming DOM without regenerating SVG paths. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=pageHTML(state.page);$('adVerses').classList.toggle('aq-opening',state.page<=2);}
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
@@ -394,11 +436,15 @@
     if(phoneMode()||mobileTrial()){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-qcf-page','aq-qcf-opening');
       text.classList.add('aq-native-page');
-      text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
-      text.style.height=(paper.clientHeight-12)+'px';
+      // Default size remains a fitted, full-screen page. Explicit reading zoom
+      // enlarges the whole SVG page, allowing native scrolling without reflowing
+      // or regenerating its Quran glyph paths.
+      const zoom=Math.max(1,state.font/44);
+      text.style.setProperty('width',((paper.clientWidth-18)*zoom)+'px','important');
+      text.style.height=((paper.clientHeight-12)*zoom)+'px';
       const rows=phonePages.get(page)?.lines.length||15;
       text.style.setProperty('--native-rows',rows);
-      text.style.setProperty('--native-zoom',1);
+      text.style.setProperty('--native-zoom',zoom);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
@@ -430,7 +476,21 @@
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){galleryClearReady();for(const p of [state.page+1,state.page-1])if(p>=1&&p<=604){phonePage(p).then(()=>{if(root?.isConnected&&Math.abs(state.page-p)===1)gallerySchedule();}).catch(()=>{});}gallerySchedule();return;}
+    if(phoneMode()){
+      galleryClearReady();
+      const current=state.page;
+      for(const p of [current+1,current-1])if(p>=1&&p<=TOTAL){
+        phonePage(p).then(()=>{if(root?.isConnected&&state.page===current)gallerySchedule();}).catch(()=>{});
+      }
+      gallerySchedule();
+      // Read data for a short run of upcoming pages in the background.
+      // Only the immediate neighbors are turned into DOM nodes.
+      warmTask=setTimeout(()=>{
+        if(!root?.isConnected||pointer||galleryBusy||state.page!==current)return;
+        for(const p of [current+2,current+3,current-2])if(p>=1&&p<=TOTAL)phonePage(p).catch(()=>{});
+      },250);
+      return;
+    }
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;

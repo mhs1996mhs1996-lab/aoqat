@@ -1,4 +1,6 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
+// A malformed Mushaf URL expression previously made the entire service worker invalid.
+new (require('node:vm').Script)(require('node:fs').readFileSync('sw.js','utf8'),{filename:'sw.js'});
 (async()=>{const server=spawn('python3',['-m','http.server','8771'],{stdio:'ignore'});let browser;try{
  await require('./sw-update-browser.cjs')();
  await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
@@ -7,7 +9,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spa
  await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;});
  await page.waitForFunction(()=>navigator.serviceWorker.controller);
  const cacheName=require('node:fs').readFileSync('sw.js','utf8').match(/const CACHE_NAME = "([^"]+)"/)[1];
- await page.evaluate(async name=>{const c=await caches.open(name);for(const path of ['/js/prayer-time-choice.js','/js/quran-reader.js','/assets/quran.json','/assets/quran-pages.json','/assets/fonts/uthmanic-hafs.woff2','/js/web-menu-order.js?v=30'])if(!await c.match(path))throw Error('Missing cached resource: '+path);},cacheName);
+ await page.evaluate(async name=>{const c=await caches.open(name),entries=await c.keys();for(const path of ['/js/prayer-time-choice.js','/js/quran-reader.js','/assets/quran.json','/assets/quran-pages.json','/assets/fonts/uthmanic-hafs.woff2','/js/web-menu-order.js'])if(!entries.some(request=>new URL(request.url).pathname===path))throw Error('Missing cached resource: '+path);},cacheName);
  // First Quran visit and subsequent reload both work without any network.
  await context.setOffline(true);await page.reload({waitUntil:'domcontentloaded'});
  await page.waitForSelector('[data-drawer="quran"]',{state:'attached'});await page.evaluate(()=>document.body.classList.add('design-menu-open'));await page.locator('[data-drawer="quran"]').click();
