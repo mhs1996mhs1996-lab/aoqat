@@ -503,3 +503,46 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
     margin-bottom:18px!important;
   }
 }
+
+
+/* The opening name must be centered in the decorative strip (not aligned to
+   the right side by inherited RTL/flex rules); ornaments are native SVG and
+   remain crisp without depending on platform-specific flower glyph fonts. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-inner>.aq-qcf-opening-heading{
+  display:block!important;
+  position:relative!important;
+  direction:rtl!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-heading>.aq-qcf-opening-title{
+  position:absolute!important;
+  display:block!important;
+  top:50%!important;
+  left:50%!important;
+  right:auto!important;
+  transform:translate(-50%,-50%)!important;
+  width:max-content!important;
+  max-width:52%!important;
+  white-space:nowrap!important;
+  font-size:clamp(17px,4.7vw,27px)!important;
+  text-align:center!important;
+  z-index:2!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-heading>svg.aq-qcf-opening-ornament{
+  display:block!important;
+  position:absolute!important;
+  width:23%!important;
+  height:calc(100% - 5px)!important;
+  top:2px!important;
+  left:auto!important;
+  right:0!important;
+  background:transparent!important;
+  border:0!important;
+  min-width:0!important;
+  padding:0!important;
+  z-index:1!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-heading>svg.aq-qcf-opening-ornament:last-child{
+  left:0!important;
+  right:auto!important;
+  transform:scaleX(-1)!important;
+}
