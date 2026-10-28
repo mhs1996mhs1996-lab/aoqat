@@ -31,6 +31,19 @@ const {spawn}=require('node:child_process');
    await page.locator('#prev').click();
    await page.waitForFunction(n=>document.querySelector('#pageNumber').textContent.startsWith(String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d])),n,{timeout:30000});
   }
+  // Two real, rapid pointer gestures, without waiting for the first slide to settle.
+  await page.waitForFunction(()=>!!document.querySelector('.stage[data-kind="qcf"][data-page="2"]'),null,{timeout:10000});
+  const box=await page.locator('#paper').boundingBox();
+  for(let i=0;i<2;i++){
+   await page.mouse.move(box.x+45,box.y+box.height*.52);
+   await page.mouse.down();
+   await page.mouse.move(box.x+190,box.y+box.height*.52,{steps:4});
+   await page.mouse.up();
+  }
+  await page.waitForFunction(()=>document.querySelector('#pageNumber').textContent.startsWith('٣'),null,{timeout:10000});
+  assert.ok(await page.locator('#paper .stage[data-kind="qcf"][data-page="3"] .qword').count()>0,'Rapid swipes must reach page 3');
+  await page.locator('#prev').click();await page.waitForFunction(()=>document.querySelector('#pageNumber').textContent.startsWith('٢'));
+  await page.locator('#prev').click();await page.waitForFunction(()=>document.querySelector('#pageNumber').textContent.startsWith('١'));
   await page.locator('#svgMode').click();
   await page.waitForFunction(()=>document.querySelector('#svgMode').getAttribute('aria-pressed')==='true');
   assert.equal(await page.locator('#paper .stage[data-kind="svg"][data-page="1"] svg').count()>0,true);
