@@ -52,7 +52,8 @@ const {spawn}=require('node:child_process');
      rowCount:frame?.children.length,
      title:frame?.querySelector('.aq-qcf-opening-title')?.textContent,
      ornaments:frame?.querySelectorAll('.aq-qcf-opening-ornament').length||0,
-     heading:frame?.querySelector('.aq-qcf-opening-heading')&&rect(frame.querySelector('.aq-qcf-opening-heading')), 
+     heading:frame?.querySelector('.aq-qcf-opening-heading')&&rect(frame.querySelector('.aq-qcf-opening-heading')),
+     headingTitle:frame?.querySelector('.aq-qcf-opening-title')&&rect(frame.querySelector('.aq-qcf-opening-title')),
      firstLine:frame?.querySelector('.aq-qcf-line')&&rect(frame.querySelector('.aq-qcf-line')),
      basmala:!!frame?.querySelector('.aq-qcf-bismillah'),
      wordIds:[...new Set([...frame.querySelectorAll('.aq-qcf-word')].map(el=>Number(el.dataset.qrVerse)))],
@@ -64,6 +65,8 @@ const {spawn}=require('node:child_process');
    assert.equal(layout.rowCount,8,'The opening pair must preserve the original eight printed rows');
    assert.ok(layout.title.includes(n===1?'الْفَاتِحَةِ':'الْبَقَرَةِ'),'Wrong surah opening heading');
    assert.equal(layout.ornaments,2,'Decorated Quran title needs symmetric ornamental flanks');
+   assert.ok(Math.abs((layout.headingTitle.x+layout.headingTitle.w/2)-(layout.heading.x+layout.heading.w/2))<=2,
+    'Decorated surah title must be horizontally centered within its banner: '+JSON.stringify(layout));
    assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening requires a separate surah title with clear space above the verses');
    assert.equal(layout.basmala,n===2,'Al-Baqarah needs its own Basmala; Al-Fatiha contains Basmala in first verse');
    assert.equal(layout.wordIds.length,n===1?7:5,'Missing or duplicate Quran verses in opening page '+n);
