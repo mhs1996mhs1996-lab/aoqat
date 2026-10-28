@@ -500,6 +500,6 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   }
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening .aq-qcf-opening-inner>.aq-qcf-opening-heading{
     min-height:34px!important;
-    margin-bottom:5px!important;
+    margin-bottom:18px!important;
   }
 }
