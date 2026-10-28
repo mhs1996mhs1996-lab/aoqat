@@ -108,6 +108,8 @@
     root.addEventListener('contextmenu',e=>{if(e.target.closest('#aqSheet')&&!e.target.matches('input,textarea'))e.preventDefault();});
     $('aqPaper').addEventListener('pointerdown',e=>{
       if(!e.isPrimary)return;
+      // A fast second swipe must finish the previous turn instead of being lost.
+      if(galleryBusy)gallerySettle?.();
       if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
@@ -142,7 +144,7 @@
     document.body.classList.toggle('quran-reader-immersive',on);
   }
   // Gallery-style horizontal swipe: move two already prepared pages with the finger.
-  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false;
+  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false,gallerySettle=null,gallerySettleTimer=0,galleryAnimationFrame=0;
   // Build and fit adjacent pages while idle, never in the pointermove handler.
   const galleryReady=new Map();
   let galleryPrepareTimer=0;
@@ -171,9 +173,12 @@
     galleryPrepareTimer=setTimeout(()=>{
       if(!root?.isConnected||pointer||galleryBusy)return;
       for(const p of [state.page+1,state.page-1])galleryPrepare(p);
-    },100);
+    },0);
   }
   function galleryReset(){
+    clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
+    cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
+    gallerySettle=null;galleryBusy=false;
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
     const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
   }
@@ -211,13 +216,17 @@
     neighbor.style.visibility='visible';
     current.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
     neighbor.style.transition='transform 260ms cubic-bezier(.22,1,.36,1)';
-    requestAnimationFrame(()=>{
+    galleryAnimationFrame=requestAnimationFrame(()=>{
+      galleryAnimationFrame=0;
+      if(!galleryBusy)return;
       current.style.transform='translate3d('+(commit?direction*width:0)+'px,0,0)';
       neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
     });
     const settle=()=>{
       if(!galleryBusy)return;
-      galleryBusy=false;
+      clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
+      cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
+      gallerySettle=null;galleryBusy=false;
       if(commit&&root?.isConnected&&state.page!==target){
         // Keep the already rendered and fitted neighbor; do not rebuild it after the swipe.
         current.remove();
@@ -232,8 +241,9 @@
         go(target);
       }else galleryReset();
     };
+    gallerySettle=settle;
     neighbor.addEventListener('transitionend',settle,{once:true});
-    setTimeout(settle,310);
+    gallerySettleTimer=setTimeout(settle,310);
   }
   function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
   // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
@@ -366,8 +376,8 @@
     const pageChanged=root.dataset.page!==String(state.page);
     dragOffset=0;
     clearTurn();
-    const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
-    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* The incoming gallery page is already fitted and displayed. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
+    const items=pageItems(),start=meta.pages[state.page-1].start;
+    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* Reuse the fitted incoming DOM without regenerating SVG paths. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=pageHTML(state.page);$('adVerses').classList.toggle('aq-opening',state.page<=2);}
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
