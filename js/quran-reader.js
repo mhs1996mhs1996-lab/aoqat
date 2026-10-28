@@ -399,6 +399,10 @@
   }
   function qcfLoad(page){
     if(qcfData.has(page)&&qcfFontFaces.has(page)){
+      // Page 2's Basmala borrows authentic page-1 QCF V2 word glyphs.
+      // If its font was evicted, restore it without refetching page 2.
+      if(page===2&&(!qcfData.has(1)||!qcfFontFaces.has(1)))
+        return qcfLoad(1).catch(()=>null).then(()=>qcfData.get(2));
       // Keep recently used text and its specific font resident for quick
       // consecutive/reverse flips instead of repeated font decoding.
       const rows=qcfData.get(page);qcfData.delete(page);qcfData.set(page,rows);
@@ -408,6 +412,10 @@
     }
     if(qcfPending.has(page))return qcfPending.get(page);
     const job=(async()=>{
+      // Fetch the Fatiha font and this page's font concurrently. Only the
+      // opening page 2 needs both. A missing Fatiha font can still fall back
+      // to the original readable Basmala rather than blanking the Quran.
+      const fatihaReady=page===2?qcfLoad(1).catch(()=>null):null;
       const layouts=await qcfManifest();
       const rows=layouts[String(page)]?.lines;
       if(!Array.isArray(rows)||rows.length<6||rows.length>15||
@@ -422,6 +430,7 @@
         document.fonts.add(loaded);
         qcfFontFaces.set(page,loaded);
       }
+      if(fatihaReady)await fatihaReady;
       qcfData.set(page,rows);
       return rows;
     })().finally(()=>qcfPending.delete(page));
@@ -463,6 +472,24 @@
       '<span class="aq-surah-info-name">سورة '+esc(surah.name)+'</span>'+
       '<span class="aq-surah-info-kind">'+kind+'</span></div></div>';
   }
+  function qcfOpeningBasmala(){
+    // QCF V2 page 1 stores the four genuine Basmala word glyphs as the
+    // first four entries of its first verse. The FIFTH glyph is the verse
+    // number rosette: never copy that into Al-Baqarah, where Basmala is
+    // unnumbered. Reuse the same font, size and weight as Al-Fatiha.
+    const words=qcfData.get(1)?.find(row=>row.v?.some(w=>w[0]===0))?.v
+      ?.filter(([verseIndex,,end])=>verseIndex===0&&!end);
+    if(words?.length===4&&qcfFontFaces.has(1)){
+      return '<div class="aq-qcf-line aq-qcf-bismillah aq-qcf-authentic-bismillah" '+
+        'style="--aq-qcf-font:AqQcfV2Page1" role="text" aria-label="'+
+        esc(quran[0].verses[0].text)+'">'+
+        words.map(([,code])=>'<span class="aq-qcf-word aq-qcf-basmala-word" aria-hidden="true">'+
+          esc(code)+'</span>').join('')+'</div>';
+    }
+    // Graceful offline/web fallback only when the extra font is unavailable.
+    return '<div class="aq-native-bismillah aq-qcf-bismillah">'+
+      esc(quran[0].verses[0].text)+'</div>';
+  }
   function qcfHTML(page){
     const rows=qcfData.get(page);
     if(!rows)return '';
@@ -471,7 +498,8 @@
     // Do not move or remove the reader's existing surah-information header.
     const html=rows.map((row,n)=>{
       if(row.s)return page<=2?'':'<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
-      if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
+      if(row.b)return page===2?qcfOpeningBasmala():
+        '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
         ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
         row.v.map(([i,code,end])=>{
@@ -607,6 +635,16 @@
             line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
           }
           sizes.push(parseFloat(line.style.fontSize));
+        }
+        if(page<=2&&sizes.length){
+          // The previous renderer fit every line separately: some verses
+          // appeared larger/darker (especially Fatiha's short verses 2 and
+          // 7). Use ONE common fitting size for ALL words on each opening
+          // page, including the genuine QCF Basmala of page 2. The minimum
+          // already guarantees the widest line still fits on small phones.
+          const common=Math.min(...sizes);
+          lines.forEach(line=>line.style.setProperty('font-size',common.toFixed(2)+'px','important'));
+          sizes.fill(common);
         }
         if(qcfFitCache.size>=36)qcfFitCache.delete(qcfFitCache.keys().next().value);
         qcfFitCache.set(fitKey,sizes);
