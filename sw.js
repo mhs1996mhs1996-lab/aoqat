@@ -1,4 +1,5 @@
-const CACHE_NAME = "aoqat-pwa-v166-quran-offline-prefetch";
+const CACHE_NAME = "aoqat-pwa-v167-qcf-v2-web-20261028";
+const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
@@ -60,6 +61,7 @@ const APP_SHELL = [
   "/js/prayer-time-choice.js",
   "/js/web-back-navigation.js",
   "/data/prayer-times-offline.js?v=2",
+  "/experiments/qcf604-web-verse-layouts.json.gz",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
   "/css/quran-reader.css?v=quick-save-visibility-20261025",
   "/js/settings-subwindows.js", "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
@@ -101,7 +103,7 @@ const APP_SHELL = [
   "/js/modal-panels.js?v=10",
   "/js/tomorrow-alarm.js?v=9",
   "/js/push-notifications.js?v=9",
-  "/js/quran-reader.js?v=phone-only-v2-20261026",
+  "/js/quran-reader.js?v=web-qcf-v2-604-20261028",
   "/js/iqama-timing.js?v=1",
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
@@ -123,7 +125,7 @@ self.addEventListener("activate", event => {
   event.waitUntil((async()=>{
     const keys=await caches.keys();
     const upgraded=keys.some(key=>key.startsWith("aoqat-pwa-")&&key!==CACHE_NAME);
-    await Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-phone-hafs").map(key => caches.delete(key)));
+    await Promise.all(keys.filter(key => key !== CACHE_NAME && key !== "aoqat-mushaf-phone-hafs" && key !== QCF_FONT_CACHE).map(key => caches.delete(key)));
     await self.clients.claim();
     // An existing document still runs the previous menu even after the worker changes.
     // Reload once per installed upgrade; preferences remain in localStorage.
@@ -140,13 +142,27 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (url.pathname === "/rest/v1/annual_prayer_times") return;
   // Serve preloaded Mushaf pages from the persistent cache on every subsequent turn.
-  if(url.origin===self.location.origin && /^\\/assets\\/mushaf-phone-hafs\\/\\d{3}\\.json\\.gz$/.test(url.pathname)){
+  if(url.origin===self.location.origin && /^\/assets\/mushaf-phone-hafs\/\d{3}\.json\.gz$/.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open('aoqat-mushaf-phone-hafs');
       const hit=await cache.match(event.request);
       if(hit)return hit;
       const response=await fetch(event.request);
       if(response.ok)await cache.put(event.request,response.clone());
+      return response;
+    })());
+    return;
+  }
+
+  // Keep previously loaded QCF V2 page fonts for offline repeat visits.
+  if(url.hostname==='verses.quran.foundation' &&
+    /^\/fonts\/quran\/hafs\/v2\/woff2\/p(?:[1-9]\d{0,2})\.woff2$/.test(url.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(QCF_FONT_CACHE);
+      const hit=await cache.match(event.request);
+      if(hit)return hit;
+      const response=await fetch(event.request);
+      if(response.ok||response.type==='opaque')await cache.put(event.request,response.clone());
       return response;
     })());
     return;
