@@ -402,6 +402,41 @@
     qcfPending.set(page,job);
     return job;
   }
+  // One contiguous, ornamented title plaque for the first TWO pages only.
+  // The floral pattern is part of the plate itself, never floating rosettes
+  // over "مكية" / "مدنية" or the authentic verse count.
+  function qcfOpeningBanner(page){
+    const surah=quran[page-1],kind=surah.type==='meccan'?'مكية':'مدنية';
+    const flower='<g class="aq-qcf-floral" fill="none" stroke="#a7825d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
+      '<path d="M3 60H17M181 60H197M15 20Q28 34 42 25M15 100Q28 86 42 95M154 25Q168 35 181 20M154 95Q168 85 181 100"/>'+
+      '<path d="M98 15Q113 34 131 25Q122 44 146 60Q122 76 131 95Q113 86 98 105Q83 86 65 95Q74 76 50 60Q74 44 65 25Q83 34 98 15Z" fill="#efe2cd" stroke-width="2"/>'+
+      '<circle cx="98" cy="60" r="32" fill="#f9f1e3"/>'+
+      '<circle cx="98" cy="60" r="24" stroke-width="1.4"/>'+
+      '<path d="M98 31C108 42 110 51 98 60C86 51 88 42 98 31Z" fill="#d6c09c"/>'+
+      '<path d="M98 89C88 78 86 69 98 60C110 69 108 78 98 89Z" fill="#d6c09c"/>'+
+      '<path d="M69 60C80 50 89 48 98 60C89 72 80 70 69 60Z" fill="#d6c09c"/>'+
+      '<path d="M127 60C116 70 107 72 98 60C107 48 116 50 127 60Z" fill="#d6c09c"/>'+
+      '<path d="M78 40Q99 40 118 80Q99 80 78 40Z" opacity=".55"/>'+
+      '<path d="M118 40Q97 40 78 80Q97 80 118 40Z" opacity=".55"/>'+
+      '<circle cx="98" cy="60" r="8" fill="#b49a75"/><circle cx="98" cy="60" r="3.5" fill="#fff9ec" stroke="none"/>'+
+      '<circle cx="39" cy="60" r="9"/><path d="M39 46V74M25 60H53"/>'+
+      '<circle cx="157" cy="60" r="9"/><path d="M157 46V74M143 60H171"/>'+
+      '</g>';
+    const art='<svg class="aq-qcf-opening-art" viewBox="0 0 1000 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
+      '<path d="M18 6H982Q994 6 994 18V102Q994 114 982 114H18Q6 114 6 102V18Q6 6 18 6Z" fill="#f8eddf" stroke="#aa8c66" stroke-width="3"/>'+
+      '<path d="M21 13H979Q987 13 987 21V99Q987 107 979 107H21Q13 107 13 99V21Q13 13 21 13Z" fill="none" stroke="#d7bd98" stroke-width="2"/>'+
+      '<path d="M198 13H802L825 24V96L802 107H198L175 96V24Z" fill="#fffaf0" stroke="#ac8d67" stroke-width="2"/>'+
+      '<path d="M213 21H787L813 31V89L787 99H213L187 89V31Z" fill="none" stroke="#d5bd9a" stroke-width="1.8"/>'+
+      '<path d="M500 14V23M500 97V106M182 60H205M795 60H818" stroke="#b59a78" stroke-width="1.6" fill="none"/>'+
+      '<g class="aq-qcf-ornate-left">'+flower+'</g>'+
+      '<g class="aq-qcf-ornate-right" transform="translate(1000 0) scale(-1 1)">'+flower+'</g>'+
+      '</svg>';
+    return '<div class="aq-qcf-opening-top aq-native-heading aq-qcf-heading" role="group" aria-label="معلومات السورة">'+
+      art+'<div class="aq-surah-info-clean aq-qcf-opening-info" role="group" aria-label="اسم السورة وعدد آياتها وتصنيفها">'+
+      '<span class="aq-surah-info-count">'+arabic(surah.total_verses)+' آية</span>'+
+      '<span class="aq-surah-info-name">سورة '+esc(surah.name)+'</span>'+
+      '<span class="aq-surah-info-kind">'+kind+'</span></div></div>';
+  }
   function qcfHTML(page){
     const rows=qcfData.get(page);
     if(!rows)return '';
@@ -422,16 +457,7 @@
         }).join('')+'</div>';
     }).join('');
     if(page<=2){
-      // Small symmetric vector ornaments live at the EDGE of the info bar,
-      // leaving the ayah count, surah name and Makki/Madani label readable.
-      const flower='<svg class="aq-qcf-opening-corner" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
-        '<g fill="none" stroke="#a88c63" stroke-width="1.05">'+
-        '<circle cx="14" cy="14" r="10"/><circle cx="14" cy="14" r="3.4" fill="#dbc7a7"/>'+
-        '<path d="M14 1L18 10L27 14L18 18L14 27L10 18L1 14L10 10Z"/>'+
-        '<circle cx="14" cy="14" r="6.5" stroke-dasharray="1.5 2"/></g></svg>';
-      const header='<div class="aq-qcf-opening-top aq-native-heading aq-qcf-heading" role="group" aria-label="معلومات السورة">'+
-        flower+surahBanner(page)+flower+'</div>';
-      return header+'<div class="aq-qcf-opening-inner">'+html+'</div>';
+      return qcfOpeningBanner(page)+'<div class="aq-qcf-opening-inner">'+html+'</div>';
     }
     return html;
   }
