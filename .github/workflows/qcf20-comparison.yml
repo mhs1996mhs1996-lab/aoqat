@@ -1,0 +1,41 @@
+name: Quran QCF V2 604-page jump experiment
+on:
+  push:
+    branches:
+      - experiment/qcf-v2-pages-1-20-20261028
+    paths:
+      - quran-qcf20-speed-test.html
+      - experiments/qcf20-browser.cjs
+      - scripts/prepare-qcf604-experiment.py
+      - .github/workflows/qcf20-comparison.yml
+  pull_request:
+    paths:
+      - quran-qcf20-speed-test.html
+      - experiments/qcf20-browser.cjs
+      - scripts/prepare-qcf604-experiment.py
+      - .github/workflows/qcf20-comparison.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  compare-qcf604:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate verified 604-page compact QCF V2 layout (build-time only)
+        run: python3 scripts/prepare-qcf604-experiment.py
+      - name: Install Playwright
+        run: npm install --no-save --package-lock=false playwright
+      - name: Verify SVG baseline, 604-page random access, and rapid QCF swipes in Chrome
+        run: node experiments/qcf20-browser.cjs
+      - name: Publish generated experimental page layout after successful Chrome test
+        if: github.event_name == 'push' && github.ref == 'refs/heads/experiment/qcf-v2-pages-1-20-20261028'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f experiments/qcf604-layouts.json.gz
+          if ! git diff --cached --quiet; then
+            git commit -m "Bundle verified QCF V2 604-page trial layout [web-only]"
+            git push origin HEAD:experiment/qcf-v2-pages-1-20-20261028
+          fi
