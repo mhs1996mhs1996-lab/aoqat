@@ -1,0 +1,22 @@
+name: Quran QCF V2 pages 1-20 experiment
+on:
+  push:
+    branches:
+      - experiment/qcf-v2-pages-1-20-20261028
+    paths:
+      - quran-qcf20-speed-test.html
+      - experiments/qcf20-browser.cjs
+      - .github/workflows/qcf20-comparison.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare-qcf20:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: npm install --no-save --package-lock=false playwright
+      - name: Verify SVG baseline and QCF V2 20-page font trial in Chrome
+        run: node experiments/qcf20-browser.cjs
