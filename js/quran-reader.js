@@ -212,8 +212,13 @@
   }
   function galleryPruneReady(){
     const paper=$('aqPaper');if(!paper)return;
+    const wanted=new Set(isQcf()?[
+      state.page+galleryLastDirection,state.page-galleryLastDirection,
+      state.page+galleryLastDirection*2,state.page-galleryLastDirection*2,
+      state.page+galleryLastDirection*3
+    ]:[state.page+1,state.page-1]);
     for(const [page,entry] of galleryReady){
-      if(page===state.page||Math.abs(page-state.page)>2||
+      if(page===state.page||!wanted.has(page)||
          entry.width!==paper.clientWidth||entry.height!==paper.clientHeight||
          !entry.node.isConnected){
         entry.node.remove();galleryReady.delete(page);
@@ -246,7 +251,9 @@
     const prepareIdle=()=>{
       if(!root?.isConnected||pointer||galleryBusy||state.page!==activePage)return;
       const targets=isQcf()
-        ?[activePage+galleryLastDirection,activePage-galleryLastDirection,activePage+2*galleryLastDirection]
+        ?[activePage+galleryLastDirection,activePage-galleryLastDirection,
+          activePage+galleryLastDirection*2,activePage-galleryLastDirection*2,
+          activePage+galleryLastDirection*3]
         :[activePage+1,activePage-1];
       // One fully fitted page per task; do not monopolize the main thread
       // with multiple layouts between two rapid finger gestures.
@@ -370,16 +377,35 @@
     }).catch(error=>{qcfManifestPromise=null;throw error;});
     return qcfManifestPromise;
   }
+  // A 2-page font cache caused repeated FontFace removal/reload on fast turns.
+  // Retain a bounded recent set, never all 604 QCF page-specific fonts.
+  const QCF_TEXT_CACHE_LIMIT=12,QCF_FONT_CACHE_LIMIT=10;
   function trimQcfCaches(){
-    for(const p of qcfData.keys())if(Math.abs(p-state.page)>2)qcfData.delete(p);
+    const hot=p=>Math.abs(p-state.page)<=3||galleryReady.has(p)||qcfPending.has(p);
+    for(const p of qcfData.keys()){
+      if(qcfData.size<=QCF_TEXT_CACHE_LIMIT)break;
+      if(!hot(p))qcfData.delete(p);
+    }
     for(const [p,font] of qcfFontFaces){
-      if(Math.abs(p-state.page)>2&&!qcfPending.has(p)){
+      if(qcfFontFaces.size<=QCF_FONT_CACHE_LIMIT)break;
+      if(!hot(p)){
         document.fonts.delete(font);qcfFontFaces.delete(p);
+        // Never retain a page layout with its required per-page QCF font gone.
+        // renderPage() relies on qcfData.has(page) to decide whether glyphs
+        // are display-ready; stale data without FontFace causes font fallback.
+        qcfData.delete(p);
       }
     }
   }
   function qcfLoad(page){
-    if(qcfData.has(page))return Promise.resolve(qcfData.get(page));
+    if(qcfData.has(page)&&qcfFontFaces.has(page)){
+      // Keep recently used text and its specific font resident for quick
+      // consecutive/reverse flips instead of repeated font decoding.
+      const rows=qcfData.get(page);qcfData.delete(page);qcfData.set(page,rows);
+      const font=qcfFontFaces.get(page);
+      if(font){qcfFontFaces.delete(page);qcfFontFaces.set(page,font);}
+      return Promise.resolve(rows);
+    }
     if(qcfPending.has(page))return qcfPending.get(page);
     const job=(async()=>{
       const layouts=await qcfManifest();
@@ -637,7 +663,9 @@
       trimQcfCaches();
       const current=state.page;
       const wanted=isQcf()?
-        [current+galleryLastDirection,current-galleryLastDirection,current+2*galleryLastDirection]:
+        [current+galleryLastDirection,current-galleryLastDirection,
+         current+galleryLastDirection*2,current-galleryLastDirection*2,
+         current+galleryLastDirection*3]:
         [current+1,current-1];
       for(const p of wanted)if(p>=1&&p<=TOTAL){
         ensureReadyPage(p).then(()=>{

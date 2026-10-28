@@ -38,7 +38,7 @@ const {spawn}=require('node:child_process');
    await page.mouse.move(xs[0],y);await page.mouse.down();
    await page.mouse.move(xs[1],y,{steps:5});await page.mouse.up();
   }
-  async function verifyOpening(n){
+  async function verifyOpening(n,paperViewportHeight){
    await ready(n);
    assert.ok(await page.locator('#adVerses').evaluate(el=>el.classList.contains('aq-qcf-opening')),
     'Opening layout class missing on page '+n);
@@ -64,6 +64,15 @@ const {spawn}=require('node:child_process');
      })),
      firstLine:frame?.querySelector('.aq-qcf-line')&&rect(frame.querySelector('.aq-qcf-line')),
      basmala:!!frame?.querySelector('.aq-qcf-bismillah'),
+     basmalaStyle:frame?.querySelector('.aq-qcf-bismillah')&&{
+       fontSize:parseFloat(getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).fontSize),
+       fontWeight:getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).fontWeight,
+       stroke:parseFloat(getComputedStyle(frame.querySelector('.aq-qcf-bismillah')).webkitTextStrokeWidth)||0,
+       bounds:rect(frame.querySelector('.aq-qcf-bismillah')),
+       scrollWidth:frame.querySelector('.aq-qcf-bismillah').scrollWidth,
+       clientWidth:frame.querySelector('.aq-qcf-bismillah').clientWidth
+     },
+     firstLineFont:parseFloat(getComputedStyle(frame.querySelector('.aq-qcf-line')).fontSize),
      wordIds:[...new Set([...frame.querySelectorAll('.aq-qcf-word')].map(el=>Number(el.dataset.qrVerse)))],
      lines:[...frame.querySelectorAll('.aq-qcf-line')].map(line=>({...rect(line),clientW:line.clientWidth,scrollW:line.scrollWidth})),
      frameBackground:getComputedStyle(frame).backgroundColor
@@ -79,6 +88,9 @@ const {spawn}=require('node:child_process');
    assert.ok(layout.metadata.every(m=>m.rect.w>20&&m.rect.h>10&&m.visibility==='visible'&&
      m.scrollWidth<=m.clientWidth+2),
     'Metadata must be readable and not visually clipped: '+JSON.stringify(layout.metadata));
+   const expectedHeaderHeight=h=>h<=600?42:55;
+   assert.ok(layout.heading.h<=expectedHeaderHeight(paperViewportHeight)+1,
+      'The surah plaque should be compact vertically while retaining full width: '+JSON.stringify(layout));
    assert.equal(layout.ornaments,2,'The integrated ornament must have two mirrored floral wings');
    assert.equal(layout.pastedCornerCount,0,'The banner must not contain pasted-on corner flowers');
    assert.ok(layout.joinedArtwork&&Math.abs(layout.heading.x-layout.joinedArtwork.x)<2&&
@@ -94,6 +106,14 @@ const {spawn}=require('node:child_process');
     'Metadata frame MUST stay at the TOP of the Mushaf page, not move to the middle: '+JSON.stringify(layout));
    assert.ok(layout.heading.b+15<layout.firstLine.y,'Opening metadata must stay clear of the centered verses');
    assert.equal(layout.basmala,n===2,'Al-Baqarah needs its own Basmala; Al-Fatiha contains Basmala in first verse');
+   if(n===2){
+     assert.ok(layout.basmalaStyle.fontSize>=Math.max(33,layout.firstLineFont*.95),
+       'Al-Baqarah Basmala must match the readable size of adjacent QCF verses: '+JSON.stringify(layout.basmalaStyle));
+     assert.ok(layout.basmalaStyle.stroke>=.2,
+       'Al-Baqarah Basmala must have sufficient stroke weight');
+     assert.ok(layout.basmalaStyle.scrollWidth<=layout.basmalaStyle.clientWidth+3,
+       'Enlarged Basmala must remain fully visible on narrow screens');
+   }
    assert.equal(layout.wordIds.length,n===1?7:5,'Missing or duplicate Quran verses in opening page '+n);
    assert.ok(Math.abs((layout.frame.y+layout.frame.h/2)-(layout.paper.y+layout.paper.h/2))<layout.paper.h*.15,
     'ONLY the Quran text should be visually centered in the opening page: '+JSON.stringify(layout));
@@ -110,14 +130,14 @@ const {spawn}=require('node:child_process');
   }
   for(const [w,h] of [[390,844],[412,915],[320,568]]){
    await page.setViewportSize({width:w,height:h});
-   await jump(1);await verifyOpening(1);
+   await jump(1);await verifyOpening(1,h);
    await page.waitForFunction(()=>!!document.querySelector('#aqPaper .aq-gallery-neighbor'),null,{timeout:30000});
-   await swipe(1);await verifyOpening(2);
-   await jump(2);await verifyOpening(2);
+   await swipe(1);await verifyOpening(2,h);
+   await jump(2);await verifyOpening(2,h);
    await swipe(1);await ready(3);
    assert.equal(await page.locator('#adVerses .aq-qcf-opening-inner').count(),0,
     'Standard 15-line pages must remain unchanged');
-   await swipe(-1);await verifyOpening(2);
+   await swipe(-1);await verifyOpening(2,h);
    console.log('PASS QCF opening 1/2 and normal page 3 swipes on '+w+'x'+h);
   }
   assert.deepEqual(errors,[],'Unexpected browser JavaScript errors');

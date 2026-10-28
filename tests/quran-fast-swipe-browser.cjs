@@ -3,9 +3,9 @@ const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
 const {readFileSync}=require('node:fs');
 const html=readFileSync('index.html','utf8'),sw=readFileSync('sw.js','utf8');
-assert.ok(html.includes('js/quran-reader.js?v=qcf-ornate-frame-20261028'));
-assert.ok(sw.includes('js/quran-reader.js?v=qcf-ornate-frame-20261028'));
-assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
+assert.ok(html.includes('js/quran-reader.js?v=qcf-font-lru-fast-20261028'));
+assert.ok(sw.includes('js/quran-reader.js?v=qcf-font-lru-fast-20261028'));
+assert.ok(sw.includes('aoqat-pwa-v175-qcf-basmala-fast-20261028'));
 (async()=>{
  const server=spawn('python3',['-m','http.server','8795'],{stdio:'ignore'});
  let browser;
@@ -49,17 +49,28 @@ assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
    await page.setViewportSize({width,height});
    await jump(120);
    // Both adjacent QCF pages and one lookahead page must exist while idle.
-   await page.waitForFunction(()=>document.querySelectorAll('#aqPaper>.aq-gallery-neighbor').length>=3,null,{timeout:40000});
-   await page.evaluate(()=>{window.__oldQcfPage=document.querySelector('#adVerses')});
+   await page.waitForFunction(()=>document.querySelectorAll('#aqPaper>.aq-gallery-neighbor').length>=4,null,{timeout:40000});
+   await page.evaluate(()=>{
+     window.__oldQcfPage=document.querySelector('#adVerses');
+     window.__firstQcfFont=[...document.fonts].find(font=>font.family==='AqQcfV2Page120');
+   });
+   assert.ok(await page.evaluate(()=>!!window.__firstQcfFont),
+     'Expected the starting Quran QCF font to be loaded before rapid turns');
    const paper=await page.locator('#aqPaper').boundingBox();
    const y=paper.y+paper.height*.52;
    await page.evaluate(()=>{
     window.__qcfAdded=0;
+    window.__testPointerActive=false;
+    const paper=document.querySelector('#aqPaper');
+    // Warmup can legitimately stage an adjacent page BEFORE pointerdown.
+    // Count DOM work only from the moment the finger actually touches paper.
+    paper.addEventListener('pointerdown',()=>{window.__testPointerActive=true;},{once:true,capture:true});
     window.__qcfObserver=new MutationObserver(records=>{
+     if(!window.__testPointerActive)return;
      for(const record of records)for(const node of record.addedNodes)
       if(node.nodeType===1&&node.classList.contains('aq-gallery-neighbor'))window.__qcfAdded++;
     });
-    window.__qcfObserver.observe(document.querySelector('#aqPaper'),{childList:true});
+    window.__qcfObserver.observe(paper,{childList:true});
    });
    // The touchmove path must NOT allocate/reflow a new QCF page.
    await page.mouse.move(paper.x+paper.width*.18,y);
@@ -67,15 +78,17 @@ assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
    await page.mouse.move(paper.x+paper.width*.48,y,{steps:5});
    const added=await page.evaluate(()=>{
     const observer=window.__qcfObserver;
-    for(const record of observer.takeRecords())for(const node of record.addedNodes)
+    if(window.__testPointerActive)for(const record of observer.takeRecords())for(const node of record.addedNodes)
       if(node.nodeType===1&&node.classList.contains('aq-gallery-neighbor'))window.__qcfAdded++;
-    const count=window.__qcfAdded;observer.disconnect();return count;
+    const count=window.__qcfAdded;window.__testPointerActive=false;observer.disconnect();return count;
    });
    assert.equal(added,0,'A heavy Quran neighbor was built during pointermove');
    await page.mouse.up();await ready(121);
    assert.ok(await page.evaluate(()=>window.__oldQcfPage.isConnected&&window.__oldQcfPage.classList.contains('aq-gallery-neighbor')),
     'Previous fitted QCF page must be retained as the reverse swipe buffer');
    await swipe(-1);await ready(120);
+   assert.ok(await page.evaluate(()=>[...document.fonts].includes(window.__firstQcfFont)),
+     'A fast reverse turn should reuse the already loaded Quran font instead of redecoding it');
    assert.ok(await page.evaluate(()=>document.querySelector('#adVerses')===window.__oldQcfPage),
     'Fast reverse swipe must reuse the exact same fitted Quran DOM node');
    for(let n=121;n<=128;n++){
@@ -83,7 +96,7 @@ assert.ok(sw.includes('aoqat-pwa-v174-qcf-ornate-frame-20261028'));
     await ready(n);
     // The page cache is bounded; do not grow 604 DOM trees while reading.
     const count=await page.locator('#aqPaper>.aq-gallery-neighbor').count();
-    assert.ok(count<=4,'Too many prepared page DOM trees: '+count);
+    assert.ok(count<=5,'Too many prepared page DOM trees: '+count);
    }
    await swipe(-1);await ready(127);
    // Rapid consecutive flicks: start the next gesture before the settlement
