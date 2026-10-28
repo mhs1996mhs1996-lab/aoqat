@@ -134,7 +134,7 @@
       try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
       // A fast second swipe must finish the previous turn instead of being lost.
       if(galleryBusy)gallerySettle?.();
-      if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
+      if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};if(Array.isArray(window.__qrSwipeTrace))window.__qrSwipeTrace.push({type:'app-down',page:state.page,busy:galleryBusy});
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
       if(v)pressTimer=setTimeout(()=>{pointer=null;ignoreClickUntil=performance.now()+800;versePanel(Number(v.dataset.qrVerse));},400);
@@ -146,7 +146,7 @@
       if(phoneMode()&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4)galleryDrag(dx);
     });
     $('aqPaper').addEventListener('pointerup',e=>{
-      clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
+      clearTimeout(pressTimer);if(Array.isArray(window.__qrSwipeTrace))window.__qrSwipeTrace.push({type:'app-up',page:state.page,valid:!!pointer&&pointer.id===e.pointerId,busy:galleryBusy,neighbor:!!galleryNeighbor});if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
       if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target))){const from=state.page;Promise.all([phonePage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&phonePages.has(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
@@ -234,7 +234,7 @@
   function galleryFinish(target,commit){
     const paper=$('aqPaper'),current=$('adVerses'),neighbor=galleryNeighbor;
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
-    galleryBusy=true;
+    galleryBusy=true;if(Array.isArray(window.__qrSwipeTrace))window.__qrSwipeTrace.push({type:'finish',page:state.page,target,commit});
     const direction=galleryDirection,width=paper.clientWidth;
     // Prevent the hidden offscreen staging transform from flashing on screen.
     neighbor.style.visibility='visible';
@@ -247,6 +247,7 @@
       neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
     });
     const settle=()=>{
+      if(Array.isArray(window.__qrSwipeTrace))window.__qrSwipeTrace.push({type:'settle',page:state.page,target,busy:galleryBusy});
       if(!galleryBusy)return;
       clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
       cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
