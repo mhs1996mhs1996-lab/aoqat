@@ -523,6 +523,10 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   font-family:inherit!important;
   font-weight:400!important;
   -webkit-text-stroke:0!important;
+  flex:0 0 auto!important;
+  white-space:pre!important;
+  letter-spacing:0!important;
+  color:var(--qr-ink)!important;
   cursor:default!important;
   pointer-events:none!important;
 }
