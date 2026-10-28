@@ -366,8 +366,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   display:block!important;
   isolation:isolate!important;
   width:100%!important;
-  height:clamp(58px,8vh,78px)!important;
-  min-height:58px!important;
+  height:clamp(43px,5.4vh,53px)!important;
+  min-height:43px!important;
   padding:0!important;
   margin:clamp(4px,1vh,9px) 0 0!important;
   box-sizing:border-box!important;
@@ -503,14 +503,18 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   min-height:0!important;
   width:100%!important;
   margin:0!important;
-  font-size:clamp(21px,4.3vw,31px)!important;
-  line-height:1.6!important;
+  /* Al-Baqarah's Basmala used the small generic AoqatQuran (22px) text;
+     enlarge and strengthen ONLY this opening line so it matches the visual
+     weight of the neighboring QCF V2 verses. Al-Fatiha uses actual QCF glyphs. */
+  font:700 clamp(35px,9.3vw,43px)/1.3 AoqatQuran,serif!important;
+  -webkit-text-stroke:.28px currentColor!important;
+  text-rendering:optimizeLegibility!important;
   color:var(--qr-ink)!important;
 }
 @media(max-height:600px){
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top{
-    height:48px!important;
-    min-height:48px!important;
+    height:39px!important;
+    min-height:39px!important;
     margin-top:3px!important;
   }
   body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner{
