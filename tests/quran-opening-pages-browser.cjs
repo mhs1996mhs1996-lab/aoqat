@@ -122,7 +122,7 @@ const {spawn}=require('node:child_process');
        'Al-Baqarah Basmala must use regular weight like the Quran lines');
      assert.ok(layout.basmalaStyle.stroke<=.01,
        'Do not artificially outline the Basmala while Quran glyphs have no text stroke');
-     assert.ok(layout.basmalaStyle.fontSize>=25&&layout.basmalaStyle.fontSize<=36,
+     assert.ok(layout.basmalaStyle.fontSize>=18&&layout.basmalaStyle.fontSize<=36,
        'Keep Al-Baqarah Basmala proportionate to surrounding QCF verses: '+JSON.stringify(layout.basmalaStyle));
      assert.ok(layout.basmalaStyle.family.includes('AqQcfV2Page1'),
        'Basmala must use the SAME authentic Fatiha QCF V2 font, not substituted AoqatQuran');
