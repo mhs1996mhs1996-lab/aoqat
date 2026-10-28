@@ -1,6 +1,9 @@
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),{spawn}=require('node:child_process');
 (async()=>{const server=spawn('python3',['-m','http.server','8770'],{stdio:'ignore'});let browser;try{
  await new Promise(r=>setTimeout(r,700));browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});const context=await browser.newContext({viewport:{width:390,height:844},serviceWorkers:'block'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ // Keep the established SVG regression suite on the original display mode;
+ // the new QCF mode is tested independently by qcf-web-integration-browser.cjs.
+ await page.addInitScript(()=>{const key='aoqatQuranReaderV1';const data=JSON.parse(localStorage.getItem(key)||'{}');data.renderEngine='svg';localStorage.setItem(key,JSON.stringify(data));});
  await page.route('**/rest/v1/annual_prayer_times**',r=>r.fulfill({json:[{gregorian_month:10,gregorian_day:3,fajr:'4:45',sunrise:'6:06',dhuhr:'11:59',asr:'3:20',maghrib:'5:50',isha:'7:10'}]}));await page.route('https://api.alquran.cloud/v1/ayah/**',r=>r.fulfill({json:{data:{text:'تفسير تجريبي للفحص فقط'}}}));
  async function panel(k){await page.evaluate(()=>document.body.classList.remove('quran-reader-immersive'));await page.locator(`[data-qr-panel="${k}"]`).click();}
  async function ready(){await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.ready==='true');}
