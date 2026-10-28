@@ -381,10 +381,14 @@
     const rows=qcfData.get(page);
     if(!rows)return '';
     return rows.map((row,n)=>{
-      if(row.s)return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
-      if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
+      // In the standard Madinah Mushaf, the two facing opening pages contain
+      // eight content rows in a framed central block, not eight rows at the top
+      // of an otherwise blank 15-row page. Keep every authentic QCF glyph.
+      const opening=page<=2?';--aq-opening-slot:'+(n+4):'';
+      if(row.s)return '<div class="aq-native-heading aq-qcf-heading" style="'+(page<=2?'--aq-opening-slot:'+(n+4):'')+'">'+surahBanner(row.s)+'</div>';
+      if(row.b)return '<div class="aq-native-bismillah aq-qcf-bismillah" style="'+(page<=2?'--aq-opening-slot:'+(n+4):'')+'">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
-        ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
+        ';--aq-qcf-row:'+(n+1)+opening+'" aria-label="السطر '+arabic(n+1)+'">'+
         row.v.map(([i,code,end])=>{
           const v=verses[i];
           return '<span class="aq-qcf-word'+(end?' aq-qcf-marker':'')+
@@ -481,8 +485,9 @@
     }
 
     if(isQcf()){
-      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page','aq-qcf-opening');
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page');
       text.classList.add('aq-qcf-page');
+      text.classList.toggle('aq-qcf-opening',page<=2);
       const zoom=Math.max(1,state.font/44);
       const width=Math.max(50,(paper.clientWidth-18)*zoom),height=(paper.clientHeight-12)*zoom;
       text.style.setProperty('width',width+'px','important');
@@ -491,7 +496,10 @@
       zoomBanner(zoom);
       const rows=qcfData.get(page)?.length||15;
       text.style.setProperty('--native-rows',rows);
-      const startingSize=Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
+      // The opening pair is framed and centered, so its eight authentic rows
+      // need a modest font instead of overstretched full-width lines.
+      const startingSize=page<=2?Math.min(32*zoom,Math.max(20*zoom,height/15*0.82)):
+        Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
       const fitKey=[page,paper.clientWidth,paper.clientHeight,state.font].join(':');
       const lines=text.querySelectorAll('.aq-qcf-line');
       const memo=qcfFitCache.get(fitKey);
