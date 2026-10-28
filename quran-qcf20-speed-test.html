@@ -53,18 +53,25 @@ footer{background:#fffaf1;border-top:1px solid #d5c3a7;padding:8px 10px;min-heig
   <button id="next" type="button">التالي</button>
  </div>
  <div id="metrics">الوقت محسوب على جهازك بعد تجهيز الصفحات.</div>
- <div id="description">نسخة مقارنة منفصلة؛ لا تغيّر المصحف المعتمد، ولا تعمل خارج الصفحات ١–٢٠. يحتاج الخط إلى اتصال أولي بالإنترنت.</div>
+ <div id="description">نسخة مقارنة منفصلة؛ لا تغيّر المصحف المعتمد. بيانات الحروف محلية؛ خطوط QCF V2 من Quran Foundation وتحتاج إنترنت أول مرة.</div>
 </footer>
 <script>
 (function(){
 'use strict';
 const TOTAL=20;
 const FONT_CDN='https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p';
-const WORD_API='https://api.quran.com/api/v4/verses/by_page/';
 const $=id=>document.getElementById(id);
 const paper=$('paper'),status=$('loading'),metric=$('metrics');
 let mode='svg',page=1,source=null,chapters=null,turnBusy=false,turnFinish=null,pointer=null,turnTimer=0,modeToken=0,layoutToken=0;
 const svgData=new Map(),qcfData=new Map(),fontPromises=new Map(),staged=new Map(),preparing=new Map();
+let codeManifestPromise=null;
+async function codeManifest(){
+ if(!codeManifestPromise)codeManifestPromise=Promise.all([
+  fetch('assets/qcf20-experiment-01-10.json').then(r=>{if(!r.ok)throw Error('تعذر فتح بيانات الصفحات ١–١٠');return r.json();}),
+  fetch('assets/qcf20-experiment-11-20.json').then(r=>{if(!r.ok)throw Error('تعذر فتح بيانات الصفحات ١١–٢٠');return r.json();})
+ ]).then(([a,b])=>({...a.rows,...b.rows})).catch(e=>{codeManifestPromise=null;throw e;});
+ return codeManifestPromise;
+}
 let lastMeasure={dom:0,turn:0};
 function arabic(n){return String(n).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[+d]);}
 function message(s,error){status.textContent=s;status.dataset.error=error?'true':'false';}
@@ -96,16 +103,11 @@ async function svgPage(n){
 }
 async function qcfWords(n){
  if(qcfData.has(n))return qcfData.get(n);
- // Use page-specific QCF V2 code and line numbering, not generic Uthmani text.
- const url=WORD_API+n+'?words=true&word_fields=code_v2%2Cline_v2%2Cv2_page%2Ctext_qpc_hafs&per_page=50&mushaf=1';
- const r=await fetch(url);if(!r.ok)throw Error('بيانات الخط غير متاحة (HTTP '+r.status+')');
- const json=await r.json();
- const words=(json.verses||[]).flatMap(v=>(v.words||[]).map(w=>({ ...w,verse_key:v.verse_key})));
- const selected=words.filter(w=>Number(w.v2_page)===n&&Number(w.line_v2)>0&&typeof w.code_v2==='string'&&w.code_v2.trim());
- const unique=new Map();
- for(const w of selected){const line=Number(w.line_v2);if(!unique.has(line))unique.set(line,[]);unique.get(line).push(w);}
- const rows=[...unique].sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
- if(!rows.length||selected.length<8)throw Error('بيانات QCF V2 للصفحة '+arabic(n)+' ناقصة؛ أوقفنا العرض منعاً لتشوه المصحف');
+ // Glyph codes are pinned in two local manifests from the same QCF2 layout source
+ // used to build the approved SVG edition. No runtime text/API fetch is needed.
+ const codes=await codeManifest();const rows=codes[String(n)];
+ if(!Array.isArray(rows)||rows.length<6||rows.some(line=>!Array.isArray(line)||!line.length||line.some(code=>typeof code!=='string'||!code.trim())))
+  throw Error('بيانات QCF V2 للصفحة '+arabic(n)+' ناقصة؛ أوقفنا العرض منعاً لتشوه المصحف');
  qcfData.set(n,rows);return rows;
 }
 async function font(n){
@@ -145,7 +147,7 @@ function createSvgLine(row){
 }
 function createQcfLine(words,fontName){
  const line=document.createElement('div');line.className='line qline';line.style.fontFamily='"'+fontName+'",serif';
- for(const w of words){const span=document.createElement('span');span.className='qword';span.style.fontFamily='"'+fontName+'",serif';span.textContent=w.code_v2;line.append(span);}
+ for(const code of words){const span=document.createElement('span');span.className='qword';span.style.fontFamily='"'+fontName+'",serif';span.textContent=code;line.append(span);}
  return line;
 }
 function fitQcf(node){
