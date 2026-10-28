@@ -7,6 +7,11 @@ on:
       - quran-qcf20-speed-test.html
       - experiments/qcf20-browser.cjs
       - .github/workflows/qcf20-comparison.yml
+  pull_request:
+    paths:
+      - quran-qcf20-speed-test.html
+      - experiments/qcf20-browser.cjs
+      - .github/workflows/qcf20-comparison.yml
   workflow_dispatch:
 permissions:
   contents: read
