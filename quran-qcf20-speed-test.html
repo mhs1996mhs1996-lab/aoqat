@@ -66,7 +66,7 @@ const FONT_CDN='https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p';
 const $=id=>document.getElementById(id);
 const paper=$('paper'),status=$('loading'),metric=$('metrics');
 let mode='svg',page=1,source=null,chapters=null,turnBusy=false,turnFinish=null,pointer=null,turnTimer=0,modeToken=0,layoutToken=0;
-const svgData=new Map(),qcfData=new Map(),fontPromises=new Map(),staged=new Map(),preparing=new Map();
+const svgData=new Map(),qcfData=new Map(),fontPromises=new Map(),fontFaces=new Map(),staged=new Map(),preparing=new Map();
 let requestedTarget=null;
 let codeManifestPromise=null;
 async function codeManifest(){
@@ -121,6 +121,7 @@ async function font(n){
   const face=new FontFace(name,"url('"+FONT_CDN+n+".woff2')",{style:'normal',weight:'400',display:'block'});
   const loaded=await face.load();
   document.fonts.add(loaded);
+  fontFaces.set(n,loaded);
   return name;
  })().catch(e=>{fontPromises.delete(n);throw Error('تعذر تحميل خط الصفحة '+arabic(n)+': '+e.message);});
  fontPromises.set(n,task);return task;
@@ -188,6 +189,12 @@ async function makeStage(n,kind){
   lastMeasure.dom=performance.now()-constructed;
   metricText();
   staged.set(key,el);
+  // Late prefetches from a previous location must not leak stale page DOM.
+  setTimeout(()=>{
+   if(staged.get(key)===el&&Math.abs(page-n)>1&&requestedTarget!==n){
+    el.remove();staged.delete(key);trimFonts();
+   }
+  },0);
   return el;
  })().finally(()=>preparing.delete(key));
  preparing.set(key,job);
@@ -211,6 +218,16 @@ function disposeFar(){
   const n=Number(el.dataset.page),kind=el.dataset.kind;
   if(kind!==mode||Math.abs(n-page)>1){el.remove();staged.delete(key);}
  }
+ trimFonts();
+}
+function trimFonts(){
+ // Keep only the present and neighboring page fonts in document.fonts.
+ // Browser disk cache can reload an evicted font without downloading it again.
+ for(const [n,face] of fontFaces){
+  if(Math.abs(n-page)>1&&requestedTarget!==n&&!staged.has('qcf-'+n)&&!preparing.has('qcf-'+n)){
+   document.fonts.delete(face);fontFaces.delete(n);fontPromises.delete(n);
+  }
+ }
 }
 function warmNearby(){
  const currentPage=page,currentMode=mode;
@@ -230,6 +247,7 @@ async function turn(target,drag=0){
  if(target<1||target>TOTAL)return;
  if(turnBusy)completeTurn();
  if(target===page)return;
+ requestedTarget=null;
  const from=page,kind=mode,ticket=++layoutToken,direction=target>from?1:-1;
  let incoming=node(target);
  if(!incoming){
@@ -305,33 +323,51 @@ paper.addEventListener('pointerup',e=>{
  warmNearby();
 });
 paper.addEventListener('pointercancel',()=>{pointer=null;const current=node(page);if(current)current.style.transform='translate3d(0,0,0)';warmNearby();});
+// Jump straight to any Quran page without generating intermediate pages.
+async function jumpTo(target){
+ if(!Number.isInteger(target)||target<1||target>TOTAL){message('اختر رقم صفحة صحيحاً من ١ إلى ٦٠٤',true);return;}
+ if(turnBusy)completeTurn();
+ if(target===page){warmNearby();return;}
+ const kind=mode,ticket=++layoutToken;
+ ++modeToken;pointer=null;requestedTarget=target;
+ message('الانتقال مباشرة إلى الصفحة '+arabic(target)+' وتجهيز الصفحات القريبة…');
+ try{
+  const selected=await makeStage(target,kind);
+  if(ticket!==layoutToken||kind!==mode)return;
+  page=target;requestedTarget=null;
+  for(const [key,el] of staged){if(el!==selected){el.remove();staged.delete(key);}}
+  selected.dataset.hidden='false';selected.style.transition='none';
+  selected.style.transform='translate3d(0,0,0)';
+  displayCurrent();trimFonts();warmNearby();
+  message('الصفحة '+arabic(target)+' جاهزة — الصفحتان المجاورتان تُجهّزان تلقائياً');
+ }catch(e){if(ticket===layoutToken){requestedTarget=null;message('تعذر فتح الصفحة '+arabic(target)+': '+e.message,true);}}
+}
+function parsePageInput(raw){
+ const digits=String(raw).trim().replace(/[٠-٩]/g,d=>String(d.charCodeAt(0)-0x660)).replace(/[۰-۹]/g,d=>String(d.charCodeAt(0)-0x6f0));
+ return /^\d+$/.test(digits)?Number(digits):NaN;
+}
+$('jumpForm').onsubmit=e=>{e.preventDefault();void jumpTo(parsePageInput($('jumpPage').value));};
 $('next').onclick=()=>turn(page+1);
 $('prev').onclick=()=>turn(page-1);
 $('svgMode').onclick=()=>switchMode('svg');
 $('fontMode').onclick=()=>switchMode('qcf');
 $('preload').onclick=async()=>{
  const button=$('preload');if(button.disabled)return;
- button.disabled=true;let done=0,failed=[];
- message('تحميل الخطوط وبيانات الصفحات ١–٢٠…');
- // Limit concurrent requests; page fonts are cached in the current browser session.
- let next=1;
- async function worker(){
-  while(next<=TOTAL){
-   const n=next++;
-   try{await Promise.all([font(n),qcfWords(n)]);done++;}
-   catch(e){failed.push(arabic(n)+': '+e.message);}
-   message('تجهيز خطوط QCF V2: '+arabic(done)+' من '+arabic(TOTAL)+(failed.length?' — إخفاق '+arabic(failed.length):''),false);
-  }
- }
- await Promise.all([worker(),worker(),worker()]);
+ button.disabled=true;
+ const focus=page,kind=mode;
+ const targets=[focus,focus-1,focus+1].filter(n=>n>=1&&n<=TOTAL);
+ message('تجهيز الصفحة '+arabic(focus)+' والمجاورتين فقط…');
+ const results=await Promise.allSettled(targets.map(n=>makeStage(n,kind)));
  button.disabled=false;
- if(failed.length)message('جهزت '+arabic(done)+' صفحة، وتعذّر تجهيز '+arabic(failed.length)+'. '+failed[0],true);
- else message('الصفحات ١–٢٠ جاهزة بخط QCF V2. ابدأ التقليب لقياس السلاسة.');
+ if(focus!==page||kind!==mode)return;
+ const failed=results.find(r=>r.status==='rejected');
+ if(failed)message('تعذّر تجهيز بعض الصفحات: '+failed.reason.message,true);
+ else {warmNearby();message('الصفحات القريبة جاهزة. انتقل لأي صفحة من خانة الرقم بالأسفل.');}
 };
 (async()=>{
  try{
   await base();await makeStage(page,'svg');displayCurrent();warmNearby();
-  message('SVG جاهز. اختر خط QCF V2 للمقارنة، أو جهّز الصفحات ١–٢٠ أولاً.');
+  message('تجربة ١–٦٠٤ جاهزة. اختر خط QCF V2، ثم اكتب أي رقم صفحة أسفل المصحف.');
  }catch(e){message('تعذر بدء التجربة: '+e.message,true);}
 })();
 })();
