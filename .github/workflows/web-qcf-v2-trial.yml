@@ -1,0 +1,47 @@
+name: Web QCF V2 reader trial integration
+on:
+  push:
+    branches:
+      - feature/web-qcf-v2-reader-20261028
+    paths:
+      - scripts/prepare-qcf604-web-trial.py
+      - js/quran-reader.js
+      - tests/qcf-web-integration-browser.cjs
+      - .github/workflows/web-qcf-v2-trial.yml
+  pull_request:
+    paths:
+      - scripts/prepare-qcf604-web-trial.py
+      - js/quran-reader.js
+      - tests/qcf-web-integration-browser.cjs
+      - .github/workflows/web-qcf-v2-trial.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  qcf-integrated-reader:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate 604-page text/verse manifest
+        run: python3 scripts/prepare-qcf604-web-trial.py
+      - name: Check generated QCF layout and word mappings
+        run: |
+          python3 - <<'PY'
+          import gzip,json
+          data=json.loads(gzip.decompress(open('experiments/qcf604-web-verse-layouts.json.gz','rb').read()))
+          assert data['pageCount']==604 and len(data['pages'])==604
+          rows=data['pages']['102']['lines']
+          assert rows and all('v' not in r or all(len(w)==3 for w in r['v']) for r in rows)
+          print('604 QCF pages and complete Quran verse mappings ready')
+          PY
+      - name: Commit QCF-only web trial manifest
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/web-qcf-v2-reader-20261028'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f experiments/qcf604-web-verse-layouts.json.gz
+          if ! git diff --cached --quiet; then
+            git commit -m "Bundle validated QCF V2 web trial layout [web-only]"
+            git push origin HEAD:feature/web-qcf-v2-reader-20261028
+          fi
