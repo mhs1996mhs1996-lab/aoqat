@@ -35,6 +35,10 @@ jobs:
           assert rows and all('v' not in r or all(len(w)==3 for w in r['v']) for r in rows)
           print('604 QCF pages and complete Quran verse mappings ready')
           PY
+      - name: Install Playwright for integrated Quran reader checks
+        run: npm install --no-save --package-lock=false playwright
+      - name: Verify integrated web reader, random jumps, swipe stability, bookmarks and fallback
+        run: node tests/qcf-web-integration-browser.cjs
       - name: Commit QCF-only web trial manifest
         if: github.event_name == 'push' && github.ref == 'refs/heads/feature/web-qcf-v2-reader-20261028'
         run: |
