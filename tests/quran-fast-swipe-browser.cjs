@@ -3,9 +3,9 @@ const assert=require('node:assert/strict');
 const {spawn}=require('node:child_process');
 const {readFileSync}=require('node:fs');
 const html=readFileSync('index.html','utf8'),sw=readFileSync('sw.js','utf8');
-assert.ok(html.includes('js/quran-reader.js?v=qcf-swipe-prefetch-20261028'));
-assert.ok(sw.includes('js/quran-reader.js?v=qcf-swipe-prefetch-20261028'));
-assert.ok(sw.includes('aoqat-pwa-v169-qcf-fast-swipe-20261028'));
+assert.ok(html.includes('js/quran-reader.js?v=qcf-raf-swipe-opening-20261028'));
+assert.ok(sw.includes('js/quran-reader.js?v=qcf-raf-swipe-opening-20261028'));
+assert.ok(sw.includes('aoqat-pwa-v170-qcf-opening-raf-20261028'));
 (async()=>{
  const server=spawn('python3',['-m','http.server','8795'],{stdio:'ignore'});
  let browser;
@@ -86,6 +86,13 @@ assert.ok(sw.includes('aoqat-pwa-v169-qcf-fast-swipe-20261028'));
     assert.ok(count<=4,'Too many prepared page DOM trees: '+count);
    }
    await swipe(-1);await ready(127);
+   // Rapid consecutive flicks: start the next gesture before the settlement
+   // would normally finish. Every flick must still advance one page.
+   await jump(120);
+   for(let i=0;i<6;i++)await swipe(1);
+   await ready(126);
+   for(let i=0;i<6;i++)await swipe(-1);
+   await ready(120);
    console.log('PASS fast Quran swipe: no touchmove layout, original DOM reused, 9 forward turns and immediate reverse at '+width+'x'+height);
   }
   assert.deepEqual(errors,[],'No Quran JS errors expected');
