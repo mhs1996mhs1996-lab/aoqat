@@ -70,7 +70,10 @@ const {gunzipSync}=require('node:zlib');
       headings,markers:markers.map(m=>({
        text:m.textContent,color:getComputedStyle(m).color,ink,
        pseudo:getComputedStyle(m,'::before').content,
-       backdrop:getComputedStyle(m,'::before').backgroundImage,
+       pseudoDisplay:getComputedStyle(m,'::before').display,
+       backdrop:getComputedStyle(m).backgroundImage,
+       inkVar:getComputedStyle(m).getPropertyValue('--qcf-rosette-ink').trim(),
+       tintVar:getComputedStyle(m).getPropertyValue('--qcf-rosette-tint').trim(),
        rect:rect(m),font:getComputedStyle(m).fontFamily,
        data:m.dataset.qrVerse
       }))};
@@ -84,9 +87,10 @@ const {gunzipSync}=require('node:zlib');
    assert.deepEqual(result.markers.map(x=>x.text),original,
      'Do not change original QCF verse-number glyphs or their order: page '+n);
    assert.ok(result.markers.length>0,'Expected original verse-number markers on '+n);
-   assert.ok(result.markers.every(m=>m.color!==m.ink&&m.pseudo!=='none'&&
-       m.backdrop.includes('radial-gradient')&&m.rect.w>4&&m.rect.h>5),
-     'Style8 verse-number contrast and ornamental background must remain visible: '+n);
+   assert.ok(result.markers.every(m=>m.color!==m.ink&&m.pseudo==='none'&&
+       m.pseudoDisplay==='none'&&m.backdrop.includes('radial-gradient')&&
+       m.inkVar&&m.tintVar&&m.rect.w>4&&m.rect.h>5),
+     'Keep ONE true QCF verse rosette with a contrast tint, no pasted-on second shape: '+n);
    if(n<=2)assert.equal(result.headings.length,1,'Opening pages should keep exactly one surah bar');
    else assert.equal(result.headings.length,manifest.pages[String(n)].lines.filter(x=>x.s).length,
      'Every real surah title row must have exactly one style8 header on page '+n);
@@ -122,9 +126,12 @@ const {gunzipSync}=require('node:zlib');
    const c=await page.locator('#aqReader').evaluate((r,t)=>{
     r.dataset.theme=t;
     const mark=r.querySelector('#adVerses .aq-qcf-marker');
-    return {ink:getComputedStyle(mark).color,bg:getComputedStyle(mark,'::before').backgroundImage};
+    return {ink:getComputedStyle(mark).color,bg:getComputedStyle(mark).backgroundImage,
+      tint:getComputedStyle(mark).getPropertyValue('--qcf-rosette-tint').trim(),
+      pseudo:getComputedStyle(mark,'::before').content};
    },theme);
-   assert.ok(c.bg.includes('radial-gradient'),'Verse decoration gone in '+theme);
+   assert.ok(c.bg.includes('radial-gradient')&&c.pseudo==='none'&&c.tint,
+     'Original verse rosette tint must remain visible, without overlaid shape, in '+theme);
    assert.deepEqual(await page.locator('#adVerses .aq-qcf-marker').allTextContents(),
      originals,'Theme must never change Quran verse number glyph data');
    console.log('PASS style8 verse number contrast theme '+theme+': '+c.ink);
