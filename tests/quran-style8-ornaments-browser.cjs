@@ -63,6 +63,10 @@ const {gunzipSync}=require('node:zlib');
     });
     const ink=getComputedStyle(text.querySelector('.aq-qcf-word:not(.aq-qcf-marker)')).color;
     return {w:text.clientWidth,sw:text.scrollWidth,
+      lineSizes:[...text.querySelectorAll('.aq-qcf-line')].map(l=>({
+        rect:rect(l),scrollWidth:l.scrollWidth,clientWidth:l.clientWidth,
+        fontSize:getComputedStyle(l).fontSize,childCount:l.children.length
+      })),
       headings,markers:markers.map(m=>({
        text:m.textContent,color:getComputedStyle(m).color,ink,
        pseudo:getComputedStyle(m,'::before').content,
@@ -71,7 +75,10 @@ const {gunzipSync}=require('node:zlib');
        data:m.dataset.qrVerse
       }))};
    });
-   assert.ok(result.sw<=result.w+6,'No Quran page text may overflow horizontally: '+n);
+   assert.ok(result.sw<=result.w+6,'No Quran page text may overflow horizontally: '+n+' '+JSON.stringify({
+     scrollWidth:result.sw,availableWidth:result.w,headings:result.headings.map(h=>({name:h.name,rect:h.rect})),
+     worstLines:result.lineSizes.filter(l=>l.scrollWidth>l.clientWidth+3).slice(0,4)
+   }));
    const original=manifest.pages[String(n)].lines.flatMap(line=>(line.v||[])
      .filter(w=>w[2]).map(w=>w[1]));
    assert.deepEqual(result.markers.map(x=>x.text),original,
