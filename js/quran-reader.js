@@ -440,33 +440,40 @@
   // One contiguous, ornamented title plaque for the first TWO pages only.
   // The floral pattern is part of the plate itself, never floating rosettes
   // over "مكية" / "مدنية" or the authentic verse count.
-  function qcfOpeningBanner(page){
-    const surah=quran[page-1],kind=surah.type==='meccan'?'مكية':'مدنية';
-    const flower='<g class="aq-qcf-floral" fill="none" stroke="#a7825d" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
-      '<path d="M3 60H17M181 60H197M15 20Q28 34 42 25M15 100Q28 86 42 95M154 25Q168 35 181 20M154 95Q168 85 181 100"/>'+
-      '<path d="M98 15Q113 34 131 25Q122 44 146 60Q122 76 131 95Q113 86 98 105Q83 86 65 95Q74 76 50 60Q74 44 65 25Q83 34 98 15Z" fill="#efe2cd" stroke-width="2"/>'+
-      '<circle cx="98" cy="60" r="32" fill="#f9f1e3"/>'+
-      '<circle cx="98" cy="60" r="24" stroke-width="1.4"/>'+
-      '<path d="M98 31C108 42 110 51 98 60C86 51 88 42 98 31Z" fill="#d6c09c"/>'+
-      '<path d="M98 89C88 78 86 69 98 60C110 69 108 78 98 89Z" fill="#d6c09c"/>'+
-      '<path d="M69 60C80 50 89 48 98 60C89 72 80 70 69 60Z" fill="#d6c09c"/>'+
-      '<path d="M127 60C116 70 107 72 98 60C107 48 116 50 127 60Z" fill="#d6c09c"/>'+
-      '<path d="M78 40Q99 40 118 80Q99 80 78 40Z" opacity=".55"/>'+
-      '<path d="M118 40Q97 40 78 80Q97 80 118 40Z" opacity=".55"/>'+
-      '<circle cx="98" cy="60" r="8" fill="#b49a75"/><circle cx="98" cy="60" r="3.5" fill="#fff9ec" stroke="none"/>'+
-      '<circle cx="39" cy="60" r="9"/><path d="M39 46V74M25 60H53"/>'+
-      '<circle cx="157" cy="60" r="9"/><path d="M157 46V74M143 60H171"/>'+
+  // Style 8 (the selected preview): one unified rounded folio with gilded
+  // floral wings at both ends. Called for ALL 114 surahs in the QCF reader.
+  // Verse count, Meccan/Medinan classification and full surah name come
+  // directly from the bundled Quran DB; never render them as a static image.
+  function qcfSurahBanner(id){
+    const surah=quran[id-1];
+    if(!surah)return surahBanner(id);
+    const kind=surah.type==='meccan'?'مكية':'مدنية';
+    const wing='<g class="aq-qcf-floral" stroke="#986d48" stroke-width="1.8" fill="none" stroke-linejoin="round">'+
+      '<path d="M5 60Q20 52 24 33Q32 16 49 16H166Q181 16 192 4" opacity=".7"/>'+
+      '<path d="M5 60Q20 68 24 87Q32 104 49 104H166Q181 104 192 116" opacity=".7"/>'+
+      '<path d="M34 60Q24 49 34 38Q45 27 61 28M34 60Q24 71 34 82Q45 93 61 92"/>'+
+      '<path d="M48 16Q52 34 67 41M48 104Q52 86 67 79M154 22Q143 36 145 45M154 98Q143 84 145 75"/>'+
+      '<path d="M105 15Q118 28 136 23Q130 40 149 60Q130 80 136 97Q118 92 105 105Q92 92 74 97Q80 80 61 60Q80 40 74 23Q92 28 105 15Z" fill="#f0dfc4"/>'+
+      '<path d="M105 24Q121 39 137 38Q124 53 140 60Q124 67 137 82Q121 81 105 96Q89 81 73 82Q86 67 70 60Q86 53 73 38Q89 39 105 24Z" fill="#fff7e9"/>'+
+      '<circle cx="105" cy="60" r="28" stroke="#c4a37c"/>'+
+      '<circle cx="105" cy="60" r="20" stroke="#a47c56" stroke-dasharray="2 3"/>'+
+      '<path d="M105 33C119 45 119 49 105 60C91 49 91 45 105 33Z" fill="#dfc39a"/>'+
+      '<path d="M105 87C91 75 91 71 105 60C119 71 119 75 105 87Z" fill="#dfc39a"/>'+
+      '<path d="M78 60C90 46 94 46 105 60C94 74 90 74 78 60Z" fill="#dfc39a"/>'+
+      '<path d="M132 60C120 74 116 74 105 60C116 46 120 46 132 60Z" fill="#dfc39a"/>'+
+      '<path d="M86 41Q111 44 124 79Q99 76 86 41ZM124 41Q99 44 86 79Q111 76 124 41Z" opacity=".6"/>'+
+      '<circle cx="105" cy="60" r="7" fill="#b18a5f"/><circle cx="105" cy="60" r="2.7" fill="#fff8ed" stroke="none"/>'+
+      '<path d="M14 60H36M166 60H197" stroke="#b7946d"/>'+
       '</g>';
-    const art='<svg class="aq-qcf-opening-art" viewBox="0 0 1000 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
-      '<path d="M18 6H982Q994 6 994 18V102Q994 114 982 114H18Q6 114 6 102V18Q6 6 18 6Z" fill="#f8eddf" stroke="#aa8c66" stroke-width="3"/>'+
-      '<path d="M21 13H979Q987 13 987 21V99Q987 107 979 107H21Q13 107 13 99V21Q13 13 21 13Z" fill="none" stroke="#d7bd98" stroke-width="2"/>'+
-      '<path d="M198 13H802L825 24V96L802 107H198L175 96V24Z" fill="#fffaf0" stroke="#ac8d67" stroke-width="2"/>'+
-      '<path d="M213 21H787L813 31V89L787 99H213L187 89V31Z" fill="none" stroke="#d5bd9a" stroke-width="1.8"/>'+
-      '<path d="M500 14V23M500 97V106M182 60H205M795 60H818" stroke="#b59a78" stroke-width="1.6" fill="none"/>'+
-      '<g class="aq-qcf-ornate-left">'+flower+'</g>'+
-      '<g class="aq-qcf-ornate-right" transform="translate(1000 0) scale(-1 1)">'+flower+'</g>'+
+    const art='<svg class="aq-qcf-opening-art aq-qcf-style8-art" viewBox="0 0 1000 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
+      '<path d="M37 7H963Q986 7 987 27Q990 46 997 60Q990 74 987 93Q986 113 963 113H37Q14 113 13 93Q10 74 3 60Q10 46 13 27Q14 7 37 7Z" fill="#f8ecda" stroke="#ab825a" stroke-width="3"/>'+
+      '<path d="M38 13H962Q979 13 980 31Q984 49 990 60Q984 71 980 89Q979 107 962 107H38Q21 107 20 89Q16 71 10 60Q16 49 20 31Q21 13 38 13Z" fill="none" stroke="#d3b48c" stroke-width="1.6"/>'+
+      '<path d="M235 12H765Q781 12 789 26Q797 41 816 49Q822 60 816 71Q797 79 789 94Q781 108 765 108H235Q219 108 211 94Q203 79 184 71Q178 60 184 49Q203 41 211 26Q219 12 235 12Z" fill="#fffaf0" stroke="#b28c65" stroke-width="2.2"/>'+
+      '<path d="M237 19H763Q777 19 782 32Q792 46 802 51Q809 60 802 69Q792 74 782 88Q777 101 763 101H237Q223 101 218 88Q208 74 198 69Q191 60 198 51Q208 46 218 32Q223 19 237 19Z" fill="none" stroke="#d0ad83" stroke-width="1.5"/>'+
+      '<g class="aq-qcf-ornate-left">'+wing+'</g>'+
+      '<g class="aq-qcf-ornate-right" transform="translate(1000 0) scale(-1 1)">'+wing+'</g>'+
       '</svg>';
-    return '<div class="aq-qcf-opening-top aq-native-heading aq-qcf-heading" role="group" aria-label="معلومات السورة">'+
+    return '<div class="aq-qcf-opening-top aq-qcf-surah-plaque aq-native-heading aq-qcf-heading" role="group" aria-label="معلومات السورة">'+
       art+'<div class="aq-surah-info-clean aq-qcf-opening-info" role="group" aria-label="اسم السورة وعدد آياتها وتصنيفها">'+
       '<span class="aq-surah-info-count">'+arabic(surah.total_verses)+' آية</span>'+
       '<span class="aq-surah-info-name">سورة '+esc(surah.name)+'</span>'+
@@ -497,7 +504,7 @@
     // in the top surah bar. Only the Quran text occupies the centered folio.
     // Do not move or remove the reader's existing surah-information header.
     const html=rows.map((row,n)=>{
-      if(row.s)return page<=2?'':'<div class="aq-native-heading aq-qcf-heading">'+surahBanner(row.s)+'</div>';
+      if(row.s)return page<=2?'':'<div class="aq-native-heading aq-qcf-heading aq-qcf-style8-heading">'+qcfSurahBanner(row.s)+'</div>';
       if(row.b)return page===2?qcfOpeningBasmala():
         '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
       return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
@@ -511,7 +518,7 @@
         }).join('')+'</div>';
     }).join('');
     if(page<=2){
-      return qcfOpeningBanner(page)+'<div class="aq-qcf-opening-inner">'+html+'</div>';
+      return qcfSurahBanner(page)+'<div class="aq-qcf-opening-inner">'+html+'</div>';
     }
     return html;
   }
