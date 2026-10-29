@@ -70,7 +70,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private val audioFocus=AdhanAudioFocus(
         resume={startPreparedAudio()},
         pause={if(prepared&&player?.isPlaying==true)player?.pause()},
-        volume={scale->val v=config.optInt("volume",80).coerceIn(0,100)/100f*scale;player?.setVolume(v,v)},
+        volume={scale->player?.setVolume(scale,scale)},
         stop={manuallyStopped=true;stopSelf()})
     private fun startPreparedAudio(){
         val ready=player?:return
@@ -119,13 +119,13 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         retryAllowed=true
         try {
             val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
-            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
+            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
             val result=am.requestAudioFocus(focus!!)
             audioFocus.requested(result)
             if(result==AudioManager.AUDIOFOCUS_REQUEST_FAILED){stopSelf();return START_NOT_STICKY}
             handler.postDelayed({if(!audioStarted)stopSelf()},60000L)
             previousVolume=am.getStreamVolume(AudioManager.STREAM_ALARM)
-            appliedVolume=am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            appliedVolume=(am.getStreamMaxVolume(AudioManager.STREAM_ALARM)*config.optInt("volume",80).coerceIn(0,100)/100f).toInt().coerceIn(0,am.getStreamMaxVolume(AudioManager.STREAM_ALARM))
             getSharedPreferences("adhan_audio_volume",MODE_PRIVATE).edit().putInt("previous",previousVolume!!).putInt("applied",appliedVolume!!).commit()
             am.setStreamVolume(AudioManager.STREAM_ALARM,appliedVolume!!,0)
             val preparing=MediaPlayer()
@@ -134,13 +134,13 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 setAudioAttributes(attrs)
                 if(config.optString("sound","1")=="custom")setDataSource(File(filesDir,"custom-adhan").absolutePath)
                 else {val id=config.optString("sound","1").takeIf{it in listOf("1","2","3","4")}?:"1";val suffix=if(config.optBoolean("partial"))"-short" else "";val name=if(id=="3")"adhan-quba-suraihi" else "adhan-v124-$id";assets.openFd("www/assets/audio/$name$suffix.mp3").use{setDataSource(it.fileDescriptor,it.startOffset,it.length)}}
-                val v=config.optInt("volume",80).coerceIn(0,100)/100f;setVolume(v,v)
+                setVolume(1f,1f)
                 setOnCompletionListener{successful=true;stopSelf()};setOnErrorListener{_,_,_->Toast.makeText(this@AdhanPlaybackService,"تعذر تشغيل الصوت المختار؛ اختر ملفًا صوتيًا صالحًا",Toast.LENGTH_LONG).show();stopSelf();true}
                 setOnPreparedListener { ready ->
                     if(player!==ready||manuallyStopped)return@setOnPreparedListener
                     prepared=true
                     val saved=getSharedPreferences("adhan_resume",MODE_PRIVATE)
-                    if(!preview&&saved.getLong("at",0)==prayerAt&&saved.getString("id","")==prayerId){
+                    if(!preview&&prayerAt>0&&saved.getLong("at",0)==prayerAt&&saved.getString("id","")==prayerId){
                         ready.seekTo(saved.getInt("position",0).coerceAtLeast(0))
                     }
                     startPreparedAudio();handler.post(progress)
