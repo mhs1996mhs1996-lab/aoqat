@@ -221,7 +221,7 @@
   }
 
   function addIqamaAppearance(){
-    const host=document.getElementById('switchPanel');
+    const host=document.getElementById('iqamaPanel');
     if(!host||document.getElementById('iqamaAppearance'))return;
     const label=document.createElement('label');label.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0';
     label.textContent='خلفية إشعار الإقامة';const select=document.createElement('select');select.id='iqamaAppearance';
