@@ -650,6 +650,8 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
    not change line lengths, glyph code points, verse selection or swipe DOM. */
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-marker{
   --qcf-verse-fill:#edce96;
+  --qcf-verse-center:#fff1d2;
+  --qcf-verse-shell:#d7ad73;
   --qcf-verse-edge:#af773d;
   --qcf-verse-ink:#81502b;
   position:relative!important;
@@ -673,29 +675,37 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   box-sizing:border-box!important;
   border:1px solid var(--qcf-verse-edge)!important;
   border-radius:36% 47% 36% 47%!important;
-  background:radial-gradient(circle at 50% 50%,#fff4dc 0%,var(--qcf-verse-fill) 72%,#d7ad73 100%)!important;
+  background:radial-gradient(circle at 50% 50%,var(--qcf-verse-center) 0%,var(--qcf-verse-fill) 72%,var(--qcf-verse-shell) 100%)!important;
   box-shadow:0 0 0 1px #fbebcd inset!important;
   transform:translate(-50%,-50%) rotate(45deg)!important;
   pointer-events:none!important;
   z-index:-1!important;
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=night][data-edition="qcf2-font"] .aq-qcf-marker{
-  --qcf-verse-fill:#66512f;
+  --qcf-verse-fill:#45351f;
+  --qcf-verse-center:#2e261a;
+  --qcf-verse-shell:#75572d;
   --qcf-verse-edge:#f0cf88;
   --qcf-verse-ink:#ffe4b1;
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=green][data-edition="qcf2-font"] .aq-qcf-marker{
   --qcf-verse-fill:#d9c28d;
+  --qcf-verse-center:#faeac7;
+  --qcf-verse-shell:#c3a875;
   --qcf-verse-edge:#7b633a;
   --qcf-verse-ink:#705025;
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=blue][data-edition="qcf2-font"] .aq-qcf-marker{
   --qcf-verse-fill:#dfc895;
+  --qcf-verse-center:#faebcb;
+  --qcf-verse-shell:#c4a875;
   --qcf-verse-edge:#806c4a;
   --qcf-verse-ink:#66502d;
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=contrast][data-edition="qcf2-font"] .aq-qcf-marker{
   --qcf-verse-fill:#ffe59d;
+  --qcf-verse-center:#fff0bc;
+  --qcf-verse-shell:#d9b262;
   --qcf-verse-edge:#000;
   --qcf-verse-ink:#000;
 }
