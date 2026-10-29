@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v177-qcf-opening-uniform-20261028";
+const CACHE_NAME = "aoqat-pwa-v178-qcf-style8-surah-ayah-20261029";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -63,7 +63,7 @@ const APP_SHELL = [
   "/data/prayer-times-offline.js?v=2",
   "/experiments/qcf604-web-verse-layouts.json.gz",
   "/assets/mushaf-phone-hafs-ready.json", "/assets/mushaf-phone-hafs.json.gz", "/assets/mushaf-phone-hafs/001.json.gz", "/assets/mushaf-phone-hafs/604.json.gz",
-  "/css/quran-reader.css?v=qcf-uniform-opening-20261028",
+  "/css/quran-reader.css?v=qcf-style8-surah-ayah-20261029",
   "/js/settings-subwindows.js", "/js/prayer-alarm-core.js", "/js/prayer-alarm.js", "/css/prayer-alarm.css",
   "/",
   "/index.html",
@@ -103,7 +103,7 @@ const APP_SHELL = [
   "/js/modal-panels.js?v=10",
   "/js/tomorrow-alarm.js?v=9",
   "/js/push-notifications.js?v=9",
-  "/js/quran-reader.js?v=qcf-authentic-basmala-20261028",
+  "/js/quran-reader.js?v=qcf-style8-surah-ayah-20261029",
   "/js/iqama-timing.js?v=1",
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",

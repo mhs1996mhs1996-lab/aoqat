@@ -1,0 +1,45 @@
+name: Quran style 8 surah and verse ornaments (web only)
+on:
+  push:
+    branches:
+      - fix/quran-surah-verse-ornaments-style8-20261029
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-style8-ornaments-browser.cjs
+      - .github/workflows/quran-style8-ornaments.yml
+  pull_request:
+    paths:
+      - js/quran-reader.js
+      - css/quran-reader.css
+      - index.html
+      - sw.js
+      - tests/quran-style8-ornaments-browser.cjs
+      - .github/workflows/quran-style8-ornaments.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  style8-browser-regression:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install browser harness
+        run: npm install --no-save --package-lock=false playwright
+      - name: Selected style 8 cartouches across real surahs, genuine QCF verse rosettes, themes and phone sizes
+        run: node tests/quran-style8-ornaments-browser.cjs
+      - name: Opening Quran pages 1-2, all fields, and authentic Fatiha / Baqarah glyphs
+        run: node tests/quran-opening-pages-browser.cjs
+      - name: Fast QCF repeated swipes / prepainted page reuse
+        run: node tests/quran-fast-swipe-browser.cjs
+      - name: QCF glyph stability after turns
+        run: node tests/quran-swipe-settle-browser.cjs
+      - name: Quran bookmarks, direct page jumps 102/450/604, SVG fallback
+        run: node tests/qcf-web-integration-browser.cjs
+      - name: Existing SVG and offline PWA untouched
+        run: |
+          node tests/quran-responsive-browser.cjs
+          node tests/quran-offline-browser.cjs
