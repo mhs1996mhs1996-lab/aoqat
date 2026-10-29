@@ -498,6 +498,9 @@
     return '<div class="aq-native-bismillah aq-qcf-bismillah">'+
       esc(quran[0].verses[0].text)+'</div>';
   }
+  function selectedAyahMedallion(code){
+    return '<span class="aq-qcf-selected-ayah"><svg class="aq-qcf-selected-ayah-frame" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#a67a48" stroke-width="2"><path d="M50 3Q60 14 70 10Q75 24 90 30Q86 41 97 50Q86 59 90 70Q75 76 70 90Q60 86 50 97Q40 86 30 90Q25 76 10 70Q14 59 3 50Q14 41 10 30Q25 24 30 10Q40 14 50 3Z"/><path d="M50 10Q60 21 68 17Q73 30 83 33Q79 42 90 50Q79 58 83 67Q73 70 68 83Q60 79 50 90Q40 79 32 83Q27 70 17 67Q21 58 10 50Q21 42 17 33Q27 30 32 17Q40 21 50 10Z"/><circle cx="50" cy="50" r="31"/></g></svg><span class="aq-qcf-selected-ayah-glyph">'+esc(code)+'</span></span>';
+  }
   function qcfHTML(page){
     const rows=qcfData.get(page);
     if(!rows)return '';
@@ -515,7 +518,7 @@
           return '<span class="aq-qcf-word'+(end?' aq-qcf-marker':'')+
             (audioOn&&audioIndex===i?' aq-playing':'')+
             '" role="button" tabindex="0" data-qr-verse="'+i+
-            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+esc(code)+'</span>';
+            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+(end?selectedAyahMedallion(code):esc(code))+'</span>';
         }).join('')+'</div>';
     }).join('');
     if(page<=2){
