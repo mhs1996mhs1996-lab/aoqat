@@ -1,0 +1,33 @@
+name: Publish verified v1.57 APK direct link (one-time)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-adhan-preview-pr.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-verified-apk:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'release/adhan-v157-direct-apk-20261029'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve verified installable APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/aoqat-direct-release
+          gh run download 40954895344 --repo "$GITHUB_REPOSITORY" --name adhan-settings-validation-apk --dir /tmp/aoqat-direct-release
+          test -s /tmp/aoqat-direct-release/app-debug.apk
+          mv /tmp/aoqat-direct-release/app-debug.apk /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.apk
+          sha256sum /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.apk | tee /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.sha256
+      - name: Publish APK and checksum as direct release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.57-adhan-fixes --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload v1.57-adhan-fixes /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.apk /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.sha256 --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create v1.57-adhan-fixes /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.apk /tmp/aoqat-direct-release/aoqat-v1.57-adhan-fixes.sha256 --repo "$GITHUB_REPOSITORY" --target de4076b3a49318795e9c7d3e920366c519a5a5dc --title "Aoqat Android v1.57 - Adhan and settings fixes" --notes "Tested build 92. Adhan volume and audio focus, quiet mode permission persistence, settings navigation and iqama notification controls. The new Quran font and splash replacement are not included in this interim installable build."
+          fi
