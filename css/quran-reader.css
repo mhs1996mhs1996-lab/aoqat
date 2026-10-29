@@ -699,3 +699,18 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-numb
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number .aq-ayah-rosette{display:none!important}
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number .aq-ayah-digits{position:relative!important;z-index:1!important;font-size:.8em!important}
+
+/* Ornament selection 1: fitted frame, never reflow the QCF text. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah{
+  display:inline-grid!important;place-items:center!important;position:relative!important;
+  width:1.12em!important;height:1.12em!important;vertical-align:middle!important;
+  isolation:isolate!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-frame{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  pointer-events:none!important;z-index:0!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-glyph{
+  position:relative!important;z-index:1!important;font:inherit!important;color:inherit!important;
+  transform:scale(.75)!important;display:inline-block!important;
+}
