@@ -20,6 +20,13 @@ object AfterIqamaQuiet {
         val times=window(AdhanSchedule.settings(c),prayerId,prayerAt,IqamaNativeScheduler.durations(c,prayerId).beforeMinutes) ?: return
         val now=System.currentTimeMillis()
         if (now !in times.first until times.second) return
+        // A short iqama window must never silence a still-playing adhan.
+        // Recheck after 15 seconds, preserving the original absolute end time.
+        if (AdhanPlaybackService.running) {
+            AdhanSchedule.alarm(c, 60590 + PrayerTimes.ids.indexOf(prayerId), "IQAMA_QUIET", now + 15000L,
+                PrayerTimes.Prayer(prayerId,prayerAt,false))
+            return
+        }
         val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.isNotificationPolicyAccessGranted) return
         val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager

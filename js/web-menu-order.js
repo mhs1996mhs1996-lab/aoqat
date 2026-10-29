@@ -12,6 +12,7 @@
   const SETTINGS=[
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
     ["footer","✍","النص السفلي","footerPanel"],
+    ["switch","⏰","التبديل التلقائي و التنبيه","switchPanel"],
     ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"],
     ["iqama","⏳","أوقات الإقامة","iqamaPanel"],
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
@@ -166,7 +167,7 @@
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
     openSub("إعدادت التصميم",wrap,"main");
-    if(webOnly){const controls=document.getElementById('switchPanel');if(controls){controls.classList.add('inline-open');wrap.appendChild(controls);window.aoqatMoveNotificationSettings?.();}}
+    // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
   }
   function datePrayerView(){

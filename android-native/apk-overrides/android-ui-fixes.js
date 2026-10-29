@@ -221,18 +221,33 @@
   }
 
   function addIqamaAppearance(){
-    const host=document.getElementById('switchPanel');
-    if(!host||document.getElementById('iqamaAppearance'))return;
-    const label=document.createElement('label');label.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0';
-    label.textContent='خلفية إشعار الإقامة';const select=document.createElement('select');select.id='iqamaAppearance';
-    select.style.cssText='font:inherit;max-width:150px;padding:7px;border-radius:9px';
-    for(const [value,text] of [['white','أبيض'],['dark','داكن'],['transparent','شفاف']])select.add(new Option(text,value));
-    select.value=window.AndroidNative?.readIqamaAppearance?.()||'transparent';
-    select.onchange=()=>window.AndroidNative?.configureIqamaAppearance?.(select.value);
-    label.appendChild(select);host.appendChild(label);
+    const host=document.getElementById('iqamaPanel');
+    if(!host)return false;
+    let group=document.getElementById('iqamaNotificationSettings');
+    if(!group){group=document.createElement('section');group.id='iqamaNotificationSettings';group.style.cssText='margin-top:16px;padding:12px 0;border-top:1px solid #bbc9b7';const title=document.createElement('h3');title.textContent='ظهور إشعار الإقامة';group.appendChild(title);host.appendChild(group);}
+    const toggle=document.getElementById('iqamaNotificationToggle');
+    if(toggle && toggle.parentElement!==group)group.appendChild(toggle);
+    const repair=document.getElementById('iqamaBackgroundAccess');
+    if(repair && repair.parentElement!==group)group.appendChild(repair);
+    if(!document.getElementById('iqamaAppearance')){
+      const label=document.createElement('label');
+      label.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0';
+      label.textContent='خلفية إشعار الإقامة';
+      const select=document.createElement('select');select.id='iqamaAppearance';
+      select.style.cssText='font:inherit;max-width:150px;padding:7px;border-radius:9px';
+      for(const [value,text] of [['white','أبيض'],['dark','داكن'],['transparent','شفاف']])select.add(new Option(text,value));
+      select.value=window.AndroidNative?.readIqamaAppearance?.()||'transparent';
+      select.onchange=()=>window.AndroidNative?.configureIqamaAppearance?.(select.value);
+      label.appendChild(select);group.appendChild(label);
+    }
+    return !!toggle;
   }
-  document.addEventListener('DOMContentLoaded',addIqamaAppearance,{once:true});
+  document.addEventListener('DOMContentLoaded',()=>{
+    addIqamaAppearance();
+    let attempts=0;const task=setInterval(()=>{if(addIqamaAppearance()||++attempts>=80)clearInterval(task);},150);
+  },{once:true});
   window.addEventListener('aoqatModulesReady',addIqamaAppearance);
+  window.addEventListener('aoqatIqamaNotificationChanged',addIqamaAppearance);
 
   function refreshAndroidDesignVisibility(){
     window.dispatchEvent(new CustomEvent('aoqatModulesReady'));
