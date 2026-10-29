@@ -702,10 +702,10 @@ class MainActivity : Activity() {
                 val settings=org.json.JSONObject(json)
                 if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true || settings.optBoolean("persistent")) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
                 if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
-                    settings.put("afterSilent",0)
-                    settings.optJSONObject("afterIqamaSilent")?.put("enabled",false)
+                    // Keep the user's chosen quiet durations: missing permission is temporary.
+                    // Do not silently erase the enabled switch before the user returns from Settings.
                     startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
-                    webView.evaluateJavascript("window.aoqatAdhanStatus?.('امنح إذن التحكم بوضع الصامت ثم حدّد المدة مرة أخرى')",null)
+                    webView.evaluateJavascript("window.aoqatAdhanStatus?.('امنح إذن التحكم بوضع الصامت، وتبقى إعداداتك محفوظة')",null)
                 }
                 if(settings.optBoolean("screen") && Build.VERSION.SDK_INT>=34 && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).canUseFullScreenIntent()) {
                     settings.put("screen",false)
