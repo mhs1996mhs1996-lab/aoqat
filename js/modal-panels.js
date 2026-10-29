@@ -137,7 +137,7 @@
     }
     if(notifyBtn){
       const on=notifyEnabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";
-      notifyBtn.textContent=on?"🔔 التنبيه: تشغيل":"🔕 التنبيه: إيقاف";
+      notifyBtn.textContent=on?"🔔 تنبيه النشر على الهاتف: تشغيل":"🔕 تنبيه النشر على الهاتف: إيقاف";
       notifyBtn.classList.toggle("enabled",on);
       notifyBtn.classList.toggle("is-on",on);
       notifyBtn.setAttribute("aria-pressed",String(on));
@@ -215,7 +215,7 @@
       button.type="button";
       button.className="main-action switch-action";
       button.dataset.openPanel="switchPanel";
-      button.innerHTML="⏰ <span>التبديل والتنبيه</span>";
+      button.innerHTML="⏰ <span>التبديل التلقائي و التنبيه</span>";
       mainPanel.appendChild(button);
     }
     if(!panel){
@@ -228,6 +228,7 @@
         ${!window.AndroidNative?.configureAdhan?'<button type="button" id="previewDayToggle" class="switch-control-btn manual"></button>':''}
         <button type="button" id="showTomorrowNowBtn" class="switch-control-btn manual">➡ عرض اليوم التالي الآن</button>
         <button type="button" id="showTodayNowBtn" class="switch-control-btn manual secondary">↩ الرجوع إلى اليوم</button>
+        <button type="button" id="tomorrowNotifyToggle" class="switch-control-btn" aria-pressed="false">🔕 تنبيه النشر على الهاتف: إيقاف</button>
         <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">التبديل التلقائي متوقف</div>`;
       button.insertAdjacentElement("afterend",panel);
     }
