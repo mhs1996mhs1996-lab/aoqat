@@ -449,22 +449,29 @@
     if(!surah)return surahBanner(id);
     const kind=surah.type==='meccan'?'مكية':'مدنية';
     const titleScale=Math.max(.69,1-Math.max(0,surah.name.length-9)*.045);
-    const wing='<g class="aq-qcf-floral" stroke="#986d48" stroke-width="1.8" fill="none" stroke-linejoin="round">'+
-      '<path d="M5 60Q20 52 24 33Q32 16 49 16H166Q181 16 192 4" opacity=".7"/>'+
-      '<path d="M5 60Q20 68 24 87Q32 104 49 104H166Q181 104 192 116" opacity=".7"/>'+
-      '<path d="M34 60Q24 49 34 38Q45 27 61 28M34 60Q24 71 34 82Q45 93 61 92"/>'+
-      '<path d="M48 16Q52 34 67 41M48 104Q52 86 67 79M154 22Q143 36 145 45M154 98Q143 84 145 75"/>'+
-      '<path d="M105 15Q118 28 136 23Q130 40 149 60Q130 80 136 97Q118 92 105 105Q92 92 74 97Q80 80 61 60Q80 40 74 23Q92 28 105 15Z" fill="#f0dfc4"/>'+
-      '<path d="M105 24Q121 39 137 38Q124 53 140 60Q124 67 137 82Q121 81 105 96Q89 81 73 82Q86 67 70 60Q86 53 73 38Q89 39 105 24Z" fill="#fff7e9"/>'+
-      '<circle cx="105" cy="60" r="28" stroke="#c4a37c"/>'+
-      '<circle cx="105" cy="60" r="20" stroke="#a47c56" stroke-dasharray="2 3"/>'+
-      '<path d="M105 33C119 45 119 49 105 60C91 49 91 45 105 33Z" fill="#dfc39a"/>'+
-      '<path d="M105 87C91 75 91 71 105 60C119 71 119 75 105 87Z" fill="#dfc39a"/>'+
-      '<path d="M78 60C90 46 94 46 105 60C94 74 90 74 78 60Z" fill="#dfc39a"/>'+
-      '<path d="M132 60C120 74 116 74 105 60C116 46 120 46 132 60Z" fill="#dfc39a"/>'+
-      '<path d="M86 41Q111 44 124 79Q99 76 86 41ZM124 41Q99 44 86 79Q111 76 124 41Z" opacity=".6"/>'+
-      '<circle cx="105" cy="60" r="7" fill="#b18a5f"/><circle cx="105" cy="60" r="2.7" fill="#fff8ed" stroke="none"/>'+
-      '<path d="M14 60H36M166 60H197" stroke="#b7946d"/>'+
+    // Reference #8 uses dense symmetrical arabesque/four-petal flowers in
+    // each END PANEL, not a bare eight-pointed compass rose. This ornament
+    // is fully isolated from metadata and Quran glyphs.
+    const wing='<g class="aq-qcf-floral" stroke="#9d7854" stroke-width="1.7" fill="none" stroke-linejoin="round" stroke-linecap="round">'+
+      '<path d="M2 60L17 45Q21 30 37 25Q51 18 61 8H167L187 2M2 60L17 75Q21 90 37 95Q51 102 61 112H167L187 118" stroke-width="2.2"/>'+
+      '<path d="M18 60C28 36 47 22 64 17C80 10 98 14 106 4C114 14 132 10 148 17C165 22 184 36 194 60C184 84 165 98 148 103C132 110 114 106 106 116C98 106 80 110 64 103C47 98 28 84 18 60Z" stroke="#b38d64" stroke-width="2.1"/>'+
+      '<path d="M32 60C46 49 42 34 63 30C74 26 75 17 90 20C96 11 103 16 106 25C109 16 116 11 122 20C137 17 138 26 149 30C170 34 166 49 180 60C166 71 170 86 149 90C138 94 137 103 122 100C116 109 109 104 106 95C103 104 96 109 90 100C75 103 74 94 63 90C42 86 46 71 32 60Z" fill="#f3e4ce"/>'+
+      '<path d="M106 23C119 35 134 31 135 46C151 48 151 59 140 60C151 61 151 72 135 74C134 89 119 85 106 97C93 85 78 89 77 74C61 72 61 61 72 60C61 59 61 48 77 46C78 31 93 35 106 23Z" fill="#fff8e8" stroke="#a47c54" stroke-width="1.6"/>'+
+      '<circle cx="106" cy="60" r="29" stroke="#c09f76" stroke-width="1.3"/>'+
+      '<circle cx="106" cy="60" r="21" stroke="#b78e63" stroke-width="1.1"/>'+
+      '<path d="M106 30Q122 47 106 60Q90 47 106 30Z" fill="#dcc098"/>'+
+      '<path d="M106 90Q90 73 106 60Q122 73 106 90Z" fill="#dcc098"/>'+
+      '<path d="M76 60Q93 44 106 60Q93 76 76 60Z" fill="#dcc098"/>'+
+      '<path d="M136 60Q119 76 106 60Q119 44 136 60Z" fill="#dcc098"/>'+
+      '<path d="M84 38Q107 41 128 82Q105 79 84 38Z" stroke="#a77d55"/>'+
+      '<path d="M128 38Q105 41 84 82Q107 79 128 38Z" stroke="#a77d55"/>'+
+      '<path d="M67 19Q62 35 48 39M67 101Q62 85 48 81M145 19Q150 35 164 39M145 101Q150 85 164 81" stroke="#b18b63"/>'+
+      '<path d="M42 60Q54 51 61 60Q54 69 42 60M151 60Q158 51 170 60Q158 69 151 60" fill="#eed9b5"/>'+
+      '<path d="M106 12V25M106 95V108M23 60H42M170 60H190" stroke="#aa8058"/>'+
+      '<circle cx="106" cy="60" r="8" fill="#b38c60"/>'+
+      '<circle cx="106" cy="60" r="3.2" fill="#fff9ee" stroke="none"/>'+
+      '<circle cx="52" cy="28" r="2.1" fill="#b38c60"/><circle cx="52" cy="92" r="2.1" fill="#b38c60"/>'+
+      '<circle cx="160" cy="28" r="2.1" fill="#b38c60"/><circle cx="160" cy="92" r="2.1" fill="#b38c60"/>'+
       '</g>';
     const art='<svg class="aq-qcf-opening-art aq-qcf-style8-art" viewBox="0 0 1000 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
       '<path d="M37 7H963Q986 7 987 27Q990 46 997 60Q990 74 987 93Q986 113 963 113H37Q14 113 13 93Q10 74 3 60Q10 46 13 27Q14 7 37 7Z" fill="#f8ecda" stroke="#ab825a" stroke-width="3"/>'+
