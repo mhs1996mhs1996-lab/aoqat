@@ -500,9 +500,11 @@
   }
   // Ayah ornament #1: replace the original QCF rosette with one visible
   // decorative frame and the real verse number. Never add a second rosette.
-  function selectedAyahMedallion(verseNumber){
+  // Keep the authentic QCF codepoint in DOM for Quran identity and validation.
+  // Replace its visual outline only, using selected decorative frame #1.
+  function selectedAyahMedallion(code,verseNumber){
     const numeral=arabic(verseNumber);
-    return '<span class="aq-qcf-selected-ayah" aria-hidden="true">'+
+    return '<span class="aq-qcf-selected-ayah" data-ayah-number="'+numeral+'">'+
       '<svg class="aq-qcf-selected-ayah-frame" viewBox="0 0 100 100" focusable="false" aria-hidden="true">'+
       '<g fill="none" stroke="#aa7c45" stroke-linejoin="round">'+
       '<path stroke-width="2.5" d="M50 3L58 11L70 8L74 20L86 22L87 35L97 42L91 51L97 60L86 67L85 80L73 82L68 94L57 89L49 98L40 89L28 93L25 81L13 78L13 65L3 58L9 49L3 41L14 34L15 21L27 19L33 7L43 11Z"/>'+
@@ -511,7 +513,7 @@
       '<circle cx="50" cy="50" r="27.5" stroke-width="1"/>'+
       '<path stroke-width="1.2" d="M50 3v10M50 87v10M3 50h10M87 50h10M17 17l8 8M75 75l8 8M83 17l-8 8M25 75l-8 8"/>'+
       '</g><g fill="#b38a55"><circle cx="50" cy="6" r="2"/><circle cx="94" cy="50" r="2"/><circle cx="50" cy="94" r="2"/><circle cx="6" cy="50" r="2"/></g></svg>'+
-      '<span class="aq-qcf-selected-ayah-number">'+numeral+'</span></span>';
+      '<span class="aq-qcf-selected-ayah-glyph">'+esc(code)+'</span></span>';
   }
   function qcfHTML(page){
     const rows=qcfData.get(page);
@@ -530,7 +532,7 @@
           return '<span class="aq-qcf-word'+(end?' aq-qcf-marker':'')+
             (audioOn&&audioIndex===i?' aq-playing':'')+
             '" role="button" tabindex="0" data-qr-verse="'+i+
-            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+(end?selectedAyahMedallion(v.a):esc(code))+'</span>';
+            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+(end?selectedAyahMedallion(code,v.a):esc(code))+'</span>';
         }).join('')+'</div>';
     }).join('');
     if(page<=2){
