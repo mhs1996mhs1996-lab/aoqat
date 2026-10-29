@@ -68,7 +68,7 @@ object AdhanSchedule {
     fun configure(c: Context, json: String) {
         val s = try { JSONObject(json) } catch (_: Exception) { return }
         // Permission-dependent features must never appear enabled when Android refuses them.
-        if (s.optInt("afterSilent") > 0 && !(c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) s.put("afterSilent", 0)
+        // Keep quiet-mode preferences saved even before the user grants the system permission.
         if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).commit()
         prefs(c).edit().putString("settings", s.toString()).commit()
         if (!s.optBoolean("enabled") || s.optJSONObject("modes")?.optString(AdhanPlaybackService.activePrayerId)=="silent") c.stopService(Intent(c, AdhanPlaybackService::class.java))
