@@ -448,6 +448,7 @@
     const surah=quran[id-1];
     if(!surah)return surahBanner(id);
     const kind=surah.type==='meccan'?'مكية':'مدنية';
+    const titleScale=Math.max(.69,1-Math.max(0,surah.name.length-9)*.045);
     const wing='<g class="aq-qcf-floral" stroke="#986d48" stroke-width="1.8" fill="none" stroke-linejoin="round">'+
       '<path d="M5 60Q20 52 24 33Q32 16 49 16H166Q181 16 192 4" opacity=".7"/>'+
       '<path d="M5 60Q20 68 24 87Q32 104 49 104H166Q181 104 192 116" opacity=".7"/>'+
@@ -473,7 +474,7 @@
       '<g class="aq-qcf-ornate-left">'+wing+'</g>'+
       '<g class="aq-qcf-ornate-right" transform="translate(1000 0) scale(-1 1)">'+wing+'</g>'+
       '</svg>';
-    return '<div class="aq-qcf-opening-top aq-qcf-surah-plaque aq-native-heading aq-qcf-heading" role="group" aria-label="معلومات السورة">'+
+    return '<div class="aq-qcf-opening-top aq-qcf-surah-plaque aq-native-heading aq-qcf-heading" style="--aq-surah-title-scale:'+titleScale.toFixed(2)+'" role="group" aria-label="معلومات السورة">'+
       art+'<div class="aq-surah-info-clean aq-qcf-opening-info" role="group" aria-label="اسم السورة وعدد آياتها وتصنيفها">'+
       '<span class="aq-surah-info-count">'+arabic(surah.total_verses)+' آية</span>'+
       '<span class="aq-surah-info-name">سورة '+esc(surah.name)+'</span>'+
@@ -604,8 +605,12 @@
   function fitText(paper,text,page){
     function zoomBanner(zoom){
       for(const selector of ['.aq-surah-info-count','.aq-surah-info-kind'])
-        text.querySelectorAll(selector).forEach(el=>el.style.setProperty('font-size','calc(clamp(11px,3vw,15px) * '+zoom+')','important'));
-      text.querySelectorAll('.aq-surah-info-name').forEach(el=>el.style.setProperty('font-size','calc(clamp(14px,3.7vw,19px) * '+zoom+')','important'));
+        text.querySelectorAll(selector).forEach(el=>{
+          if(!el.closest('.aq-qcf-surah-plaque'))el.style.setProperty('font-size','calc(clamp(11px,3vw,15px) * '+zoom+')','important');
+        });
+      text.querySelectorAll('.aq-surah-info-name').forEach(el=>{
+        if(!el.closest('.aq-qcf-surah-plaque'))el.style.setProperty('font-size','calc(clamp(14px,3.7vw,19px) * '+zoom+')','important');
+      });
     }
 
     if(isQcf()){
