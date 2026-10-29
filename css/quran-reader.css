@@ -665,13 +665,16 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
   position:absolute!important;
   left:50%!important;
   top:51%!important;
-  width:.97em!important;
-  height:.97em!important;
+  /* Stay strictly INSIDE each original QCF marker glyph's advance box.
+     The initial 0.97em medallion extended 6–9 px beyond tightly fitted
+     lines on pages 102 and 604, causing actual horizontal overflow. */
+  width:.58em!important;
+  height:.58em!important;
   box-sizing:border-box!important;
   border:1px solid var(--qcf-verse-edge)!important;
   border-radius:36% 47% 36% 47%!important;
   background:radial-gradient(circle at 50% 50%,#fff4dc 0%,var(--qcf-verse-fill) 72%,#d7ad73 100%)!important;
-  box-shadow:0 0 0 1px #fbebcd inset,0 0 0 .7px #ad824c66!important;
+  box-shadow:0 0 0 1px #fbebcd inset!important;
   transform:translate(-50%,-50%) rotate(45deg)!important;
   pointer-events:none!important;
   z-index:-1!important;
