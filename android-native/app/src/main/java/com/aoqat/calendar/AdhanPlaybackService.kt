@@ -118,14 +118,16 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         if(mode=="vibrate"){handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
         retryAllowed=true
         try {
-            val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
+            val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
             focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
             val result=am.requestAudioFocus(focus!!)
             audioFocus.requested(result)
             if(result==AudioManager.AUDIOFOCUS_REQUEST_FAILED){stopSelf();return START_NOT_STICKY}
             handler.postDelayed({if(!audioStarted)stopSelf()},60000L)
             previousVolume=am.getStreamVolume(AudioManager.STREAM_ALARM)
-            appliedVolume=(am.getStreamMaxVolume(AudioManager.STREAM_ALARM)*config.optInt("volume",80).coerceIn(0,100)/100f).toInt().coerceIn(0,am.getStreamMaxVolume(AudioManager.STREAM_ALARM))
+            val maxLevel=am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+            val percent=config.optInt("volume",80).coerceIn(0,100)
+            appliedVolume=if(percent==0)0 else ((maxLevel*percent+99)/100).coerceIn(1,maxLevel)
             getSharedPreferences("adhan_audio_volume",MODE_PRIVATE).edit().putInt("previous",previousVolume!!).putInt("applied",appliedVolume!!).commit()
             am.setStreamVolume(AudioManager.STREAM_ALARM,appliedVolume!!,0)
             val preparing=MediaPlayer()
