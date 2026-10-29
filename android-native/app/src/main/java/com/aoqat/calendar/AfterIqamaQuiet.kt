@@ -9,7 +9,7 @@ import org.json.JSONObject
 object AfterIqamaQuiet {
     fun window(settings: JSONObject, prayerId: String, prayerAt: Long, iqamaMinutes: Int): Pair<Long, Long>? {
         val quiet=settings.optJSONObject("afterIqamaSilent") ?: return null
-        if (!settings.optBoolean("enabled") || !quiet.optBoolean("enabled")) return null
+        if (!quiet.optBoolean("enabled")) return null
         val duration=quiet.optJSONObject("minutes")?.optInt(prayerId,0)?.coerceIn(0,120) ?: 0
         if (duration==0 || prayerId !in PrayerTimes.ids) return null
         val start=prayerAt+iqamaMinutes.coerceIn(0,120)*60000L
@@ -20,6 +20,13 @@ object AfterIqamaQuiet {
         val times=window(AdhanSchedule.settings(c),prayerId,prayerAt,IqamaNativeScheduler.durations(c,prayerId).beforeMinutes) ?: return
         val now=System.currentTimeMillis()
         if (now !in times.first until times.second) return
+        // A short iqama window must never silence a still-playing adhan.
+        // Recheck after 15 seconds, preserving the original absolute end time.
+        if (AdhanPlaybackService.running) {
+            AdhanSchedule.alarm(c, 60590 + PrayerTimes.ids.indexOf(prayerId), "IQAMA_QUIET", now + 15000L,
+                PrayerTimes.Prayer(prayerId,prayerAt,false))
+            return
+        }
         val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (!nm.isNotificationPolicyAccessGranted) return
         val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
