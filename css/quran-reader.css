@@ -636,7 +636,7 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition=
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info>.aq-surah-info-name{
   grid-column:2!important;
   text-align:center!important;
-  font:600 clamp(11px,3.35vw,18px)/1.3 AoqatQuran,'Traditional Arabic',serif!important;
+  font:600 calc(clamp(11px,3.35vw,18px) * var(--aq-surah-title-scale,1))/1.3 AoqatQuran,'Traditional Arabic',serif!important;
 }
 body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info>.aq-surah-info-kind{
   grid-column:3!important;
