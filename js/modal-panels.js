@@ -135,7 +135,7 @@
       autoBtn.setAttribute("aria-pressed",String(on));
       autoBtn.dataset.enabled=String(on);
     }
-    if(notifyBtn){
+    if(notifyBtn&&!window.aoqatNativePublishAlarm){
       const on=notifyEnabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";
       notifyBtn.textContent=on?"🔔 تنبيه النشر على الهاتف: تشغيل":"🔕 تنبيه النشر على الهاتف: إيقاف";
       notifyBtn.classList.toggle("enabled",on);
@@ -305,6 +305,7 @@
       localStorage.setItem(AUTO_KEY,autoEnabled()?"0":"1");manualOverrideUntil=0;refreshToggleButtons();if(autoEnabled()){setSwitchStatus("جاري تحديث حالة التبديل التلقائي...","success");evaluateAutoSwitch(true);}else setSwitchStatus("التبديل التلقائي متوقف");
     });
     document.getElementById("tomorrowNotifyToggle")?.addEventListener("click",async()=>{
+      if(window.aoqatNativePublishAlarm)return;
       if(notifyEnabled()){localStorage.setItem(NOTIFY_KEY,"0");refreshToggleButtons();return;}
       if(typeof Notification==="undefined"){setSwitchStatus("هذا المتصفح لا يدعم التنبيهات","error");return;}
       const permission=await Notification.requestPermission();
