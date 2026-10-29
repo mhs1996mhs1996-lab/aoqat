@@ -129,12 +129,14 @@ const {gunzipSync}=require('node:zlib');
    const c=await page.locator('#aqReader').evaluate((r,t)=>{
     r.dataset.theme=t;
     const mark=r.querySelector('#adVerses .aq-qcf-marker');
+    const medal=mark.querySelector('.aq-qcf-selected-ayah');
     return {ink:getComputedStyle(mark).color,bg:getComputedStyle(mark).backgroundImage,
-      tint:getComputedStyle(mark).getPropertyValue('--qcf-rosette-tint').trim(),
+      frame:!!medal?.querySelector('svg.aq-qcf-selected-ayah-frame'),
+      numeral:getComputedStyle(medal,'::after').content,
       pseudo:getComputedStyle(mark,'::before').content};
    },theme);
-   assert.ok(c.bg.includes('radial-gradient')&&c.pseudo==='none'&&c.tint,
-     'Original verse rosette tint must remain visible, without overlaid shape, in '+theme);
+   assert.ok(c.frame&&c.numeral!=='none'&&c.pseudo==='none'&&c.bg==='none',
+     'The user-selected single ayah medallion must remain visible in '+theme);
    assert.deepEqual(await page.locator('#adVerses .aq-qcf-marker').allTextContents(),
      originals,'Theme must never change Quran verse number glyph data');
    console.log('PASS style8 verse number contrast theme '+theme+': '+c.ink);
