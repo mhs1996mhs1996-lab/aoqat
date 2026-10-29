@@ -498,8 +498,22 @@
     return '<div class="aq-native-bismillah aq-qcf-bismillah">'+
       esc(quran[0].verses[0].text)+'</div>';
   }
-  function selectedAyahMedallion(code){
-    return '<span class="aq-qcf-selected-ayah"><svg class="aq-qcf-selected-ayah-frame" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#a67a48" stroke-width="2"><path d="M50 3Q60 14 70 10Q75 24 90 30Q86 41 97 50Q86 59 90 70Q75 76 70 90Q60 86 50 97Q40 86 30 90Q25 76 10 70Q14 59 3 50Q14 41 10 30Q25 24 30 10Q40 14 50 3Z"/><path d="M50 10Q60 21 68 17Q73 30 83 33Q79 42 90 50Q79 58 83 67Q73 70 68 83Q60 79 50 90Q40 79 32 83Q27 70 17 67Q21 58 10 50Q21 42 17 33Q27 30 32 17Q40 21 50 10Z"/><circle cx="50" cy="50" r="31"/></g></svg><span class="aq-qcf-selected-ayah-glyph">'+esc(code)+'</span></span>';
+  // Ayah ornament #1: replace the original QCF rosette with one visible
+  // decorative frame and the real verse number. Never add a second rosette.
+  // Keep the authentic QCF codepoint in DOM for Quran identity and validation.
+  // Replace its visual outline only, using selected decorative frame #1.
+  function selectedAyahMedallion(code,verseNumber){
+    const numeral=arabic(verseNumber);
+    return '<span class="aq-qcf-selected-ayah" data-ayah-number="'+numeral+'">'+
+      '<svg class="aq-qcf-selected-ayah-frame" viewBox="0 0 100 100" focusable="false" aria-hidden="true">'+
+      '<g fill="none" stroke="#aa7c45" stroke-linejoin="round">'+
+      '<path stroke-width="2.5" d="M50 3L58 11L70 8L74 20L86 22L87 35L97 42L91 51L97 60L86 67L85 80L73 82L68 94L57 89L49 98L40 89L28 93L25 81L13 78L13 65L3 58L9 49L3 41L14 34L15 21L27 19L33 7L43 11Z"/>'+
+      '<path stroke-width="1.5" d="M50 10L59 18L69 15L73 26L83 28L81 40L90 50L81 60L83 72L72 74L68 85L58 82L50 91L42 82L32 85L28 74L17 72L19 60L10 50L19 40L17 28L28 26L32 15L41 18Z"/>'+
+      '<circle cx="50" cy="50" r="31" stroke-width="1.7"/>'+
+      '<circle cx="50" cy="50" r="27.5" stroke-width="1"/>'+
+      '<path stroke-width="1.2" d="M50 3v10M50 87v10M3 50h10M87 50h10M17 17l8 8M75 75l8 8M83 17l-8 8M25 75l-8 8"/>'+
+      '</g><g fill="#b38a55"><circle cx="50" cy="6" r="2"/><circle cx="94" cy="50" r="2"/><circle cx="50" cy="94" r="2"/><circle cx="6" cy="50" r="2"/></g></svg>'+
+      '<span class="aq-qcf-selected-ayah-glyph">'+esc(code)+'</span></span>';
   }
   function qcfHTML(page){
     const rows=qcfData.get(page);
@@ -518,7 +532,7 @@
           return '<span class="aq-qcf-word'+(end?' aq-qcf-marker':'')+
             (audioOn&&audioIndex===i?' aq-playing':'')+
             '" role="button" tabindex="0" data-qr-verse="'+i+
-            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+(end?selectedAyahMedallion(code):esc(code))+'</span>';
+            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+(end?selectedAyahMedallion(code,v.a):esc(code))+'</span>';
         }).join('')+'</div>';
     }).join('');
     if(page<=2){
