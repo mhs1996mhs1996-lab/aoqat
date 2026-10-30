@@ -132,9 +132,12 @@ class PrayerAlarmActivity:Activity(){
     private fun decide(action:String){
         if(actionTaken)return
         actionTaken=true
-        sendBroadcast(Intent(this,PrayerAlarmActionReceiver::class.java)
-            .setAction(action).putExtra("id",prayerId).putExtra("count",snoozeCount)
-            .putExtra("preview",preview))
+        // Execute the same action synchronously so the player and vibration
+        // stop on the physical key press, before Android redraws the lock screen.
+        PrayerAlarmActionReceiver().onReceive(this,
+            Intent(this,PrayerAlarmActionReceiver::class.java)
+                .setAction(action).putExtra("id",prayerId).putExtra("count",snoozeCount)
+                .putExtra("preview",preview))
         finish()
     }
     override fun onCreate(b:Bundle?){
