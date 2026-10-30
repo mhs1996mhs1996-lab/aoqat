@@ -77,6 +77,15 @@
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
       #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}
+      /* Compact iqama list on phones without hiding any rows or user choices. */
+      #webSubBody #iqamaPanel{box-sizing:border-box!important;width:100%!important;padding:10px 12px!important;margin:0!important;border-radius:12px!important;overflow:visible!important}
+      #webSubBody #iqamaPanel .iqama-help,#webSubBody #iqamaPanel .iqama-friday-help{margin:0 0 7px!important;line-height:1.5!important;font-size:13px!important}
+      #webSubBody #iqamaPanel label{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;min-height:43px!important;max-height:none!important;margin:2px 0!important;padding:1px 0!important;font-size:16px!important;line-height:1.4!important}
+      #webSubBody #iqamaPanel select{width:138px!important;max-width:46%!important;height:38px!important;min-height:38px!important;padding:5px!important;border-radius:8px!important;font-size:16px!important}
+      #webSubBody #iqamaPanel h3,#webSubBody #iqamaPanel h2{margin:10px 0 5px!important;font-size:19px!important}
+      #webSubBody #iqamaPanel hr{margin:10px 0!important}
+      #webSubBody #iqamaPanel .switch-control-btn,#webSubBody #iqamaPanel button{min-height:43px!important;padding:6px 10px!important;margin:5px 0!important}
+      
     `;
     document.head.append(style);
     render();
