@@ -201,7 +201,7 @@ transform('web-menu-order.js', [("()=>setTimeout(install,100)", "install")])
 transform('design-side-menu.js', [("()=>setTimeout(()=>{syncActionWidth();hideEmptyStrips();},80)", "()=>{syncActionWidth();hideEmptyStrips();}")])
 
 # APK defaults remain separate from the hosted web interface and saved user choices.
-transform('compact-design-menu.js', [("let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}\n    const items=", "let state={};try{state={clock:true,date:true,adhan:true,iqama:true,...(JSON.parse(localStorage.getItem(KEY)||'{}')||{})};}catch(_){state={clock:true,date:true,adhan:true,iqama:true};}\n    const items=")])
+transform('compact-design-menu.js', [("let state={};try{state=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){}\n    const items=", "let state={};try{state={clock:true,date:true,adhan:true,iqama:true,...(JSON.parse(localStorage.getItem(KEY)||'{}')||{})};}catch(_){state={clock:true,date:true,adhan:true,iqama:true};}if(localStorage.getItem(KEY)===null)localStorage.setItem(KEY,JSON.stringify(state));\n    const items=")])
 transform('interface-clock.js', [('#liveClockTime{font-size:12.5px}#liveClockDate{font-size:11px}', '#liveClockTime{font-size:16px}#liveClockDate{font-size:14px}')])
 transform('prayer-countdown.js', [
  ('.next-prayer span,.iqama-status span{font-size:9px}', '#nextPrayerLabel,#iqamaLabel{font-size:12px}.next-prayer span,.iqama-status span{font-size:12px}'),
