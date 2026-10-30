@@ -26,7 +26,7 @@ jobs:
               p=Path('/tmp/aoqat-releases')/name
               apk=next(p.glob('*.apk'));sha=next(p.glob('*.sha256')).read_text().split()[0]
               print(name,'size=',apk.stat().st_size,'sha=',sha)
-              assert hashlib.file_digest(apk.open('rb'),'sha256').hexdigest()==sha
+              assert hashlib.sha256(apk.read_bytes()).hexdigest()==sha
           PY
       - name: Enable KVM
         run: |
