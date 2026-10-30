@@ -284,7 +284,7 @@ source=source.replace("state.renderEngine='svg';save();galleryClearReady();prepa
 # The APK keeps its lightweight index, while full page glyphs/fonts are already local.
 start=source.find("if(phone){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';")
 if start>=0:
-    end=source.find("if(webQcfTrial){$('aqRenderingMode')",start)
+    end=source.find("if(webQcfTrial&&$('aqRenderingMode')",start)
     if end<0: raise RuntimeError('Could not locate SVG offline download control')
     source=source[:start]+source[end:]
 if "state.renderEngine='qcf';" not in source: raise RuntimeError('QCF default not applied')
