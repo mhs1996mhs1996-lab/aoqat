@@ -1,0 +1,38 @@
+name: Publish tested QCF-only APK preview
+on:
+  push:
+    branches:
+      - fix/apk-qcf-only-offline-20261030
+    paths:
+      - '.github/workflows/publish-qcf-only-preview.yml'
+permissions:
+  contents: write
+jobs:
+  publish-tested-apk:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download verified APK artifact from successful QCF validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --location --retry 4 \
+            --header "Authorization: Bearer $GH_TOKEN" \
+            --header "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/12947437332/zip" \
+            --output verified.zip
+          unzip -j verified.zip 'app-debug.apk' -d extracted
+          test -s extracted/app-debug.apk
+          mv extracted/app-debug.apk aoqat-v1.58-qcf-only-test.apk
+      - name: Make direct APK download available as preview, not final splash release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.58-qcf-only-test >/dev/null 2>&1; then
+            gh release upload v1.58-qcf-only-test aoqat-v1.58-qcf-only-test.apk --clobber
+          else
+            gh release create v1.58-qcf-only-test aoqat-v1.58-qcf-only-test.apk \
+              --prerelease --target "$GITHUB_SHA" \
+              --title 'Hawija 1.58 QCF-only test APK' \
+              --notes 'Single QCF V2 offline Quran edition; previous SVG pages removed. Approved splash artwork has NOT been bundled; this is a test APK.'
+          fi
