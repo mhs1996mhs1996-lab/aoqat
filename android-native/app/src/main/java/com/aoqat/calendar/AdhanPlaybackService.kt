@@ -25,11 +25,40 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             try { if(am.getStreamVolume(AudioManager.STREAM_ALARM)==p.getInt("applied",-1))am.setStreamVolume(AudioManager.STREAM_ALARM,p.getInt("previous",0),0) } catch(_:SecurityException) { }
             p.edit().clear().commit()
         }
+        fun activateQuiet(c: Context, end: Long) {
+            val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if(!nm.isNotificationPolicyAccessGranted)return
+            val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+            val prior=if(p.getBoolean("changed",false))p.getInt("previous",AudioManager.RINGER_MODE_NORMAL) else am.ringerMode
+            val oldFilter=if(p.contains("previousFilter"))p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL) else nm.currentInterruptionFilter
+            val until=maxOf(end,p.getLong("end",0L))
+            try {
+                am.ringerMode=AudioManager.RINGER_MODE_SILENT
+                // Some Android ROMs leave the phone audible when only the ringer mode changes.
+                // Request a DND fallback only when silent was not actually applied.
+                var dndApplied=p.getBoolean("dndApplied",false)
+                if(am.ringerMode!=AudioManager.RINGER_MODE_SILENT) {
+                    nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+                    dndApplied=nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE
+                }
+                p.edit().putBoolean("changed",true).putInt("previous",prior)
+                    .putBoolean("dndApplied",dndApplied).putInt("previousFilter",oldFilter)
+                    .putLong("end",until).commit()
+                AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until)
+            } catch (_: SecurityException) { }
+        }
         fun restoreRinger(c: Context) {
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
             if(!p.getBoolean("changed",false))return
             val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            try { if(am.ringerMode==AudioManager.RINGER_MODE_SILENT) am.ringerMode=p.getInt("previous",AudioManager.RINGER_MODE_NORMAL) } catch (_: SecurityException) { }
+            val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            try {
+                if(am.ringerMode==AudioManager.RINGER_MODE_SILENT)am.ringerMode=p.getInt("previous",AudioManager.RINGER_MODE_NORMAL)
+                if(p.getBoolean("dndApplied",false)&&nm.isNotificationPolicyAccessGranted
+                    &&nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE)
+                    nm.setInterruptionFilter(p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL))
+            } catch (_: SecurityException) { }
             p.edit().clear().commit()
         }
         fun restoreRingerIfExpired(c: Context) {
@@ -160,7 +189,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         restoreVolume(this)
         previousVolume=null;appliedVolume=null
         handler.removeCallbacksAndMessages(null);sensors.unregisterListener(this);player?.release();player=null;vibrator?.cancel();focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};focus=null;if(wake?.isHeld==true)wake?.release();wake=null}
-    override fun onDestroy(){if((manuallyStopped||stopRequested)&&!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt);cleanup();AdhanDispatch.release();if(retryAllowed&&!preview&&!audioStarted&&!manuallyStopped&&!stopRequested&&prayerAt>0)AdhanSchedule.retry(this,prayerId,prayerAt);running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(duration>0&&nm.isNotificationPolicyAccessGranted){val am=getSystemService(AUDIO_SERVICE) as AudioManager;val p=getSharedPreferences("adhan_ringer",MODE_PRIVATE);val old=if(p.getBoolean("changed",false))p.getInt("previous",2) else am.ringerMode;val end=maxOf(System.currentTimeMillis()+duration*60000L,p.getLong("end",0));try{am.ringerMode=AudioManager.RINGER_MODE_SILENT;p.edit().putBoolean("changed",true).putInt("previous",old).putLong("end",end).commit();AdhanSchedule.alarm(this,60403,"RESTORE_SOUND",end)}catch(_:SecurityException){}}};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){if((manuallyStopped||stopRequested)&&!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt);cleanup();AdhanDispatch.release();if(retryAllowed&&!preview&&!audioStarted&&!manuallyStopped&&!stopRequested&&prayerAt>0)AdhanSchedule.retry(this,prayerId,prayerAt);running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);if(duration>0)activateQuiet(this,System.currentTimeMillis()+duration*60000L)};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
     override fun onSensorChanged(e:SensorEvent){if(e.values[2]>-5)flipArmed=true;if(flipArmed && e.values[2]<-7 && SystemClock.elapsedRealtime()-started>1500){manuallyStopped=true;stopSelf()}}
     override fun onAccuracyChanged(s:Sensor?,a:Int){}
 }
