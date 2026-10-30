@@ -131,6 +131,23 @@ def landscape(base):
 
 def title_and_logo(base):
     art=Image.open(ROOT/"android-native/app/src/main/res/mipmap/app_icon.png").convert("RGBA")
+    # The source app icon has a flat white square around its gold rounded edge.
+    # Remove only the exterior connected white field to preserve the exact logo.
+    from collections import deque
+    px=art.load()
+    aw,ah=art.size
+    seen=bytearray(aw*ah)
+    todo=deque([(0,0),(aw-1,0),(0,ah-1),(aw-1,ah-1)])
+    while todo:
+        x,y=todo.popleft()
+        if x<0 or y<0 or x>=aw or y>=ah:continue
+        index=y*aw+x
+        if seen[index]:continue
+        seen[index]=1
+        r,g,b,a=px[x,y]
+        if r<232 or g<232 or b<232 or max(r,g,b)-min(r,g,b)>18:continue
+        px[x,y]=(r,g,b,0)
+        todo.extend(((x-1,y),(x+1,y),(x,y-1),(x,y+1)))
     art=art.resize((501,501),Image.Resampling.LANCZOS)
     # A small shadow grounds the exact approved app logo.
     shadow=Image.new("RGBA",base.size,(0,0,0,0))
@@ -138,16 +155,17 @@ def title_and_logo(base):
     base=Image.alpha_composite(base,shadow.filter(ImageFilter.GaussianBlur(15)))
     base.alpha_composite(art,(105,357))
     d=ImageDraw.Draw(base)
-    font=ROOT/"assets/fonts/amiri-quran.ttf"
-    if not font.exists():font=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-    f=ImageFont.truetype(str(font),size=62)
+    font=Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
+    if not font.exists():font=ROOT/"assets/fonts/amiri-quran.ttf"
+    f=ImageFont.truetype(str(font),size=47)
     caption="أوقات الصلاة في الحويجة"
-    # Pillow's RAQM layout engine shapes and joins Arabic letters.
     kwargs={"direction":"rtl"} if ImageFont.core.HAVE_RAQM else {}
-    try: bb=d.textbbox((0,0),caption,font=f,**kwargs)
-    except Exception:bb=d.textbbox((0,0),caption,font=f);kwargs={}
-    tw=bb[2]-bb[0]
-    d.text(((W-tw)/2,887),caption,font=f,fill=(17,65,51,255),stroke_width=0,**kwargs)
+    # Center the headline on its actual visual box, above the gold divider.
+    try:
+        d.text((W/2,924),caption,font=f,fill=(17,65,51,255),anchor="mm",**kwargs)
+    except Exception:
+        bbox=d.textbbox((0,0),caption,font=f)
+        d.text(((W-(bbox[2]-bbox[0]))/2,897),caption,font=f,fill=(17,65,51,255))
     # Golden ornamental separator under the title
     gold=(189,144,72,180)
     d.line((225,990,322,990),fill=gold,width=2)
