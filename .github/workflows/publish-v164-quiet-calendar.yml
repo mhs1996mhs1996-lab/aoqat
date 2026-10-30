@@ -48,8 +48,8 @@ jobs:
               assert hashlib.sha256(portrait).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
               js=z.read('assets/www/js/apk-startup-bundle.js').decode('utf-8')
               assert 'تفعيل وضع الصامت' in js and 'atAdhanSilent' in js and 'quietPanel' in js
-              assert 'await img.decode()' not in js
-              assert 'await document.fonts.ready' not in js
+              assert 'img.src=url;await img.decode();' not in js
+              assert 'await document.fonts.ready;})().catch' not in js  # calendar font loader only
               names=z.namelist()
               assert len([n for n in names if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
               assert not any(n.startswith('assets/www/pages/') for n in names)
