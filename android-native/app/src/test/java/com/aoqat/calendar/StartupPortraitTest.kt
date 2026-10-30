@@ -28,7 +28,7 @@ class StartupPortraitTest {
         val startup=StartupScreen(context)
         assertEquals("No duplicated icon or title overlays",1,startup.childCount)
         val image=startup.getChildAt(0) as ImageView
-        assertEquals(ImageView.ScaleType.FIT_CENTER,image.scaleType)
+        assertEquals(ImageView.ScaleType.CENTER_CROP,image.scaleType)
         val drawable=image.drawable as BitmapDrawable
         assertEquals(711,drawable.bitmap.width)
         assertEquals(1536,drawable.bitmap.height)
