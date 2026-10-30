@@ -44,5 +44,35 @@ class AdhanScheduleTest{
   AdhanSchedule.schedule(c)
   assertTrue(shadowOf(am).scheduledAlarms.none{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY"&&i.getStringExtra("prayerId")==id&&i.getLongExtra("prayerAt",0)==intent.getLongExtra("prayerAt",0)}})
  }
+ @Test fun selectedPrayerNotificationNeverSuppressesEnabledAdhan() {
+  seed()
+  set(JSONObject("""{"enabled":true,"modes":{"asr":"sound"}}"""))
+  c.getSharedPreferences("prayer_notifications_v1",Context.MODE_PRIVATE).edit()
+    .putString("settings","""{"enabled":true,"prayers":{"asr":true}}""").commit()
+  assertTrue(PrayerNotifications.selected(c,"asr"))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  val asr=alarms.firstOrNull{shadowOf(it.operation).savedIntent.let{i->
+      i.action=="PLAY" && i.getStringExtra("prayerId")=="asr"}}
+  assertNotNull("Enabled notification must not cancel an enabled audible adhan",asr)
+  assertTrue(AdhanSchedule.claim(c,"asr",System.currentTimeMillis()-3000))
+ }
+ @Test fun silentAtIqamaIsScheduledEvenWhenAdhanAndIqamaNotificationsAreOff() {
+  seed()
+  val d=LocalDate.now().plusDays(1)
+  c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit()
+    .putBoolean("enabled",false).putString("minutes","""{"asr":15}""").commit()
+  set(JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"asr":7}}}"""))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  assertTrue(alarms.none{shadowOf(it.operation).savedIntent.action=="PLAY"})
+  val event=PrayerTimes.events(c,d).first{it.id=="asr" && java.time.Instant.ofEpochMilli(it.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate()==d}
+  val quiet=alarms.firstOrNull{shadowOf(it.operation).savedIntent.let{i->
+      i.action=="IQAMA_QUIET" && i.getStringExtra("prayerId")=="asr" &&
+      i.getLongExtra("prayerAt",0)==event.at}}
+  assertNotNull("After-iqama quiet must have an exact native alarm",quiet)
+  assertEquals("Start exactly when iqama countdown reaches zero",event.at+15*60000L,quiet!!.triggerAtTime)
+  assertTrue(alarms.any{shadowOf(it.operation).savedIntent.action=="REFRESH"})
+ }
  @Test fun parseHandlesMorningDhuhrAndAfternoon(){assertEquals(719,PrayerTimes.minutes("11:59","dhuhr"));assertEquals(922,PrayerTimes.minutes("3:22","asr"));assertEquals(364,PrayerTimes.minutes("6:04","sunrise"));assertNull(PrayerTimes.minutes("27:11","fajr"))}
 }
