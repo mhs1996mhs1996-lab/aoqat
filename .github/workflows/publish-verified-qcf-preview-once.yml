@@ -1,4 +1,4 @@
-name: Publish already-verified single-QCF Android preview
+name: Publish already-verified single-QCF Android preview APK
 on:
   push:
     paths:
