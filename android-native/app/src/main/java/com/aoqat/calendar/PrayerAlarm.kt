@@ -75,10 +75,35 @@ class PrayerAlarmActionReceiver:BroadcastReceiver(){override fun onReceive(c:Con
     if(!preview&&!snoozed)PrayerAlarm.finish(c,id)
     c.stopService(Intent(c,PrayerAlarmService::class.java))
 }}
-class PrayerAlarmService:Service(){private var player:MediaPlayer?=null;private val handler=Handler(Looper.getMainLooper());private var wake:PowerManager.WakeLock?=null;private var focus:AudioFocusRequest?=null
+class PrayerAlarmService:Service(){
+    private var player:MediaPlayer?=null
+    private val handler=Handler(Looper.getMainLooper())
+    private var wake:PowerManager.WakeLock?=null
+    private var focus:AudioFocusRequest?=null
+    private var ringingId=""
+    private var ringingCount=0
+    private var ringingPreview=false
+    private var hardwareHandled=false
+    // Android does not expose KEYCODE_POWER to ordinary apps. The registered
+    // screen-off broadcast is the closest supported equivalent while ringing.
+    private val screenOff=object:BroadcastReceiver(){
+        override fun onReceive(c:Context,i:Intent){
+            if(i.action!=Intent.ACTION_SCREEN_OFF||ringingId.isBlank()||hardwareHandled)return
+            hardwareHandled=true
+            PrayerAlarmActionReceiver().onReceive(this@PrayerAlarmService,
+                Intent(this@PrayerAlarmService,PrayerAlarmActionReceiver::class.java)
+                    .setAction("SNOOZE").putExtra("id",ringingId)
+                    .putExtra("count",ringingCount).putExtra("preview",ringingPreview))
+        }
+    }
+    override fun onCreate(){
+        super.onCreate()
+        if(Build.VERSION.SDK_INT>=33)registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),RECEIVER_NOT_EXPORTED)
+        else @Suppress("DEPRECATION") registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF))
+    }
     override fun onBind(i:Intent?)=null
     override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int{val id=i?.getStringExtra("id")?:return START_NOT_STICKY;if(id !in PrayerAlarm.ids){stopSelf();return START_NOT_STICKY};player?.release();handler.removeCallbacksAndMessages(null)
-        PrayerAlarm.prefs(this).edit().putString("activeId",id).apply();val p=PrayerAlarm.item(this,id);val preview=i.getBooleanExtra("preview",false);if(!preview)PrayerAlarm.prefs(this).edit().remove("snooze_$id").apply();val count=i.getIntExtra("count",0);val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        PrayerAlarm.prefs(this).edit().putString("activeId",id).apply();val p=PrayerAlarm.item(this,id);val preview=i.getBooleanExtra("preview",false);if(!preview)PrayerAlarm.prefs(this).edit().remove("snooze_$id").apply();val count=i.getIntExtra("count",0);ringingId=id;ringingCount=count;ringingPreview=preview;hardwareHandled=false;val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channel=NotificationChannel("prayer_alarm_v1","منبّه الصلاة",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);lockscreenVisibility=Notification.VISIBILITY_PUBLIC};nm.createNotificationChannel(channel)
         fun action(name:String)=PendingIntent.getBroadcast(this,72000+PrayerAlarm.ids.indexOf(id)*2+(if(name=="SNOOZE")1 else 0),Intent(this,PrayerAlarmActionReceiver::class.java).setAction(name).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val show=PendingIntent.getActivity(this,73000,Intent(this,PrayerAlarmActivity::class.java).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -94,7 +119,7 @@ class PrayerAlarmService:Service(){private var player:MediaPlayer?=null;private 
         sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",true))
         handler.postDelayed({if(!preview)PrayerAlarm.finish(this,id);stopSelf()},duration);return START_NOT_STICKY
     }
-    override fun onDestroy(){PrayerAlarmAudio.restore(this);PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){ringingId="";hardwareHandled=true;try{unregisterReceiver(screenOff)}catch(_:Exception){};PrayerAlarmAudio.restore(this);PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
 class PrayerAlarmActivity:Activity(){
     private val receiver=object:BroadcastReceiver(){
@@ -103,7 +128,10 @@ class PrayerAlarmActivity:Activity(){
     private var prayerId=""
     private var snoozeCount=0
     private var preview=false
+    private var actionTaken=false
     private fun decide(action:String){
+        if(actionTaken)return
+        actionTaken=true
         sendBroadcast(Intent(this,PrayerAlarmActionReceiver::class.java)
             .setAction(action).putExtra("id",prayerId).putExtra("count",snoozeCount)
             .putExtra("preview",preview))
@@ -176,9 +204,19 @@ class PrayerAlarmActivity:Activity(){
         setContentView(panel)
         ContextCompat.registerReceiver(this,receiver,IntentFilter("com.aoqat.calendar.PRAYER_ALARM_ACTIVE"),ContextCompat.RECEIVER_NOT_EXPORTED)
     }
+    override fun dispatchKeyEvent(event:android.view.KeyEvent):Boolean{
+        if(event.keyCode==android.view.KeyEvent.KEYCODE_VOLUME_UP ||
+           event.keyCode==android.view.KeyEvent.KEYCODE_VOLUME_DOWN){
+            if(event.action==android.view.KeyEvent.ACTION_DOWN && event.repeatCount==0)
+                decide("SNOOZE")
+            return true // Consume DOWN and UP; never change phone volume while ringing.
+        }
+        return super.dispatchKeyEvent(event)
+    }
     override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean{
         if(code==android.view.KeyEvent.KEYCODE_VOLUME_UP||code==android.view.KeyEvent.KEYCODE_VOLUME_DOWN){
-            decide("SNOOZE");return true
+            if(event.repeatCount==0)decide("SNOOZE")
+            return true
         }
         return super.onKeyDown(code,event)
     }
