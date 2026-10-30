@@ -214,6 +214,12 @@ transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configu
 transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', ''), ('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
 transform('monthly-calendars.js', [
  ('if(window.AndroidNative?.configureAdhan)return;', ''),
+ # APK: blank <img> elements otherwise show a broken-image icon/alt text before
+ # canvas rendering is complete. Keep it invisible until the PNG decodes.
+ ("img.className='mc-preview';img.alt=", "img.className='mc-preview';img.style.display='none';img.alt="),
+ ("img.src=url;download.disabled=false;", "img.src=url;await img.decode();if(token!==sequence||!p.isConnected)return;img.style.display='';download.disabled=false;"),
+ # In the font-format editor, retain the old image until the new drawing is ready.
+ ("img.src=canvas.toDataURL('image/png');const applied=", "img.src=canvas.toDataURL('image/png');await img.decode();if(id!==drawId||!p.isConnected)return;img.style.display='';const applied="),
  ("function rawRows(){return typeof availablePrayerRows==='function'?availablePrayerRows(false):window.AoqatPrayerBackupRows||[];}", "function rawRows(){let rows=typeof availablePrayerRows==='function'?availablePrayerRows(false):[];if(Array.isArray(rows)&&rows.length>=365)return rows;try{const nativeRows=JSON.parse(window.AndroidNative?.readPrayerRows?.()||'[]');if(Array.isArray(nativeRows)&&nativeRows.length>=365)return nativeRows;}catch(_){}return Array.isArray(window.AoqatPrayerBackupRows)?window.AoqatPrayerBackupRows:rows||[];}"),
  ('await navigator.share({files:[file],title:img.alt});', "if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});"),
  ('const can=!!navigator.share', 'const can=!!window.AndroidNative?.sharePrayerImage||!!navigator.share'),
