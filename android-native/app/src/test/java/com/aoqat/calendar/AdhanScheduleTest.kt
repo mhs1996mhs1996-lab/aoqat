@@ -74,5 +74,20 @@ class AdhanScheduleTest{
   assertEquals("Start exactly when iqama countdown reaches zero",event.at+15*60000L,quiet!!.triggerAtTime)
   assertTrue(alarms.any{shadowOf(it.operation).savedIntent.action=="REFRESH"})
  }
+ @Test fun backupDueAlarmUsesSamePrayerTimeAndCannotDoublePlay() {
+  seed()
+  set(JSONObject("""{"enabled":true,"modes":{"asr":"sound"}}"""))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  val main=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY"&&i.getStringExtra("prayerId")=="asr"}}
+  val backup=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="VERIFY_DUE"&&i.getStringExtra("prayerId")=="asr"}}
+  assertEquals(main.triggerAtTime+30000L,backup.triggerAtTime)
+  assertEquals(shadowOf(main.operation).savedIntent.getLongExtra("prayerAt",0),shadowOf(backup.operation).savedIntent.getLongExtra("prayerAt",0))
+  val due=System.currentTimeMillis()-1500L
+  assertTrue(AdhanSchedule.claim(c,"asr",due))
+  AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("VERIFY_DUE")
+    .putExtra("prayerId","asr").putExtra("prayerAt",due))
+  assertNull("The backup must never start a second adhan",shadowOf(c as Application).nextStartedService)
+ }
  @Test fun parseHandlesMorningDhuhrAndAfternoon(){assertEquals(719,PrayerTimes.minutes("11:59","dhuhr"));assertEquals(922,PrayerTimes.minutes("3:22","asr"));assertEquals(364,PrayerTimes.minutes("6:04","sunrise"));assertNull(PrayerTimes.minutes("27:11","fajr"))}
 }
