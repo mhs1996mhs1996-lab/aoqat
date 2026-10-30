@@ -27,17 +27,6 @@ object AfterIqamaQuiet {
                 PrayerTimes.Prayer(prayerId,prayerAt,false))
             return
         }
-        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (!nm.isNotificationPolicyAccessGranted) return
-        val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val prefs=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
-        val previous=if(prefs.getBoolean("changed",false))prefs.getInt("previous",2) else am.ringerMode
-        val end=maxOf(times.second,prefs.getLong("end",0))
-        try {
-            am.ringerMode=AudioManager.RINGER_MODE_SILENT
-            prefs.edit().putBoolean("changed",true).putInt("previous",previous).putLong("end",end).commit()
-            AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",end)
-        } catch (_: SecurityException) { }
+        AdhanPlaybackService.activateQuiet(c,times.second)
     }
 }
-
