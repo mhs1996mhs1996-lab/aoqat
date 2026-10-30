@@ -268,3 +268,25 @@ for prefix,extension in [('mushaf-phone-hafs','json.gz')]:
 
 
 
+
+
+# APK-only: make the approved QCF V2 reader the sole Quran engine.
+# Preserve the user's chosen page, appearance and bookmarks without an SVG fallback.
+qcf=target/'js/quran-reader.js'
+source=qcf.read_text()
+source=source.replace('const webQcfTrial=!window.AndroidNative?.configureAdhan;', 'const webQcfTrial=true;')
+source=source.replace("state.renderEngine=webQcfTrial&&state.renderEngine!=='svg'?'qcf':'svg';", "state.renderEngine='qcf';")
+source=source.replace("""'url("https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p'+page+'.woff2")'""", """'url("assets/qcf-v2-page-fonts/p'+page+'.woff2")'""")
+# Remove the redundant edition dropdown, keep paper/theme and every other reading tool.
+source=source.replace("""${webQcfTrial?'<label>طريقة عرض المصحف<select id="aqRenderingMode"><option value="qcf">خط QCF V2 — تجربة السلاسة</option><option value="svg">عرض SVG الأصلي</option></select></label>':''}""", "")
+source=source.replace("""if(webQcfTrial){$('aqRenderingMode').value=state.renderEngine;""", """if(webQcfTrial&&$('aqRenderingMode')){$('aqRenderingMode').value=state.renderEngine;""")
+source=source.replace("state.renderEngine='svg';save();galleryClearReady();preparedPages.clear();", "galleryClearReady();preparedPages.clear();")
+# The APK keeps its lightweight index, while full page glyphs/fonts are already local.
+start=source.find("if(phone){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';")
+if start>=0:
+    end=source.find("if(webQcfTrial){$('aqRenderingMode')",start)
+    if end<0: raise RuntimeError('Could not locate SVG offline download control')
+    source=source[:start]+source[end:]
+if "state.renderEngine='qcf';" not in source: raise RuntimeError('QCF default not applied')
+if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('External Quran fonts remain')
+qcf.write_text(source)
