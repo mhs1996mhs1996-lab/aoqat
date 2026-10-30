@@ -13,8 +13,27 @@ import android.widget.TextView
 /** Local, lightweight launch surface; no network, fonts or Quran assets required. */
 class StartupScreen(context: Context) : FrameLayout(context) {
     init {
-        background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.rgb(8, 49, 48), Color.rgb(14, 76, 66), Color.rgb(5, 32, 36)))
+        // The approved portrait already contains the complete application icon,
+        // title, floral framing and Hawija skyline. Do not overlay another copy.
+        val approved = try {
+            context.assets.open("splash-hawija-approved.png").use { input ->
+                android.graphics.BitmapFactory.decodeStream(input)
+            }
+        } catch (_: java.io.IOException) { null }
+        if (approved != null) {
+            setBackgroundColor(Color.rgb(251, 245, 229))
+            addView(ImageView(context).apply {
+                setImageBitmap(approved)
+                scaleType = ImageView.ScaleType.FIT_XY
+                contentDescription = "أوقات الصلاة في الحويجة"
+            }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        } else {
+            // Keep the current stable splash until the approved binary is bundled.
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(8, 49, 48), Color.rgb(14, 76, 66), Color.rgb(5, 32, 36)))
+        }
         isClickable = true
+        if (approved == null) {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -34,6 +53,7 @@ class StartupScreen(context: Context) : FrameLayout(context) {
             setTextColor(Color.rgb(249, 241, 213))
             setPadding(0, dp(30), 0, dp(12))
         })
+        }
     }
 
     private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
