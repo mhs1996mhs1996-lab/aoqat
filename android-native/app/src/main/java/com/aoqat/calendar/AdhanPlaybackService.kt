@@ -124,7 +124,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         preview=intent?.getBooleanExtra("preview",false)==true
         val prayer=intent?.getStringExtra("prayerId")?:"fajr"
         activePrayerId=prayer
-        if(!preview&&PrayerNotifications.selected(this,prayer)){stopSelf();return START_NOT_STICKY}
+        // Prayer notifications are independent. They may briefly duck the adhan
+        // audio, but must never cancel a scheduled, explicitly enabled adhan.
         val special=prayer in listOf("fridayFirst","fridaySecond")
         if(!preview&&FridaySchedule.suppress(this,prayer,intent?.getLongExtra("prayerAt",0)?:0)){stopSelf();return START_NOT_STICKY}
         if(special&&!preview){val f=config.optJSONObject("friday")?:JSONObject();config.put("enabled",f.optBoolean("enabled")&&f.optBoolean(if(prayer=="fridayFirst")"firstSound" else "secondSound",true));config.put("modes",JSONObject().put("friday","sound"));config.put("afterSilent",0);config.put("overrideSilent",true);config.put("vibrate",false);config.put("screen",false);config.put("flip",false)}
