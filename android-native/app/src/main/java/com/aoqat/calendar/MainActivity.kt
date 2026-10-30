@@ -638,6 +638,15 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun openSupportWhatsApp(url:String) {
+            val target=try { Uri.parse(url) } catch (_:Exception) { return }
+            if(target.scheme!="https" || target.host!="wa.me" ||
+                !Regex("/[0-9]{8,15}").matches(target.path ?: "")) return
+            runOnUiThread {
+                try { startActivity(Intent(Intent.ACTION_VIEW,target).addCategory(Intent.CATEGORY_BROWSABLE)) }
+                catch (_:Exception) { Toast.makeText(this@MainActivity,"تعذر فتح واتساب",Toast.LENGTH_LONG).show() }
+            }
+        }
         @JavascriptInterface fun readCommunityReminderSettings():String = CommunityReminders.settings(this@MainActivity)
         @JavascriptInterface fun configureCommunityReminders(json:String){CommunityReminders.configure(this@MainActivity,json)}
         @JavascriptInterface fun readCommunityReminderInbox():String = CommunityReminders.inbox(this@MainActivity).toString()
