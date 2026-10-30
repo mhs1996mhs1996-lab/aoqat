@@ -33,7 +33,16 @@ android {
         jvmTarget = '17'
     }
 
-    testOptions { unitTests.includeAndroidResources = true }
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            testLogging {
+                exceptionFormat = 'full'
+                showStackTraces = true
+                showExceptions = true
+            }
+        }
+    }
 
     buildTypes {
         debug {
