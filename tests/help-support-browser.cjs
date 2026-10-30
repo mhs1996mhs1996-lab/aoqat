@@ -1,0 +1,43 @@
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+const assert=require('node:assert/strict');
+(async()=>{
+ const server=spawn('python3',['-m','http.server','8973'],{stdio:'ignore'});
+ let browser;
+ try{
+  await new Promise(r=>setTimeout(r,800));
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
+  const page=await browser.newPage({viewport:{width:390,height:780},serviceWorkers:'block'});
+  await page.route('**/rest/**',route=>route.abort());
+  await page.goto('http://127.0.0.1:8973',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>!!window.AoqatHelpSupport&&!!document.querySelector('#webDrawerMain'),{timeout:40000});
+  await page.locator('#designSideMenuBtn').click();
+  await page.locator('[data-drawer="settings"]').click();
+  const entry=page.locator('#webSettingsTemp button').filter({hasText:'حول التطبيق والدعم'});
+  assert.equal(await entry.count(),1,'Exactly one help/support entry in settings');
+  await entry.click();
+  assert.equal(await page.locator('#webSubTitle').textContent(),'حول التطبيق والدعم');
+  await page.locator('#webSubBody button').filter({hasText:'تعليمات الاستخدام'}).click();
+  assert.equal(await page.locator('#webSubTitle').textContent(),'تعليمات الاستخدام');
+  assert.equal(await page.locator('#webSubBody details').count(),9);
+  await page.locator('#webSubBody details').first().locator('summary').click();
+  assert.ok((await page.locator('#webSubBody details').first().textContent()).includes('الحويجة'));
+  await page.locator('#settingsContentDialog .web-back').click();
+  assert.equal(await page.locator('#webSubTitle').textContent(),'حول التطبيق والدعم');
+  await page.locator('#webSubBody button').filter({hasText:'تواصل معنا'}).click();
+  assert.equal(await page.locator('#webSubTitle').textContent(),'تواصل معنا');
+  const contact=page.locator('#webSubBody .ah-button');
+  assert.equal(await contact.isDisabled(),false,'Verified WhatsApp number activates support');
+  await page.evaluate(()=>{window.AndroidNative={openSupportWhatsApp:url=>window.testWhatsappUrl=url};});
+  await contact.click();
+  const opened=await page.evaluate(()=>window.testWhatsappUrl);
+  assert.equal(new URL(opened).origin,'https://wa.me');
+  assert.equal(new URL(opened).pathname,'/9647832764696');
+  assert.ok(new URL(opened).searchParams.get('text').includes('أوقات الصلاة في الحويجة'));
+  await page.locator('#settingsContentDialog .web-back').click();
+  assert.equal(await page.locator('#webSubTitle').textContent(),'حول التطبيق والدعم');
+  await page.locator('#settingsContentDialog .web-back').click();
+  assert.ok((await page.locator('#webSubTitle').textContent()).includes('التصميم'));
+  console.log('PASS: Arabic help, 9 guide sections, nested back and exact WhatsApp link');
+ }finally{await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1});
