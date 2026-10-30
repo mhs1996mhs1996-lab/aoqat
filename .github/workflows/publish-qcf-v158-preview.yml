@@ -35,3 +35,5 @@ jobs:
           fi
           gh release upload "$TAG" release/aoqat-v1.58-qcf-fixes-preview.apk release/sha256.txt --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.58-qcf-fixes-preview.apk'
+
+# The preview is deliberately kept separate from the still-unbundled splash artwork.
