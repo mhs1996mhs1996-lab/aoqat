@@ -72,7 +72,7 @@ object AdhanSchedule {
         if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).commit()
         prefs(c).edit().putString("settings", s.toString()).commit()
         if (!s.optBoolean("enabled") || s.optJSONObject("modes")?.optString(AdhanPlaybackService.activePrayerId)=="silent") c.stopService(Intent(c, AdhanPlaybackService::class.java))
-        if (s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true && s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
+        if (s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true && s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")!=true && s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
         schedule(c)
         IqamaNativeScheduler.scheduleCached(c)
         PrayerAlarm.schedule(c)
@@ -107,6 +107,9 @@ object AdhanSchedule {
         val wanted=mutableSetOf<Pair<Int,String>>()
         fun queue(slot:Int,action:String,at:Long,p:PrayerTimes.Prayer){wanted.add(slot to action);alarm(c,slot,action,at,p)}
         for ((i,p) in events.withIndex()) if (i < 40 && !FridaySchedule.suppress(c,p.id,p.at)) {
+            AtAdhanQuiet.window(s,p.id,p.at)?.let { (start,end) ->
+                if(end>now) queue(60700+i,"ADHAN_QUIET",maxOf(start,now+100),p)
+            }
             AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let { (start,end) ->
                 if (end>now) queue(60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
             }
@@ -125,11 +128,11 @@ object AdhanSchedule {
             val suhoor = s.optInt("suhoor",0).coerceIn(0,120)*60000L
             if (p.id == "fajr" && suhoor > 0 && p.at-suhoor > now) queue( 60200+i, "SUHOOR", p.at-suhoor, p)
         }
-        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
+        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET",60700+i to "ADHAN_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
         cancel(c, 60300, "NEXT")
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
-        if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
 }
 class AdhanReceiver : BroadcastReceiver() {
@@ -164,6 +167,7 @@ class AdhanReceiver : BroadcastReceiver() {
                 nm.notify(if(intent.action=="SUHOOR")60402 else 60401,n.build())
             }
             "IQAMA_QUIET" -> AfterIqamaQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
+            "ADHAN_QUIET" -> AtAdhanQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
             "RESTORE_SOUND" -> AdhanPlaybackService.restoreRingerIfExpired(c)
             "REFRESH" -> { AdhanSchedule.schedule(c); val pending=goAsync(); Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start() }
             "NEXT" -> { PrayerWidget.update(c); if(AdhanSchedule.settings(c).optBoolean("persistent"))NextPrayerService.start(c); AdhanSchedule.schedule(c) }
