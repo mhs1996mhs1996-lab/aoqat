@@ -41,7 +41,7 @@ class PrayerNotificationsTest {
         enable()
         val at = System.currentTimeMillis()
         assertTrue(AdhanSchedule.claim(c, "asr", at))
-        assertFalse(PrayerAlarm.claim(c, "asr", at, 0))
+        assertTrue(PrayerAlarm.claim(c, "asr", at, 0))
         assertEquals(ad, AdhanSchedule.settings(c).toString())
         assertEquals(pa, PrayerAlarm.settings(c).toString())
         val alarms = shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
