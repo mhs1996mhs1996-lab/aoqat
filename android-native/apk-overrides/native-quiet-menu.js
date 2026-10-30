@@ -32,9 +32,9 @@
   function permission(){
     try{return window.AndroidNative.hasQuietPolicyAccess?.()===true;}catch(_){return false;}
   }
-  function render(){
+  function render(refresh=true){
     if(!panel)return;
-    state=read();
+    if(refresh || !state)state=read();
     panel.innerHTML='<h3 class="aq-quiet-title">🔕 تفعيل وضع الصامت</h3>'+
       section('atAdhanSilent','تفعيل وضع صامت عند الأذان',
         'يبدأ الصامت حسب وقت الأذان المسجّل بقاعدة البيانات، ويستمر للمدة المحددة. إذا كان صوت الأذان مفعّلاً يستمر صوت الأذان نفسه.',10)+
@@ -43,12 +43,12 @@
       (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
-      store();render();
+      store();render(false);
     }));
     panel.querySelectorAll('[data-quiet-prayer]').forEach(select=>select.addEventListener('change',()=>{
       const group=state[select.dataset.quietKey];
       group.minutes[select.dataset.quietPrayer]=num(select.value);
-      store();render();
+      store();render(false);
     }));
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
   }
