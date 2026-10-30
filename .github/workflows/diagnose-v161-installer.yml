@@ -1,0 +1,60 @@
+name: Diagnose published APK v1.61 install/parsing error
+on:
+  pull_request:
+    paths: ['.github/workflows/diagnose-v161-installer.yml']
+permissions:
+  contents: read
+jobs:
+  inspect-real-release-apk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Fetch actual public release APKs, not intermediate build artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-check/v161 /tmp/aoqat-check/v160
+          gh release download v1.61-original-hawija-splash --repo "$GH_REPO" --dir /tmp/aoqat-check/v161
+          gh release download v1.60-hawija-splash-calendar --repo "$GH_REPO" --dir /tmp/aoqat-check/v160
+          ls -lh /tmp/aoqat-check/v161 /tmp/aoqat-check/v160
+          sha256sum /tmp/aoqat-check/v161/*.apk /tmp/aoqat-check/v160/*.apk
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,struct,hashlib,re
+          for tag in ('v161','v160'):
+              folder=Path('/tmp/aoqat-check')/tag
+              apk=next(folder.glob('*.apk'))
+              expected=(next(folder.glob('*.sha256'))).read_text().split()[0]
+              actual=hashlib.sha256(apk.read_bytes()).hexdigest()
+              print(tag,'SHA256 checksum matches published manifest:',expected==actual)
+              assert expected==actual, f'RELEASE ASSET SHA MISMATCH {tag}'
+              with zipfile.ZipFile(apk,'r') as z:
+                  bad=z.testzip()
+                  print(tag,'zip corruption:',bad,'entries:',len(z.namelist()),'total bytes:',apk.stat().st_size)
+                  assert not bad, f'ZIP CRC FAIL {tag}: {bad}'
+                  assert 'AndroidManifest.xml' in z.namelist()
+                  assert 'classes.dex' in z.namelist()
+                  assert any(x.startswith('META-INF/') for x in z.namelist())
+                  if tag=='v161':
+                      jpg=z.read('assets/splash-hawija-original.jpg')
+                      assert jpg[:2]==b'\\xff\\xd8' and jpg[-2:]==b'\\xff\\xd9'
+                      print('Original splash JPG embedded:',len(jpg),'bytes')
+          PY
+      - name: Check APK signature + Android package manager metadata of BOTH released files
+        run: |
+          set -euo pipefail
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          test -x "$signer" && test -x "$aapt"
+          for apk in /tmp/aoqat-check/v161/*.apk /tmp/aoqat-check/v160/*.apk; do
+             echo "===== CHECKING $apk ====="
+             "$signer" verify --verbose --print-certs --min-sdk-version 26 "$apk"
+             "$aapt" dump badging "$apk" | head -n 18
+          done
