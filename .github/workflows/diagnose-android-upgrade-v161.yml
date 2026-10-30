@@ -1,0 +1,52 @@
+name: Reproduce v1.60 to v1.61 Android installation upgrade
+on:
+  pull_request:
+    paths: ['.github/workflows/diagnose-android-upgrade-v161.yml']
+permissions:
+  contents: read
+jobs:
+  upgrade-installed-android16:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the ACTUAL published v1.60 and v1.61 assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-releases/old /tmp/aoqat-releases/new
+          gh release download v1.60-hawija-splash-calendar --repo "$GH_REPO" --dir /tmp/aoqat-releases/old
+          gh release download v1.61-original-hawija-splash --repo "$GH_REPO" --dir /tmp/aoqat-releases/new
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          for name in ('old','new'):
+              p=Path('/tmp/aoqat-releases')/name
+              apk=next(p.glob('*.apk'));sha=next(p.glob('*.sha256')).read_text().split()[0]
+              print(name,'size=',apk.stat().st_size,'sha=',sha)
+              assert hashlib.sha256(apk.read_bytes()).hexdigest()==sha
+          PY
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Android 16 - reproduce a REAL upgrade from v1.60 to v1.61
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            echo 'Install the same v1.60 the user had working:'
+            adb install -r /tmp/aoqat-releases/old/*.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.60'
+            echo 'Upgrade in-place, WITHOUT uninstall or wiping app data:'
+            adb install -r /tmp/aoqat-releases/new/*.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.61'
+            echo 'SUCCESS: Published 1.61 upgrades published 1.60 on Android 16'
