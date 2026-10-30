@@ -19,6 +19,7 @@
   ];
   const webOnly=!window.AndroidNative?.configureAdhan;
   const MENU_ROWS=webOnly?[...ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications","azkar"].includes(id)),["muslimBag",'<svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true"><path d="M3 9c5-2 9-1 13 2 4-3 8-4 13-2v18c-5-2-9-1-13 2-4-3-8-4-13-2Z" fill="#e9d59b" stroke="#216644" stroke-width="2"/><path d="M16 11v18M6 14l6 1M6 19l6 1M20 15l6-1M20 20l6-1" stroke="#216644" stroke-width="1.5"/><path d="M21 2a5 5 0 1 0 6 6 4 4 0 0 1-6-6Z" fill="#c39327"/></svg>',"حقيبة المسلم"],["reminderInbox","🔔","الإشعارات"]]:ROWS;
+  MENU_ROWS.push(["helpSupport","📚","حول التطبيق والدعم"]);
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 
@@ -166,12 +167,11 @@
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
-    const helpButton=document.createElement("button");helpButton.type="button";helpButton.className="main-action";helpButton.textContent="📚 حول التطبيق والدعم";helpButton.onclick=supportView;wrap.appendChild(helpButton);
     openSub("إعدادت التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
   }
-  function supportView(){const api=window.AoqatHelpSupport;if(!api)return;openSub("حول التطبيق والدعم",api.home(kind=>{if(kind==="guide")openSub("تعليمات الاستخدام",api.guide(),"support");else if(kind==="contact")openSub("تواصل معنا",api.contact(),"support");}),"settings");}
+  function supportView(){const api=window.AoqatHelpSupport;if(!api)return;openSub("حول التطبيق والدعم",api.home(kind=>{if(kind==="guide")openSub("تعليمات الاستخدام",api.guide(),"support");else if(kind==="contact")openSub("تواصل معنا",api.contact(),"support");}),"main");}
   function datePrayerView(){
     const wrap=document.createElement("div");wrap.id="webDatePrayerTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>["date","prayer"].includes(key)).forEach(([key,icon,label,panel])=>{
@@ -244,6 +244,7 @@
       if(id==="reminderInbox"){inboxView();return;}
       if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
+      if(id==="helpSupport"){supportView();return;}
       if(id==="prayerTimeChoice"){openSub("طريقة اختيار أوقات الصلاة",window.aoqatPrayerTimeChoiceView(),"main");return;}
       if(id==="datePrayer"){datePrayerView();return;}
       if(id==="adhanIqama"){adhanIqamaView();return;}
