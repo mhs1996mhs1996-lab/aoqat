@@ -23,7 +23,7 @@ class StartupScreen(context: Context) : FrameLayout(context) {
             setBackgroundColor(Color.rgb(251, 245, 229))
             addView(ImageView(context).apply {
                 setImageBitmap(approved)
-                scaleType = ImageView.ScaleType.FIT_CENTER
+                scaleType = ImageView.ScaleType.CENTER_CROP
                 contentDescription = "أوقات الصلاة في الحويجة"
             }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         } else {

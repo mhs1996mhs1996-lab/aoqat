@@ -1,0 +1,51 @@
+name: Publish APK v1.62 edge-to-edge original splash
+on:
+  pull_request:
+    paths: ['.github/workflows/publish-v162-edge-splash.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - name: Retrieve verified APK from successful CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN=41075338146
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.conclusion')" = success
+          mkdir -p /tmp/v162
+          gh run download "$RUN" --repo "$GH_REPO" --name aoqat-v1.58-qcf-only-apk --dir /tmp/v162
+          test -s /tmp/v162/app-debug.apk
+          mv /tmp/v162/app-debug.apk /tmp/v162/aoqat-v1.62-original-splash-fullscreen.apk
+      - name: Verify authentic splash image and package metadata before publication
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import zipfile,hashlib
+          p='/tmp/v162/aoqat-v1.62-original-splash-fullscreen.apk'
+          with zipfile.ZipFile(p) as z:
+              image=z.read('assets/splash-hawija-original.jpg')
+              assert hashlib.sha256(image).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
+              assert b'CENTER_CROP' not in z.read('assets/www/js/quran-reader.js') # no web reader change
+              print('Original approved splash binary preserved:',len(image))
+          PY
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$aapt" dump badging /tmp/v162/aoqat-v1.62-original-splash-fullscreen.apk | grep "^package: name='com.aoqat.calendar' versionCode='97' versionName='1.62'"
+          sha256sum /tmp/v162/aoqat-v1.62-original-splash-fullscreen.apk > /tmp/v162/aoqat-v1.62.sha256
+      - name: Publish direct signed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG=v1.62-original-splash-fullscreen
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target 90847fdb9d512b825bc420da3e2452b55e85de30 --title "أوقات الصلاة في الحويجة v1.62 — صورة البداية بعرض الشاشة" --prerelease --notes 'نفس صورة البداية الأصلية تماماً، ملء شاشة الهاتف عرضياً بدون تشويه وبقص بسيط عمودياً فقط حسب نسبة الشاشة. ملفات المصحف والتقاويم والأذان دون تعديل.'
+          fi
+          gh release upload "$TAG" /tmp/v162/aoqat-v1.62-original-splash-fullscreen.apk /tmp/v162/aoqat-v1.62.sha256 --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.62-original-splash-fullscreen.apk'

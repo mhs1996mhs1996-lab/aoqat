@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 96 // User's exact original portrait replaces reconstructed launch image
-        versionName '1.61'
+        versionCode 97 // Edge-to-edge approved original splash with no image stretching
+        versionName '1.62'
     }
 
     compileOptions {
