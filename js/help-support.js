@@ -1,6 +1,6 @@
 (function(){'use strict';
  // International digits only; empty until the owner supplies an official WhatsApp number.
- const WHATSAPP_NUMBER='';
+ const WHATSAPP_NUMBER='9647832764696';
  const MESSAGE='السلام عليكم، أود التواصل بخصوص تطبيق أوقات الصلاة في الحويجة.';
  const guides=[
  ['🕌 مواقيت الصلاة','يعرض التطبيق مواقيت الصلاة لمدينة الحويجة من قاعدة بياناته الداخلية. لمعرفة بيانات الغد افتح خيار اليوم التالي.'],
