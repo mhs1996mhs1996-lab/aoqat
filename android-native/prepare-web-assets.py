@@ -70,6 +70,21 @@ transform('adhan-settings.js', [
  ("    $(\"adSilentAfterEnabled\").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};", "    $(\"adSilentAfterEnabled\").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};\n    $(\"adQuietPermission\")?.addEventListener(\"click\",()=>window.AndroidNative?.requestQuietPolicyAccess?.());"),
 ])
 
+# APK-only: keep the hosted web's adhan settings unchanged and add a
+# standalone phone quiet page for quiet-at-adhan and quiet-after-iqama.
+transform('adhan-core.js', [
+ ('      afterIqamaSilent: {\\n        enabled: false,\\n        minutes: Object.fromEntries(ids.map((id) => [id, 0])),\\n      },',
+  '      afterIqamaSilent: {\\n        enabled: false,\\n        minutes: Object.fromEntries(ids.map((id) => [id, 0])),\\n      },\\n      atAdhanSilent: {enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))},'),
+ ('    d.friday = normalizeFriday(s.friday);',
+  '    d.atAdhanSilent.enabled=s.atAdhanSilent?.enabled===true;\\n    for(const id of ids){const n=Number(s.atAdhanSilent?.minutes?.[id]);if(Number.isFinite(n))d.atAdhanSilent.minutes[id]=Math.max(0,Math.min(120,Math.floor(n)));}\\n    d.friday = normalizeFriday(s.friday);')
+])
+transform('web-menu-order.js', [
+ ('[["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"]]',
+  '[["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"],["🔕","تفعيل وضع الصامت","quietPanel"]]'),
+ ('b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);',
+  'b.onclick=()=>{if(id==="quietPanel")window.AoqatApkQuietSettings?.render?.();openPanel(title,id,"adhanIqama");};wrap.appendChild(b);')
+])
+
 # Replace the browser alarm entirely: Android owns audio, stopping, snooze and lock-screen UI.
 (target/'js/tomorrow-alarm.js').write_text((root/'android-native/apk-overrides/native-publish-alarm.js').read_text())
 # No browser push subscription or service-worker alarm can compete with the native alarm.
@@ -219,6 +234,8 @@ transform('prayer-countdown.js', [
 transform('web-menu-order.js', [('if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={', 'window.AoqatWebSettingsNavigation={')])
 transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configureAdhan)return;', '')])
 transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', ''), ('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
+# Do not block calendar rendering on unrelated Quran/WebView font loading.
+transform('monthly-calendars-renderer.js', [('await document.fonts.ready;', '/* Both calendar fonts were loaded explicitly. */')])
 transform('monthly-calendars.js', [
  ('if(window.AndroidNative?.configureAdhan)return;', ''),
  # APK: blank <img> elements otherwise show a broken-image icon/alt text before
@@ -231,6 +248,14 @@ transform('monthly-calendars.js', [
  ('await navigator.share({files:[file],title:img.alt});', "if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});"),
  ('const can=!!navigator.share', 'const can=!!window.AndroidNative?.sharePrayerImage||!!navigator.share'),
  ("download=button('حفظ الصورة على الهاتف',()=>{if(!file||!url)return;", "download=button('حفظ الصورة على الهاتف',async()=>{if(!file||!url)return;if(window.AndroidNative?.savePrayerImage){download.disabled=true;try{await window.aoqatNativeImageAction('savePrayerImage',file);status.textContent='تم حفظ صورة التقويم على الجهاز.';}catch(_){status.textContent='تعذر حفظ الصورة. أعد المحاولة.';}finally{download.disabled=false;}return;}")])
+
+# APK calendar: a complete rendered PNG can be shown immediately.
+# Waiting for WebView's image.decode() can hang on some Android OEM devices,
+# leaving the share and save buttons grey even after the image blob is ready.
+transform('monthly-calendars.js', [
+ ("img.src=url;await img.decode();if(token!==sequence||!p.isConnected)return;img.style.display='';download.disabled=false;", "img.src=url;img.style.display='';download.disabled=false;"),
+ ("img.src=canvas.toDataURL('image/png');await img.decode();if(id!==drawId||!p.isConnected)return;img.style.display='';const applied=", "img.src=canvas.toDataURL('image/png');img.style.display='';const applied=")
+])
 
 # APK-only: make the approved QCF V2 reader the sole Quran engine.
 # Preserve the user's chosen page, appearance and bookmarks without an SVG fallback.
@@ -288,7 +313,9 @@ static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
 dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js').read_text())
 paths=['js/startup-stabilizer.js','js/design-side-menu.js']+[src.split('?')[0] for src in static if not src.startswith('data/prayer-times.js')]+[src.split('?')[0] for src in dynamic]
 (target/'js/native-reminders.js').write_text((root/'android-native/apk-overrides/native-reminders.js').read_text())
+(target/'js/native-quiet-menu.js').write_text((root/'android-native/apk-overrides/native-quiet-menu.js').read_text())
 paths.append('js/native-reminders.js')
+paths.append('js/native-quiet-menu.js')
 seen=set();chunks=['const prayerTimes=[];']
 for relative in paths:
     # This old compatibility module repeatedly unhides all slides, conflicting
