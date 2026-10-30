@@ -1,0 +1,86 @@
+name: Check single-offline-QCF Android package
+on:
+  pull_request:
+    paths:
+      - 'android-native/**'
+      - 'js/**'
+      - '.github/workflows/check-apk-qcf-single.yml'
+permissions:
+  contents: read
+jobs:
+  qcf-single-apk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Android signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Build test and check one QCF edition
+        run: |
+          gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile
+          apk=Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
+          with zipfile.ZipFile(apk) as z:
+              entries=z.namelist()
+              base='assets/www/'
+              fonts=[n for n in entries if n.startswith(base+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+              assert len(fonts)==604, 'Only '+str(len(fonts))+' QCF fonts'
+              print('QCF ASSET DEBUG', 'fonts',len(fonts), 'experiments', [n for n in entries if 'experiments/' in n][:10], 'svg', len([n for n in entries if n.startswith(base+'pages/')]))
+              assert base+'experiments/qcf604-web-verse-layouts.json.gz.bin' in entries
+              assert not any(n.startswith(base+'assets/mushaf-phone-hafs/') and n.endswith('.bin') for n in entries)
+              assert not any(n.startswith(base+'pages/') for n in entries)
+              js=z.read(base+'js/quran-reader.js').decode()
+              assert "state.renderEngine='qcf'" in js
+              assert 'aqRenderingMode"><option' not in js
+              assert 'https://verses.quran.foundation/fonts' not in js
+              print('APPROVED ONE QCF EDITION: 604 fonts, 0 SVG pages, APK MB=',round(apk.stat().st_size/1048576,1))
+          PY
+      - name: Save direct installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v1.58-qcf-only-apk
+          path: android-native/app/build/outputs/apk/debug/app-debug.apk
+          compression-level: 0
+          retention-days: 30
+
+  publish-preview:
+    if: github.event.pull_request.head.repo.full_name == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve successful offline QCF-only APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail --location --retry 3 -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/12947437332/zip" \
+            -o qcf-apk.zip
+          unzip -j qcf-apk.zip 'app-debug.apk' -d qcf-output
+          test -s qcf-output/app-debug.apk
+          mv qcf-output/app-debug.apk aoqat-v1.58-qcf-only-test.apk
+      - name: Direct APK download (test build, splash still pending)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view v1.58-qcf-only-test >/dev/null 2>&1; then
+            gh release upload v1.58-qcf-only-test aoqat-v1.58-qcf-only-test.apk --clobber
+          else
+            gh release create v1.58-qcf-only-test aoqat-v1.58-qcf-only-test.apk \
+              --prerelease --target "$GITHUB_SHA" \
+              --title "Hawija QCF V2 only APK (test)" \
+              --notes "The old SVG folios are removed and 604 QCF fonts are offline. Approved splash picture not yet bundled; this is a test build."
+          fi
