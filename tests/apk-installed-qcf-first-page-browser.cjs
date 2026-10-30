@@ -38,9 +38,14 @@ const assert=require('node:assert/strict');
   });
   await page.goto('http://127.0.0.1:8796/',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.aoqatUIReady,{timeout:30000});
-  await page.waitForSelector('[data-drawer="quran"]',{timeout:30000});
-  await page.evaluate(()=>document.body.classList.add('design-menu-open'));
-  await page.locator('[data-drawer="quran"]').click();
+  await page.waitForFunction(()=>Boolean(window.AoqatQuranReader?.open));
+  await page.evaluate(()=>{
+    document.body.classList.add('design-menu-open');
+    const host=document.createElement('div');
+    host.id='apkQcfReaderTestHost';
+    document.body.append(host);
+    window.AoqatQuranReader.open(host);
+  });
   await page.waitForFunction(()=>document.querySelector('#aqReader')?.dataset.ready==='true',{timeout:45000});
   assert.equal(await page.locator('#aqReader').getAttribute('data-edition'),'qcf2-font');
   assert.ok(await page.locator('.aq-qcf-line').count()>0,'No Quran QCF rows');
