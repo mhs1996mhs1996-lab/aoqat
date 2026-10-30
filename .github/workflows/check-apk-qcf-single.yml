@@ -36,6 +36,7 @@ jobs:
               base='assets/www/'
               fonts=[n for n in entries if n.startswith(base+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
               assert len(fonts)==604, 'Only '+str(len(fonts))+' QCF fonts'
+              print('QCF ASSET DEBUG', 'fonts',len(fonts), 'experiments', [n for n in entries if 'experiments/' in n][:10], 'svg', len([n for n in entries if n.startswith(base+'pages/')]))
               assert base+'experiments/qcf604-web-verse-layouts.json.gz' in entries
               assert not any(n.startswith(base+'assets/mushaf-phone-hafs/') and n.endswith('.bin') for n in entries)
               assert not any(n.startswith(base+'pages/') for n in entries)
