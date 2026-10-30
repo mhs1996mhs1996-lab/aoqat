@@ -290,3 +290,12 @@ if start>=0:
 if "state.renderEngine='qcf';" not in source: raise RuntimeError('QCF default not applied')
 if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('External Quran fonts remain')
 qcf.write_text(source)
+
+# Never reach out to the web for Quran page indexes in the installed APK.
+source=source.replace('const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;', 'const mushafUrl = url => url;')
+source=source.replace("renderPage(false);notice('تعذّر تحميل خط QCF V2؛ تم الرجوع إلى عرض المصحف الأصلي.');", "root.dataset.ready='error';$('adVerses').innerHTML='<p class=\"aq-loading\">تعذّر تحميل صفحة المصحف المحفوظة؛ أعد فتح المصحف.</p>';notice('تعذّر تحميل خط المصحف المحلي.');")
+# Confirm the one installed edition cannot silently switch to legacy SVG mode.
+if "state.renderEngine='svg'" in source: raise RuntimeError('Legacy Quran engine fallback still present')
+if 'aqRenderingMode"><option' in source: raise RuntimeError('Old Quran edition switch is still visible')
+if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('QCF font URLs not local')
+qcf.write_text(source)
