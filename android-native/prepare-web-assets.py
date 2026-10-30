@@ -243,6 +243,19 @@ qcf.write_text(source)
 # Never reach out to the web for Quran page indexes in the installed APK.
 source=source.replace('const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;', "const mushafUrl = url => url.endsWith('.gz') ? url+'.bin' : url;")
 source=source.replace("renderPage(false);notice('تعذّر تحميل خط QCF V2؛ تم الرجوع إلى عرض المصحف الأصلي.');", "root.dataset.ready='error';$('adVerses').innerHTML='<p class=\"aq-loading\">تعذّر تحميل صفحة المصحف المحفوظة؛ أعد فتح المصحف.</p>';notice('تعذّر تحميل خط المصحف المحلي.');")
+# For APK, read both compressed Quran indexes with the native AssetManager.
+# Android WebView versions differ in whether fetch(file://...) and
+# DecompressionStream('gzip') are supported for file-backed resources.
+source=source.replace(
+    "async function compressed(url){const r=await fetch(mushafUrl(url));",
+    "async function compressed(url){if(url==='assets/mushaf-phone-hafs.json.gz')return JSON.parse(window.AndroidNative.readQuranAsset('mushaf-phone-hafs.json.gz'));if(url==='experiments/qcf604-web-verse-layouts.json.gz')return JSON.parse(window.AndroidNative.readQuranAsset('qcf604-web-verse-layouts.json.gz'));const r=await fetch(mushafUrl(url));")
+source=source.replace(
+    "const ready=await fetch(mushafUrl('assets/mushaf-phone-hafs-ready.json'));if(!ready.ok)throw Error('Phone Mushaf unavailable');",
+    "")
+if "async function compressed(url){if(url==='assets/mushaf-phone-hafs.json.gz')" not in source:
+    raise RuntimeError('Native Quran JSON decoder was not installed at exact call site')
+if "const ready=await fetch(mushafUrl('assets/mushaf-phone-hafs-ready.json'))" in source:
+    raise RuntimeError('Unnecessary WebView Quran ready file fetch remains')
 # Confirm the one installed edition cannot silently switch to legacy SVG mode.
 if "state.renderEngine='svg'" in source: raise RuntimeError('Legacy Quran engine fallback still present')
 if 'aqRenderingMode"><option' in source: raise RuntimeError('Old Quran edition switch is still visible')
