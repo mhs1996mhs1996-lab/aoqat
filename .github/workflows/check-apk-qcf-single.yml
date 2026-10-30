@@ -60,6 +60,7 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - name: Retrieve successful offline QCF-only APK
         env:
           GH_TOKEN: ${{ github.token }}
