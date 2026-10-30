@@ -58,3 +58,36 @@ jobs:
              "$signer" verify --verbose --print-certs --min-sdk-version 26 "$apk"
              "$aapt" dump badging "$apk" | head -n 18
           done
+
+  confirm-android-install:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download exact published v1.61 file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p /tmp/aoqat-install
+          gh release download v1.61-original-hawija-splash --repo "$GH_REPO" --pattern '*.apk' --dir /tmp/aoqat-install
+          test "$(stat -c%s /tmp/aoqat-install/*.apk)" -eq 108882167
+      - name: Enable KVM for Android Emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Actually install release APK into Android 15 (API 35)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r /tmp/aoqat-install/aoqat-v1.61-original-splash.apk
+            adb shell pm path com.aoqat.calendar
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.61'
+            echo 'PASS: ORIGINAL v1.61 RELEASE APK INSTALLED ON ANDROID EMULATOR'
