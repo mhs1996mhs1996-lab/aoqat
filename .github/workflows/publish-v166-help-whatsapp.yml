@@ -59,10 +59,14 @@ jobs:
               help=z.read(prefix+'js/help-support.js').decode('utf8')
               menu=z.read(prefix+'js/web-menu-order.js').decode('utf8')
               idx=z.read(prefix+'index.html').decode('utf8')
+              bundle=z.read(prefix+'js/apk-startup-bundle.js').decode('utf8')
               assert "WHATSAPP_NUMBER='9647832764696'" in help
               assert 'https://wa.me/' in help and 'AoqatHelpSupport' in help
               assert 'helpButton.onclick=supportView' in menu
-              assert 'js/help-support.js' in idx
+              assert 'js/apk-startup-bundle.js' in idx
+              assert 'AoqatHelpSupport' in bundle
+              assert "WHATSAPP_NUMBER='9647832764696'" in bundle
+              assert 'helpButton.onclick=supportView' in bundle
               assert 'تعليمات الاستخدام' in help and 'تواصل معنا' in help
               assert len(z.read(prefix+'data/prayer-times-offline.json'))>5000
               splash=z.read('assets/splash-hawija-original.jpg')
