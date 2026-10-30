@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 97 // Edge-to-edge approved original splash with no image stretching
-        versionName '1.62'
+        versionCode 98 // Reliable adhan delivery, independent iqama quiet mode, four first-install interface defaults
+        versionName '1.63'
     }
 
     compileOptions {

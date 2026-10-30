@@ -9,7 +9,9 @@ import org.json.JSONObject
 object AfterIqamaQuiet {
     fun window(settings: JSONObject, prayerId: String, prayerAt: Long, iqamaMinutes: Int): Pair<Long, Long>? {
         val quiet=settings.optJSONObject("afterIqamaSilent") ?: return null
-        if (!settings.optBoolean("enabled") || !quiet.optBoolean("enabled")) return null
+        // This feature has its own switch. The adhan audio master switch only
+        // controls playback; it must never prevent the prayer-time quiet window.
+        if (!quiet.optBoolean("enabled")) return null
         val duration=quiet.optJSONObject("minutes")?.optInt(prayerId,0)?.coerceIn(0,120) ?: 0
         if (duration==0 || prayerId !in PrayerTimes.ids) return null
         val start=prayerAt+iqamaMinutes.coerceIn(0,120)*60000L

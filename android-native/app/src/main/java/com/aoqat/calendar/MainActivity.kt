@@ -744,6 +744,12 @@ class MainActivity : Activity() {
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
         @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
+        @JavascriptInterface fun hasQuietPolicyAccess():Boolean =
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
+        @JavascriptInterface fun requestQuietPolicyAccess(){runOnUiThread{
+            if(!hasQuietPolicyAccess())
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        }}
         @JavascriptInterface fun adhanPermissions(){runOnUiThread{requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(!nm.isNotificationPolicyAccessGranted)startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))else if(Build.VERSION.SDK_INT>=34&&!nm.canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))else Toast.makeText(this@MainActivity,"أذونات الأذان وشاشة القفل متاحة",Toast.LENGTH_LONG).show()}}
 
         @JavascriptInterface fun readPublishSnoozeMinutes():Int=AlarmScheduler.snoozeMinutes(this@MainActivity)

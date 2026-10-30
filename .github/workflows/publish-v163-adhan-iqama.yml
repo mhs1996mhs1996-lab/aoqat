@@ -1,0 +1,78 @@
+name: Publish APK v1.63 with native adhan and iqama quiet fixes
+on:
+  pull_request:
+    paths: ['.github/workflows/publish-v163-adhan-iqama.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-tested-apk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - name: Download the exact successful native and offline APK artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN=41090425432
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq .conclusion)" = success
+          mkdir -p /tmp/aoqat-v163
+          gh run download "$RUN" --repo "$GH_REPO" --name aoqat-v1.58-qcf-only-apk --dir /tmp/aoqat-v163
+          test -s /tmp/aoqat-v163/app-debug.apk
+          mv /tmp/aoqat-v163/app-debug.apk /tmp/aoqat-v163/aoqat-v1.63-adhan-iqama-quiet.apk
+          gh release download v1.62-original-splash-fullscreen --repo "$GH_REPO" --pattern '*.apk' --dir /tmp/aoqat-v163
+      - name: Verify signature, real original portrait, Quran-only assets and v1.63 version
+        run: |
+          set -euo pipefail
+          apk=/tmp/aoqat-v163/aoqat-v1.63-adhan-iqama-quiet.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | grep -F "versionCode='98' versionName='1.63'"
+          python3 - <<'PY'
+          import zipfile,hashlib,os
+          p='/tmp/aoqat-v163/aoqat-v1.63-adhan-iqama-quiet.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None, 'Corrupted APK archive'
+              original=z.read('assets/splash-hawija-original.jpg')
+              assert hashlib.sha256(original).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
+              names=z.namelist()
+              assert len([n for n in names if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+              assert not any(n.startswith('assets/www/pages/') for n in names)
+              print('v1.63 release package validated; bytes:',os.stat(p).st_size)
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v163/aoqat-v1.63.sha256
+      - name: Enable Android emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify installation upgrades v1.62 without deleting user data
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r /tmp/aoqat-v163/aoqat-v1.62-original-splash-fullscreen.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 "versionName=1.62"
+            adb install -r /tmp/aoqat-v163/aoqat-v1.63-adhan-iqama-quiet.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 "versionName=1.63"
+            echo "PASS: v1.63 installed over v1.62 without uninstalling"
+      - name: Publish direct installable APK only after all checks pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v1.63-adhan-iqama-quiet
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target 35144387f6a4fec305514e7e67d48f272cee914f --title "أوقات الصلاة في الحويجة v1.63 — إصلاح الأذان والصامت بعد الإقامة" --prerelease --notes 'إصلاح جدولة الصامت عند صفر الإقامة للمدة المحددة لكل صلاة، استقلاله عن زر صوت الأذان، منع الإشعارات من إيقاف الأذان، محاولة احتياطية مع حماية من تكرار الأذان، افتراضي تشغيل الساعة والتاريخ وباقي الصلاة وباقي الإقامة على التثبيت الجديد. تبقى اختيارات المستخدم السابقة محفوظة. عند رفض الصامت يجب منح إذن التحكم بوضع الصامت من داخل إعداداته. المصحف QCF V2 وصورة البداية والتقاويم دون تغيير. اجتازت اختبارات أندرويد وفحص ملف التثبيت والترقية.'
+          fi
+          gh release upload "$tag" /tmp/aoqat-v163/aoqat-v1.63-adhan-iqama-quiet.apk /tmp/aoqat-v163/aoqat-v1.63.sha256 --clobber
+          gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.63-adhan-iqama-quiet.apk'
