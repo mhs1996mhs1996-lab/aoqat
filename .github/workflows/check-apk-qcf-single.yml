@@ -51,6 +51,8 @@ jobs:
               assert 'https://verses.quran.foundation/fonts' not in js
               print('APPROVED ONE QCF EDITION: 604 fonts, 0 SVG pages, APK MB=',round(apk.stat().st_size/1048576,1))
           PY
+      - name: Open actual installed APK Quran page 1 completely offline
+        run: node tests/apk-installed-qcf-first-page-browser.cjs
       - name: Save direct installable APK
         uses: actions/upload-artifact@v4
         with:
