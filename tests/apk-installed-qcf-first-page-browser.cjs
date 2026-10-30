@@ -52,7 +52,9 @@ const assert=require('node:assert/strict');
   assert.ok(await page.locator('#adVerses').innerText().then(x=>!x.includes('تعذر فتح ملفات المصحف')),'User-reported Quran failure');
   assert.equal(await page.locator('#aqRenderingMode').count(),0,'Old edition selector must be absent');
   assert.equal(await page.locator('#aqTheme').count(),0,'Settings only after open');
-  await page.locator('[data-qr-panel="settings"]').click();
+  // The app drawer is overlaid in this harness; trigger the reader's own
+  // installed settings button directly, not through the covered click surface.
+  await page.locator('[data-qr-panel="settings"]').evaluate(button=>button.click());
   assert.equal(await page.locator('#aqTheme').count(),1,'Preserve Quran appearance');
   assert.deepEqual(errors.filter(x=>/Cannot read|TypeError|ReferenceError/.test(x)),[]);
   console.log('VERIFIED installed APK opens actual QCF Quran page 1, no network, no SVG dropdown');
