@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 93 // Single QCF V2 offline Quran edition, new splash and updated Android native assets
-        versionName '1.58'
+        versionCode 94 // Fix first-run offline QCF reader using native Android asset bridge
+        versionName '1.59'
     }
 
     compileOptions {
