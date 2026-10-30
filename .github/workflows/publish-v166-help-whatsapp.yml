@@ -101,7 +101,16 @@ jobs:
             adb install -r /tmp/aoqat-v166/aoqat-v1.66-help-whatsapp.apk
             adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.66'
             adb shell am start -n com.aoqat.calendar/.MainActivity
-            adb shell pidof com.aoqat.calendar
+            alive=0
+            for attempt in $(seq 1 20); do
+              if adb shell pidof com.aoqat.calendar; then alive=1; break; fi
+              sleep 1
+            done
+            if [ "$alive" -ne 1 ]; then
+              adb logcat -d -t 400 | grep -E -A 12 'FATAL EXCEPTION|Process: com.aoqat.calendar|AndroidRuntime' || true
+              echo 'App did not remain running after launch'
+              exit 1
+            fi
             echo 'PASS: v1.66 upgrades v1.65 and launches without clearing data'
       - name: Publish installable verified APK
         env:
