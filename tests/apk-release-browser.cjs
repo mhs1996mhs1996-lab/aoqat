@@ -18,6 +18,10 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.goto('http://127.0.0.1:8841',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.aoqatUIReady&&window.AoqatCalendars&&document.querySelector('#publishSnoozeMinutes'));
   assert.equal(await page.locator('#interfaceVisibilityControls .interface-visibility-btn.is-on').count(),4);
+  assert.deepEqual(await page.evaluate(()=>{
+    const settings=JSON.parse(localStorage.getItem('aoqatInterfaceVisibilityV1')||'{}');
+    return ['clock','date','adhan','iqama'].map(key=>settings[key]);
+  }),[true,true,true,true],'The four interface items must persist as enabled only on a new installation');
   assert.equal(await page.locator('#tomorrowNotifyToggle').getAttribute('aria-pressed'),'false');
   assert.deepEqual(await page.evaluate(()=>testNativeCalls),[]);
   await page.locator('#publishSnoozeMinutes').evaluate(el=>{el.value='7';el.dispatchEvent(new Event('change',{bubbles:true}))});assert.equal(await page.evaluate(()=>localStorage.testSnooze),'7');
