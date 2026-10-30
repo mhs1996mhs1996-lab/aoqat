@@ -1,7 +1,6 @@
 name: Publish QCF v1.58 test installer
 on:
-  push:
-    branches: [fix/apk-qcf-only-offline-20261030]
+  pull_request:
     paths: ['.github/workflows/publish-qcf-v158-preview.yml']
 permissions:
   contents: write
