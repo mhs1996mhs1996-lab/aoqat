@@ -202,7 +202,9 @@ class PrayerAlarmActivity:Activity(){
         }
         panel.addView(stop,LinearLayout.LayoutParams(-1,-2))
         setContentView(panel)
-        ContextCompat.registerReceiver(this,receiver,IntentFilter("com.aoqat.calendar.PRAYER_ALARM_ACTIVE"),ContextCompat.RECEIVER_NOT_EXPORTED)
+        val statusFilter=IntentFilter("com.aoqat.calendar.PRAYER_ALARM_ACTIVE")
+        if(Build.VERSION.SDK_INT>=33)registerReceiver(receiver,statusFilter,RECEIVER_NOT_EXPORTED)
+        else @Suppress("DEPRECATION") registerReceiver(receiver,statusFilter)
     }
     override fun dispatchKeyEvent(event:android.view.KeyEvent):Boolean{
         if(event.keyCode==android.view.KeyEvent.KEYCODE_VOLUME_UP ||
