@@ -24,7 +24,7 @@
   function section(key,title,help,fallback){
     const s=state[key];
     const body=ids.map(id=>'<label class="aq-quiet-minute"><span>'+names[id]+'</span><select data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="مدة الصامت '+names[id]+'">'+
-      [0,3,5,7,10,15,20,25,30,40,45,60,90,120].map(value=>'<option value="'+value+'"'+(num(s.minutes[id],fallback)===value?' selected':'')+'>'+(value?value+' دقيقة':'متوقف')+'</option>').join('')+
+      Array.from({length:121},(_,i)=>i).map(value=>'<option value="'+value+'"'+(num(s.minutes[id],fallback)===value?' selected':'')+'>'+(value?value+' دقيقة':'متوقف')+'</option>').join('')+
       '</select></label>').join('');
     return '<div class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
       '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+body+'</div></div>';
