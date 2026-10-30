@@ -14,7 +14,13 @@ class StartupPortraitTest {
     @Test fun bundledPortraitIsFullResolutionAndReplacesOldSplash() {
         val context=RuntimeEnvironment.getApplication()
         val options=BitmapFactory.Options().apply { inJustDecodeBounds=true }
-        context.assets.open("splash-hawija-approved.png").use { stream ->
+        context.assets.open("splash-hawija-original.jpg").use { stream ->
+            val bytes=stream.readBytes()
+            val hash=java.security.MessageDigest.getInstance("SHA-256").digest(bytes)
+                .joinToString("") { "%02x".format(it) }
+            assertEquals("50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba",hash)
+        }
+        context.assets.open("splash-hawija-original.jpg").use { stream ->
             BitmapFactory.decodeStream(stream,null,options)
         }
         assertEquals(711,options.outWidth)
