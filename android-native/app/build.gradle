@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 98 // Reliable adhan delivery, independent iqama quiet mode, four first-install interface defaults
-        versionName '1.63'
+        versionCode 99 // Native silent modes menu and fast calendar display
+        versionName '1.64'
     }
 
     compileOptions {

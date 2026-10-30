@@ -700,8 +700,8 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
             try {
                 val settings=org.json.JSONObject(json)
-                if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true || settings.optBoolean("persistent") || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
-                if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
+                if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true || settings.optBoolean("persistent") || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || settings.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
+                if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || settings.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
                     // Keep the user's chosen quiet durations: missing permission is temporary.
                     // Do not silently erase the enabled switch before the user returns from Settings.
                     startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))

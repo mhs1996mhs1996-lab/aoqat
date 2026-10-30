@@ -10,7 +10,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));await page.route('**/rest/**',r=>r.abort());
   await page.addInitScript(rows=>{
-   window.testNativeCalls=[];window.AndroidNative={configureAdhan:()=>{},readAdhanSettings:()=>'{}',readPrayerAlarmSettings:()=>'{}',readPrayerRows:()=>JSON.stringify(rows),readIqamaAppearance:()=>'transparent',
+   window.testNativeCalls=[];window.AndroidNative={configureAdhan:json=>{window.testAdhanNative=JSON.parse(json);testNativeCalls.push('adhan')},readAdhanSettings:()=>JSON.stringify(window.testAdhanNative||{}),hasQuietPolicyAccess:()=>true,requestQuietPolicyAccess:()=>testNativeCalls.push('quietPermission'),readPrayerAlarmSettings:()=>'{}',readPrayerRows:()=>JSON.stringify(rows),readIqamaAppearance:()=>'transparent',
     readPublishAlarmEnabled:()=>localStorage.testPublish==='1',readPublishSnoozeMinutes:()=>Number(localStorage.testSnooze||10),configurePublishSnoozeMinutes:n=>{localStorage.testSnooze=n},
     enableAlarm:()=>{localStorage.testPublish='1';testNativeCalls.push('enable')},disableAlarm:()=>{localStorage.testPublish='0';testNativeCalls.push('disable')},stopPublishAlarm:()=>{},
     openQibla:()=>{testNativeCalls.push('qibla')},sharePrayerImage:(data,name,id)=>{window.testImage={data,name};window.aoqatImageActionResult(id,true)},savePrayerImage:(data,name,id)=>{window.testSaved={data,name};window.aoqatImageActionResult(id,true)}};
@@ -38,6 +38,24 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   assert.ok(await page.evaluate(()=>testImage.data.startsWith('data:image/png;base64,')));
   await page.getByRole('button',{name:'حفظ الصورة على الهاتف',exact:true}).click();await page.waitForFunction(()=>!!window.testSaved);
   assert.equal(await page.evaluate(()=>testImage.data===testSaved.data),true);
+  // APK only: moved quiet control is under Adhan/Iqama, not the adhan method list.
+  await page.evaluate(()=>{window.AoqatWebSettingsNavigation.main();document.body.classList.add('design-menu-open');});
+  await page.locator('[data-drawer="adhanIqama"]').click();
+  const quietMenu=page.getByRole('button',{name:/تفعيل وضع الصامت/,exact:false});
+  assert.equal(await quietMenu.count(),1,'One dedicated quiet settings entry is required');
+  await quietMenu.click();
+  assert.equal(await page.locator('#quietPanel .aq-quiet-card').count(),2);
+  assert.equal(await page.locator('#quietPanel [data-quiet-enabled]').count(),2);
+  assert.equal(await page.locator('#adhanPanel #adSilentSettingsToggle').isVisible(),false,'Original adhan menu must not duplicate moved quiet control');
+  await page.locator('#quietPanel [data-quiet-enabled="atAdhanSilent"]').check();
+  await page.locator('#quietPanel select[data-quiet-key="atAdhanSilent"][data-quiet-prayer="asr"]').selectOption('15');
+  await page.locator('#quietPanel [data-quiet-enabled="afterIqamaSilent"]').check();
+  assert.deepEqual(await page.evaluate(()=>({
+    at:window.testAdhanNative?.atAdhanSilent?.enabled,
+    asr:window.testAdhanNative?.atAdhanSilent?.minutes?.asr,
+    after:window.testAdhanNative?.afterIqamaSilent?.enabled
+  })),{at:true,asr:15,after:true});
+  await page.evaluate(()=>window.AoqatWebSettingsNavigation.main());
   await page.evaluate(()=>localStorage.setItem('aoqatInterfaceVisibilityV1',JSON.stringify({clock:false,date:true,adhan:true,iqama:true})));
   await page.reload({waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.aoqatUIReady&&document.querySelector('#publishSnoozeMinutes'));
   assert.equal(await page.locator('#interfaceVisibilityControls .interface-visibility-btn').first().getAttribute('aria-pressed'),'false');

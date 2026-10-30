@@ -174,7 +174,12 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         if(config.optBoolean("flip"))sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let{sensors.registerListener(this,it,SensorManager.SENSOR_DELAY_NORMAL)}
         val am=getSystemService(AUDIO_SERVICE) as AudioManager
         val override=config.optBoolean("overrideSilent")
-        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL){if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate();handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
+        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL &&
+            !AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)){
+            if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
+            handler.postDelayed({stopSelf()},4000)
+            return START_NOT_STICKY
+        }
         if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
         if(mode=="vibrate"){handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
         retryAllowed=true
