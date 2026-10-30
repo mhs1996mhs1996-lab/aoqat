@@ -1,0 +1,90 @@
+name: Publish APK v1.64 quiet menu and calendar repair
+on:
+  pull_request:
+    paths: ['.github/workflows/publish-v164-quiet-calendar.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish-tested-apk:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Await verified APK from native integration run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN=41101424474
+          for attempt in $(seq 1 55); do
+            state="$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.status')"
+            verdict="$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.conclusion')"
+            echo "APK build run $RUN: $state ($verdict)"
+            if [ "$verdict" = success ]; then break; fi
+            if [ "$state" = completed ]; then echo 'Native verification failed'; exit 1; fi
+            sleep 20
+          done
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.conclusion')" = success
+          mkdir -p /tmp/aoqat-v164
+          gh run download "$RUN" --repo "$GH_REPO" --name aoqat-v1.58-qcf-only-apk --dir /tmp/aoqat-v164
+          test -s /tmp/aoqat-v164/app-debug.apk
+          mv /tmp/aoqat-v164/app-debug.apk /tmp/aoqat-v164/aoqat-v1.64-quiet-mode-calendars.apk
+          gh release download v1.63-adhan-iqama-quiet --repo "$GH_REPO" --pattern '*.apk' --dir /tmp/aoqat-v164
+      - name: Verify Android package, unchanged portrait, offline Mushaf and new version
+        run: |
+          set -euo pipefail
+          apk=/tmp/aoqat-v164/aoqat-v1.64-quiet-mode-calendars.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | grep -F "versionCode='99' versionName='1.64'"
+          python3 - <<'PY'
+          import zipfile,hashlib,os
+          p='/tmp/aoqat-v164/aoqat-v1.64-quiet-mode-calendars.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              portrait=z.read('assets/splash-hawija-original.jpg')
+              assert hashlib.sha256(portrait).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
+              js=z.read('assets/www/js/apk-startup-bundle.js').decode('utf-8')
+              assert 'تفعيل وضع الصامت' in js and 'atAdhanSilent' in js and 'quietPanel' in js
+              assert 'await img.decode()' not in js
+              assert 'await document.fonts.ready' not in js
+              names=z.namelist()
+              assert len([n for n in names if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+              assert not any(n.startswith('assets/www/pages/') for n in names)
+              print('v1.64 APK ready:',os.stat(p).st_size,'bytes')
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v164/aoqat-v1.64.sha256
+      - name: Enable Android emulator KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify in-place upgrade from v1.63 to v1.64 on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r /tmp/aoqat-v164/aoqat-v1.63-adhan-iqama-quiet.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.63'
+            adb install -r /tmp/aoqat-v164/aoqat-v1.64-quiet-mode-calendars.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.64'
+            echo 'PASS: APK v1.64 upgrades in-place without uninstalling app or user data'
+      - name: Publish direct APK after integration and emulator validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v1.64-quiet-mode-calendars
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target cf69b0466f3360092ad4ce74a73387878170368f --title "أوقات الصلاة في الحويجة v1.64 — الصامت والتقاويم" --prerelease --notes 'APK-only: قائمة مستقلة للصامت داخل بيانات الأذان والإقامة؛ الصامت عند الأذان وبعد الإقامة مع مدة لكل صلاة وحفظ الإعدادات السابقة؛ صلاحيات أندرويد؛ تقليص قائمة أوقات الإقامة؛ إصلاح تعليق صور التقاويم عند تحميل خطوط المصحف أو انتظار فك ترميز PNG. لا تعديل لنسخة الويب ولا لصورة البداية والمصحف والمواقيت. تم بناء النسخة والتحقق من ترقيتها على أندرويد 16.'
+          fi
+          gh release upload "$tag" /tmp/aoqat-v164/aoqat-v1.64-quiet-mode-calendars.apk /tmp/aoqat-v164/aoqat-v1.64.sha256 --clobber
+          gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.64-quiet-mode-calendars.apk'
