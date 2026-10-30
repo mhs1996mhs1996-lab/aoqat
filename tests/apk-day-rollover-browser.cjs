@@ -4,6 +4,9 @@ const {spawn,execFileSync}=require('node:child_process');
 (async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'aoqat-day-'));
  for(const name of ['index.html','js','css','data'])fs.cpSync(name,path.join(dir,name),{recursive:true});
+ // The calendar PNG renderer needs the real bundled Amiri font even offline.
+ fs.mkdirSync(path.join(dir,'assets/fonts'),{recursive:true});
+ fs.copyFileSync('assets/fonts/amiri-quran.ttf',path.join(dir,'assets/fonts/amiri-quran.ttf'));
  execFileSync('python3',['android-native/prepare-web-assets.py',dir]);
  fs.copyFileSync('android-native/apk-overrides/android-ui-fixes.js',path.join(dir,'js/android-ui-fixes.js'));
  fs.appendFileSync(path.join(dir,'index.html'),'<script src="js/android-ui-fixes.js"></script>');
