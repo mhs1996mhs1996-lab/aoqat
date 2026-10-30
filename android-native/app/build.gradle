@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 92 // Adhan reliability and updated APK-only settings; invalidate old cached web snapshots
-        versionName '1.57'
+        versionCode 94 // Fix first-run offline QCF reader using native Android asset bridge
+        versionName '1.59'
     }
 
     compileOptions {
@@ -58,12 +58,16 @@ tasks.register('syncWebAssets', Sync) {
         include 'data/**'
         include 'assets/**'
         exclude 'assets/mushaf-phone-*', 'assets/mushaf-phone-*/**'
-        include 'pages/**'
+        // No legacy SVG Quran folio assets: QCF V2 is the only packaged edition.
+        exclude 'pages/**', 'assets/mushaf-phone-hafs/**', 'assets/mushaf-hafs-*/**', 'assets/mushaf-tajwid*/**'
         include 'manifest.webmanifest'
     }
     from(webSourceRoot) {
         include 'assets/mushaf-phone-hafs-ready.json', 'assets/mushaf-phone-hafs.json.gz'
-        include 'assets/mushaf-phone-hafs/**'
+        // Only the page index/verse metadata is needed by the QCF reader.
+    }
+    from(webSourceRoot) {
+        include 'experiments/qcf604-web-verse-layouts.json.gz'
     }
     from(apkOverrideRoot) {
         include 'android-ui-fixes.js', 'android-back-navigation.js', 'native-reminders.js'
@@ -74,6 +78,7 @@ tasks.register('syncWebAssets', Sync) {
     doLast {
         // Integrate tested web services without modifying the hosted web build.
         exec { commandLine 'python3', file("$rootProject.projectDir/prepare-web-assets.py"), webAssetDir }
+        exec { commandLine 'python3', file("$rootProject.projectDir/download-qcf-fonts.py"), webAssetDir }
 
         def indexFile = file("$webAssetDir/index.html")
         if (indexFile.exists()) {

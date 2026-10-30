@@ -1,0 +1,39 @@
+name: Publish fixed offline QCF APK v1.59
+on:
+  pull_request:
+    paths: ['.github/workflows/publish-qcf-v159-fix.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Download latest fully tested offline APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN=41022498460
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.conclusion')" = success
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN/jobs" --jq '.jobs[0].conclusion')" = success
+          mkdir -p release
+          gh run download "$RUN" --repo "$GH_REPO" --name aoqat-v1.58-qcf-only-apk --dir release
+          test -s release/app-debug.apk
+          mv release/app-debug.apk release/aoqat-v1.59-qcf-reader-fixed.apk
+          sha256sum release/aoqat-v1.59-qcf-reader-fixed.apk > release/aoqat-v1.59.sha256
+          unzip -p release/aoqat-v1.59-qcf-reader-fixed.apk assets/www/js/quran-reader.js | grep -F "state.renderEngine='qcf'"
+      - name: Publish direct installation file
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG=v1.59-qcf-reader-fixed
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target ccc3356291ba05cc5b38858abf49b4b4ffec8a26 --title "أوقات الصلاة في الحويجة 1.59 — إصلاح فتح المصحف أوفلاين" --prerelease --notes 'إصلاح تعذّر فتح ملفات المصحف داخل APK، مصحف QCF V2 واحد (604 خطاً) دون SVG، وإصلاحات الصامت والتقاويم. اجتازت النسخة اختبار فتح الصفحة فعلياً دون إنترنت. صورة شاشة البداية المعتمدة لم تدمج بعد.'
+          fi
+          gh release upload "$TAG" release/aoqat-v1.59-qcf-reader-fixed.apk release/aoqat-v1.59.sha256 --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.59-qcf-reader-fixed.apk'

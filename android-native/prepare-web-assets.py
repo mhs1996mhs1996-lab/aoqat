@@ -214,9 +214,61 @@ transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configu
 transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', ''), ('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
 transform('monthly-calendars.js', [
  ('if(window.AndroidNative?.configureAdhan)return;', ''),
+ ("function rawRows(){return typeof availablePrayerRows==='function'?availablePrayerRows(false):window.AoqatPrayerBackupRows||[];}", "function rawRows(){let rows=typeof availablePrayerRows==='function'?availablePrayerRows(false):[];if(Array.isArray(rows)&&rows.length>=365)return rows;try{const nativeRows=JSON.parse(window.AndroidNative?.readPrayerRows?.()||'[]');if(Array.isArray(nativeRows)&&nativeRows.length>=365)return nativeRows;}catch(_){}return Array.isArray(window.AoqatPrayerBackupRows)?window.AoqatPrayerBackupRows:rows||[];}"),
  ('await navigator.share({files:[file],title:img.alt});', "if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});"),
  ('const can=!!navigator.share', 'const can=!!window.AndroidNative?.sharePrayerImage||!!navigator.share'),
  ("download=button('حفظ الصورة على الهاتف',()=>{if(!file||!url)return;", "download=button('حفظ الصورة على الهاتف',async()=>{if(!file||!url)return;if(window.AndroidNative?.savePrayerImage){download.disabled=true;try{await window.aoqatNativeImageAction('savePrayerImage',file);status.textContent='تم حفظ صورة التقويم على الجهاز.';}catch(_){status.textContent='تعذر حفظ الصورة. أعد المحاولة.';}finally{download.disabled=false;}return;}")])
+
+# APK-only: make the approved QCF V2 reader the sole Quran engine.
+# Preserve the user's chosen page, appearance and bookmarks without an SVG fallback.
+qcf=target/'js/quran-reader.js'
+source=qcf.read_text()
+source=source.replace('const webQcfTrial=!window.AndroidNative?.configureAdhan;', 'const webQcfTrial=true;')
+source=source.replace("state.renderEngine=webQcfTrial&&state.renderEngine!=='svg'?'qcf':'svg';", "state.renderEngine='qcf';")
+source=source.replace("""'url("https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p'+page+'.woff2")'""", """'url("assets/qcf-v2-page-fonts/p'+page+'.woff2")'""")
+# Remove the redundant edition dropdown, keep paper/theme and every other reading tool.
+source=source.replace("""${webQcfTrial?'<label>طريقة عرض المصحف<select id="aqRenderingMode"><option value="qcf">خط QCF V2 — تجربة السلاسة</option><option value="svg">عرض SVG الأصلي</option></select></label>':''}""", "")
+source=source.replace("""if(webQcfTrial){$('aqRenderingMode').value=state.renderEngine;""", """if(webQcfTrial&&$('aqRenderingMode')){$('aqRenderingMode').value=state.renderEngine;""")
+source=source.replace("state.renderEngine='svg';save();galleryClearReady();preparedPages.clear();", "galleryClearReady();preparedPages.clear();")
+# The APK keeps its lightweight index, while full page glyphs/fonts are already local.
+start=source.find("if(phone){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';")
+if start>=0:
+    end=source.find('if(webQcfTrial&&',start)
+    if end<0: raise RuntimeError('Could not locate SVG offline download control')
+    source=source[:start]+source[end:]
+if "state.renderEngine='qcf';" not in source: raise RuntimeError('QCF default not applied')
+if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('External Quran fonts remain')
+qcf.write_text(source)
+
+# Never reach out to the web for Quran page indexes in the installed APK.
+source=source.replace('const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;', "const mushafUrl = url => url.endsWith('.gz') ? url+'.bin' : url;")
+source=source.replace("renderPage(false);notice('تعذّر تحميل خط QCF V2؛ تم الرجوع إلى عرض المصحف الأصلي.');", "root.dataset.ready='error';$('adVerses').innerHTML='<p class=\"aq-loading\">تعذّر تحميل صفحة المصحف المحفوظة؛ أعد فتح المصحف.</p>';notice('تعذّر تحميل خط المصحف المحلي.');")
+# For APK, read both compressed Quran indexes with the native AssetManager.
+# Android WebView versions differ in whether fetch(file://...) and
+# DecompressionStream('gzip') are supported for file-backed resources.
+source=source.replace(
+    "async function compressed(url){const r=await fetch(mushafUrl(url));",
+    "async function compressed(url){if(url==='assets/mushaf-phone-hafs.json.gz')return JSON.parse(window.AndroidNative.readQuranAsset('mushaf-phone-hafs.json.gz'));if(url==='experiments/qcf604-web-verse-layouts.json.gz')return JSON.parse(window.AndroidNative.readQuranAsset('qcf604-web-verse-layouts.json.gz'));const r=await fetch(mushafUrl(url));")
+source=source.replace(
+    "const ready=await fetch(mushafUrl('assets/mushaf-phone-hafs-ready.json'));if(!ready.ok)throw Error('Phone Mushaf unavailable');",
+    "")
+if "async function compressed(url){if(url==='assets/mushaf-phone-hafs.json.gz')" not in source:
+    raise RuntimeError('Native Quran JSON decoder was not installed at exact call site')
+if "const ready=await fetch(mushafUrl('assets/mushaf-phone-hafs-ready.json'))" in source:
+    raise RuntimeError('Unnecessary WebView Quran ready file fetch remains')
+# Confirm the one installed edition cannot silently switch to legacy SVG mode.
+if "state.renderEngine='svg'" in source: raise RuntimeError('Legacy Quran engine fallback still present')
+if 'aqRenderingMode"><option' in source: raise RuntimeError('Old Quran edition switch is still visible')
+if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('QCF font URLs not local')
+qcf.write_text(source)
+
+# Include the QCF verse/page manifest explicitly; Gradle copy filters may omit
+# the experiments directory in its base web-asset snapshot.
+qcf_layout=root/'experiments/qcf604-web-verse-layouts.json.gz'
+if not qcf_layout.is_file(): raise RuntimeError('Missing reviewed QCF layout manifest')
+qcf_layout_dest=target/'experiments/qcf604-web-verse-layouts.json.gz.bin'
+qcf_layout_dest.parent.mkdir(parents=True, exist_ok=True)
+shutil.copy2(qcf_layout,qcf_layout_dest)
 
 html=(target/'index.html').read_text()
 static=re.findall(r'<script\b[^>]*src="([^"]+)"[^>]*></script>',html)
@@ -250,7 +302,7 @@ manifest={}
 for obsolete in (target/'assets').glob('mushaf-hafs-*'):
     if obsolete.is_dir(): shutil.rmtree(obsolete)
     else: obsolete.unlink()
-for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-phone-hafs.json.gz'] + sorted((root/'assets/mushaf-phone-hafs').glob('*.json.gz')):
+for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-phone-hafs.json.gz']:
     relative=source.relative_to(root);destination=target/(str(relative)+".bin" if source.name.endswith(".gz") else str(relative))
     # AAPT treats .gz names specially; retain compressed bytes under a neutral suffix.
     if source.name.endswith(".gz") and (target/relative).exists(): (target/relative).unlink()
@@ -259,12 +311,10 @@ for source in [root/'assets/mushaf-phone-hafs-ready.json',root/'assets/mushaf-ph
         try: os.link(source,destination)
         except OSError: shutil.copyfile(source,destination)
     manifest[str(relative)]=hashlib.sha256(source.read_bytes()).hexdigest()
-for prefix,extension in [('mushaf-phone-hafs','json.gz')]:
-    for page in range(1,605):
-        name=f'assets/{prefix}/{page:03d}.{extension}'
-        manifest[name]=hashlib.sha256((root/name).read_bytes()).hexdigest()
 (target/'assets').mkdir(parents=True,exist_ok=True)
 (target/'assets/mushaf-apk-sha256.json').write_text(json.dumps(manifest,separators=(',',':')))
+
+
 
 
 

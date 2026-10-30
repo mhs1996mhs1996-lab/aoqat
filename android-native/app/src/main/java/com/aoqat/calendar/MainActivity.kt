@@ -718,8 +718,22 @@ class MainActivity : Activity() {
             } catch(e:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ إعدادات الأذان",Toast.LENGTH_LONG).show()}
         } }
         @JavascriptInterface fun readQuranAsset(name:String):String {
-            if (name !in listOf("quran.json", "quran-pages.json")) return "null"
-            return assets.open("www/assets/$name").bufferedReader().use { it.readText() }
+            // Use the native APK asset manager for local Quran JSON and gzip indexes.
+            // WebView fetch(file://...) differs across Android versions and must not
+            // be a dependency for opening the offline Mushaf.
+            val path=when(name) {
+                "quran.json","quran-pages.json" -> "www/assets/$name"
+                "mushaf-phone-hafs.json.gz" -> "www/assets/mushaf-phone-hafs.json.gz.bin"
+                "qcf604-web-verse-layouts.json.gz" -> "www/experiments/qcf604-web-verse-layouts.json.gz.bin"
+                else -> return "null"
+            }
+            return try {
+                val bytes=assets.open(path).use { it.readBytes() }
+                String(MushafAssetStore.decode(bytes),Charsets.UTF_8)
+            } catch(e:Exception) {
+                android.util.Log.e("QuranNativeAssets","Failed native Quran read: $name",e)
+                "null"
+            }
         }
         @JavascriptInterface fun readPrayerRows():String = OfflinePrayerSync.rows(this@MainActivity).toString()
         @JavascriptInterface fun readPrayerTimeChoice():String = PrayerTimeChoice.settings(this@MainActivity).toString()
