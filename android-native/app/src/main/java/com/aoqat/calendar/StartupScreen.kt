@@ -7,7 +7,6 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.TextView
 
 /** Local, lightweight launch surface; no network, fonts or Quran assets required. */
@@ -24,7 +23,7 @@ class StartupScreen(context: Context) : FrameLayout(context) {
             setBackgroundColor(Color.rgb(251, 245, 229))
             addView(ImageView(context).apply {
                 setImageBitmap(approved)
-                scaleType = ImageView.ScaleType.FIT_XY
+                scaleType = ImageView.ScaleType.FIT_CENTER
                 contentDescription = "أوقات الصلاة في الحويجة"
             }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         } else {
