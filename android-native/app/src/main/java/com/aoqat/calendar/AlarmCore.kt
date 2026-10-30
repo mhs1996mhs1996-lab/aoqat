@@ -488,7 +488,7 @@ class AlarmActivity : Activity() {
         val snooze = Button(this).apply {
             text = "غفوة ${AlarmScheduler.snoozeMinutes(this@AlarmActivity)} دقائق"
             textSize = 18f
-            setOnClickListener { snooze() }
+            setOnClickListener { this@AlarmActivity.snooze() }
         }
         val stop = Button(this).apply {
             text = "إيقاف التنبيه"
