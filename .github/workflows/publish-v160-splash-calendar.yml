@@ -1,0 +1,51 @@
+name: Publish v1.60 Hawija splash and calendar APK
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/publish-v160-splash-calendar.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - name: Download tested native splash, calendars and QCF APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN=41025856592
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.conclusion')" = success
+          mkdir -p release
+          gh run download "$RUN" --repo "$GH_REPO" --name aoqat-v1.58-qcf-only-apk --dir release
+          test -s release/app-debug.apk
+          mv release/app-debug.apk release/aoqat-v1.60-hawija-splash-calendar.apk
+          python3 - <<'PY'
+          import zipfile,struct
+          p='release/aoqat-v1.60-hawija-splash-calendar.apk'
+          with zipfile.ZipFile(p) as z:
+            names=set(z.namelist())
+            picture=z.read('assets/splash-hawija-approved.png')
+            assert picture[:8]==b'\x89PNG\r\n\x1a\n'
+            assert struct.unpack('>II',picture[16:24])==(711,1536)
+            fonts=[n for n in names if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+            assert len(fonts)==604
+            assert not any(n.startswith('assets/www/pages/') for n in names)
+            print('Verified native portrait embedded:',len(picture),'bytes; 604 QCF fonts, 0 legacy SVG page assets')
+          PY
+          sha256sum release/aoqat-v1.60-hawija-splash-calendar.apk > release/aoqat-v1.60.sha256
+      - name: Publish direct v1.60 installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG=v1.60-hawija-splash-calendar
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target fd542d30541a4a534f794fb0b2e6d63c9e8e4a0d --title "أوقات الصلاة في الحويجة 1.60 — شاشة بداية والتقاويم" --prerelease --notes 'نسخة اختبار APK مباشرة: صورة بداية مضمنة فعلياً بقياس 711×1536 وبالشعار المعتمد وخلفية معاد تكوينها، إصلاح الصورة المكسورة أثناء تجهيز تقويم الشهر، مصحف QCF V2 واحد 604 صفحة دون ملفات SVG قديمة، إصلاحات الصامت السابقة. اجتازت بناء Android واختبار فتح القرآن بدون إنترنت. الخلفية معاد تكوينها وليست نسخة بكسلية من صورة المحادثة الأصلية.'
+          fi
+          gh release upload "$TAG" release/aoqat-v1.60-hawija-splash-calendar.apk release/aoqat-v1.60.sha256 --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.60-hawija-splash-calendar.apk'
