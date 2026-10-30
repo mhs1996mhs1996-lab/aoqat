@@ -44,7 +44,7 @@ jobs:
                   assert any(x.startswith('META-INF/') for x in z.namelist())
                   if tag=='v161':
                       jpg=z.read('assets/splash-hawija-original.jpg')
-                      assert jpg[:2]==b'\\xff\\xd8' and jpg[-2:]==b'\\xff\\xd9'
+                      assert jpg[:2]==bytes.fromhex('ffd8') and jpg[-2:]==bytes.fromhex('ffd9')
                       print('Original splash JPG embedded:',len(jpg),'bytes')
           PY
       - name: Check APK signature + Android package manager metadata of BOTH released files
