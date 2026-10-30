@@ -41,6 +41,18 @@ const {spawn,execFileSync}=require('node:child_process');
  await year.click();
  await page.waitForSelector('#monthlyCalendars.mc-year-view');
  assert.ok(await page.locator('#monthlyCalendars').innerText().then(t=>t.includes('كانون')||t.includes('شباط')));
+ // Prevent the exact APK screenshot regression: no broken image/alt preview
+ // may appear while the monthly calendar canvas is still drawing.
+ await page.locator('#monthlyCalendars [data-calendar-month="2"]').click();
+ await page.waitForSelector('#monthlyCalendars .mc-preview',{state:'attached'});
+ assert.equal(await page.locator('#monthlyCalendars .mc-preview').evaluate(img=>!img.getAttribute('src')?getComputedStyle(img).display==='none':true),true);
+ await page.waitForFunction(()=>{
+   const img=document.querySelector('#monthlyCalendars .mc-preview');
+   return img?.complete&&img.naturalWidth>0&&getComputedStyle(img).display!=='none';
+ },null,{timeout:45000});
+ assert.equal(await page.getByRole('button',{name:'حفظ الصورة على الهاتف'}).isEnabled(),true);
+ assert.ok(await page.locator('#monthlyCalendars .mc-preview').evaluate(img=>img.naturalHeight>=1000));
+
  console.log('APK offline: initial next-day preview, midnight, next rollover, lazy picker values and saved notification appearance passed');
  }finally{if(browser)await browser.close();server.kill();fs.rmSync(dir,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exit(1)});
