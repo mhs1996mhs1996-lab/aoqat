@@ -12,10 +12,10 @@ import android.widget.TextView
 /** Local, lightweight launch surface; no network, fonts or Quran assets required. */
 class StartupScreen(context: Context) : FrameLayout(context) {
     init {
-        // The approved portrait already contains the complete application icon,
+        // The user's original, unmodified portrait already contains the application icon,
         // title, floral framing and Hawija skyline. Do not overlay another copy.
         val approved = try {
-            context.assets.open("splash-hawija-approved.png").use { input ->
+            context.assets.open("splash-hawija-original.jpg").use { input ->
                 android.graphics.BitmapFactory.decodeStream(input)
             }
         } catch (_: java.io.IOException) { null }
