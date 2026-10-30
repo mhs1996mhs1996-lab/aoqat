@@ -73,10 +73,10 @@ transform('adhan-settings.js', [
 # APK-only: keep the hosted web's adhan settings unchanged and add a
 # standalone phone quiet page for quiet-at-adhan and quiet-after-iqama.
 transform('adhan-core.js', [
- ('      afterIqamaSilent: {\\n        enabled: false,\\n        minutes: Object.fromEntries(ids.map((id) => [id, 0])),\\n      },',
-  '      afterIqamaSilent: {\\n        enabled: false,\\n        minutes: Object.fromEntries(ids.map((id) => [id, 0])),\\n      },\\n      atAdhanSilent: {enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))},'),
+ ('      afterIqamaSilent: {\n        enabled: false,\n        minutes: Object.fromEntries(ids.map((id) => [id, 0])),\n      },',
+  '      afterIqamaSilent: {\n        enabled: false,\n        minutes: Object.fromEntries(ids.map((id) => [id, 0])),\n      },\n      atAdhanSilent: {enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))},'),
  ('    d.friday = normalizeFriday(s.friday);',
-  '    d.atAdhanSilent.enabled=s.atAdhanSilent?.enabled===true;\\n    for(const id of ids){const n=Number(s.atAdhanSilent?.minutes?.[id]);if(Number.isFinite(n))d.atAdhanSilent.minutes[id]=Math.max(0,Math.min(120,Math.floor(n)));}\\n    d.friday = normalizeFriday(s.friday);')
+  '    d.atAdhanSilent.enabled=s.atAdhanSilent?.enabled===true;\n    for(const id of ids){const n=Number(s.atAdhanSilent?.minutes?.[id]);if(Number.isFinite(n))d.atAdhanSilent.minutes[id]=Math.max(0,Math.min(120,Math.floor(n)));}\n    d.friday = normalizeFriday(s.friday);')
 ])
 transform('web-menu-order.js', [
  ('[["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"]]',
