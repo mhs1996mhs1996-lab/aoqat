@@ -63,6 +63,13 @@ transform('adhan-settings.js',[
  ('    if (!native) {\n      servicePanel = document.createElement("section");','    {\n      servicePanel = document.createElement("section");'),
  ('على الويب نعاين فترة الصامت ونكتم صوت الأذان داخل الصفحة أثناءها. تحويل الهاتف نفسه إلى الصامت واستعادة وضعه يحتاج تطبيق Android بعد تحديثه.', 'يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.')])
 
+# Android-only: a clear permission action if the user's iqama quiet switch
+# is enabled but Android has not granted notification-policy access.
+transform('adhan-settings.js', [
+ ("يحتاج إذن التحكم بوضع الصامت في Android.</p></div>`;", "يحتاج إذن التحكم بوضع الصامت في Android.</p>${native&&s.enabled&&!window.AndroidNative?.hasQuietPolicyAccess?.()?'<button type=\"button\" id=\"adQuietPermission\">منح صلاحية تشغيل الصامت للهاتف</button>':''}</div>`;"),
+ ("    $(\"adSilentAfterEnabled\").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};", "    $(\"adSilentAfterEnabled\").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};\n    $(\"adQuietPermission\")?.addEventListener(\"click\",()=>window.AndroidNative?.requestQuietPolicyAccess?.());"),
+])
+
 # Replace the browser alarm entirely: Android owns audio, stopping, snooze and lock-screen UI.
 (target/'js/tomorrow-alarm.js').write_text((root/'android-native/apk-overrides/native-publish-alarm.js').read_text())
 # No browser push subscription or service-worker alarm can compete with the native alarm.
