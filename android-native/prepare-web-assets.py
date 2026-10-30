@@ -299,3 +299,11 @@ if "state.renderEngine='svg'" in source: raise RuntimeError('Legacy Quran engine
 if 'aqRenderingMode"><option' in source: raise RuntimeError('Old Quran edition switch is still visible')
 if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('QCF font URLs not local')
 qcf.write_text(source)
+
+# Include the QCF verse/page manifest explicitly; Gradle copy filters may omit
+# the experiments directory in its base web-asset snapshot.
+qcf_layout=root/'experiments/qcf604-web-verse-layouts.json.gz'
+if not qcf_layout.is_file(): raise RuntimeError('Missing reviewed QCF layout manifest')
+qcf_layout_dest=target/'experiments/qcf604-web-verse-layouts.json.gz'
+qcf_layout_dest.parent.mkdir(parents=True, exist_ok=True)
+shutil.copy2(qcf_layout,qcf_layout_dest)
