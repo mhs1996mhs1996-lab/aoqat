@@ -15,6 +15,10 @@ const assert=require('node:assert/strict');
   // Primary settings drawer from the user's screenshot, not its nested design settings.
   const entry=page.locator('#webDrawerMain [data-drawer="helpSupport"]');
   assert.equal(await entry.count(),1,'Exactly one help/support entry in the main drawer');
+  await page.waitForFunction(()=>document.body.classList.contains('design-menu-open'));
+  const diagnostics=await entry.evaluate(e=>({outer:e.outerHTML,rect:e.getBoundingClientRect().toJSON(),visibility:getComputedStyle(e).visibility,display:getComputedStyle(e).display,body:document.body.className,drawerDisplay:getComputedStyle(document.getElementById('webDrawerMain')).display,drawerRect:document.getElementById('webDrawerMain').getBoundingClientRect().toJSON(),scroll:document.getElementById('webDrawerMain').scrollTop}));
+  console.log('MAIN_HELP_DIAGNOSTICS',JSON.stringify(diagnostics));
+  await entry.scrollIntoViewIfNeeded({timeout:7000});
   assert.equal(await entry.isVisible(),true,'The help/support entry must be visible in the main drawer');
   assert.ok((await entry.textContent()).includes('حول التطبيق والدعم'));
   await entry.click();
