@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 99 // Native silent modes menu and fast calendar display
-        versionName '1.64'
+        versionCode 100 // Android alarm volume keys/power screen-off snooze for prayer and daily publish
+        versionName '1.65'
     }
 
     compileOptions {
@@ -33,7 +33,16 @@ android {
         jvmTarget = '17'
     }
 
-    testOptions { unitTests.includeAndroidResources = true }
+    testOptions {
+        unitTests.includeAndroidResources = true
+        unitTests.all {
+            testLogging {
+                exceptionFormat = 'full'
+                showStackTraces = true
+                showExceptions = true
+            }
+        }
+    }
 
     buildTypes {
         debug {

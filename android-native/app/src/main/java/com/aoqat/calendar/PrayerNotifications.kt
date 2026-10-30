@@ -29,7 +29,7 @@ object PrayerNotifications {
         val clean = JSONObject().put("enabled", incoming.optBoolean("enabled")).put("volume", incoming.optInt("volume", 65).coerceIn(0, 100)).put("prayers", prayers)
         edit.putString("settings", clean.toString()).commit()
         // An enabled notification must not stop or replace an independently enabled adhan.
-        if (selected(c, PrayerAlarm.prefs(c).getString("activeId", "") ?: "")) c.stopService(Intent(c, PrayerAlarmService::class.java))
+        // A phone notification may sound while the separately enabled alarm rings. Never cancel it.
         if (!clean.optBoolean("enabled")) c.stopService(Intent(c, PrayerNotificationSoundService::class.java))
         AdhanSchedule.schedule(c); PrayerAlarm.schedule(c)
     }
