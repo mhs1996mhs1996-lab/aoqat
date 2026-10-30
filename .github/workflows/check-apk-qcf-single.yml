@@ -4,6 +4,7 @@ on:
     paths:
       - 'android-native/**'
       - 'js/**'
+      - 'tests/**'
       - '.github/workflows/check-apk-qcf-single.yml'
 permissions:
   contents: read
@@ -20,6 +21,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Verify native APK calendar navigation and offline annual rows
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/apk-day-rollover-browser.cjs
       - name: Android signing key
         run: |
           mkdir -p android-native/signing
