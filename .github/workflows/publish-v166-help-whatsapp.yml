@@ -22,6 +22,12 @@ jobs:
           java-version: '17'
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore stable Android signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
       - name: Verify Arabic guide and WhatsApp handoff in Chrome
         run: |
           set -euo pipefail
@@ -30,9 +36,7 @@ jobs:
       - name: Build APK and run Android unit tests
         run: |
           set -euo pipefail
-          cd android-native
-          chmod +x gradlew
-          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+          gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
       - name: Verify signature, version, contents and offline data
         run: |
           set -euo pipefail
