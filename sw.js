@@ -1,6 +1,7 @@
-const CACHE_NAME = "aoqat-pwa-v179-qcf-single-ayah-rosette-20261029";
+const CACHE_NAME = "aoqat-pwa-v180-help-support-20261030";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
+  "/js/help-support.js?v=1",
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
   "/js/monthly-calendars.js?v=annual-gallery-explicit-card-v16-20261026",
