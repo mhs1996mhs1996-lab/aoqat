@@ -1,0 +1,79 @@
+name: Publish APK v1.65 hardware alarm snooze
+on:
+  pull_request:
+    paths: ['.github/workflows/publish-v165-hardware-snooze.yml']
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Download exact APK built and tested from native v1.65 commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN=41117488394
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.conclusion')" = success
+          test "$(gh api "repos/$GH_REPO/actions/runs/$RUN" --jq '.head_sha')" = 07bf2090d0bc39bc6ca6ce7d33c9e938272d80e9
+          mkdir -p /tmp/aoqat-v165
+          gh run download "$RUN" --repo "$GH_REPO" --name aoqat-v1.58-qcf-only-apk --dir /tmp/aoqat-v165
+          test -s /tmp/aoqat-v165/app-debug.apk
+          mv /tmp/aoqat-v165/app-debug.apk /tmp/aoqat-v165/aoqat-v1.65-alarm-hardware-snooze.apk
+          gh release download v1.64-quiet-mode-calendars --repo "$GH_REPO" --pattern '*.apk' --dir /tmp/aoqat-v165
+      - name: Verify signed package, original splash, and offline Quran
+        run: |
+          set -euo pipefail
+          apk=/tmp/aoqat-v165/aoqat-v1.65-alarm-hardware-snooze.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | grep -F "versionCode='100' versionName='1.65'"
+          python3 - <<'PY'
+          import zipfile,hashlib,os
+          p='/tmp/aoqat-v165/aoqat-v1.65-alarm-hardware-snooze.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              original=z.read('assets/splash-hawija-original.jpg')
+              assert hashlib.sha256(original).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
+              names=z.namelist()
+              assert len([n for n in names if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+              assert not any(n.startswith('assets/www/pages/') for n in names)
+              print('Verified offline QCF Quran and approved original splash; APK bytes',os.stat(p).st_size)
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v165/aoqat-v1.65.sha256
+      - name: Enable hardware acceleration for Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify Android 16 update installs over existing v1.64
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r /tmp/aoqat-v165/aoqat-v1.64-quiet-mode-calendars.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.64'
+            adb install -r /tmp/aoqat-v165/aoqat-v1.65-alarm-hardware-snooze.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.65'
+            echo 'PASS: v1.65 upgrades v1.64 without uninstalling or clearing user data'
+      - name: Publish installable APK only after successful verification
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v1.65-alarm-hardware-snooze
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target 07bf2090d0bc39bc6ca6ce7d33c9e938272d80e9 --title "أوقات الصلاة في الحويجة v1.65 — غفوة المنبه بأزرار الهاتف" --prerelease --notes 'Android APK only: منبه مواقيت الصلاة وتنبيه نشر اليوم التالي يوقفان الصوت عند ضغط رفع/خفض الصوت من شاشة المنبه مع غفوة المستخدم. تدعم خدمة المنبه حدث إطفاء الشاشة عند الضغط على زر التشغيل (إطفاء الشاشة التلقائي قد ينفذ الغفوة أيضاً). تم إصلاح تعارض إشعارات الصلاة مع المنبه، وضمان صوت احتياطي لتذكير النشر، وحفظ الإعدادات السابقة. لا تغيير للصورة أو المصحف أو التقاويم أو قاعدة المواقيت أو نسخة الويب. تنبيه: زر الباور نفسه محجوب عن التطبيقات من أندرويد؛ إطفاء الشاشة هو البديل المتاح.'
+          fi
+          gh release upload "$tag" /tmp/aoqat-v165/aoqat-v1.65-alarm-hardware-snooze.apk /tmp/aoqat-v165/aoqat-v1.65.sha256 --clobber
+          gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.65-alarm-hardware-snooze.apk'
