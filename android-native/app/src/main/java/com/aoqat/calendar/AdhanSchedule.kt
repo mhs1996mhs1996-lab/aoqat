@@ -113,13 +113,19 @@ object AdhanSchedule {
             if (!s.optBoolean("enabled", false)) continue
             val mode = s.optJSONObject("modes")?.optString(p.id, "sound") ?: "sound"
             val due = now-p.at in 0L until 120000L && p.at >= prefs(c).getLong("enabledAt",0) && !delivered(c,p)
-            if (mode != "silent" && (p.at > now || due)) queue( 60000+i, "PLAY", maxOf(p.at,now+100), p)
+            if (mode != "silent" && (p.at > now || due)) {
+                queue(60000+i,"PLAY",maxOf(p.at,now+100),p)
+                // Independent second chance if an OEM defers/drops the primary
+                // receiver. The same delivery claim prevents duplicate adhan.
+                if(!delivered(c,p) && p.at+30000L>now)
+                    queue(60600+i,"VERIFY_DUE",maxOf(p.at+30000L,now+500L),p)
+            }
             val before = s.optInt("reminder", 0).coerceIn(0,60)*60000L
             if (before > 0 && p.at-before > now) queue( 60100+i, "REMINDER", p.at-before, p)
             val suhoor = s.optInt("suhoor",0).coerceIn(0,120)*60000L
             if (p.id == "fajr" && suhoor > 0 && p.at-suhoor > now) queue( 60200+i, "SUHOOR", p.at-suhoor, p)
         }
-        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
+        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
         cancel(c, 60300, "NEXT")
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
@@ -129,7 +135,7 @@ object AdhanSchedule {
 class AdhanReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
         when(intent.action) {
-            "PLAY" -> {
+            "PLAY", "VERIFY_DUE" -> {
                 val id=intent.getStringExtra("prayerId") ?: return
                 val at=intent.getLongExtra("prayerAt",0)
                 if (AdhanSchedule.claim(c,id,at)) {
