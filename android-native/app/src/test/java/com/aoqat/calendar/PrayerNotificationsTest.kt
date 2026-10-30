@@ -33,19 +33,19 @@ class PrayerNotificationsTest {
         }
         assertNull(shadowOf(c as Application).nextStartedActivity)
     }
-    @Test fun notificationReplacesBothMethodsWithoutDestroyingTheirSettings() {
+    @Test fun notificationKeepsEnabledAdhanAudibleWithoutDestroyingEitherSetting() {
         val ad = """{"enabled":true,"sound":"4","volume":52,"modes":{"asr":"sound"}}"""
         val pa = """{"enabled":true,"items":{"asr":{"enabled":true,"duration":7}}}"""
         c.getSharedPreferences("adhan_settings", 0).edit().putString("settings", ad).commit()
         PrayerAlarm.prefs(c).edit().putString("settings", pa).commit()
         enable()
         val at = System.currentTimeMillis()
-        assertFalse(AdhanSchedule.claim(c, "asr", at))
+        assertTrue(AdhanSchedule.claim(c, "asr", at))
         assertFalse(PrayerAlarm.claim(c, "asr", at, 0))
         assertEquals(ad, AdhanSchedule.settings(c).toString())
         assertEquals(pa, PrayerAlarm.settings(c).toString())
         val alarms = shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
-        assertTrue(alarms.none { shadowOf(it.operation).savedIntent.let { i -> i.action == "PLAY" && i.getStringExtra("prayerId") == "asr" } })
+        assertTrue(alarms.any { shadowOf(it.operation).savedIntent.let { i -> i.action == "PLAY" && i.getStringExtra("prayerId") == "asr" } })
         PrayerNotifications.configure(c, "{\"enabled\":false}")
         assertFalse(PrayerNotifications.selected(c, "asr"))
         assertTrue(shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms.none { shadowOf(it.operation).savedIntent.action == "DUE" })
