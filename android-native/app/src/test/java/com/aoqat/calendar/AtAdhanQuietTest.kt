@@ -39,10 +39,11 @@ class AtAdhanQuietTest {
             .putString("settings",config().toString()).commit()
         AdhanSchedule.schedule(c)
         val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
-        val quiet=alarms.firstOrNull { shadowOf(it.operation).savedIntent.let { i ->
-            i.action=="ADHAN_QUIET" && i.getStringExtra("prayerId")=="asr" } }
-        assertNotNull("Quiet at adhan must have an exact native wakeup alarm",quiet)
         val expected=PrayerTimes.events(c,date).first{it.id=="asr" && java.time.Instant.ofEpochMilli(it.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate()==date}.at
+        val quiet=alarms.firstOrNull { shadowOf(it.operation).savedIntent.let { i ->
+            i.action=="ADHAN_QUIET" && i.getStringExtra("prayerId")=="asr" &&
+                i.getLongExtra("prayerAt",0L)==expected } }
+        assertNotNull("Tomorrow's exact Asr quiet alarm must exist even when today's is also scheduled",quiet)
         assertEquals(expected,quiet!!.triggerAtTime)
         assertTrue("Sound is still opt-in",alarms.none { shadowOf(it.operation).savedIntent.action=="PLAY" })
     }

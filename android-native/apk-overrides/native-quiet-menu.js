@@ -32,6 +32,35 @@
   function permission(){
     try{return window.AndroidNative.hasQuietPolicyAccess?.()===true;}catch(_){return false;}
   }
+  function statusPanel(){
+    const root=document.createElement('div');root.className='aq-quiet-diagnostics';
+    let data={};
+    try{data=JSON.parse(window.AndroidNative.readQuietModeStatus?.()||'{}');}
+    catch(_){root.textContent='تعذر قراءة حالة وضع الصامت من الهاتف.';return root;}
+    const line=text=>{const p=document.createElement('p');p.textContent=text;root.appendChild(p);};
+    const showTime=ms=>ms>0?new Date(ms).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
+    const name={0:'الوضع الصامت',1:'الاهتزاز',2:'الرنين الطبيعي'}[data.ringer]||'غير معروف';
+    line('حالة صوت الهاتف الآن: '+name+(data.dnd===3?' — عدم الإزعاج الكامل مفعل':''));
+    line('أذونات التحكم بالصامت: '+(data.permission?'متاحة':'غير متاحة')+' | المنبهات الدقيقة: '+(data.exactAlarm?'متاحة':'غير متاحة'));
+    const status={
+      never:'لم تُسجل محاولة صامت بعد',applied:'تم تفعيل الصامت بواسطة التطبيق',
+      active:'الصامت الذي فعّله التطبيق ما زال مستمراً',
+      already_silent:'كان الهاتف صامتاً أصلاً؛ لم يغيّر التطبيق الوضع',
+      permission_missing:'لم يُفعّل الصامت: صلاحية أندرويد غير متاحة',
+      exact_alarm_missing:'لم يُفعّل الصامت: منبّه أندرويد الدقيق غير مسموح، حتى لا يبقى الهاتف صامتاً بلا نهاية',
+      failed:'فشلت محاولة الصامت؛ رفض الهاتف التغيير',
+      restored:'انتهت المدة وحاول التطبيق استعادة الوضع السابق',
+      restore_failed:'تعذرت استعادة وضع الصوت السابق'
+    };
+    line('آخر نتيجة: '+(status[data.lastResult]||'لا توجد بيانات')+(data.lastAt?' — '+showTime(data.lastAt):''));
+    if(data.scheduledStart>0&&data.deadline>0){
+      line('وقت بدء الصامت المقرر: '+showTime(data.scheduledStart)+' | نهاية المدة: '+showTime(data.deadline));
+      if(data.lastResult==='applied'&&data.lastAt>data.scheduledStart+30000)
+        line('تنبيه: تنفيذ الصامت تأخر عن موعده '+Math.round((data.lastAt-data.scheduledStart)/60000)+' دقيقة؛ راجع قيود بطارية الهاتف وصلاحية المنبهات.');
+    }
+    if(data.appOwnsQuiet&&data.activeUntil>Date.now())line('الصامت فعّال من التطبيق حتى '+showTime(data.activeUntil));
+    return root;
+  }
   function render(refresh=true){
     if(!panel)return;
     if(refresh || !state)state=read();
@@ -41,6 +70,7 @@
       section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
         'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
       (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
+    panel.appendChild(statusPanel());
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
       store();render(false);
@@ -76,7 +106,7 @@
       #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:40px!important;margin:0!important;color:#234037!important}
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
-      #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}
+      #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}
       /* Compact iqama list on phones without hiding any rows or user choices. */
       #webSubBody #iqamaPanel{box-sizing:border-box!important;width:100%!important;padding:10px 12px!important;margin:0!important;border-radius:12px!important;overflow:visible!important}
       #webSubBody #iqamaPanel .iqama-help,#webSubBody #iqamaPanel .iqama-friday-help{margin:0 0 7px!important;line-height:1.5!important;font-size:13px!important}

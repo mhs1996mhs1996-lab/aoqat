@@ -753,6 +753,7 @@ class MainActivity : Activity() {
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
         @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
+        @JavascriptInterface fun readQuietModeStatus():String = AdhanPlaybackService.quietStatus(this@MainActivity).toString()
         @JavascriptInterface fun hasQuietPolicyAccess():Boolean =
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
         @JavascriptInterface fun requestQuietPolicyAccess(){runOnUiThread{

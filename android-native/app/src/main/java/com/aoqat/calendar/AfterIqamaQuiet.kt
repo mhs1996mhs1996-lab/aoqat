@@ -29,6 +29,6 @@ object AfterIqamaQuiet {
                 PrayerTimes.Prayer(prayerId,prayerAt,false))
             return
         }
-        AdhanPlaybackService.activateQuiet(c,times.second)
+        AdhanPlaybackService.activateQuiet(c,times.second,times.first)
     }
 }
