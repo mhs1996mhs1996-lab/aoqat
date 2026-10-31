@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 104 // Fix user-enabled DND being mistaken for already-silent ringer
-        versionName '1.69'
+        versionCode 105 // Native iqama countdown zero-trigger and verified ringer restoration
+        versionName '1.70'
     }
 
     compileOptions {
