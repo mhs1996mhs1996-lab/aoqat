@@ -90,4 +90,40 @@ class AdhanQuietModeTest {
         assertFalse(AdhanPlaybackService.quietStatus(context).getBoolean("appOwnsQuiet"))
     }
 
+    @Test fun manualDndDoesNotBlockAfterIqamaRingerQuietAndRestoresOriginalDnd() {
+        val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        val am=context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        // Recreate the user's precise combination: DND enabled manually, ringer
+        // still in normal mode. The app should ONLY mute the ringer for iqama.
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        am.ringerMode=AudioManager.RINGER_MODE_NORMAL
+        assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
+        val now=System.currentTimeMillis()
+        assertTrue(AdhanPlaybackService.activateQuiet(context,now+120000L,now))
+        assertEquals(AudioManager.RINGER_MODE_SILENT,am.ringerMode)
+        assertTrue(AdhanPlaybackService.quietStatus(context).getBoolean("appOwnsQuiet"))
+        assertEquals("applied",AdhanPlaybackService.quietStatus(context).getString("lastResult"))
+        assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
+        AdhanPlaybackService.restoreRinger(context)
+        assertEquals(AudioManager.RINGER_MODE_NORMAL,am.ringerMode)
+        assertEquals("Manually enabled DND remains enabled after restoring normal ringer",
+            NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
+        assertFalse(AdhanPlaybackService.quietStatus(context).getBoolean("appOwnsQuiet"))
+    }
+
+    @Test fun manualDndWithPreexistingSilentMustNotResetUserState() {
+        val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        val am=context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        am.ringerMode=AudioManager.RINGER_MODE_SILENT
+        assertTrue(AdhanPlaybackService.activateQuiet(context,System.currentTimeMillis()+60000L))
+        assertEquals("already_silent",AdhanPlaybackService.quietStatus(context).getString("lastResult"))
+        assertFalse(AdhanPlaybackService.quietStatus(context).getBoolean("appOwnsQuiet"))
+        AdhanPlaybackService.restoreRinger(context)
+        assertEquals(AudioManager.RINGER_MODE_SILENT,am.ringerMode)
+        assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
+    }
+
 }
