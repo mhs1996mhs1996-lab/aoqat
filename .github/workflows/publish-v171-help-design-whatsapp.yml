@@ -1,0 +1,136 @@
+name: Verify and publish APK v1.71 help guide design and WhatsApp
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/publish-v171-help-design-whatsapp.yml'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 55
+    steps:
+      - name: Checkout exact support feature commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore stable Android signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Verify Arabic guide and WhatsApp handoff in Chrome
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/help-support-browser.cjs
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          grep -q 'manualDndDoesNotBlockAfterIqamaRingerQuietAndRestoresOriginalDnd' android-native/app/src/test/java/com/aoqat/calendar/AdhanQuietModeTest.kt
+          grep -q 'nativeNotificationZeroStartsSilentWithManualDndAndExactRestoreDeadline' android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt
+          grep -q 'AfterIqamaQuiet.onCountdownZero' android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt
+          grep -q 'preserveUserDnd=true' android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt
+      - name: Build APK and run Android unit tests
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify signature, version, contents and offline data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-v171
+          cp android-native/app/build/outputs/apk/debug/app-debug.apk /tmp/aoqat-v171/aoqat-v1.71-help-design-whatsapp.apk
+          apk=/tmp/aoqat-v171/aoqat-v1.71-help-design-whatsapp.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --verbose --print-certs "$apk"
+          "$aapt" dump badging "$apk" | grep -F "versionCode='106' versionName='1.71'"
+          python3 - <<'PY'
+          import zipfile,hashlib,os
+          p='/tmp/aoqat-v171/aoqat-v1.71-help-design-whatsapp.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              n=z.namelist()
+              prefix='assets/www/'
+              assert len([x for x in n if x.startswith(prefix+'assets/qcf-v2-page-fonts/p') and x.endswith('.woff2')])==604
+              assert not any(x.startswith(prefix+'pages/') for x in n)
+              help=z.read(prefix+'js/help-support.js').decode('utf8')
+              menu=z.read(prefix+'js/web-menu-order.js').decode('utf8')
+              idx=z.read(prefix+'index.html').decode('utf8')
+              bundle=z.read(prefix+'js/apk-startup-bundle.js').decode('utf8')
+              assert "WHATSAPP_NUMBER='9647857994000'" in help
+              assert '9647832764696' not in help
+              assert 'شرح استخدام التطبيق' in help
+              assert 'className' in help and 'ah-steps' in help and 'ah-list' in help
+              assert 'https://wa.me/' in help and 'AoqatHelpSupport' in help
+              assert 'MENU_ROWS.push(["helpSupport"' in menu
+              assert '"المساعدة والتواصل"' in menu
+              assert '"شرح استخدام التطبيق"' in menu
+              assert 'if(id==="helpSupport")' in menu
+              assert 'const helpButton=' not in menu
+              assert 'js/apk-startup-bundle.js' in idx
+              assert 'AoqatHelpSupport' in bundle
+              assert "WHATSAPP_NUMBER='9647857994000'" in bundle
+              assert 'MENU_ROWS.push(["helpSupport"' in bundle
+              assert 'if(id==="helpSupport")' in bundle
+              assert 'const helpButton=' not in bundle
+              assert 'readQuietModeStatus' in bundle and 'aq-quiet-diagnostics' in bundle
+              assert 'المساعدة والتواصل' in bundle and 'شرح استخدام التطبيق' in bundle
+              assert '9647832764696' not in bundle
+              assert 'تعليمات الاستخدام' in help and 'تواصل معنا' in help
+              assert len(z.read(prefix+'data/prayer-times-offline.json'))>5000
+              splash=z.read('assets/splash-hawija-original.jpg')
+              assert hashlib.sha256(splash).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
+              print('PASS: new WhatsApp 9647857994000, redesigned guide, 604 offline Quran pages, prayer DB, original splash; bytes:',os.stat(p).st_size)
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v171/aoqat-v1.71.sha256
+      - name: Download previous signed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release download v1.70-iqama-zero-quiet --repo "$GH_REPO" --pattern '*.apk' --dir /tmp/aoqat-v171
+      - name: Enable Android emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify in-place Android 16 upgrade and app launch
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r /tmp/aoqat-v171/aoqat-v1.70-iqama-zero-quiet.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.70'
+            adb install -r /tmp/aoqat-v171/aoqat-v1.71-help-design-whatsapp.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.71'
+            adb shell am start -n com.aoqat.calendar/.MainActivity
+            sleep 5
+            adb shell pidof com.aoqat.calendar
+            echo 'PASS: v1.71 upgrades v1.70 and launches without clearing data'
+      - name: Publish installable verified APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          tag=v1.71-help-design-whatsapp
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$SOURCE_SHA" --title "أوقات الصلاة في الحويجة v1.71 — شرح استخدام أنيق ورقم واتساب جديد" --prerelease --notes 'تحديث v1.71 فوق v1.70: تغيير عنوان قائمة الدعم إلى المساعدة والتواصل، وشرح استخدام التطبيق بتسعة أقسام قابلة للفتح وخطوات مرقمة وأزرار بنفس نمط قائمة الإعدادات، واستبدال رقم واتساب الرسمي إلى 9647857994000. يحتفظ بجميع إصلاحات صامت الإقامة والأذان والمصحف والمواقيت والتقاويم دون تغيير.'
+          fi
+          gh release upload "$tag" /tmp/aoqat-v171/aoqat-v1.71-help-design-whatsapp.apk /tmp/aoqat-v171/aoqat-v1.71.sha256 --clobber
+          gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.71-help-design-whatsapp.apk'
