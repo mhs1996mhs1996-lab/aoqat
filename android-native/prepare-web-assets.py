@@ -90,9 +90,20 @@ transform('web-menu-order.js', [
 # No browser push subscription or service-worker alarm can compete with the native alarm.
 (target/'js/push-notifications.js').write_text('/* APK uses native publish notifications. */')
 
-# Native compass opens directly from the menu, with one Activity and one back button.
+# Native compass and screen illumination settings live only in the APK drawer.
+# The hosted web keeps its original menus and does not control physical alarms.
 transform('web-menu-order.js', [
- ('const id=b.dataset.drawer;', 'const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}')])
+ ('MENU_ROWS.push(["helpSupport","📖","المساعدة والتواصل"]);',
+  'MENU_ROWS.push(["helpSupport","📖","المساعدة والتواصل"]);MENU_ROWS.push(["screenAlerts","💡","إضاءة شاشة الهاتف"]);'),
+ ('const id=b.dataset.drawer;',
+  'const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}if(id==="screenAlerts"){window.AoqatScreenAlerts?.open();return;}')
+])
+# The legacy adhan-only screen switch is obsolete: one native setting controls
+# adhan, selected prayer notices, alarm and publishing alike. Remove duplicate UI.
+transform('adhan-settings.js', [
+ ('${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}',
+  '<p class="ad-note">💡 إضاءة الشاشة لجميع التنبيهات تُضبط من «إضاءة شاشة الهاتف» في القائمة الرئيسية.</p>')
+])
 # The native scheduler owns background reminders; the web module supplies its reviewed controls only.
 transform('azkar-reminders.js', [
  ('  if(window.AndroidNative?.configureAdhan)return;', ''),
@@ -314,8 +325,10 @@ dynamic=re.findall(r'await loadScript\("([^"]+)"', (root/'data/prayer-times.js')
 paths=['js/startup-stabilizer.js','js/design-side-menu.js']+[src.split('?')[0] for src in static if not src.startswith('data/prayer-times.js')]+[src.split('?')[0] for src in dynamic]
 (target/'js/native-reminders.js').write_text((root/'android-native/apk-overrides/native-reminders.js').read_text())
 (target/'js/native-quiet-menu.js').write_text((root/'android-native/apk-overrides/native-quiet-menu.js').read_text())
+(target/'js/native-screen-alerts.js').write_text((root/'android-native/apk-overrides/native-screen-alerts.js').read_text())
 paths.append('js/native-reminders.js')
 paths.append('js/native-quiet-menu.js')
+paths.append('js/native-screen-alerts.js')
 seen=set();chunks=['const prayerTimes=[];']
 for relative in paths:
     # This old compatibility module repeatedly unhides all slides, conflicting
