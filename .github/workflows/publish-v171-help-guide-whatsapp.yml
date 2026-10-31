@@ -33,6 +33,8 @@ jobs:
           set -euo pipefail
           npm install --no-save --package-lock=false playwright
           CHROME_PATH=/usr/bin/google-chrome node tests/help-support-browser.cjs
+          grep -Fq 'js/help-support.js?v=2' index.html
+          grep -Fq 'js/web-menu-order.js?v=32' index.html
           node --check js/help-support.js
           node --check js/web-menu-order.js
           node --check android-native/apk-overrides/native-quiet-menu.js
@@ -84,7 +86,9 @@ jobs:
               assert '9647832764696' not in help
               assert 'ah-nav-row' in help and 'ah-section' in help and 'ah-step' in help
               assert 'شرح استخدام التطبيق' in bundle and '9647857994000' in bundle
-              assert 'js/help-support.js?v=2' in idx and 'js/web-menu-order.js?v=32' in idx
+              # Android intentionally bundles those cache-busted web scripts into
+              # js/apk-startup-bundle.js; verify the actual shipped bundle above.
+              assert 'المساعدة والتواصل' in bundle and 'شرح استخدام التطبيق' in bundle
               assert len(z.read(prefix+'data/prayer-times-offline.json'))>5000
               splash=z.read('assets/splash-hawija-original.jpg')
               assert hashlib.sha256(splash).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
