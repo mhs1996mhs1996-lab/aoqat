@@ -1,8 +1,6 @@
 package com.aoqat.calendar
 
-import android.app.NotificationManager
 import android.content.Context
-import android.media.AudioManager
 import org.json.JSONObject
 
 /** Uses saved prayer identity and iqama durations, never WebView countdown text. */
@@ -13,10 +11,23 @@ object AfterIqamaQuiet {
         // controls playback; it must never prevent the prayer-time quiet window.
         if (!quiet.optBoolean("enabled")) return null
         val duration=quiet.optJSONObject("minutes")?.optInt(prayerId,0)?.coerceIn(0,120) ?: 0
-        if (duration==0 || prayerId !in PrayerTimes.ids) return null
+        if (duration==0 || prayerId !in PrayerTimes.ids || prayerAt<=0L) return null
         val start=prayerAt+iqamaMinutes.coerceIn(0,120)*60000L
         return start to start+duration*60000L
     }
+    /**
+     * Independent confirmation from the notification countdown's exact zero point.
+     * The ordinary IQAMA_QUIET alarm remains scheduled even when notifications are
+     * turned off; both paths use the same absolute database + iqama deadline.
+     * Never derive the start from the moment the application was opened.
+     */
+    fun onCountdownZero(c: Context, prayerAt: Long) {
+        val state=c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE)
+        if(!state.getBoolean("active",false) || state.getLong("prayerAt",0L)!=prayerAt) return
+        val prayerId=state.getString("prayerId","") ?: return
+        if(prayerId in PrayerTimes.ids) start(c,prayerId,prayerAt)
+    }
+
     fun start(c: Context, prayerId: String, prayerAt: Long) {
         if(FridaySchedule.suppress(c,prayerId,prayerAt))return
         val times=window(AdhanSchedule.settings(c),prayerId,prayerAt,IqamaNativeScheduler.durations(c,prayerId).beforeMinutes) ?: return
@@ -29,6 +40,8 @@ object AfterIqamaQuiet {
                 PrayerTimes.Prayer(prayerId,prayerAt,false))
             return
         }
-        AdhanPlaybackService.activateQuiet(c,times.second,times.first)
+        // Only change the ringtone, never substitute or overwrite the user's
+        // scheduled Do Not Disturb policy (e.g. 23:20–07:00).
+        AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)
     }
 }
