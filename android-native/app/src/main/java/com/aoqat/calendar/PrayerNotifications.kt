@@ -61,15 +61,30 @@ object PrayerNotifications {
             enableVibration(true)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         })
-        return Notification.Builder(c, "prayer_due_system_v2")
+        val screenAlert = !preview && selected(c, id) && PhoneScreenAlerts.enabled(c)
+        val fullIntent=Intent(c,AdhanScreenActivity::class.java)
+            .putExtra("reminderMessage",title(id,friday))
+            .putExtra("prayerId",id)
+            .putExtra("notificationOnly",true)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val full=PendingIntent.getActivity(c,78150+PrayerTimes.ids.indexOf(id).coerceAtLeast(0),
+            fullIntent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val tap=if(screenAlert)full else PendingIntent.getActivity(c,78991,
+            Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
+        val alert=Notification.Builder(c, "prayer_due_system_v2")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(if (preview) "تجربة صوت الإشعار" else title(id, friday))
             .setContentText("أوقات الصلاة في الحويجة")
-            .setCategory(Notification.CATEGORY_REMINDER)
+            .setCategory(Notification.CATEGORY_ALARM)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setPriority(Notification.PRIORITY_MAX)
             .setAutoCancel(true)
-            .setContentIntent(PendingIntent.getActivity(c, 78991, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE))
-            .build()
+            .setContentIntent(tap)
+        // An explicit prayer notification is allowed to wake the phone ONLY
+        // when the user opted into that prayer AND enabled screen illumination.
+        // It never starts or stops the independent adhan recording.
+        if(screenAlert) alert.setFullScreenIntent(full,true)
+        return alert.build()
     }
     fun start(c: Context, id: String, friday: Boolean = false, preview: Boolean = false) {
         // Never play a second application-generated tone on top of Android's

@@ -38,8 +38,7 @@
             android:name=".AlarmActivity"
             android:excludeFromRecents="true"
             android:exported="false"
-            android:showWhenLocked="true"
-            android:turnScreenOn="true" />
+ />
 
         <service android:name=".PrayerNotificationSoundService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".PrayerNotificationReceiver" android:exported="false" />
@@ -47,9 +46,9 @@
         <service android:name=".PrayerAlarmService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".PrayerAlarmReceiver" android:exported="false" />
         <receiver android:name=".PrayerAlarmActionReceiver" android:exported="false" />
-        <activity android:name=".PrayerAlarmActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true" android:excludeFromRecents="true" />
+        <activity android:name=".PrayerAlarmActivity" android:exported="false" android:excludeFromRecents="true" />
         <activity android:name=".QiblaActivity" android:exported="false" />
-        <activity android:name=".AdhanScreenActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true" android:excludeFromRecents="true" />
+        <activity android:name=".AdhanScreenActivity" android:exported="false" android:excludeFromRecents="true" />
         <service android:name=".AdhanPlaybackService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
         <service android:name=".NextPrayerService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User enabled next prayer notification with a live countdown" />

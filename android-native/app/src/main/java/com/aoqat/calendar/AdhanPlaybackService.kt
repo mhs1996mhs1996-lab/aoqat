@@ -257,8 +257,26 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback_silent_v2","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val builder=Notification.Builder(this,"adhan_playback_silent_v2").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")"حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true)).setContentText("اضغط إيقاف لإنهاء الأذان").setOnlyAlertOnce(true).setOngoing(true).setVisibility(Notification.VISIBILITY_PUBLIC).addAction(Notification.Action.Builder(null,"إيقاف",stop).build()).setContentIntent(PendingIntent.getActivity(this,60411,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
-        if(config.optBoolean("screen")&&!preview){val show=PendingIntent.getActivity(this,60412,Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT);builder.setFullScreenIntent(show,true)}
+        val screenAlert = PhoneScreenAlerts.enabled(this) && !preview && mode=="sound"
+        val screenActivity = Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val show=PendingIntent.getActivity(this,60412,screenActivity,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val content=if(screenAlert)show else PendingIntent.getActivity(this,60411,
+            Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
+        val builder=Notification.Builder(this,"adhan_playback_silent_v2")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")
+                "حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true))
+            .setContentText("اضغط إيقاف لإنهاء الأذان")
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setOnlyAlertOnce(true).setOngoing(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .addAction(Notification.Action.Builder(null,"إيقاف",stop).build())
+            .setContentIntent(content)
+        // FSI is the supported alarm path to wake a sleeping phone. On Android
+        // 14+ the user may still need to allow 'full-screen notifications'.
+        if(screenAlert)builder.setFullScreenIntent(show,true)
         startForeground(60400,builder.build())
 
         started=SystemClock.elapsedRealtime()
@@ -323,9 +341,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
 }
 class AdhanScreenActivity: Activity(){
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
-    override fun onCreate(b:Bundle?){super.onCreate(b);if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}else window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text=intent.getStringExtra("reminderMessage")?:"حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text=if(intent.hasExtra("reminderMessage"))"إغلاق" else "إيقاف الأذان";setOnClickListener{if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this@AdhanScreenActivity);finish()}});setContentView(layout);if(intent.hasExtra("reminderMessage"))android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(!isFinishing)finish()},30000);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
-    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean {if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_MEDIA_STOP)){AdhanPlaybackService.stop(this);finish();return true};return super.onKeyDown(code,event)}
-    @Deprecated("Deprecated in Java") override fun onBackPressed(){AdhanPlaybackService.stop(this);super.onBackPressed()}
+    override fun onCreate(b:Bundle?){super.onCreate(b);PhoneScreenAlerts.applyWindow(this);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text=intent.getStringExtra("reminderMessage")?:"حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text=if(intent.hasExtra("reminderMessage"))"إغلاق" else "إيقاف الأذان";setOnClickListener{if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this@AdhanScreenActivity);finish()}});setContentView(layout);if(intent.hasExtra("reminderMessage"))android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(!isFinishing)finish()},30000);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
+    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean {if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_MEDIA_STOP)){if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this);finish();return true};return super.onKeyDown(code,event)}
+    @Deprecated("Deprecated in Java") override fun onBackPressed(){if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this);super.onBackPressed()}
     override fun onDestroy(){unregisterReceiver(stopped);super.onDestroy()}
 }
 
