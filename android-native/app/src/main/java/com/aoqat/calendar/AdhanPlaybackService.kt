@@ -56,6 +56,12 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 android.util.Log.w("IqamaQuiet","Notification policy access needed to activate silent mode")
                 return false
             }
+            val alarmManager=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if(Build.VERSION.SDK_INT>=31 && !alarmManager.canScheduleExactAlarms()) {
+                // Never silence a phone when Android cannot schedule its recovery.
+                auditQuiet(c,"exact_alarm_missing",scheduledStart,end)
+                return false
+            }
             val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
             val already=p.getBoolean("changed",false)
