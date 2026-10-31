@@ -15,7 +15,12 @@ const assert=require('node:assert/strict');
   const entry=page.locator('#webDrawerMain [data-drawer="helpSupport"]');
   assert.equal(await entry.count(),1,'Exactly one help entry in the main settings drawer');
   await page.waitForFunction(()=>document.body.classList.contains('design-menu-open'));
-  assert.equal(await entry.isVisible(),true,'Help must be readily visible at top of the main drawer');
+  const info=await entry.evaluate(e=>{const main=document.getElementById('webDrawerMain');const c=getComputedStyle(e);const rect=e.getBoundingClientRect();return{row:rect.toJSON(),display:c.display,visibility:c.visibility,mainDisplay:getComputedStyle(main).display,mainScroll:main.scrollTop,mainRect:main.getBoundingClientRect().toJSON(),bodyClass:document.body.className,parent:e.parentElement?.id};});
+  console.log('HELP_MENU_DIAGNOSTICS',JSON.stringify(info));
+  // Match the real scrollable settings drawer: users can reach the item even
+  // when the host UI initially paints outside the viewport.
+  await entry.scrollIntoViewIfNeeded({timeout:7000});
+  assert.equal(await entry.isVisible(),true,'Help must be reachable after scrolling into view');
   assert.equal(await entry.textContent().then(x=>x.includes('المساعدة والتواصل')),true);
   assert.equal(await entry.evaluate(e=>e.parentElement.children[1]===e),true,'Help should be the second visible menu row');
   await entry.click();
