@@ -68,11 +68,12 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             val ringerBefore=am.ringerMode
             val filterBefore=nm.currentInterruptionFilter
             val until=if(already) maxOf(end,p.getLong("end",0L)) else end
-            // If another app or the user already silenced the device, we own no
-            // change and must NEVER issue a meaningless silent -> silent call
-            // or restore somebody else's earlier silent/DND selection.
-            if(!already && (ringerBefore==AudioManager.RINGER_MODE_SILENT ||
-                        filterBefore==NotificationManager.INTERRUPTION_FILTER_NONE)) {
+            // A user-enabled Do Not Disturb filter is NOT the same as Android's
+            // ringer's silent state. The user may keep DND enabled while ringtone
+            // remains NORMAL or VIBRATE; iqama must still silence THAT ringer.
+            // Only skip when the ringer itself was silent before our action.
+            // Never claim ownership of the user's pre-existing DND setting.
+            if(!already && ringerBefore==AudioManager.RINGER_MODE_SILENT) {
                 auditQuiet(c,"already_silent",scheduledStart,end)
                 return true
             }
