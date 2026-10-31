@@ -40,7 +40,8 @@
     const line=text=>{const p=document.createElement('p');p.textContent=text;root.appendChild(p);};
     const showTime=ms=>ms>0?new Date(ms).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
     const name={0:'الوضع الصامت',1:'الاهتزاز',2:'الرنين الطبيعي'}[data.ringer]||'غير معروف';
-    line('حالة صوت الهاتف الآن: '+name+(data.dnd===3?' — عدم الإزعاج الكامل مفعل':''));
+    line('حالة رنين الهاتف الآن: '+name);
+    line('عدم الإزعاج: '+(data.dnd===3?'مفعّل من إعدادات الهاتف؛ يبقى مستقلاً عن الصامت':data.dnd===1?'غير مفعّل':'مفعّل حسب إعدادات الهاتف'));
     line('أذونات التحكم بالصامت: '+(data.permission?'متاحة':'غير متاحة')+' | المنبهات الدقيقة: '+(data.exactAlarm?'متاحة':'غير متاحة'));
     const status={
       never:'لم تُسجل محاولة صامت بعد',applied:'تم تفعيل الصامت بواسطة التطبيق',

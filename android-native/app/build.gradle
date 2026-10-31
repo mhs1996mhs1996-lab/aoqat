@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 103 // Preserve user silent state and expose quiet diagnostics in the app
-        versionName '1.68'
+        versionCode 104 // Fix user-enabled DND being mistaken for already-silent ringer
+        versionName '1.69'
     }
 
     compileOptions {
