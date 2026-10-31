@@ -100,7 +100,7 @@ class AdhanQuietModeTest {
         am.ringerMode=AudioManager.RINGER_MODE_NORMAL
         assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
         val now=System.currentTimeMillis()
-        assertTrue(AdhanPlaybackService.activateQuiet(context,now+120000L,now))
+        assertTrue(AdhanPlaybackService.activateQuiet(context,now+120000L,now,preserveUserDnd=true))
         assertEquals(AudioManager.RINGER_MODE_SILENT,am.ringerMode)
         assertTrue(AdhanPlaybackService.quietStatus(context).getBoolean("appOwnsQuiet"))
         assertEquals("applied",AdhanPlaybackService.quietStatus(context).getString("lastResult"))
