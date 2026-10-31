@@ -648,6 +648,32 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun readScreenWakeEnabled(): Boolean =
+            PhoneScreenAlerts.enabled(this@MainActivity)
+
+        @JavascriptInterface fun screenWakeStatus(): String =
+            PhoneScreenAlerts.status(this@MainActivity).toString()
+
+        @JavascriptInterface fun configureScreenWake(on: Boolean) {
+            PhoneScreenAlerts.setEnabled(this@MainActivity, on)
+        }
+
+        @JavascriptInterface fun requestScreenWakeAccess() { runOnUiThread {
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if(Build.VERSION.SDK_INT>=33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
+                requestNotificationPermissionIfNeeded()
+            } else if(Build.VERSION.SDK_INT>=34 && !nm.canUseFullScreenIntent()) {
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                        Uri.parse("package:$packageName")))
+                } catch (e: Exception) {
+                    android.util.Log.w("PhoneScreenAlerts","Cannot open fullscreen access settings",e)
+                    Toast.makeText(this@MainActivity,"افتح أذونات العرض بملء الشاشة من إعدادات التطبيق",Toast.LENGTH_LONG).show()
+                }
+            } else Toast.makeText(this@MainActivity,"أذونات الشاشة والتنبيهات متاحة",Toast.LENGTH_SHORT).show()
+        }}
+
         @JavascriptInterface fun openSupportWhatsApp(url:String) {
             val target=try { Uri.parse(url) } catch (_:Exception) { return }
             if(target.scheme!="https" || target.host!="wa.me" ||
