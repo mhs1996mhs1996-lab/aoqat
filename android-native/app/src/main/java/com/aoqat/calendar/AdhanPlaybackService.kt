@@ -49,7 +49,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 .put("scheduledStart",history.getLong("scheduledStart",0L))
                 .put("deadline",history.getLong("end",0L))
         }
-        @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L): Boolean {
+        @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L, preserveUserDnd:Boolean=false): Boolean {
             val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if(!nm.isNotificationPolicyAccessGranted) {
                 auditQuiet(c,"permission_missing",scheduledStart,end)
@@ -68,6 +68,10 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             val ringerBefore=am.ringerMode
             val filterBefore=nm.currentInterruptionFilter
             val until=if(already) maxOf(end,p.getLong("end",0L)) else end
+            if (until<=System.currentTimeMillis()) {
+                auditQuiet(c,"expired",scheduledStart,end)
+                return false
+            }
             // A user-enabled Do Not Disturb filter is NOT the same as Android's
             // ringer's silent state. The user may keep DND enabled while ringtone
             // remains NORMAL or VIBRATE; iqama must still silence THAT ringer.
@@ -78,13 +82,27 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 return true
             }
             if(already && ringerBefore==AudioManager.RINGER_MODE_SILENT) {
+                // Do not extend the quiet window unless we can still restore it.
+                try { AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until) }
+                catch (e: Exception) {
+                    auditQuiet(c,"recovery_alarm_failed",scheduledStart,until)
+                    android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
+                    return false
+                }
                 p.edit().putLong("end",until).commit()
                 auditQuiet(c,"active",scheduledStart,until)
-                AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until)
                 return true
             }
             val prior=if(already)p.getInt("previous",AudioManager.RINGER_MODE_NORMAL) else ringerBefore
             val oldFilter=if(already)p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL) else filterBefore
+            // Schedule restoration BEFORE changing Android's sound mode, so a
+            // process death immediately after muting cannot strand the phone.
+            try { AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until) }
+            catch (e: Exception) {
+                auditQuiet(c,"recovery_alarm_failed",scheduledStart,until)
+                android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
+                return false
+            }
             var silentApplied=false
             try {
                 if(am.ringerMode!=AudioManager.RINGER_MODE_SILENT)
@@ -98,7 +116,10 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             // Record this as OUR change so the exact previous DND policy is restored.
             if(nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE &&
                 oldFilter!=NotificationManager.INTERRUPTION_FILTER_NONE) dndApplied=true
-            if(!silentApplied) {
+            if(!silentApplied && !preserveUserDnd) {
+                // This legacy DND fallback is ONLY for other quiet services.
+                // After iqama the user explicitly requests ringtone SILENT,
+                // never modification of their separately scheduled DND rule.
                 try {
                     if(nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_NONE)
                         nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
@@ -108,16 +129,15 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                     android.util.Log.w("IqamaQuiet","Android rejected DND fallback",e)
                 }
             }
-            if(!silentApplied && !dndApplied) {
+            if(!silentApplied && (preserveUserDnd || !dndApplied)) {
                 auditQuiet(c,"failed",scheduledStart,end)
-                android.util.Log.e("IqamaQuiet","Neither silent nor DND was applied")
+                android.util.Log.e("IqamaQuiet","Android did not apply ringtone silent; user DND was not changed")
                 return false
             }
             p.edit().putBoolean("changed",true).putInt("previous",prior)
                 .putBoolean("dndApplied",dndApplied).putInt("previousFilter",oldFilter)
                 .putLong("end",until).commit()
             auditQuiet(c,"applied",scheduledStart,until)
-            AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until)
             return true
         }
         @Synchronized fun restoreRinger(c: Context) {
@@ -130,19 +150,24 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             val previous=p.getInt("previous",AudioManager.RINGER_MODE_NORMAL)
             try {
                 if(previous!=AudioManager.RINGER_MODE_SILENT &&
-                    am.ringerMode==AudioManager.RINGER_MODE_SILENT)
+                    am.ringerMode==AudioManager.RINGER_MODE_SILENT) {
                     am.ringerMode=previous
-            } catch (e: SecurityException) {
+                    // Some OEMs silently reject mode changes without throwing.
+                    ringerRestored=am.ringerMode==previous
+                }
+            } catch (e: Exception) {
                 ringerRestored=false
                 android.util.Log.w("IqamaQuiet","Will retry restoring previous ringer mode",e)
             }
             if(p.getBoolean("dndApplied",false)) {
                 try {
                     if(nm.isNotificationPolicyAccessGranted &&
-                        nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE)
-                        nm.setInterruptionFilter(p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL))
-                    else if(!nm.isNotificationPolicyAccessGranted) dndRestored=false
-                } catch (e: SecurityException) {
+                        nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE) {
+                        val filter=p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL)
+                        nm.setInterruptionFilter(filter)
+                        dndRestored=nm.currentInterruptionFilter==filter
+                    } else if(!nm.isNotificationPolicyAccessGranted) dndRestored=false
+                } catch (e: Exception) {
                     dndRestored=false
                     android.util.Log.w("IqamaQuiet","Will retry restoring previous DND mode",e)
                 }
@@ -150,7 +175,13 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             if(ringerRestored && dndRestored) {
                 auditQuiet(c,"restored")
                 p.edit().clear().commit()
-            } else auditQuiet(c,"restore_failed")
+            } else {
+                auditQuiet(c,"restore_failed")
+                // Never discard the saved previous sound mode after a failed
+                // restoration. Retry from a native alarm even with the app closed.
+                try { AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",System.currentTimeMillis()+60000L) }
+                catch (e: Exception) { android.util.Log.e("IqamaQuiet","Cannot schedule restore retry",e) }
+            }
         }
         fun restoreRingerIfExpired(c: Context) {
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)

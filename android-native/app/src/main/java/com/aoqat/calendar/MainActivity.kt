@@ -136,6 +136,8 @@ class IqamaNotificationService : android.app.Service() {
         if (FridaySchedule.suppress(this,prayerId,prayerAt) || !IqamaNativeScheduler.enabled(this) || display == null) {
             finishCycle(); return
         }
+        if (display.phase == IqamaCycle.Phase.ELAPSED && publishedPhase != IqamaCycle.Phase.ELAPSED)
+            AfterIqamaQuiet.onCountdownZero(this, prayerAt)
         if (force || publishedPhase != display.phase) {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
@@ -173,6 +175,10 @@ class IqamaNotificationService : android.app.Service() {
         prefs.edit().putBoolean("active", true).putLong("prayerAt", prayerAt)
             .putString("prayerId", prayerId)
             .putLong("startRealtime", startRealtime).putInt("boot", boot).commit()
+        // If the service was restarted after the exact zero point, reconcile
+        // the same saved countdown instead of waiting until the app is opened.
+        if (display.phase == IqamaCycle.Phase.ELAPSED)
+            AfterIqamaQuiet.onCountdownZero(this, prayerAt)
         IqamaPersistentNotification.ensureChannel(this)
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
         publishedPhase = display.phase
@@ -260,6 +266,10 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
             "PHASE_BOUNDARY", "EXPIRE" -> {
                 val prefs = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
                 if (prefs.getBoolean("active", false) && prefs.getLong("prayerAt", 0L) == intent.getLongExtra("prayerAt", -1L)) {
+                    // Independent real-time countdown boundary backs up the
+                    // dedicated after-iqama silent alarm on sleeping phones.
+                    if (intent.action == "PHASE_BOUNDARY")
+                        AfterIqamaQuiet.onCountdownZero(context, prefs.getLong("prayerAt", 0L))
                     // Reconcile from the persisted anchor, including a late delivery.
                     // Do not reset the zero point at the time the alarm is received.
                     val service = Intent(context, IqamaNotificationService::class.java).setAction("RECONCILE")
