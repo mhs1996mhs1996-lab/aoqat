@@ -28,7 +28,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         private fun auditQuiet(c:Context, result:String, scheduledStart:Long=0L, deadline:Long=0L) {
             c.getSharedPreferences("adhan_quiet_diagnostics",Context.MODE_PRIVATE).edit()
                 .putString("result",result).putLong("at",System.currentTimeMillis())
-                .putLong("scheduledStart",scheduledStart).putLong("end",deadline).commit()
+                .apply { if(scheduledStart>0L)putLong("scheduledStart",scheduledStart)
+                         if(deadline>0L)putLong("end",deadline) }.commit()
         }
         fun quietStatus(c:Context):JSONObject {
             val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
