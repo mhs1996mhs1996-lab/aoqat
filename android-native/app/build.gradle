@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 105 // Native iqama countdown zero-trigger and verified ringer restoration
-        versionName '1.70'
+        versionCode 106 // Redesigned in-app guide and updated official WhatsApp contact
+        versionName '1.71'
     }
 
     compileOptions {
