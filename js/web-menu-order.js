@@ -19,7 +19,7 @@
   ];
   const webOnly=!window.AndroidNative?.configureAdhan;
   const MENU_ROWS=webOnly?[...ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications","azkar"].includes(id)),["muslimBag",'<svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true"><path d="M3 9c5-2 9-1 13 2 4-3 8-4 13-2v18c-5-2-9-1-13 2-4-3-8-4-13-2Z" fill="#e9d59b" stroke="#216644" stroke-width="2"/><path d="M16 11v18M6 14l6 1M6 19l6 1M20 15l6-1M20 20l6-1" stroke="#216644" stroke-width="1.5"/><path d="M21 2a5 5 0 1 0 6 6 4 4 0 0 1-6-6Z" fill="#c39327"/></svg>',"حقيبة المسلم"],["reminderInbox","🔔","الإشعارات"]]:ROWS;
-  MENU_ROWS.push(["helpSupport","📚","حول التطبيق والدعم"]);
+  MENU_ROWS.splice(1,0,["helpSupport","❔","المساعدة والتواصل"]);
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 
@@ -171,7 +171,7 @@
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
   }
-  function supportView(){const api=window.AoqatHelpSupport;if(!api)return;openSub("حول التطبيق والدعم",api.home(kind=>{if(kind==="guide")openSub("تعليمات الاستخدام",api.guide(),"support");else if(kind==="contact")openSub("تواصل معنا",api.contact(),"support");}),"main");}
+  function supportView(){const api=window.AoqatHelpSupport;if(!api)return;openSub("المساعدة والتواصل",api.home(kind=>{if(kind==="guide")openSub("شرح استخدام التطبيق",api.guide(),"support");else if(kind==="contact")openSub("تواصل معنا",api.contact(),"support");}),"main");}
   function datePrayerView(){
     const wrap=document.createElement("div");wrap.id="webDatePrayerTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>["date","prayer"].includes(key)).forEach(([key,icon,label,panel])=>{
