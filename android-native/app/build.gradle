@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 106 // Redesigned in-app guide and updated official WhatsApp contact
-        versionName '1.71'
+        versionCode 107 // Android-only fullscreen alert and wake-screen toggle; calendar icon parity
+        versionName '1.72'
     }
 
     compileOptions {
