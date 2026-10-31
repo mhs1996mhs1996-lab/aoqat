@@ -39,7 +39,7 @@
     catch(_){root.textContent='تعذر قراءة حالة وضع الصامت من الهاتف.';return root;}
     const line=text=>{const p=document.createElement('p');p.textContent=text;root.appendChild(p);};
     const showTime=ms=>ms>0?new Date(ms).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
-    const name={0:'الوضع الصامت',1:'الرنين الطبيعي',2:'الاهتزاز'}[data.ringer]||'غير معروف';
+    const name={0:'الوضع الصامت',1:'الاهتزاز',2:'الرنين الطبيعي'}[data.ringer]||'غير معروف';
     line('حالة صوت الهاتف الآن: '+name+(data.dnd===3?' — عدم الإزعاج الكامل مفعل':''));
     line('أذونات التحكم بالصامت: '+(data.permission?'متاحة':'غير متاحة')+' | المنبهات الدقيقة: '+(data.exactAlarm?'متاحة':'غير متاحة'));
     const status={
