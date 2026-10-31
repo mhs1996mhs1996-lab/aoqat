@@ -84,7 +84,7 @@ jobs:
               assert 'readQuietModeStatus' in bundle and 'aq-quiet-diagnostics' in bundle
               assert 'المساعدة والتواصل' in bundle and 'شرح استخدام التطبيق' in bundle
               assert '9647832764696' not in bundle
-              assert 'تعليمات الاستخدام' in help and 'تواصل معنا' in help
+              assert 'شرح استخدام التطبيق' in help and 'تواصل معنا' in help
               assert len(z.read(prefix+'data/prayer-times-offline.json'))>5000
               splash=z.read('assets/splash-hawija-original.jpg')
               assert hashlib.sha256(splash).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
