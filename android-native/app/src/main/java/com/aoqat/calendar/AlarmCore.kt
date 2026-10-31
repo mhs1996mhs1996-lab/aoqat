@@ -288,7 +288,7 @@ object AlarmUi {
         val stopPending = PendingIntent.getBroadcast(context, 45103, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val snoozePending = PendingIntent.getBroadcast(context, 45104, snoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        return NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification=NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("⏰ مواقيت الغد جاهزة")
             .setContentText("اضغط إيقاف التنبيه أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق")
@@ -301,10 +301,12 @@ object AlarmUi {
             .setOnlyAlertOnce(true)
             .setDeleteIntent(stopPending)
             .setContentIntent(fullPending)
-            .setFullScreenIntent(fullPending, true)
             .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق", snoozePending)
             .addAction(android.R.drawable.ic_media_pause, "إيقاف التنبيه", stopPending)
-            .build()
+        // A full-screen alarm is requested only when the user allows screen waking.
+        // Android 14+ can still show a heads-up alert until FSI access is granted.
+        if(PhoneScreenAlerts.enabled(context)) notification.setFullScreenIntent(fullPending,true)
+        return notification.build()
     }
 
     fun showFullScreenNotification(context: Context) {
@@ -457,15 +459,11 @@ class AlarmActivity : Activity() {
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 27) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        PhoneScreenAlerts.applyWindow(this)
 
         if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED))
         if(!AlarmScheduler.enabled(this)){finish();return}
 
-        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
