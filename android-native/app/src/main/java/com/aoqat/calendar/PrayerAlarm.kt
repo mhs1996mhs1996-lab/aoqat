@@ -109,7 +109,8 @@ class PrayerAlarmService:Service(){
         val show=PendingIntent.getActivity(this,73000,Intent(this,PrayerAlarmActivity::class.java).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val notification=Notification.Builder(this,"prayer_alarm_v1").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview || id=="third")p.optString("label",PrayerAlarm.names[id]) else PrayerNotifications.title(id,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY)).setContentText(if(preview)"تجربة النغمة" else p.optString("label",PrayerAlarm.names[id])).setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(show).addAction(Notification.Action.Builder(null,"إيقاف",action("STOP")).build())
         if(!preview&&count<p.optInt("count",3))notification.addAction(Notification.Action.Builder(null,"غفوة",action("SNOOZE")).build())
-        if(!preview)notification.setFullScreenIntent(show,true)
+        // The alert must be explicitly enabled and screen waking is user-controlled.
+        if(!preview && PhoneScreenAlerts.enabled(this)) notification.setFullScreenIntent(show,true)
         startForeground(73100,notification.build());val duration=if(preview)5000L else p.optInt("duration",5).coerceIn(1,30)*60000L
         wake?.let{if(it.isHeld)it.release()};wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:prayerAlarm").apply{acquire(duration+10000)}
         val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
@@ -142,9 +143,7 @@ class PrayerAlarmActivity:Activity(){
     }
     override fun onCreate(b:Bundle?){
         super.onCreate(b)
-        if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}
-        else window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        PhoneScreenAlerts.applyWindow(this)
         prayerId=intent.getStringExtra("id")?:run{finish();return}
         snoozeCount=intent.getIntExtra("count",0)
         preview=intent.getBooleanExtra("preview",false)
