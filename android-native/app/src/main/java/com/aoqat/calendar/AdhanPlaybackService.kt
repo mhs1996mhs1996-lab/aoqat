@@ -129,9 +129,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                     android.util.Log.w("IqamaQuiet","Android rejected DND fallback",e)
                 }
             }
-            if(!silentApplied && !dndApplied) {
+            if(!silentApplied && (preserveUserDnd || !dndApplied)) {
                 auditQuiet(c,"failed",scheduledStart,end)
-                android.util.Log.e("IqamaQuiet","Neither silent nor DND was applied")
+                android.util.Log.e("IqamaQuiet","Android did not apply ringtone silent; user DND was not changed")
                 return false
             }
             p.edit().putBoolean("changed",true).putInt("previous",prior)
@@ -162,11 +162,11 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             if(p.getBoolean("dndApplied",false)) {
                 try {
                     if(nm.isNotificationPolicyAccessGranted &&
-                        nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE)
-                        nm.setInterruptionFilter(p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL)).also {
-                            dndRestored=nm.currentInterruptionFilter==p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL)
-                        }
-                    else if(!nm.isNotificationPolicyAccessGranted) dndRestored=false
+                        nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE) {
+                        val filter=p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL)
+                        nm.setInterruptionFilter(filter)
+                        dndRestored=nm.currentInterruptionFilter==filter
+                    } else if(!nm.isNotificationPolicyAccessGranted) dndRestored=false
                 } catch (e: Exception) {
                     dndRestored=false
                     android.util.Log.w("IqamaQuiet","Will retry restoring previous DND mode",e)
