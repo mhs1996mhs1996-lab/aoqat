@@ -26,7 +26,7 @@ object AtAdhanQuiet {
         val now=System.currentTimeMillis()
         if(now !in begin until end)return
         // Restore the previous ringer/DND state on the original absolute deadline.
-        AdhanPlaybackService.activateQuiet(c,end)
+        AdhanPlaybackService.activateQuiet(c,end,begin)
     }
 
     fun ownsActiveRinger(c: Context, prayerId: String, prayerAt: Long): Boolean {
