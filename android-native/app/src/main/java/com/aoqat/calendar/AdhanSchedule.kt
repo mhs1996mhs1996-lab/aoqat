@@ -155,7 +155,7 @@ class AdhanReceiver : BroadcastReceiver() {
             "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c) && !FridaySchedule.suppress(c,intent.getStringExtra("prayerId")?:"",intent.getLongExtra("prayerAt",0))) {
                 val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 val s=AdhanSchedule.settings(c)
-                val override=s.optBoolean("overrideSilent");val screen=s.optBoolean("screen")
+                val override=s.optBoolean("overrideSilent");val screen=PhoneScreenAlerts.enabled(c)
                 val channel="adhan_reminders_v1_${override}_${screen}"
                 nm.createNotificationChannel(NotificationChannel(channel,"تذكيرات الصلاة والسحور",if(screen)NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_DEFAULT).apply{
                     if(override)setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM),android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ALARM).setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
