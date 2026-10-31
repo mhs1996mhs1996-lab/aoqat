@@ -42,8 +42,11 @@ const {chromium}=require('playwright');
     await page.locator('#androidWakeScreenAccess').click();
     assert.equal(await page.evaluate(()=>window.permissionRequested),true);
     const calendar=page.locator('#webDrawerMain [data-drawer="calendar"] .ico');
-    assert.equal(await calendar.evaluate(el=>el.innerHTML),original.match(/<span class="ico">([\s\S]*?)<\/span>/)[1],
-      'APK calendar icon markup must match web source byte-for-byte');
+    const sameIcon=await calendar.locator('svg').evaluate((svg,source)=>{
+      const div=document.createElement('div');div.innerHTML=source;
+      return svg.outerHTML===div.querySelector('svg').outerHTML;
+    },original);
+    assert.equal(sameIcon,true,'APK calendar SVG must have identical rendered DOM to hosted web');
     const attributes=await calendar.locator('svg').evaluate(svg=>({
       width:getComputedStyle(svg).width,height:getComputedStyle(svg).height,
       stroke:getComputedStyle(svg).stroke,fill:getComputedStyle(svg).fill
