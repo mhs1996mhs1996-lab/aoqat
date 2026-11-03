@@ -12,9 +12,12 @@ object PrayerSoundPolicy {
         val silent=entry?.optBoolean("silent",settings.optBoolean("overrideSilent",false))
             ?:settings.optBoolean("overrideSilent",false)
         val dnd=entry?.optBoolean("dnd",false)?:false
-        if(am.ringerMode!=AudioManager.RINGER_MODE_NORMAL && !silent)return false
-        if(nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL && !dnd)return false
-        return true
+        // DND is its own user mode. On some OEM phones DND automatically
+        // reports RINGER_MODE_SILENT; in that case use the DND switch rather
+        // than demanding both switches be on.
+        if(nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL)
+            return dnd
+        return am.ringerMode==AudioManager.RINGER_MODE_NORMAL || silent
     }
     fun enabledFor(settings:JSONObject,id:String,kind:String):Boolean {
         val entry=settings.optJSONObject("soundPolicy")?.optJSONObject(id)
