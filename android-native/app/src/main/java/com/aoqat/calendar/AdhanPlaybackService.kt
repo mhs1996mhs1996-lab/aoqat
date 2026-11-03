@@ -287,11 +287,11 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         val nmPolicy=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val policyId=if(special)"dhuhr" else prayer
         val appQuiet=AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)
-        val soundAllowed=preview || (appQuiet ||
-            PrayerSoundPolicy.enabledFor(config,policyId,"silent") ||
-            am.ringerMode==AudioManager.RINGER_MODE_NORMAL) &&
-            (PrayerSoundPolicy.enabledFor(config,policyId,"dnd") ||
-             nmPolicy.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_ALL)
+        val dndActive=nmPolicy.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL
+        val soundAllowed=preview || if(dndActive)
+            PrayerSoundPolicy.enabledFor(config,policyId,"dnd")
+        else (appQuiet || am.ringerMode==AudioManager.RINGER_MODE_NORMAL ||
+            PrayerSoundPolicy.enabledFor(config,policyId,"silent"))
         if(!soundAllowed) {
             if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
             handler.postDelayed({stopSelf()},4000)
