@@ -114,7 +114,20 @@ class PrayerAlarmService:Service(){
         startForeground(73100,notification.build());val duration=if(preview)5000L else p.optInt("duration",5).coerceIn(1,30)*60000L
         wake?.let{if(it.isHeld)it.release()};wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:prayerAlarm").apply{acquire(duration+10000)}
         val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
-        val am=getSystemService(AUDIO_SERVICE) as AudioManager;PrayerAlarmAudio.ensureAudible(this);focus?.let{am.abandonAudioFocusRequest(it)};focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setOnAudioFocusChangeListener{}.build();am.requestAudioFocus(focus!!)
+        val am=getSystemService(AUDIO_SERVICE) as AudioManager
+        val dnd=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        // Shared per-prayer switches are independent of the prayer alarm master.
+        // Do not alter ringer/DND here; the user decides whether this alarm may
+        // sound in each system mode.
+        val soundPolicy=AdhanSchedule.settings(this)
+        val policyId=if(id=="third")"isha" else id
+        val allowed=preview || PrayerSoundPolicy.allowed(soundPolicy,policyId,am,dnd)
+        if(!allowed){
+            android.util.Log.i("PrayerAlarm","Alarm suppressed by user's per-prayer silent/DND preference: $id")
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        PrayerAlarmAudio.ensureAudible(this);focus?.let{am.abandonAudioFocusRequest(it)};focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setOnAudioFocusChangeListener{}.build();am.requestAudioFocus(focus!!)
         fun play(uri:Uri){player=MediaPlayer().apply{setAudioAttributes(attrs);setDataSource(this@PrayerAlarmService,uri);isLooping=true;prepare();start()}}
         val tone=p.optJSONObject("tone");try{val uri=when(tone?.optString("kind")){"custom"->Uri.fromFile(java.io.File(filesDir,"prayer-alarm-$id"));"system"->Uri.parse(tone.optString("value"));"soft"->RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);else->RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)};play(uri)}catch(_:Exception){try{player?.release();play(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM))}catch(e:Exception){player?.release();player=MediaPlayer.create(this,R.raw.prayer_alarm_fallback,attrs,0)?.apply{isLooping=true;start()};if(player==null){android.util.Log.e("PrayerAlarm","No playable alarm tone",e);stopSelf();return START_NOT_STICKY}}}
         sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",true))
