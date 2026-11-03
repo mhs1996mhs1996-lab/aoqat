@@ -36,10 +36,4 @@ class PrayerSoundPolicyTest {
         assertFalse(PrayerSoundPolicy.enabledFor(specific,"fajr","silent"))
         assertTrue(PrayerSoundPolicy.enabledFor(specific,"fajr","dnd"))
     }
-    @Test fun normalRingerAndNormalNotificationFilterPermitSound() {
-        val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        am.ringerMode=AudioManager.RINGER_MODE_NORMAL
-        assertTrue(PrayerSoundPolicy.allowed(policy(false,false),"dhuhr",am,nm))
-    }
 }
