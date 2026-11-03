@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Build
 import org.json.JSONArray
 
@@ -57,12 +58,14 @@ object PrayerAudioDnd {
             return true
         }
         val filter=n.currentInterruptionFilter
+        val originalRinger=(c.getSystemService(Context.AUDIO_SERVICE) as AudioManager).ringerMode
         if(filter==NotificationManager.INTERRUPTION_FILTER_ALL)return true
         if(!n.isNotificationPolicyAccessGranted)return false
         val end=System.currentTimeMillis()+MAX_MS
         if(!schedule(c,end))return false
         if(!p.edit().putBoolean("active",true).putInt("previous",filter)
-            .putLong("until",end).putStringSet("owners",setOf(owner)).commit()) {
+            .putLong("until",end).putInt("previousRinger",originalRinger)
+            .putStringSet("owners",setOf(owner)).commit()) {
             cancel(c);return false
         }
         return try {
@@ -86,6 +89,8 @@ object PrayerAudioDnd {
         val p=pref(c);if(!p.getBoolean("active",false))return
         val n=nm(c)
         val original=p.getInt("previous",NotificationManager.INTERRUPTION_FILTER_ALL)
+        val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val oldRinger=p.getInt("previousRinger",am.ringerMode)
         try{
             // The user may have changed DND manually during the audio.
             // Never overwrite a new filter selected by the user.
@@ -94,7 +99,13 @@ object PrayerAudioDnd {
                 n.setInterruptionFilter(original)
             if(n.currentInterruptionFilter==original ||
                n.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL){
-                p.edit().clear().commit();cancel(c);return
+                // Temporarily lifting DND can also switch the ringer on some
+                // OEMs. Restore the user's previous ringer after DND is back.
+                if(am.ringerMode!=oldRinger)try{am.ringerMode=oldRinger}
+                    catch(e:Exception){android.util.Log.w("PrayerAudioDnd","Ringer restoration failed",e)}
+                if(am.ringerMode==oldRinger){
+                    p.edit().clear().commit();cancel(c);return
+                }
             }
         }catch(e:Exception){android.util.Log.w("PrayerAudioDnd","DND restore delayed",e)}
         if(!schedule(c,System.currentTimeMillis()+60000L))
