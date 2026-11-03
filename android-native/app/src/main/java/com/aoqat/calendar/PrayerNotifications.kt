@@ -37,15 +37,32 @@ object PrayerNotifications {
         Intent(c, PrayerNotificationReceiver::class.java).setAction(action).putExtra("id", id).putExtra("at", at).putExtra("friday", friday), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     @Synchronized fun schedule(c: Context) {
         val am = c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        for (i in 0..39) am.cancel(pi(c, 78000 + i, "DUE"))
-        am.cancel(pi(c, 78990, "REFRESH"))
-        if (!settings(c).optBoolean("enabled") || (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms())) return
-        val now = System.currentTimeMillis()
-        PrayerTimes.events(c).forEachIndexed { i, e ->
-            if (i < 40 && e.at > now && selected(c, e.id) && !FridaySchedule.suppress(c, e.id, e.at))
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, e.at, pi(c, 78000 + i, "DUE", e.id, e.at, e.friday))
+        val active=settings(c).optBoolean("enabled") &&
+            (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms())
+        if (!active) {
+            for(i in 0..39) am.cancel(pi(c,78000+i,"DUE"))
+            am.cancel(pi(c,78990,"REFRESH"))
+            return
         }
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), pi(c, 78990, "REFRESH"))
+        val now=System.currentTimeMillis()
+        val wanted=mutableSetOf<Int>()
+        PrayerTimes.events(c).forEachIndexed { i,e ->
+            if(i<40 && e.at>now && selected(c,e.id) && !FridaySchedule.suppress(c,e.id,e.at)) {
+                wanted.add(i)
+                // Notification is selected by the user and is due at the exact
+                // database minute. setAlarmClock avoids idle-mode batching that
+                // can defer setExactAndAllowWhileIdle by tens of seconds.
+                val due=pi(c,78000+i,"DUE",e.id,e.at,e.friday)
+                val show=PendingIntent.getActivity(c,78000+i,Intent(c,MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                am.setAlarmClock(AlarmManager.AlarmClockInfo(e.at,show),due)
+            }
+        }
+        // Never cancel the due alarms before writing their replacements.
+        for(i in 0..39)if(i !in wanted)am.cancel(pi(c,78000+i,"DUE"))
+        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,
+            LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault())
+                .toInstant().toEpochMilli(),pi(c,78990,"REFRESH"))
     }
     @Synchronized fun claim(c: Context, id: String, at: Long): Boolean {
         if (!selected(c, id) || FridaySchedule.suppress(c, id, at) || System.currentTimeMillis() - at !in 0L until 120000L || at < prefs(c).getLong("enabledAt_$id", 0)) return false
