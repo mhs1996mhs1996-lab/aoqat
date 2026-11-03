@@ -147,7 +147,7 @@ class AdhanReceiver : BroadcastReceiver() {
                 val now=System.currentTimeMillis()
                 val settings=AdhanSchedule.settings(c)
                 if(id in PrayerTimes.ids && AdhanSchedule.enabled(c) &&
-                    settings.optJSONObject("modes")?.optString(id,"sound")=="sound" &&
+                    (settings.optJSONObject("modes")?.optString(id,"sound") ?: "sound")=="sound" &&
                     now>=at-60000L && now<at &&
                     !AdhanSchedule.delivered(c,PrayerTimes.Prayer(id,at,false))) {
                     AdhanDispatch.acquire(c,(at-now+15000L).coerceIn(15000L,75000L))
