@@ -20,7 +20,7 @@ object PrayerSoundPolicy {
         return if(forAlarm) true else if(kind=="silent") settings.optBoolean("overrideSilent",false) else true
     }
 
-    fun allowed(c:Context, id:String, forAlarm:Boolean=false):Boolean {
+    fun allowed(c:Context, id:String, forAlarm:Boolean=false, prayerAt:Long=0L):Boolean {
         if(id !in PrayerTimes.ids) return true // Friday, last-third keep existing behaviour
         val config=AdhanSchedule.settings(c)
         val audio=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -30,7 +30,7 @@ object PrayerSoundPolicy {
         // App-owned silent-at-adhan must not prevent an independently enabled
         // adhan recording; user-set silent mode still follows the switch.
         val owned= !forAlarm && AtAdhanQuiet.ownsActiveRinger(c,id,
-            c.getSharedPreferences("adhan_settings",Context.MODE_PRIVATE).getLong("expectedPrayerAt",0L))
+            prayerAt)
         return (!silent || owned || chosen(config,id,"silent",forAlarm)) &&
             (!dnd || chosen(config,id,"dnd",forAlarm))
     }
