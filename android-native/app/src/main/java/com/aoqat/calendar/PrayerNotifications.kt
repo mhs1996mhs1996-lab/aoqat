@@ -44,13 +44,16 @@ object PrayerNotifications {
         // devices that creates a gap in which the scheduled prayer is lost.
         val wanted = mutableSetOf<Int>()
         if(active) PrayerTimes.events(c).forEachIndexed { i, e ->
-            if(i < 40 && e.at > now && selected(c,e.id) && !FridaySchedule.suppress(c,e.id,e.at)) {
+            val late=now-e.at in 0L..90000L &&
+                e.at>=prefs(c).getLong("enabledAt_${e.id}",0) &&
+                prefs(c).getLong("delivered_${e.id}",0)!=e.at
+            if(i < 40 && (e.at>now || late) && selected(c,e.id) && !FridaySchedule.suppress(c,e.id,e.at)) {
                 val slot=78000+i
                 wanted.add(slot)
                 val due=pi(c,slot,"DUE",e.id,e.at,e.friday)
                 val show=PendingIntent.getActivity(c,slot,Intent(c,MainActivity::class.java),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-                am.setAlarmClock(AlarmManager.AlarmClockInfo(e.at,show),due)
+                am.setAlarmClock(AlarmManager.AlarmClockInfo(maxOf(e.at,now+100L),show),due)
             }
         }
         for(i in 0..39) if(78000+i !in wanted) am.cancel(pi(c,78000+i,"DUE"))
