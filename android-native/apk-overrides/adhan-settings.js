@@ -234,7 +234,7 @@
    )
    .join(
      "",
-   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}</div></fieldset>
+   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `<p class="ad-note">إعداد السماح بالصوت متاح لكل صلاة من القسم أدناه.</p>${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}</div></fieldset>
  ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -251,6 +251,7 @@
          )}</select></label><button type="button" id="adWidget">إضافة ودجت للشاشة الرئيسية</button></div>`
      : ""
  }
+ <div class="ad-card" id="adAudibility"><h3>🔔 صوت الصلاة في الصامت وعدم الإزعاج</h3><p class="ad-note">زرّان لكل صلاة، ينطبقان على صوت الأذان ومنبّه الصلاة إذا كانا مفعّلين؛ إشعار الصلاة مستقل.</p><div class="ad-sound-policy">${C.ids.map(id=>'<div class="ad-sound-policy-row"><strong>'+names[id]+'</strong><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 أثناء الصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 أثناء عدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div>').join('')}</div><p class="ad-note">عند تشغيل الصامت وعدم الإزعاج معاً يلزم تشغيل الزرين. تتطابق الإعدادات في الويب وAPK، لكن المتصفح لا يتحكم بوضع الهاتف أو يضمن الرنين بالخلفية.</p></div>
  <div class="ad-card"><h3>الخدمات</h3><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button><div id="adService" class="ad-service"></div></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     panel.querySelectorAll("[data-setting]").forEach((el) =>
       el.addEventListener("change", () => {
@@ -326,6 +327,12 @@
           render();
         }),
     );
+    panel.querySelectorAll("[data-ad-audibility]").forEach(b => b.onclick=()=>{
+      const id=b.dataset.adAudibility, condition=b.dataset.soundCondition;
+      if(!C.ids.includes(id) || !["silent","dnd"].includes(condition))return;
+      state.audibility[id][condition]=!state.audibility[id][condition];
+      state=C.normalize(state);persist();render();
+    });
     if (native) {
       $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
       $("adPermission").onclick = () => window.AndroidNative.adhanPermissions();
