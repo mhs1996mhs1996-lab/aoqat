@@ -27,7 +27,7 @@ object AtAdhanQuiet {
         if(now !in begin until end)return
         val settings=AdhanSchedule.settings(c)
         val soundEnabled=settings.optBoolean("enabled") &&
-            settings.optJSONObject("modes")?.optString(prayerId,"sound")=="sound"
+            (settings.optJSONObject("modes")?.optString(prayerId,"sound") ?: "sound")=="sound"
         // Do not mute the phone during the actual recitation or its cold start.
         if(AdhanPlaybackService.running ||
             (soundEnabled && now-prayerAt<45000L &&
