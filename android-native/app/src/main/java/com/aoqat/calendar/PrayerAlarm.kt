@@ -46,10 +46,13 @@ object PrayerAlarm {
     }
     fun pending(c:Context,e:PrayerTimes.Prayer,now:Long):Boolean = e.at>now || (now-e.at in 0L..120000L && e.at>=prefs(c).getLong("enabledAt_${e.id}",0) && prefs(c).getLong("delivered_${e.id}",0)!=e.at)
     @Synchronized fun release(c:Context,id:String,at:Long){if(prefs(c).getLong("delivered_$id",0)==at)prefs(c).edit().remove("delivered_$id").putLong("retryAt_$id",System.currentTimeMillis()+5000).commit()}
-    @Synchronized fun schedule(c:Context){val s=settings(c);val now=System.currentTimeMillis();for(i in 0..79)cancel(c,70000+i);cancel(c,70990)
-        if(!s.optBoolean("enabled"))return
+    @Synchronized fun schedule(c:Context){val s=settings(c);val now=System.currentTimeMillis()
+        // Update active AlarmClock PendingIntents before removing stale ones.
+        // Cancel-all rescheduling can lose a prayer exactly at the deadline.
         val first=mutableSetOf<String>();var slot=0
-        events(c).filter{!FridaySchedule.suppress(c,it.id,it.at)&&pending(c,it,now)&&allowed(s,it.id,it.at)}.forEach{e->if(item(c,e.id).optString("repeat")!="once"||first.add(e.id)){if(slot<80)alarm(c,70000+slot++,e.id,e.at,triggerAt=maxOf(e.at,now+100,prefs(c).getLong("retryAt_${e.id}",0)))}}
+        if(s.optBoolean("enabled"))events(c).filter{!FridaySchedule.suppress(c,it.id,it.at)&&pending(c,it,now)&&allowed(s,it.id,it.at)}.forEach{e->if(item(c,e.id).optString("repeat")!="once"||first.add(e.id)){if(slot<80)alarm(c,70000+slot++,e.id,e.at,triggerAt=maxOf(e.at,now+100,prefs(c).getLong("retryAt_${e.id}",0))) }}
+        for(i in slot..79)cancel(c,70000+i)
+        if(!s.optBoolean("enabled")){cancel(c,70990);return}
         ids.forEach{id->val at=prefs(c).getLong("snooze_$id",0);if(at>0&&!FridaySchedule.suppress(c,id,at)&&pending(c,PrayerTimes.Prayer(id,at,false),now)&&item(c,id).optBoolean("enabled"))alarm(c,71000+ids.indexOf(id),id,at,prefs(c).getInt("snoozeCount_$id",1),maxOf(at,now+100,prefs(c).getLong("retryAt_$id",0)))}
         alarm(c,70990,"refresh",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
