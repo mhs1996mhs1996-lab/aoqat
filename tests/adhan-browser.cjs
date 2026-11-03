@@ -56,6 +56,19 @@ const { spawn } = require("node:child_process");
       await page.locator('[data-setting="sound"]').isDisabled(),
       true,
     );
+    assert.equal(await page.locator('#adAudibility [data-ad-audibility]').count(),10,
+      'Two audible-mode buttons for each of five prayers');
+    const fajrSilent=page.locator('[data-ad-audibility="fajr"][data-sound-condition="silent"]');
+    const asrDnd=page.locator('[data-ad-audibility="asr"][data-sound-condition="dnd"]');
+    await fajrSilent.click();
+    assert.equal(await fajrSilent.getAttribute('aria-pressed'),'true');
+    await asrDnd.click();
+    const audioPolicy=await page.evaluate(()=>JSON.parse(localStorage.aoqatAdhanV1).audibility);
+    assert.equal(audioPolicy.fajr.silent,true);
+    assert.equal(audioPolicy.fajr.dnd,false);
+    assert.equal(audioPolicy.asr.silent,false);
+    assert.equal(audioPolicy.asr.dnd,true);
+    assert.equal(audioPolicy.dhuhr.dnd,false);
     await page.screenshot({ path: "/tmp/aoqat-adhan-off.png" });
     await page.evaluate(()=>window.aoqatCloseSettingsLeaves?.());await page.locator("#adEnable").click();
     await page.screenshot({ path: "/tmp/aoqat-adhan-on.png" });
