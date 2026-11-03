@@ -114,7 +114,13 @@ class PrayerNotificationReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
         if (i.action == "REFRESH") { PrayerNotifications.schedule(c); return }
         val id = i.getStringExtra("id") ?: return
-        if (PrayerNotifications.claim(c, id, i.getLongExtra("at", 0))) PrayerNotifications.start(c, id, i.getBooleanExtra("friday", false))
+        val expected=i.getLongExtra("at",0)
+        if (PrayerNotifications.claim(c,id,expected)) {
+            c.getSharedPreferences("prayer_delivery_diagnostics",Context.MODE_PRIVATE).edit()
+                .putLong("notice_expected_$id",expected)
+                .putLong("notice_received_$id",System.currentTimeMillis()).apply()
+            PrayerNotifications.start(c,id,i.getBooleanExtra("friday",false))
+        }
         PrayerNotifications.schedule(c)
     }
 }
