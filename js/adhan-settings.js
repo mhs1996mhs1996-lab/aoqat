@@ -241,6 +241,11 @@
   }
   function render() {
     if (!panel) return;
+    if(!document.getElementById("adAudibilityStyles")){
+      const st=document.createElement("style");st.id="adAudibilityStyles";
+      st.textContent=".ad-audibility-list{display:grid;gap:8px}.ad-audibility-row{display:grid;gap:7px;padding:11px;border-radius:12px;border:1px solid #c9b88f;background:linear-gradient(110deg,#fffdf7,#f5edda);color:#285342}.ad-audibility-row>strong{font-size:16px}.ad-audibility-row>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ad-audibility-row button{min-height:44px;padding:8px 5px;border-radius:10px;font:inherit;font-size:13px;background:#ece7dc;color:#514b42;border:1px solid #c9bb9c}.ad-audibility-row button.selected{background:#176e58;color:white;border-color:#176e58}.ad-audibility-row button:focus-visible{outline:3px solid #b99442;outline-offset:2px}@media(max-width:340px){.ad-audibility-row>div{grid-template-columns:1fr}}";
+      document.head.append(st);
+    }
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
  <button type="button" id="adEnable" class="ad-master ${state.enabled ? "on" : ""}" aria-pressed="${state.enabled}">${state.enabled ? "🔊 الأذان مفعل" : "🔇 الأذان متوقف — اضغط للتفعيل"}</button>
  <button type="button" class="ad-section-toggle" data-ad-section="friday" aria-expanded="false" aria-controls="adSection-friday"><span class="ad-section-icon" aria-hidden="true">🕌</span><span>تخصيص صلاة الجمعة</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>${fridayMarkup()}
@@ -294,7 +299,7 @@
    )
    .join(
      "",
-   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
+   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `<p class="ad-note">التحكم بالصوت أثناء الصامت وعدم الإزعاج منفصل لكل صلاة أسفل القائمة.</p>${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
  <section id="adSection-services" class="ad-section" hidden><div class="ad-card"><h3>الخدمات</h3><div id="adServiceMenu" class="ad-service-menu"><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button>${native ? '<button type="button" data-service="widget">📱 الصلاة القادمة على الهاتف</button>' : ''}</div><div id="adServiceFrame" class="ad-service-frame" hidden><button type="button" id="adServiceBack" class="ad-inner-back">‹ رجوع إلى الخدمات</button><h4 id="adServiceTitle"></h4><div id="adService" class="ad-service"></div><div id="adWidgetControls" hidden> ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -311,7 +316,12 @@
          )}</select></label><button type="button" id="adWidget">إضافة ودجت للشاشة الرئيسية</button></div>`
      : ""
  }
-</div></div></div></section></fieldset><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+</div></div></div></section></fieldset>
+ <div class="ad-card" id="adAudibility"><h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
+ <p class="ad-note">زرّان لكل صلاة من الصلوات الخمس، ينطبقان على الأذان ومنبّه الصلاة إذا كانا مفعّلين. إشعار الصلاة العادي مستقل.</p>
+ <div class="ad-audibility-list">${C.ids.map(id => '<div class="ad-audibility-row"><strong>'+names[id]+'</strong><div><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 بالصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 بعدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div></div>').join('')}</div>
+ <p class="ad-note">إذا اجتمع الصامت وعدم الإزعاج، يجب تشغيل الزرين للصلاة. تشغيل الصوت أثناء عدم الإزعاج على أندرويد قد يحتاج منح إذن «التحكم بعدم الإزعاج»، ويستعاد وضعه السابق بعد انتهاء الصوت. المتصفح لا يستطيع تغيير أو قراءة وضع صوت الهاتف.</p>
+ </div><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     if (!native && servicePanel) {
       const services = panel.querySelector("#adSection-services"); services.hidden = false;
       services.querySelector("h3")?.remove();
@@ -414,6 +424,16 @@
           render();
         }),
     );
+    panel.querySelectorAll("[data-ad-audibility]").forEach(button => button.onclick=()=>{
+      const id=button.dataset.adAudibility,condition=button.dataset.soundCondition;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(condition))return;
+      state.audibility[id][condition]=!state.audibility[id][condition];
+      state=C.normalize(state);
+      persist();
+      if(native&&condition==="dnd"&&state.audibility[id].dnd)
+        window.AndroidNative.requestPrayerAudioDndPermission?.();
+      render();
+    });
     if (native) {
       $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
       $("adPermission").onclick = () => window.AndroidNative.adhanPermissions();
