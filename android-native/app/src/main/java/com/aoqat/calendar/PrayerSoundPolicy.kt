@@ -25,7 +25,7 @@ object PrayerSoundPolicy {
         val config=AdhanSchedule.settings(c)
         val audio=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val dnd=nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL
+        val dnd=PrayerAudioDnd.effectiveDndFilter(c)!=NotificationManager.INTERRUPTION_FILTER_ALL
         val silent=audio.ringerMode!=AudioManager.RINGER_MODE_NORMAL
         // App-owned silent-at-adhan must not prevent an independently enabled
         // adhan recording; user-set silent mode still follows the switch.
