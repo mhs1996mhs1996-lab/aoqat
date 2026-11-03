@@ -282,9 +282,17 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         started=SystemClock.elapsedRealtime()
         if(config.optBoolean("flip"))sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let{sensors.registerListener(this,it,SensorManager.SENSOR_DELAY_NORMAL)}
         val am=getSystemService(AUDIO_SERVICE) as AudioManager
-        val override=config.optBoolean("overrideSilent")
-        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL &&
-            !AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)){
+        // A prayer is allowed to sound in silent and DND only by its own two
+        // switches. An active app-owned at-adhan quiet is not a user mute.
+        val nmPolicy=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val policyId=if(special)"dhuhr" else prayer
+        val appQuiet=AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)
+        val soundAllowed=preview || (appQuiet ||
+            PrayerSoundPolicy.enabledFor(config,policyId,"silent") ||
+            am.ringerMode==AudioManager.RINGER_MODE_NORMAL) &&
+            (PrayerSoundPolicy.enabledFor(config,policyId,"dnd") ||
+             nmPolicy.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_ALL)
+        if(!soundAllowed) {
             if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
             handler.postDelayed({stopSelf()},4000)
             return START_NOT_STICKY
