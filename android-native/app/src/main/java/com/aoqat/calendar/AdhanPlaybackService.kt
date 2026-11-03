@@ -49,6 +49,36 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 .put("scheduledStart",history.getLong("scheduledStart",0L))
                 .put("deadline",history.getLong("end",0L))
         }
+        /**
+         * Some OEMs reject AudioManager's silent change while a manually
+         * scheduled DND filter is active. Temporarily lift the filter only
+         * around the ringtone operation and restore the exact previous filter
+         * immediately, without altering the user's DND rule or duration.
+         */
+        private fun switchRingerPreservingDnd(
+            am:AudioManager,nm:NotificationManager,target:Int
+        ):Boolean {
+            try { am.ringerMode=target } catch(e:Exception) {
+                android.util.Log.w("IqamaQuiet","Ringer change under existing DND rejected",e)
+            }
+            if(am.ringerMode==target)return true
+            val before=nm.currentInterruptionFilter
+            if(before==NotificationManager.INTERRUPTION_FILTER_ALL ||
+               !nm.isNotificationPolicyAccessGranted)return false
+            try {
+                nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                am.ringerMode=target
+            }catch(e:Exception) {
+                android.util.Log.w("IqamaQuiet","Temporary DND-compatible ringtone switch rejected",e)
+            }finally{
+                try {
+                    if(nm.currentInterruptionFilter!=before)nm.setInterruptionFilter(before)
+                }catch(e:Exception) {
+                    android.util.Log.e("IqamaQuiet","Could not immediately restore manually enabled DND",e)
+                }
+            }
+            return am.ringerMode==target && nm.currentInterruptionFilter==before
+        }
         @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L, preserveUserDnd:Boolean=false): Boolean {
             val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if(!nm.isNotificationPolicyAccessGranted) {
@@ -103,14 +133,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
                 return false
             }
-            var silentApplied=false
-            try {
-                if(am.ringerMode!=AudioManager.RINGER_MODE_SILENT)
-                    am.ringerMode=AudioManager.RINGER_MODE_SILENT
-                silentApplied=am.ringerMode==AudioManager.RINGER_MODE_SILENT
-            } catch (e: SecurityException) {
-                android.util.Log.w("IqamaQuiet","Android rejected ringer silent; trying DND fallback",e)
-            }
+            val silentApplied=switchRingerPreservingDnd(
+                am,nm,AudioManager.RINGER_MODE_SILENT)
             var dndApplied=p.getBoolean("dndApplied",false)
             // Some OEMs turn on DND as a side effect of changing ringer mode.
             // Record this as OUR change so the exact previous DND policy is restored.
@@ -151,9 +175,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             try {
                 if(previous!=AudioManager.RINGER_MODE_SILENT &&
                     am.ringerMode==AudioManager.RINGER_MODE_SILENT) {
-                    am.ringerMode=previous
-                    // Some OEMs silently reject mode changes without throwing.
-                    ringerRestored=am.ringerMode==previous
+                    // Restore NORMAL or VIBRATE even while the user's DND
+                    // schedule is active; never leave ringer stuck in SILENT.
+                    ringerRestored=switchRingerPreservingDnd(am,nm,previous)
                 }
             } catch (e: Exception) {
                 ringerRestored=false
