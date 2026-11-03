@@ -302,7 +302,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         retryAllowed=true
         try {
             val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
-            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
+            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(false).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
             val result=am.requestAudioFocus(focus!!)
             audioFocus.requested(result)
             if(result==AudioManager.AUDIOFOCUS_REQUEST_FAILED){stopSelf();return START_NOT_STICKY}
