@@ -27,6 +27,7 @@
       partial: false,
       customEnd: 35,
       overrideSilent: false,
+      soundPolicy: Object.fromEntries(ids.map(id=>[id,{silent:false,dnd:false}])),
       vibrate: false,
       pattern: "short",
       screen: false,
@@ -73,6 +74,15 @@
     for (const id of [...ids, "friday"])
       if (["sound", "vibrate", "silent"].includes(s.modes?.[id]))
         d.modes[id] = s.modes[id];
+    // Each prayer can independently allow sound while the phone is silent or DND.
+    // Legacy global silent override is migrated only when no per-prayer value exists.
+    for(const id of ids) {
+      const p=s.soundPolicy?.[id];
+      d.soundPolicy[id]={
+        silent:p?.silent===true || (p?.silent===undefined && s.overrideSilent===true),
+        dnd:p?.dnd===true
+      };
+    }
     d.afterIqamaSilent.enabled = s.afterIqamaSilent?.enabled === true;
     for (const id of ids) {
       const n = Number(s.afterIqamaSilent?.minutes?.[id]);
