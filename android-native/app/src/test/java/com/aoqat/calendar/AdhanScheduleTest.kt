@@ -44,5 +44,12 @@ class AdhanScheduleTest{
   AdhanSchedule.schedule(c)
   assertTrue(shadowOf(am).scheduledAlarms.none{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY"&&i.getStringExtra("prayerId")==id&&i.getLongExtra("prayerAt",0)==intent.getLongExtra("prayerAt",0)}})
  }
+ @Test fun afterIqamaQuietSchedulesWithoutEnablingAdhanSound(){
+  seed();set(JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"asr":8}}}"""))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  assertTrue(alarms.any{shadowOf(it.operation).savedIntent.action=="IQAMA_QUIET"})
+  assertTrue(alarms.none{shadowOf(it.operation).savedIntent.action=="PLAY"})
+ }
  @Test fun parseHandlesMorningDhuhrAndAfternoon(){assertEquals(719,PrayerTimes.minutes("11:59","dhuhr"));assertEquals(922,PrayerTimes.minutes("3:22","asr"));assertEquals(364,PrayerTimes.minutes("6:04","sunrise"));assertNull(PrayerTimes.minutes("27:11","fajr"))}
 }
