@@ -341,7 +341,8 @@
       .forEach((b) => (b.onclick = () => showService(b.dataset.service)));
     tick();
     if (service) showService(service);
-    persist();
+    // Rendering settings must never reconfigure native alarms or cancel their deadlines.
+    // Explicit user changes call persist() in their own handlers.
   }
   function tick() {
     const now = new Date(),
