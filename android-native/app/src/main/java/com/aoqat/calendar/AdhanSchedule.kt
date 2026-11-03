@@ -46,7 +46,7 @@ object AdhanSchedule {
         val key=deliveryKey(id,at)
         if (prefs(c).getLong(key,0)==at) return false
         val saved=prefs(c).edit().putLong(key,at).commit()
-        if(saved&&!special)alarm(c,60480+PrayerTimes.ids.indexOf(id),"VERIFY_PLAY",now+30000,PrayerTimes.Prayer(id,at,false))
+        if(saved&&!special)alarm(c,60480+PrayerTimes.ids.indexOf(id),"VERIFY_PLAY",now+8000,PrayerTimes.Prayer(id,at,false))
         return saved
     }
     fun confirmStarted(c:Context,id:String,at:Long){prefs(c).edit().putLong("started_$id",at).commit()}
@@ -90,7 +90,7 @@ object AdhanSchedule {
         val intent = Intent(c, AdhanReceiver::class.java).setAction(action)
         prayer?.let { intent.putExtra("prayerId", it.id).putExtra("prayerAt", it.at).putExtra("friday", it.friday) }
         val pi = PendingIntent.getBroadcast(c, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        if (action == "PLAY") {
+        if (action == "PLAY" || action == "VERIFY_DUE") {
             val show = PendingIntent.getActivity(c, id, Intent(c, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             am.setAlarmClock(AlarmManager.AlarmClockInfo(at, show), pi)
         } else am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -120,8 +120,8 @@ object AdhanSchedule {
                 queue(60000+i,"PLAY",maxOf(p.at,now+100),p)
                 // Independent second chance if an OEM defers/drops the primary
                 // receiver. The same delivery claim prevents duplicate adhan.
-                if(!delivered(c,p) && p.at+30000L>now)
-                    queue(60600+i,"VERIFY_DUE",maxOf(p.at+30000L,now+500L),p)
+                if(!delivered(c,p) && p.at+4000L>now)
+                    queue(60600+i,"VERIFY_DUE",maxOf(p.at+4000L,now+500L),p)
             }
             val before = s.optInt("reminder", 0).coerceIn(0,60)*60000L
             if (before > 0 && p.at-before > now) queue( 60100+i, "REMINDER", p.at-before, p)
@@ -142,6 +142,9 @@ class AdhanReceiver : BroadcastReceiver() {
                 val id=intent.getStringExtra("prayerId") ?: return
                 val at=intent.getLongExtra("prayerAt",0)
                 if (AdhanSchedule.claim(c,id,at)) {
+                    c.getSharedPreferences("adhan_delivery_diagnostics",Context.MODE_PRIVATE).edit()
+                        .putLong("receiver_$id",System.currentTimeMillis())
+                        .putLong("expected_$id",at).apply()
                     AdhanDispatch.acquire(c)
                     try { androidx.core.content.ContextCompat.startForegroundService(c, Intent(c, AdhanPlaybackService::class.java).putExtras(intent)) }
                     catch (e: Exception) { AdhanDispatch.release(); AdhanSchedule.retry(c,id,at); android.util.Log.e("AdhanReceiver","Unable to start scheduled adhan",e) }
@@ -150,7 +153,7 @@ class AdhanReceiver : BroadcastReceiver() {
             "VERIFY_PLAY" -> {
                 val id=intent.getStringExtra("prayerId")?:return
                 val at=intent.getLongExtra("prayerAt",0)
-                if(!AdhanSchedule.started(c,id,at)&&!(AdhanPlaybackService.running&&AdhanPlaybackService.activePrayerId==id))AdhanSchedule.retry(c,id,at)
+                if(!AdhanSchedule.started(c,id,at))AdhanSchedule.retry(c,id,at)
             }
             "REMINDER", "SUHOOR" -> if (AdhanSchedule.enabled(c) && !FridaySchedule.suppress(c,intent.getStringExtra("prayerId")?:"",intent.getLongExtra("prayerAt",0))) {
                 val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

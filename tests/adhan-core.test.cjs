@@ -125,3 +125,25 @@ test("services display switches at database Isha plus 35 minutes without shiftin
   assert.equal(C.displayDate([],after).getDate(),7);
   assert.equal(C.displayDate([{gregorian_month:10,gregorian_day:7,isha:'invalid'}],after).getDate(),7);
 });
+
+test("five prayers save two independent silent/DND audio choices without changing prayer times", () => {
+  const base=C.normalize();
+  assert.equal(Object.keys(base.audibility).length,5);
+  for(const id of C.ids) {
+    assert.equal(base.audibility[id].silent,false);
+    assert.equal(base.audibility[id].dnd,false);
+  }
+  const changed=C.normalize({audibility:{
+    fajr:{silent:true,dnd:false},dhuhr:{silent:false,dnd:true},
+    asr:{silent:true,dnd:true},maghrib:{silent:false,dnd:false},
+    isha:{silent:true,dnd:false}
+  }});
+  assert.deepEqual(changed.audibility.asr,{silent:true,dnd:true});
+  assert.deepEqual(changed.audibility.dhuhr,{silent:false,dnd:true});
+  assert.deepEqual(changed.audibility.maghrib,{silent:false,dnd:false});
+  assert.equal(changed.audibility.isha.silent,true);
+  assert.equal(changed.modes.asr,"sound");
+  const restored=C.normalize(JSON.parse(JSON.stringify(changed)));
+  assert.deepEqual(restored.audibility,changed.audibility);
+  assert.deepEqual(C.normalize({overrideSilent:true}).audibility.fajr,{silent:true,dnd:true});
+});

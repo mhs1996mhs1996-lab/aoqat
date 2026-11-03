@@ -46,10 +46,17 @@ object PrayerAlarm {
     }
     fun pending(c:Context,e:PrayerTimes.Prayer,now:Long):Boolean = e.at>now || (now-e.at in 0L..120000L && e.at>=prefs(c).getLong("enabledAt_${e.id}",0) && prefs(c).getLong("delivered_${e.id}",0)!=e.at)
     @Synchronized fun release(c:Context,id:String,at:Long){if(prefs(c).getLong("delivered_$id",0)==at)prefs(c).edit().remove("delivered_$id").putLong("retryAt_$id",System.currentTimeMillis()+5000).commit()}
-    @Synchronized fun schedule(c:Context){val s=settings(c);val now=System.currentTimeMillis();for(i in 0..79)cancel(c,70000+i);cancel(c,70990)
-        if(!s.optBoolean("enabled"))return
+    @Synchronized fun schedule(c:Context){val s=settings(c);val now=System.currentTimeMillis()
+        if(!s.optBoolean("enabled")){for(i in 0..79)cancel(c,70000+i);cancel(c,70990);return}
         val first=mutableSetOf<String>();var slot=0
-        events(c).filter{!FridaySchedule.suppress(c,it.id,it.at)&&pending(c,it,now)&&allowed(s,it.id,it.at)}.forEach{e->if(item(c,e.id).optString("repeat")!="once"||first.add(e.id)){if(slot<80)alarm(c,70000+slot++,e.id,e.at,triggerAt=maxOf(e.at,now+100,prefs(c).getLong("retryAt_${e.id}",0)))}}
+        events(c).filter{!FridaySchedule.suppress(c,it.id,it.at)&&pending(c,it,now)&&allowed(s,it.id,it.at)}
+            .forEach{e->if(item(c,e.id).optString("repeat")!="once"||first.add(e.id)){
+                if(slot<80)alarm(c,70000+slot++,e.id,e.at,
+                    triggerAt=maxOf(e.at,now+100,prefs(c).getLong("retryAt_${e.id}",0)))
+            }}
+        // Rescheduling never opens an alarm-delivery gap by cancelling all
+        // database alarms before replacing the selected entries.
+        for(i in slot until 80)cancel(c,70000+i)
         ids.forEach{id->val at=prefs(c).getLong("snooze_$id",0);if(at>0&&!FridaySchedule.suppress(c,id,at)&&pending(c,PrayerTimes.Prayer(id,at,false),now)&&item(c,id).optBoolean("enabled"))alarm(c,71000+ids.indexOf(id),id,at,prefs(c).getInt("snoozeCount_$id",1),maxOf(at,now+100,prefs(c).getLong("retryAt_$id",0)))}
         alarm(c,70990,"refresh",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
@@ -102,7 +109,7 @@ class PrayerAlarmService:Service(){
         else @Suppress("DEPRECATION") registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF))
     }
     override fun onBind(i:Intent?)=null
-    override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int{val id=i?.getStringExtra("id")?:return START_NOT_STICKY;if(id !in PrayerAlarm.ids){stopSelf();return START_NOT_STICKY};player?.release();handler.removeCallbacksAndMessages(null)
+    override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int{val id=i?.getStringExtra("id")?:return START_NOT_STICKY;if(id !in PrayerAlarm.ids){stopSelf();return START_NOT_STICKY};if(!i.getBooleanExtra("preview",false)&&!PrayerSoundPolicy.allowed(this,id,true)){stopSelf();return START_NOT_STICKY};player?.release();handler.removeCallbacksAndMessages(null)
         PrayerAlarm.prefs(this).edit().putString("activeId",id).apply();val p=PrayerAlarm.item(this,id);val preview=i.getBooleanExtra("preview",false);if(!preview)PrayerAlarm.prefs(this).edit().remove("snooze_$id").apply();val count=i.getIntExtra("count",0);ringingId=id;ringingCount=count;ringingPreview=preview;hardwareHandled=false;val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         val channel=NotificationChannel("prayer_alarm_v1","منبّه الصلاة",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);lockscreenVisibility=Notification.VISIBILITY_PUBLIC};nm.createNotificationChannel(channel)
         fun action(name:String)=PendingIntent.getBroadcast(this,72000+PrayerAlarm.ids.indexOf(id)*2+(if(name=="SNOOZE")1 else 0),Intent(this,PrayerAlarmActionReceiver::class.java).setAction(name).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -111,7 +118,7 @@ class PrayerAlarmService:Service(){
         if(!preview&&count<p.optInt("count",3))notification.addAction(Notification.Action.Builder(null,"غفوة",action("SNOOZE")).build())
         // The alert must be explicitly enabled and screen waking is user-controlled.
         if(!preview && PhoneScreenAlerts.enabled(this)) notification.setFullScreenIntent(show,true)
-        startForeground(73100,notification.build());val duration=if(preview)5000L else p.optInt("duration",5).coerceIn(1,30)*60000L
+        startForeground(73100,notification.build());if(!preview&&PrayerSoundPolicy.chosen(AdhanSchedule.settings(this),id,"dnd",true))PrayerAudioDnd.begin(this,"prayer-alarm");val duration=if(preview)5000L else p.optInt("duration",5).coerceIn(1,30)*60000L
         wake?.let{if(it.isHeld)it.release()};wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:prayerAlarm").apply{acquire(duration+10000)}
         val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
         val am=getSystemService(AUDIO_SERVICE) as AudioManager;PrayerAlarmAudio.ensureAudible(this);focus?.let{am.abandonAudioFocusRequest(it)};focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setOnAudioFocusChangeListener{}.build();am.requestAudioFocus(focus!!)
@@ -120,7 +127,7 @@ class PrayerAlarmService:Service(){
         sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",true))
         handler.postDelayed({if(!preview)PrayerAlarm.finish(this,id);stopSelf()},duration);return START_NOT_STICKY
     }
-    override fun onDestroy(){ringingId="";hardwareHandled=true;try{unregisterReceiver(screenOff)}catch(_:Exception){};PrayerAlarmAudio.restore(this);PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){ringingId="";hardwareHandled=true;try{unregisterReceiver(screenOff)}catch(_:Exception){};PrayerAlarmAudio.restore(this);PrayerAudioDnd.end(this,"prayer-alarm");PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
 class PrayerAlarmActivity:Activity(){
     private val receiver=object:BroadcastReceiver(){

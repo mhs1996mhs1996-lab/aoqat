@@ -247,6 +247,8 @@ class BootReceiver : BroadcastReceiver() {
         PrayerAlarm.schedule(context)
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) AdhanPlaybackService.restoreVolume(context)
         AdhanPlaybackService.restoreRingerIfExpired(context)
+        // Reboot / in-place upgrade must not strand user DND in an audio-only exception.
+        PrayerAudioDnd.restore(context)
         PrayerWidget.update(context)
         if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
         val pending = goAsync()
