@@ -58,11 +58,18 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         private fun switchRingerPreservingDnd(
             am:AudioManager,nm:NotificationManager,target:Int
         ):Boolean {
+            val before=nm.currentInterruptionFilter
             try { am.ringerMode=target } catch(e:Exception) {
                 android.util.Log.w("IqamaQuiet","Ringer change under existing DND rejected",e)
             }
-            if(am.ringerMode==target)return true
-            val before=nm.currentInterruptionFilter
+            if(am.ringerMode==target) {
+                // On some OEMs switching ringtone silently changes the DND
+                // filter as a side effect. Restore that filter immediately.
+                if(nm.currentInterruptionFilter!=before)try {
+                    if(nm.isNotificationPolicyAccessGranted)nm.setInterruptionFilter(before)
+                }catch(e:Exception){android.util.Log.w("IqamaQuiet","Could not preserve user DND",e)}
+                return am.ringerMode==target && nm.currentInterruptionFilter==before
+            }
             if(before==NotificationManager.INTERRUPTION_FILTER_ALL ||
                !nm.isNotificationPolicyAccessGranted)return false
             try {
