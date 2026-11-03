@@ -2,7 +2,7 @@ name: Verify and publish APK v1.74 uninterrupted adhan and elapsed iqama restora
 on:
   pull_request:
     paths:
-      - '.github/workflows/publish-v174-prayer-exact-dnd-iqama.yml'
+      - '.github/workflows/publish-v174-maghrib-adhan-iqama-restore.yml'
 permissions:
   contents: write
   actions: read
