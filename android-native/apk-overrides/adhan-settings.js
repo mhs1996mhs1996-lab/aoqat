@@ -235,6 +235,11 @@
    .join(
      "",
    )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}</div></fieldset>
+ <div class="ad-card" id="adAudibility"><h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
+ <p class="ad-note">زرّان لكل صلاة من الصلوات الخمس للأذان ومنبّه الصلاة فقط؛ إشعار الصلاة يبقى مستقلاً.</p>
+ <div style="display:grid;gap:8px">${C.ids.map(id => '<div class="ad-mode" style="display:grid;gap:7px"><strong>'+names[id]+'</strong><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px"><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 بالصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 بعدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div></div>').join('')}</div>
+ <p class="ad-note">عند اجتماع الصامت وعدم الإزعاج يجب تشغيل الزرين. السماح في وضع عدم الإزعاج يتطلب منح إذن أندرويد، ويُستعاد الوضع الأصلي بعد انتهاء الصوت.</p>
+ </div>
  ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -326,6 +331,16 @@
           render();
         }),
     );
+    panel.querySelectorAll("[data-ad-audibility]").forEach(button => button.onclick=()=>{
+      const id=button.dataset.adAudibility,condition=button.dataset.soundCondition;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(condition))return;
+      state.audibility[id][condition]=!state.audibility[id][condition];
+      state=C.normalize(state);
+      persist();
+      if(native&&condition==="dnd"&&state.audibility[id].dnd)
+        window.AndroidNative.requestPrayerAudioDndPermission?.();
+      render();
+    });
     if (native) {
       $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
       $("adPermission").onclick = () => window.AndroidNative.adhanPermissions();
