@@ -28,8 +28,6 @@ object PrayerNotifications {
         }
         val clean = JSONObject().put("enabled", incoming.optBoolean("enabled")).put("volume", incoming.optInt("volume", 65).coerceIn(0, 100)).put("prayers", prayers)
         edit.putString("settings", clean.toString()).commit()
-        if (selected(c, AdhanPlaybackService.activePrayerId)) c.stopService(Intent(c, AdhanPlaybackService::class.java))
-        if (selected(c, PrayerAlarm.prefs(c).getString("activeId", "") ?: "")) c.stopService(Intent(c, PrayerAlarmService::class.java))
         if (!clean.optBoolean("enabled")) c.stopService(Intent(c, PrayerNotificationSoundService::class.java))
         AdhanSchedule.schedule(c); PrayerAlarm.schedule(c)
     }
@@ -37,15 +35,26 @@ object PrayerNotifications {
         Intent(c, PrayerNotificationReceiver::class.java).setAction(action).putExtra("id", id).putExtra("at", at).putExtra("friday", friday), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     @Synchronized fun schedule(c: Context) {
         val am = c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        for (i in 0..39) am.cancel(pi(c, 78000 + i, "DUE"))
-        am.cancel(pi(c, 78990, "REFRESH"))
-        if (!settings(c).optBoolean("enabled") || (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms())) return
-        val now = System.currentTimeMillis()
-        PrayerTimes.events(c).forEachIndexed { i, e ->
-            if (i < 40 && e.at > now && selected(c, e.id) && !FridaySchedule.suppress(c, e.id, e.at))
-                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, e.at, pi(c, 78000 + i, "DUE", e.id, e.at, e.friday))
-        }
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(), pi(c, 78990, "REFRESH"))
+        val wanted = mutableSetOf<Int>()
+        val exact = Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()
+        if (settings(c).optBoolean("enabled") && exact) {
+            val now = System.currentTimeMillis()
+            PrayerTimes.events(c).forEachIndexed { i, e ->
+                if (i < 40 && e.at > now && selected(c, e.id) && !FridaySchedule.suppress(c, e.id, e.at)) {
+                    val slot = 78000 + i
+                    wanted.add(slot)
+                    val show = PendingIntent.getActivity(c, slot, Intent(c, MainActivity::class.java),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+                    // An alarm-clock deadline remains exact during Android idle/Doze.
+                    am.setAlarmClock(AlarmManager.AlarmClockInfo(e.at, show), pi(c, slot, "DUE", e.id, e.at, e.friday))
+                }
+            }
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,
+                LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+                pi(c, 78990, "REFRESH"))
+        } else am.cancel(pi(c, 78990, "REFRESH"))
+        // Replace active alarms in-place, cancelling only those no longer selected.
+        for (i in 0..39) if (78000 + i !in wanted) am.cancel(pi(c, 78000 + i, "DUE"))
     }
     @Synchronized fun claim(c: Context, id: String, at: Long): Boolean {
         if (!selected(c, id) || FridaySchedule.suppress(c, id, at) || System.currentTimeMillis() - at !in 0L until 120000L || at < prefs(c).getLong("enabledAt_$id", 0)) return false
