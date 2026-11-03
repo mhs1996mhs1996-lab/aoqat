@@ -32,7 +32,7 @@ class PrayerSoundPolicyTest {
         val json="""{"enabled":true,"audibility":{"fajr":{"silent":true,"dnd":true},
             "dhuhr":{"silent":false,"dnd":true},
             "asr":{"silent":true,"dnd":false},
-            "maghrib":{"silent":false,"dnd":false}}}"""
+            "maghrib":{"silent":false,"dnd":false},"isha":{"silent":false,"dnd":false}}}"""
         c.getSharedPreferences("adhan_settings",0).edit().putString("settings",json).commit()
     }
 
