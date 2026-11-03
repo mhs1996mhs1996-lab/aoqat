@@ -223,7 +223,7 @@
    .join(
      "",
    )}<p class="ad-note">إعداد الجمعة يُستخدم بدل الظهر يوم الجمعة. الشروق للعرض فقط ولا يُشغّل أذانًا.</p></div>
- <div class="ad-card"><h3>التنبيهات</h3>${check("vibrate", "اهتزاز مصاحب للأذان")}<label>نوع الاهتزاز<select data-setting="pattern">${[
+ <div class="ad-card"><h3>صوت الصلاة أثناء الصامت وعدم الإزعاج</h3><p class="ad-note">لكل صلاة زران مستقلان: الأول يسمح بالصوت إذا كان رنين الهاتف صامتاً، والثاني يسمح به أثناء عدم الإزعاج، حسب صلاحيات أندرويد. تنطبق هذه الخيارات على الأذان ومنبّه الصلاة، ولا تغيّر وضع الهاتف نفسه.</p>${C.ids.map(id=>`<div class="ad-policy-row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #d7c6a5"><strong style="min-width:65px">${names[id]}</strong><label style="flex:1;min-width:120px"><input type="checkbox" data-policy="silent" data-policy-id="${id}" ${state.soundPolicy?.[id]?.silent?'checked':''}> أثناء الصامت</label><label style="flex:1;min-width:145px"><input type="checkbox" data-policy="dnd" data-policy-id="${id}" ${state.soundPolicy?.[id]?.dnd?'checked':''}> أثناء عدم الإزعاج</label></div>`).join('')}</div><div class="ad-card"><h3>التنبيهات</h3>${check("vibrate", "اهتزاز مصاحب للأذان")}<label>نوع الاهتزاز<select data-setting="pattern">${[
    ["short", "قصير"],
    ["long", "طويل"],
    ["pulse", "نبضات"],
@@ -252,6 +252,12 @@
      : ""
  }
  <div class="ad-card"><h3>الخدمات</h3><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button><div id="adService" class="ad-service"></div></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+    panel.querySelectorAll("[data-policy]").forEach(el=>el.addEventListener("change",()=>{
+      const id=el.dataset.policyId,key=el.dataset.policy;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(key))return;
+      state.soundPolicy[id][key]=el.checked;
+      persist();render();
+    }));
     panel.querySelectorAll("[data-setting]").forEach((el) =>
       el.addEventListener("change", () => {
         const k = el.dataset.setting;
