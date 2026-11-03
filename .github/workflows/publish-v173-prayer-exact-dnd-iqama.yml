@@ -34,7 +34,7 @@ jobs:
           npm install --no-save --package-lock=false playwright
           CHROME_PATH=/usr/bin/google-chrome node tests/help-support-browser.cjs
           CHROME_PATH=/usr/bin/google-chrome node tests/native-screen-alerts-browser.cjs
-          CHROME_PATH=/usr/bin/google-chrome node tests/adhan-browser.cjs
+          CHROME_PATH=/usr/bin/google-chrome node tests/adhan-audibility-browser.cjs
           node tests/adhan-core.test.cjs
           node tests/prayer-alarm-core.test.cjs
           node --check js/adhan-settings.js
