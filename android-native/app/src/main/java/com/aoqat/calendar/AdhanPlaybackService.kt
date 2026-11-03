@@ -115,6 +115,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private var audioStarted=false
     private var manuallyStopped=false
     private var retryAllowed=false
+    private var dndBypassHeld=false
     private var prayerAt=0L
     private var prayerId=""
     private var prepared=false
@@ -172,8 +173,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         started=SystemClock.elapsedRealtime()
         if(config.optBoolean("flip"))sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let{sensors.registerListener(this,it,SensorManager.SENSOR_DELAY_NORMAL)}
         val am=getSystemService(AUDIO_SERVICE) as AudioManager
-        val override=config.optBoolean("overrideSilent")
-        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL){if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate();handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
+        val audioGrant=if(preview||special) PrayerAudioPolicy.Grant(true) else PrayerAudioPolicy.begin(this,prayer,config)
+        dndBypassHeld=audioGrant.dndBypass
+        if(!audioGrant.allowed){if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate();handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
         if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
         if(mode=="vibrate"){handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
         retryAllowed=true
@@ -216,6 +218,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     }
     private fun vibrate(){vibrator=getSystemService(VIBRATOR_SERVICE) as Vibrator;val p=when(config.optString("pattern")){"long"->longArrayOf(0,1000);"pulse"->longArrayOf(0,250,150,250,150,250);else->longArrayOf(0,250)};vibrator?.vibrate(VibrationEffect.createWaveform(p,-1))}
     private fun cleanup(){
+        if(dndBypassHeld){PrayerAudioPolicy.end(this);dndBypassHeld=false}
         prepared=false;audioFocus.close()
         restoreVolume(this)
         previousVolume=null;appliedVolume=null
