@@ -12,8 +12,8 @@ class AfterIqamaQuietTest {
         assertEquals(2500000L,times.first);assertEquals(2920000L,times.second)
         assertNull(AfterIqamaQuiet.window(settings(),"maghrib",1000000L,10))
     }
-    @Test fun iqamaQuietIsIndependentOfAdhanAudioMaster() {
-        assertNotNull(AfterIqamaQuiet.window(settings().put("enabled",false),"asr",1000000L,25))
+    @Test fun masterDisableStopsQuietWindows() {
+        assertNull(AfterIqamaQuiet.window(settings().put("enabled",false),"asr",1000000L,25))
         val s=settings();s.getJSONObject("afterIqamaSilent").put("enabled",false)
         assertNull(AfterIqamaQuiet.window(s,"asr",1000000L,25))
     }

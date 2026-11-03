@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 93 // Per-prayer silent/DND audio and independent exact prayer alerts
-        versionName '1.58'
+        versionCode 92 // Adhan reliability and updated APK-only settings; invalidate old cached web snapshots
+        versionName '1.57'
     }
 
     compileOptions {
