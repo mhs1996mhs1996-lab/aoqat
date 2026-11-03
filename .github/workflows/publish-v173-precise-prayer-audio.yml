@@ -133,7 +133,7 @@ jobs:
           script: |
             set -e
             adb install -r /tmp/aoqat-v173/aoqat-v1.72-fullscreen-wake-calendar.apk
-            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.73'
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.72'
             adb install -r /tmp/aoqat-v173/aoqat-v1.73-precise-prayer-audio.apk
             adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.73'
             adb shell am start -n com.aoqat.calendar/.MainActivity
