@@ -387,6 +387,7 @@ class MainActivity : Activity() {
         if(firstResume)firstResume=false else PrayerStartup.refresh(this)
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
+        PrayerAudioDnd.recover(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
@@ -648,6 +649,15 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun requestPrayerAudioDndPermission(){runOnUiThread{
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if(!nm.isNotificationPolicyAccessGranted){
+                try { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
+                catch(e:Exception){android.util.Log.w("PrayerSoundPolicy","Cannot open DND access",e)}
+            }
+        }}
+        @JavascriptInterface fun readPrayerAudioPolicyStatus():String =
+            PrayerSoundPolicy.status(this@MainActivity).toString()
         @JavascriptInterface fun readScreenWakeEnabled(): Boolean =
             PhoneScreenAlerts.enabled(this@MainActivity)
 
