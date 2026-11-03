@@ -40,7 +40,7 @@ jobs:
           node --check js/adhan-settings.js
           node --check android-native/apk-overrides/adhan-settings.js
           grep -q 'eachPrayerKeepsSeparateSilentAndDndDecisions' android-native/app/src/test/java/com/aoqat/calendar/PrayerSoundPolicyTest.kt
-          grep -q 'am.setAlarmClock(AlarmManager.AlarmClockInfo(e.at,show),due)' android-native/app/src/main/java/com/aoqat/calendar/PrayerNotifications.kt
+          grep -Fq 'am.setAlarmClock(AlarmManager.AlarmClockInfo(maxOf(e.at,now+100L),show),due)' android-native/app/src/main/java/com/aoqat/calendar/PrayerNotifications.kt
           grep -q 'manualDndDoesNotBlockAfterIqamaRingerQuietAndRestoresOriginalDnd' android-native/app/src/test/java/com/aoqat/calendar/AdhanQuietModeTest.kt
           grep -q 'nativeNotificationZeroStartsSilentWithManualDndAndExactRestoreDeadline' android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt
           grep -q 'AfterIqamaQuiet.onCountdownZero' android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt
