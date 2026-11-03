@@ -1,8 +1,13 @@
 name: Verify and publish APK v1.74 uninterrupted adhan and elapsed iqama restoration
 on:
-  pull_request:
+  push:
+    branches:
+      - 'fix/v174-followup-from-release-v173-20261103'
     paths:
       - '.github/workflows/publish-v174-maghrib-adhan-iqama-restore.yml'
+      - 'android-native/app/src/main/java/com/aoqat/calendar/**'
+      - 'android-native/app/src/test/java/com/aoqat/calendar/**'
+      - 'android-native/app/build.gradle'
 permissions:
   contents: write
   actions: read
@@ -14,7 +19,7 @@ jobs:
       - name: Checkout exact support feature commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -152,7 +157,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           tag=v1.74-maghrib-adhan-iqama-restore
