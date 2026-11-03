@@ -42,6 +42,12 @@ object PrayerAudioDnd {
         try {(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pending(c))}
         catch(_:Exception){}
     }
+    fun effectiveDndFilter(c:Context):Int {
+        val p=pref(c)
+        return if(p.getBoolean("active",false))
+            p.getInt("previous",NotificationManager.INTERRUPTION_FILTER_ALL)
+        else nm(c).currentInterruptionFilter
+    }
     @Synchronized fun begin(c:Context,owner:String):Boolean {
         val n=nm(c);val p=pref(c)
         if(p.getBoolean("active",false)){
