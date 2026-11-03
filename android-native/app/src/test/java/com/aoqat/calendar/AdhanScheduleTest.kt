@@ -81,7 +81,7 @@ class AdhanScheduleTest{
   val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
   val main=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY"&&i.getStringExtra("prayerId")=="asr"}}
   val backup=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="VERIFY_DUE"&&i.getStringExtra("prayerId")=="asr"}}
-  assertEquals(main.triggerAtTime+30000L,backup.triggerAtTime)
+  assertEquals(main.triggerAtTime+4000L,backup.triggerAtTime)
   assertEquals(shadowOf(main.operation).savedIntent.getLongExtra("prayerAt",0),shadowOf(backup.operation).savedIntent.getLongExtra("prayerAt",0))
   val due=System.currentTimeMillis()-1500L
   assertTrue(AdhanSchedule.claim(c,"asr",due))
