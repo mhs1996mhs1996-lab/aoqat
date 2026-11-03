@@ -189,7 +189,7 @@
     if (!panel) return;
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
  <button type="button" id="adEnable" class="ad-master ${state.enabled ? "on" : ""}" aria-pressed="${state.enabled}">${state.enabled ? "🔊 الأذان مفعل" : "🔇 الأذان متوقف — اضغط للتفعيل"}</button>
- <fieldset ${state.enabled ? "" : "disabled"}><div class="ad-card"><h3>صوت الأذان</h3><label>المؤذن<select data-setting="sound">${[
+ ${""}<div class="ad-card"><h3>صوت الصلاة أثناء الصامت وعدم الإزعاج</h3><p class="ad-note">لكل صلاة زران مستقلان: الأول يسمح بالصوت إذا كان رنين الهاتف صامتاً، والثاني يسمح به أثناء عدم الإزعاج، مع مراعاة صلاحيات أندرويد. إذا منع نظام الهاتف صوت المنبّه أثناء عدم الإزعاج، يجب السماح بالمنبّهات من إعدادات عدم الإزعاج أيضاً. تنطبق هذه الخيارات على الأذان ومنبّه الصلاة، ولا تغيّر وضع الهاتف نفسه.</p>${C.ids.map(id=>`<div class="ad-policy-row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #d7c6a5"><strong style="min-width:65px">${names[id]}</strong><label style="flex:1;min-width:120px"><input type="checkbox" data-policy="silent" data-policy-id="${id}" ${state.soundPolicy?.[id]?.silent?'checked':''}> أثناء الصامت</label><label style="flex:1;min-width:145px"><input type="checkbox" data-policy="dnd" data-policy-id="${id}" ${state.soundPolicy?.[id]?.dnd?'checked':''}> أثناء عدم الإزعاج</label></div>`).join('')}</div> <fieldset ${state.enabled ? "" : "disabled"}><div class="ad-card"><h3>صوت الأذان</h3><label>المؤذن<select data-setting="sound">${[
    ["1", "أذان مكة — علي أحمد ملا"],
    ["2", "أذان المدينة — الحرم النبوي"],
    ["3", "أذان مكة — محمد خليل رمل"],
@@ -234,7 +234,7 @@
    )
    .join(
      "",
-   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}</div></fieldset>
+   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `<p class="ad-note">التحكم بالصوت أثناء الصامت وعدم الإزعاج أصبح مستقلاً لكل صلاة بالأزرار أعلاه.</p>${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}</div></fieldset>
  ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -252,6 +252,12 @@
      : ""
  }
  <div class="ad-card"><h3>الخدمات</h3><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button><div id="adService" class="ad-service"></div></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+    panel.querySelectorAll("[data-policy]").forEach(el=>el.addEventListener("change",()=>{
+      const id=el.dataset.policyId,key=el.dataset.policy;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(key))return;
+      state.soundPolicy[id][key]=el.checked;
+      persist();render();
+    }));
     panel.querySelectorAll("[data-setting]").forEach((el) =>
       el.addEventListener("change", () => {
         const k = el.dataset.setting;
@@ -335,7 +341,8 @@
       .forEach((b) => (b.onclick = () => showService(b.dataset.service)));
     tick();
     if (service) showService(service);
-    persist();
+    // Rendering settings must never reconfigure native alarms or cancel their deadlines.
+    // Explicit user changes call persist() in their own handlers.
   }
   function tick() {
     const now = new Date(),

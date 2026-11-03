@@ -294,7 +294,7 @@
    )
    .join(
      "",
-   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
+   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `<p class="ad-note">التحكم بالصوت أثناء الصامت وعدم الإزعاج أصبح مستقلاً لكل صلاة بالأزرار أعلاه.</p>${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div><div class="ad-card"><h3>صوت الصلاة أثناء الصامت وعدم الإزعاج</h3><p class="ad-note">لكل صلاة زران مستقلان: الأول يسمح بالصوت إذا كان رنين الهاتف صامتاً، والثاني يسمح به أثناء عدم الإزعاج، مع مراعاة صلاحيات أندرويد. إذا منع نظام الهاتف صوت المنبّه أثناء عدم الإزعاج، يجب السماح بالمنبّهات من إعدادات عدم الإزعاج أيضاً. تنطبق هذه الخيارات على الأذان ومنبّه الصلاة، ولا تغيّر وضع الهاتف نفسه.</p>${C.ids.map(id=>`<div class="ad-policy-row" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #d7c6a5"><strong style="min-width:65px">${names[id]}</strong><label style="flex:1;min-width:120px"><input type="checkbox" data-policy="silent" data-policy-id="${id}" ${state.soundPolicy?.[id]?.silent?'checked':''}> أثناء الصامت</label><label style="flex:1;min-width:145px"><input type="checkbox" data-policy="dnd" data-policy-id="${id}" ${state.soundPolicy?.[id]?.dnd?'checked':''}> أثناء عدم الإزعاج</label></div>`).join('')}</div></section>
  <section id="adSection-services" class="ad-section" hidden><div class="ad-card"><h3>الخدمات</h3><div id="adServiceMenu" class="ad-service-menu"><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button>${native ? '<button type="button" data-service="widget">📱 الصلاة القادمة على الهاتف</button>' : ''}</div><div id="adServiceFrame" class="ad-service-frame" hidden><button type="button" id="adServiceBack" class="ad-inner-back">‹ رجوع إلى الخدمات</button><h4 id="adServiceTitle"></h4><div id="adService" class="ad-service"></div><div id="adWidgetControls" hidden> ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -337,6 +337,12 @@
       state=C.normalize(state);persist();render();
     });
     $("adServiceBack").onclick=()=>{service="";stopServiceSensors();syncServices();};
+    panel.querySelectorAll("[data-policy]").forEach(el=>el.addEventListener("change",()=>{
+      const id=el.dataset.policyId,key=el.dataset.policy;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(key))return;
+      state.soundPolicy[id][key]=el.checked;
+      persist();render();
+    }));
     panel.querySelectorAll("[data-setting]").forEach((el) =>
       el.addEventListener("change", () => {
         const k = el.dataset.setting;
@@ -425,7 +431,8 @@
     syncSections();
     syncServices();
     if (service && (externalService || (openSection==="services" && state.enabled))) showService(service);
-    persist();
+    // Rendering settings must never reconfigure native alarms or cancel their deadlines.
+    // Explicit user changes call persist() in their own handlers.
   }
   function tick() {
     const now = new Date(),

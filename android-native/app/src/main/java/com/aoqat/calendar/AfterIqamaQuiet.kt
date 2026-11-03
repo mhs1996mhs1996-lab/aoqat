@@ -42,6 +42,13 @@ object AfterIqamaQuiet {
         }
         // Only change the ringtone, never substitute or overwrite the user's
         // scheduled Do Not Disturb policy (e.g. 23:20–07:00).
-        AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)
+        val applied=AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)
+        if(!applied && now-times.first < 30000L && now+5000L < times.second) {
+            // Some OEMs briefly reject changing ringer mode while DND is
+            // transitioning. Retry without moving the original end deadline
+            // or modifying the user's own DND schedule.
+            AdhanSchedule.alarm(c,60590+PrayerTimes.ids.indexOf(prayerId),"IQAMA_QUIET",
+                now+5000L,PrayerTimes.Prayer(prayerId,prayerAt,false))
+        }
     }
 }

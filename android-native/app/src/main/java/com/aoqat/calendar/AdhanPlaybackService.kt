@@ -282,9 +282,17 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         started=SystemClock.elapsedRealtime()
         if(config.optBoolean("flip"))sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let{sensors.registerListener(this,it,SensorManager.SENSOR_DELAY_NORMAL)}
         val am=getSystemService(AUDIO_SERVICE) as AudioManager
-        val override=config.optBoolean("overrideSilent")
-        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL &&
-            !AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)){
+        // A prayer is allowed to sound in silent and DND only by its own two
+        // switches. An active app-owned at-adhan quiet is not a user mute.
+        val nmPolicy=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val policyId=if(special)"dhuhr" else prayer
+        val appQuiet=AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)
+        val dndActive=nmPolicy.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_ALL
+        val soundAllowed=preview || if(dndActive)
+            PrayerSoundPolicy.enabledFor(config,policyId,"dnd")
+        else (appQuiet || am.ringerMode==AudioManager.RINGER_MODE_NORMAL ||
+            PrayerSoundPolicy.enabledFor(config,policyId,"silent"))
+        if(!soundAllowed) {
             if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
             handler.postDelayed({stopSelf()},4000)
             return START_NOT_STICKY
@@ -294,7 +302,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         retryAllowed=true
         try {
             val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
-            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
+            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(false).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
             val result=am.requestAudioFocus(focus!!)
             audioFocus.requested(result)
             if(result==AudioManager.AUDIOFOCUS_REQUEST_FAILED){stopSelf();return START_NOT_STICKY}
