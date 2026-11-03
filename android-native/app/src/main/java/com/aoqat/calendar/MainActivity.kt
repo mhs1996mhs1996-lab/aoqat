@@ -200,6 +200,7 @@ class IqamaNotificationService : android.app.Service() {
         IqamaNotificationRenderer.build(this, display)
 
     private fun finishCycle() {
+        AfterIqamaQuiet.onCountdownComplete(this,prayerAt)
         IqamaPersistentNotification.releaseDispatchLock()
         handler.removeCallbacks(boundary)
         IqamaPersistentNotification.hide(this)
@@ -270,6 +271,8 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
                     // dedicated after-iqama silent alarm on sleeping phones.
                     if (intent.action == "PHASE_BOUNDARY")
                         AfterIqamaQuiet.onCountdownZero(context, prefs.getLong("prayerAt", 0L))
+                    if (intent.action == "EXPIRE")
+                        AfterIqamaQuiet.onCountdownComplete(context, prefs.getLong("prayerAt", 0L))
                     // Reconcile from the persisted anchor, including a late delivery.
                     // Do not reset the zero point at the time the alarm is received.
                     val service = Intent(context, IqamaNotificationService::class.java).setAction("RECONCILE")

@@ -25,7 +25,17 @@ object AtAdhanQuiet {
         val (begin,end)=window(AdhanSchedule.settings(c),prayerId,prayerAt) ?: return
         val now=System.currentTimeMillis()
         if(now !in begin until end)return
-        // Restore the previous ringer/DND state on the original absolute deadline.
+        val settings=AdhanSchedule.settings(c)
+        val soundEnabled=settings.optBoolean("enabled") &&
+            settings.optJSONObject("modes")?.optString(prayerId,"sound")=="sound"
+        // Do not mute the phone during the actual recitation or its cold start.
+        if(AdhanPlaybackService.running ||
+            (soundEnabled && now-prayerAt<45000L &&
+                !AdhanSchedule.started(c,prayerId,prayerAt))) {
+            AdhanSchedule.alarm(c,60790+PrayerTimes.ids.indexOf(prayerId),
+                "ADHAN_QUIET",now+15000L,PrayerTimes.Prayer(prayerId,prayerAt,false))
+            return
+        }
         AdhanPlaybackService.activateQuiet(c,end,begin)
     }
 

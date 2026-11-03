@@ -90,7 +90,7 @@ object AdhanSchedule {
         val intent = Intent(c, AdhanReceiver::class.java).setAction(action)
         prayer?.let { intent.putExtra("prayerId", it.id).putExtra("prayerAt", it.at).putExtra("friday", it.friday) }
         val pi = PendingIntent.getBroadcast(c, id, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        if (action == "PLAY" || action == "VERIFY_DUE") {
+        if (action in listOf("PLAY","VERIFY_DUE","PREWARM","IQAMA_QUIET","ADHAN_QUIET","RESTORE_SOUND")) {
             val show = PendingIntent.getActivity(c, id, Intent(c, MainActivity::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
             am.setAlarmClock(AlarmManager.AlarmClockInfo(at, show), pi)
         } else am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi)
@@ -110,13 +110,16 @@ object AdhanSchedule {
             AtAdhanQuiet.window(s,p.id,p.at)?.let { (start,end) ->
                 if(end>now) queue(60700+i,"ADHAN_QUIET",maxOf(start,now+100),p)
             }
-            AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let { (start,end) ->
+            AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes,IqamaNativeScheduler.durations(c,p.id).afterMinutes)?.let { (start,end) ->
                 if (end>now) queue(60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
             }
             if (!s.optBoolean("enabled", false)) continue
             val mode = s.optJSONObject("modes")?.optString(p.id, "sound") ?: "sound"
             val due = now-p.at in 0L until 120000L && p.at >= prefs(c).getLong("enabledAt",0) && !delivered(c,p)
             if (mode != "silent" && (p.at > now || due)) {
+                if(mode=="sound" && p.at>now)
+                    // Wake before the exact database minute to avoid OEM cold-start delay.
+                    queue(60800+i,"PREWARM",maxOf(p.at-45000L,now+100L),p)
                 queue(60000+i,"PLAY",maxOf(p.at,now+100),p)
                 // Independent second chance if an OEM defers/drops the primary
                 // receiver. The same delivery claim prevents duplicate adhan.
@@ -128,7 +131,7 @@ object AdhanSchedule {
             val suhoor = s.optInt("suhoor",0).coerceIn(0,120)*60000L
             if (p.id == "fajr" && suhoor > 0 && p.at-suhoor > now) queue( 60200+i, "SUHOOR", p.at-suhoor, p)
         }
-        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET",60700+i to "ADHAN_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
+        for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60800+i to "PREWARM",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET",60700+i to "ADHAN_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
         cancel(c, 60300, "NEXT")
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
@@ -138,6 +141,18 @@ object AdhanSchedule {
 class AdhanReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, intent: Intent) {
         when(intent.action) {
+            "PREWARM" -> {
+                val id=intent.getStringExtra("prayerId") ?: return
+                val at=intent.getLongExtra("prayerAt",0L)
+                val now=System.currentTimeMillis()
+                val settings=AdhanSchedule.settings(c)
+                if(id in PrayerTimes.ids && AdhanSchedule.enabled(c) &&
+                    settings.optJSONObject("modes")?.optString(id,"sound")=="sound" &&
+                    now>=at-60000L && now<at &&
+                    !AdhanSchedule.delivered(c,PrayerTimes.Prayer(id,at,false))) {
+                    AdhanDispatch.acquire(c,(at-now+15000L).coerceIn(15000L,75000L))
+                }
+            }
             "PLAY", "VERIFY_DUE" -> {
                 val id=intent.getStringExtra("prayerId") ?: return
                 val at=intent.getLongExtra("prayerAt",0)

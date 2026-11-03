@@ -104,7 +104,14 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             val already=p.getBoolean("changed",false)
             val ringerBefore=am.ringerMode
             val filterBefore=nm.currentInterruptionFilter
-            val until=if(already) maxOf(end,p.getLong("end",0L)) else end
+            // Elapsed iqama countdown is a hard cap even if other quiet modes overlap.
+            val iqamaCap=p.getLong("iqamaEnd",0L).takeIf{it>System.currentTimeMillis()}
+            val until=when {
+                preserveUserDnd -> end
+                already && iqamaCap!=null -> minOf(maxOf(end,p.getLong("end",0L)),iqamaCap)
+                already -> maxOf(end,p.getLong("end",0L))
+                else -> end
+            }
             if (until<=System.currentTimeMillis()) {
                 auditQuiet(c,"expired",scheduledStart,end)
                 return false
@@ -126,7 +133,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                     android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
                     return false
                 }
-                p.edit().putLong("end",until).commit()
+                p.edit().putLong("end",until)
+                    .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
                 auditQuiet(c,"active",scheduledStart,until)
                 return true
             }
@@ -167,7 +175,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
             p.edit().putBoolean("changed",true).putInt("previous",prior)
                 .putBoolean("dndApplied",dndApplied).putInt("previousFilter",oldFilter)
-                .putLong("end",until).commit()
+                .putLong("end",until)
+                .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
             auditQuiet(c,"applied",scheduledStart,until)
             return true
         }
@@ -241,6 +250,10 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private var prayerId=""
     private var prepared=false
     private var proceedWithoutFocus=false
+    private var playbackFailed=false
+    private val restoreDucked=Runnable {
+        try { if(player?.isPlaying==true)player?.setVolume(1f,1f) }catch(_:Exception){}
+    }
     private val progress=object:Runnable{override fun run(){
         if(!preview&&audioStarted&&prepared)try{getSharedPreferences("adhan_resume",MODE_PRIVATE).edit().putLong("at",prayerAt).putString("id",prayerId).putInt("position",player?.currentPosition?:0).apply()}catch(_:Exception){}
         handler.postDelayed(this,5000)
@@ -253,7 +266,11 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private val audioFocus=AdhanAudioFocus(
         resume={startPreparedAudio()},
         pause={if(prepared&&player?.isPlaying==true)player?.pause()},
-        volume={scale->player?.setVolume(scale,scale)},
+        volume={scale->
+            player?.setVolume(scale,scale)
+            handler.removeCallbacks(restoreDucked)
+            if(scale<1f)handler.postDelayed(restoreDucked,2500L)
+        },
         stop={manuallyStopped=true;stopSelf()})
     private fun startPreparedAudio(){
         val ready=player?:return
@@ -269,7 +286,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         cleanup()
         wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:adhan").apply{acquire(10*60*1000L)}
         AdhanDispatch.release()
-        audioStarted=false;proceedWithoutFocus=false;manuallyStopped=false;retryAllowed=false;stopRequested=false
+        audioStarted=false;proceedWithoutFocus=false;manuallyStopped=false;retryAllowed=false;playbackFailed=false;stopRequested=false
         prayerAt=intent?.getLongExtra("prayerAt",0)?:0L
         prayerId=intent?.getStringExtra("prayerId")?:"fajr"
         successful=false
@@ -356,7 +373,21 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 if(config.optString("sound","1")=="custom")setDataSource(File(filesDir,"custom-adhan").absolutePath)
                 else {val id=config.optString("sound","1").takeIf{it in listOf("1","2","3","4")}?:"1";val suffix=if(config.optBoolean("partial"))"-short" else "";val name=if(id=="3")"adhan-quba-suraihi" else "adhan-v124-$id";assets.openFd("www/assets/audio/$name$suffix.mp3").use{setDataSource(it.fileDescriptor,it.startOffset,it.length)}}
                 setVolume(1f,1f)
-                setOnCompletionListener{successful=true;stopSelf()};setOnErrorListener{_,_,_->Toast.makeText(this@AdhanPlaybackService,"تعذر تشغيل الصوت المختار؛ اختر ملفًا صوتيًا صالحًا",Toast.LENGTH_LONG).show();stopSelf();true}
+                setOnCompletionListener{
+                    successful=true
+                    getSharedPreferences("adhan_resume",MODE_PRIVATE).edit().clear().apply()
+                    stopSelf()
+                }
+                setOnErrorListener{_,what,extra->
+                    playbackFailed=true
+                    try {
+                        getSharedPreferences("adhan_resume",MODE_PRIVATE).edit()
+                            .putLong("at",prayerAt).putString("id",prayerId)
+                            .putInt("position",currentPosition.coerceAtLeast(0)).commit()
+                    }catch(_:Exception){}
+                    android.util.Log.e("Adhan","MediaPlayer failed ($what/$extra); retrying remaining audio")
+                    stopSelf();true
+                }
                 setOnPreparedListener { ready ->
                     if(player!==ready||manuallyStopped)return@setOnPreparedListener
                     prepared=true
@@ -370,7 +401,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 handler.postDelayed({if(player===preparing&&!prepared)stopSelf()},10000L)
             }
             handler.postDelayed({stopSelf()},9*60*1000L)
-        }catch(e:Exception){android.util.Log.e("Adhan","Audio playback failed",e);Toast.makeText(this,"تعذر تشغيل الأذان؛ جرّب اختيار صوت آخر",Toast.LENGTH_LONG).show();stopSelf()}
+        }catch(e:Exception){playbackFailed=true;android.util.Log.e("Adhan","Audio playback failed",e);Toast.makeText(this,"تعذر تشغيل الأذان؛ جرّب اختيار صوت آخر",Toast.LENGTH_LONG).show();stopSelf()}
         return if(preview)START_NOT_STICKY else START_REDELIVER_INTENT
     }
     private fun vibrate(){vibrator=getSystemService(VIBRATOR_SERVICE) as Vibrator;val p=when(config.optString("pattern")){"long"->longArrayOf(0,1000);"pulse"->longArrayOf(0,250,150,250,150,250);else->longArrayOf(0,250)};vibrator?.vibrate(VibrationEffect.createWaveform(p,-1))}
@@ -379,7 +410,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         restoreVolume(this)
         previousVolume=null;appliedVolume=null
         handler.removeCallbacksAndMessages(null);sensors.unregisterListener(this);player?.release();player=null;vibrator?.cancel();focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};focus=null;if(wake?.isHeld==true)wake?.release();wake=null}
-    override fun onDestroy(){if((manuallyStopped||stopRequested)&&!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt);cleanup();PrayerAudioDnd.end(this,"adhan");AdhanDispatch.release();if(retryAllowed&&!preview&&!audioStarted&&!manuallyStopped&&!stopRequested&&prayerAt>0)AdhanSchedule.retry(this,prayerId,prayerAt);running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);if(duration>0)activateQuiet(this,System.currentTimeMillis()+duration*60000L)};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){if((manuallyStopped||stopRequested)&&!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt);cleanup();PrayerAudioDnd.end(this,"adhan");AdhanDispatch.release();if(retryAllowed&&!preview&&(!audioStarted||playbackFailed)&&!manuallyStopped&&!stopRequested&&prayerAt>0)AdhanSchedule.retry(this,prayerId,prayerAt);running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);if(duration>0)activateQuiet(this,System.currentTimeMillis()+duration*60000L)};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
     override fun onSensorChanged(e:SensorEvent){if(e.values[2]>-5)flipArmed=true;if(flipArmed && e.values[2]<-7 && SystemClock.elapsedRealtime()-started>1500){manuallyStopped=true;stopSelf()}}
     override fun onAccuracyChanged(s:Sensor?,a:Int){}
 }
