@@ -28,7 +28,8 @@
   for(const e of matches){const b=document.createElement('button');b.type='button';b.className='web-settings-result';const t=document.createElement('strong'),p=document.createElement('small');t.textContent=e.title;p.textContent=e.path;b.append(t,p);b.onclick=()=>{clearSearch();e.run();};box.append(b);}
  }
  const dayKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
- function openCalendar(){clearSearch();if(window.AoqatCalendars){window.AoqatCalendars.open();return;}openDailyCalendar();}
+ window.aoqatOpenCalendar=()=>openCalendar();
+  function openCalendar(){clearSearch();if(window.AoqatCalendars){window.AoqatCalendars.open();return;}openDailyCalendar();}
  window.aoqatOpenDailyCalendar=openDailyCalendar;window.aoqatMountDailyCalendar=mountDailyCalendar;
  function openDailyCalendar(){clearSearch();const host=document.createElement('div');nav().sub('التقويم اليومي',host,'main');mountDailyCalendar(host);}
  function mountDailyCalendar(host){const page=document.createElement('section');page.id='webCalendar';page.innerHTML='<section id="webCalendarDetail" aria-live="polite"></section><div class="web-calendar-toolbar"><button type="button" data-calendar-step="-1" aria-label="الشهر السابق">‹</button><label>الشهر<input type="month" id="webCalendarMonth" aria-label="شهر التقويم"></label><button type="button" data-calendar-step="1" aria-label="الشهر التالي">›</button><button type="button" id="webCalendarToday">اليوم</button></div><h3 id="webCalendarTitle"></h3><div id="webCalendarGrid" class="web-calendar-grid"></div>';
