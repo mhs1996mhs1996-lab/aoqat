@@ -183,7 +183,7 @@
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
-    openSub("إعدادت التصميم",wrap,"main");
+    openSub("إعدادات التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
   }
@@ -222,7 +222,7 @@
       const quiet=document.createElement("button");quiet.type="button";quiet.className="main-action";quiet.textContent="🔕 تفعيل وضع الصامت";quiet.onclick=()=>{if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");else openAdhanServices();};wrap.append(quiet);
       openSub("إشعار الإقامة والصامت",wrap,"alertSettings");return;
     }
-    if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";window.AoqatFridayReminders?.mount?.(wrap);openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");return;}
+    if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");window.AoqatFridayReminders?.mount?.(wrap);return;}
     if(kind==="fasting"){const wrap=document.createElement("div");wrap.className="web-settings-list";const controls=window.AoqatFastingReminders?.createControls?.();if(controls)wrap.append(controls);openSub("تنبيهات صيام التطوع",wrap,"alertSettings");return;}
     if(kind==="azkar"){
       const wrap=document.createElement("div");wrap.className="web-settings-list";
