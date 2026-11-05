@@ -78,12 +78,7 @@ transform('adhan-core.js', [
  ('    d.friday = normalizeFriday(s.friday);',
   '    d.atAdhanSilent.enabled=s.atAdhanSilent?.enabled===true;\n    for(const id of ids){const n=Number(s.atAdhanSilent?.minutes?.[id]);if(Number.isFinite(n))d.atAdhanSilent.minutes[id]=Math.max(0,Math.min(120,Math.floor(n)));}\n    d.friday = normalizeFriday(s.friday);')
 ])
-transform('web-menu-order.js', [
- ('[["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"]]',
-  '[["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"],["🔕","تفعيل وضع الصامت","quietPanel"]]'),
- ('b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);',
-  'b.onclick=()=>{if(id==="quietPanel")window.AoqatApkQuietSettings?.render?.();openPanel(title,id,"adhanIqama");};wrap.appendChild(b);')
-])
+# quietPanel is now reached from "ضبط التنبيهات" only; native quiet logic unchanged.
 
 # Replace the browser alarm entirely: Android owns audio, stopping, snooze and lock-screen UI.
 (target/'js/tomorrow-alarm.js').write_text((root/'android-native/apk-overrides/native-publish-alarm.js').read_text())
@@ -93,16 +88,14 @@ transform('web-menu-order.js', [
 # Native compass and screen illumination settings live only in the APK drawer.
 # The hosted web keeps its original menus and does not control physical alarms.
 transform('web-menu-order.js', [
- ('MENU_ROWS.push(["helpSupport","📖","المساعدة والتواصل"]);',
-  'MENU_ROWS.push(["helpSupport","📖","المساعدة والتواصل"]);MENU_ROWS.push(["screenAlerts","💡","إضاءة شاشة الهاتف"]);'),
  ('const id=b.dataset.drawer;',
-  'const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}if(id==="screenAlerts"){window.AoqatScreenAlerts?.open();return;}')
+  'const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}')
 ])
 # The legacy adhan-only screen switch is obsolete: one native setting controls
 # adhan, selected prayer notices, alarm and publishing alike. Remove duplicate UI.
 transform('adhan-settings.js', [
  ('${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}',
-  '<p class="ad-note">💡 إضاءة الشاشة لجميع التنبيهات تُضبط من «إضاءة شاشة الهاتف» في القائمة الرئيسية.</p>')
+  '<p class="ad-note">💡 إضاءة الشاشة لجميع التنبيهات تُضبط من «ضبط التنبيهات» في القائمة الرئيسية.</p>')
 ])
 # The native scheduler owns background reminders; the web module supplies its reviewed controls only.
 transform('azkar-reminders.js', [

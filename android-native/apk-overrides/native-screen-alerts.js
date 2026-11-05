@@ -50,7 +50,7 @@
     screen.append(card,access,
       el('p','مهم: على بعض أجهزة أندرويد، عند فتح الهاتف بالفعل قد تظهر نافذة علوية بدل ملء الشاشة؛ هذا سلوك يحدده النظام. تنبيه الصلاة المنفصل لا يظهر إلا إذا فعّله المستخدم.',
         'asw-state'));
-    window.AoqatWebSettingsNavigation?.sub('إضاءة شاشة الهاتف',screen,'main');
+    window.AoqatWebSettingsNavigation?.sub('إضاءة شاشة الهاتف',screen,'alertSettings');
     render();
   }
   // Export before drawer initialization; the settings drawer is built later.

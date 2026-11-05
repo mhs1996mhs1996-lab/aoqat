@@ -3,7 +3,7 @@
   const KEY='aoqatIqamaAppearanceV1',MODES=['white','dark','transparent'];
   function mode(){try{const value=localStorage.getItem(KEY);return MODES.includes(value)?value:'transparent';}catch(_){return 'transparent';}}
   function paint(){const select=document.getElementById('iqamaAppearance'),preview=document.getElementById('iqamaAppearancePreview');if(!select||!preview)return;select.value=mode();preview.dataset.appearance=mode();}
-  function move(){const target=document.getElementById('iqamaPanel'),button=document.getElementById('iqamaNotificationToggle');if(!target||!button)return false;
+  function move(){const target=document.getElementById('aoqatAlertSettingsParking')||document.getElementById('iqamaPanel'),button=document.getElementById('iqamaNotificationToggle');if(!target||!button)return false;
     let controls=document.getElementById('iqamaNotificationSettings');if(!controls){controls=document.createElement('section');controls.id='iqamaNotificationSettings';const title=document.createElement('h3');title.textContent='إشعار الإقامة';controls.appendChild(title);target.appendChild(controls);}
     // Move originals, preserving listeners, permissions and saved timing settings.
     if(button.parentElement!==controls)controls.appendChild(button);
