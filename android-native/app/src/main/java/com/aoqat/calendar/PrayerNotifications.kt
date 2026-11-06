@@ -109,6 +109,7 @@ object PrayerNotifications {
         if (!preview && !selected(c, id)) return
         val nm = c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(78100 + PrayerTimes.ids.indexOf(id).coerceAtLeast(0), notification(c, id, friday, preview))
+        if(!preview)PhoneScreenAlerts.pulse(c)
     }
 }
 
