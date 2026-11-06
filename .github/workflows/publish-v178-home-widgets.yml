@@ -1,0 +1,140 @@
+name: Verify and publish APK v1.78 transparent home widgets
+on:
+  push:
+    branches:
+      - 'feature/v178-transparent-home-widgets-20261106'
+    paths:
+      - '.github/workflows/publish-v178-home-widgets.yml'
+      - 'android-native/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: publish-v178-home-widgets
+  cancel-in-progress: true
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact reviewed commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore original compatible signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Verify three home widgets and unchanged critical alert code
+        run: |
+          set -euo pipefail
+          node --check js/web-menu-order.js
+          node --check js/adhan-settings.js
+          node tests/adhan-core.test.cjs
+          node tests/prayer-alarm-core.test.cjs
+          grep -q 'showSnoozedNotification' android-native/app/src/main/java/com/aoqat/calendar/AlarmCore.kt
+          grep -q 'PrayerAlarmNotice.showSnoozed' android-native/app/src/main/java/com/aoqat/calendar/PrayerAlarm.kt
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          root=Path('android-native/app/src/main')
+          code=(root/'java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          manifest=(root/'AndroidManifest.xml').read_text()
+          for name in ['PrayerWidget','FivePrayerWidget','IqamaCountdownWidget']:
+              assert f'class {name}:' in code, name
+              assert f'android:name=".{name}"' in manifest, name
+          for name in ['prayer_widget','prayer_times_widget','prayer_iqama_widget']:
+              node=ET.parse(root/f'res/layout/{name}.xml').getroot()
+              assert node.attrib['{http://schemas.android.com/apk/res/android}background']=='@android:color/transparent'
+              xml=(root/f'res/layout/{name}.xml').read_text()
+              assert '#FFFFFFFF' in xml and 'bold' in xml, name
+          assert 'if(notification) Color.rgb(8,35,47) else Color.TRANSPARENT' in code
+          assert 'PrayerTimes.rows(c)' in code and 'IqamaNativeScheduler.durations' in code
+          print('PASS: three transparent bold white widgets; existing notification surface independent')
+          PY
+      - name: Run Android tests and build signed APK
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify exact version, signature and offline contents
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-v178
+          apk=/tmp/aoqat-v178/aoqat-v1.78-transparent-home-widgets.apk
+          cp android-native/app/build/outputs/apk/debug/app-debug.apk "$apk"
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --verbose --print-certs "$apk" | tee /tmp/aoqat-v178/signer.txt
+          grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' /tmp/aoqat-v178/signer.txt
+          "$aapt" dump badging "$apk" | grep -F "versionCode='113' versionName='1.78'"
+          "$aapt" dump xmltree "$apk" AndroidManifest.xml | grep -E 'FivePrayerWidget|IqamaCountdownWidget|PrayerWidget'
+          python3 - <<'PY'
+          import zipfile,hashlib
+          p='/tmp/aoqat-v178/aoqat-v1.78-transparent-home-widgets.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              names=z.namelist()
+              prefix='assets/www/'
+              assert len([n for n in names if n.startswith(prefix+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+              assert len(z.read(prefix+'data/prayer-times-offline.json'))>5000
+              menu=z.read(prefix+'js/web-menu-order.js').decode('utf8')
+              bundle=z.read(prefix+'js/apk-startup-bundle.js').decode('utf8')
+              assert 'aoqatAlertScreenWakeV1' in menu and 'configureScreenWake' in menu
+              assert 'ضبط التنبيهات' in menu and 'القرآن الكريم' in menu
+              assert 'configureScreenWake' in bundle
+              assert hashlib.sha256(z.read('assets/splash-hawija-original.jpg')).hexdigest()=='50c329d2ed32afe65f01f62a06f1655fbee1971a50d72d3f5df7e8947835e3ba'
+          print('PASS: full unchanged offline Quran, saved prayer database, existing web/alert services')
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v178/aoqat-v1.78.sha256
+      - name: Download published v1.77 for in-place upgrade test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download v1.77-persistent-alarm-screen-wake --repo "$GH_REPO" --pattern '*.apk' --dir /tmp/aoqat-v178
+      - name: Enable Android emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify in-place upgrade and all three providers on Android 16
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            adb install -r /tmp/aoqat-v178/aoqat-v1.77-persistent-alarm-screen-wake.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.77'
+            adb install -r /tmp/aoqat-v178/aoqat-v1.78-transparent-home-widgets.apk
+            adb shell dumpsys package com.aoqat.calendar | grep -m1 'versionName=1.78'
+            adb shell am start -n com.aoqat.calendar/.MainActivity
+            sleep 5
+            adb shell pidof com.aoqat.calendar
+            adb shell dumpsys appwidget > /tmp/aoqat-widgets.txt
+            grep -F 'com.aoqat.calendar.PrayerWidget' /tmp/aoqat-widgets.txt
+            grep -F 'com.aoqat.calendar.FivePrayerWidget' /tmp/aoqat-widgets.txt
+            grep -F 'com.aoqat.calendar.IqamaCountdownWidget' /tmp/aoqat-widgets.txt
+      - name: Publish APK only if all tests and signed upgrade passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag=v1.78-transparent-home-widgets
+          if ! gh release view "$tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GH_REPO" --target "$SOURCE_SHA" --title 'أوقات الصلاة في الحويجة v1.78 — بطاقات شفافة للشاشة الرئيسية' --notes 'إصدار v1.78 يحافظ على وظائف v1.77 مع بطاقة صلاة قادمة شفافة بكتابة بيضاء عريضة، وبطاقتين جديدتين: مواقيت الصلوات الخمس والإقامة. يستعمل قاعدة المواقيت المحلية وإعدادات الإقامة الأصلية. لا يغيّر تنبيهات أندرويد أو المصحف. تثبّت النسخة فوق v1.77 دون حذف البيانات.' --prerelease
+          fi
+          gh release upload "$tag" /tmp/aoqat-v178/aoqat-v1.78-transparent-home-widgets.apk /tmp/aoqat-v178/aoqat-v1.78.sha256 --repo "$GH_REPO" --clobber
+          gh release view "$tag" --repo "$GH_REPO" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.78-transparent-home-widgets.apk'
