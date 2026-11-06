@@ -1,0 +1,28 @@
+name: Check central prayer alerts and adhan voice separation (web only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/web-menu-order.js'
+      - 'css/adhan-modal.css'
+      - 'js/help-support.js'
+      - 'tests/alert-controls-placement-browser.cjs'
+      - '.github/workflows/check-alert-placement-web.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-web:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check scripts and unchanged prayer timing
+        run: |
+          node --check js/web-menu-order.js
+          node --check tests/alert-controls-placement-browser.cjs
+          node --test tests/adhan-core.test.cjs tests/prayer-alarm-core.test.cjs tests/web-quiet-core.test.cjs
+      - name: Inspect original controls and saved preferences in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/alert-controls-placement-browser.cjs
