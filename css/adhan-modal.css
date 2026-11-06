@@ -149,15 +149,3 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #adSection-sound{
   display:none!important;
 }
-
-/* Exclusive navigation views. Both screens reuse the SAME existing DOM controls,
-   handlers, storage and scheduling; no settings or alerts are cloned. */
-#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel > :not(.aoqat-prayer-timetable):not(#aoqatVoiceOnly) {
-  display:none!important;
-}
-#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel > .aoqat-prayer-timetable,
-#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel > #aoqatVoiceOnly,
-#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel [data-ad-section="sound"],
-#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #adSection-sound {
-  display:none!important;
-}
