@@ -122,6 +122,15 @@ jobs:
               print('PASS: user screen toggle, fullscreen intent paths, canonical web calendar icon, WhatsApp, offline Quran, prayer DB; bytes:',os.stat(p).st_size)
           PY
           sha256sum "$apk" > /tmp/aoqat-v176/aoqat-v1.76.sha256
+      - name: Preserve verified APK as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v1.76-adhan-theme-restore
+          path: |
+            /tmp/aoqat-v176/aoqat-v1.76-adhan-theme-restore.apk
+            /tmp/aoqat-v176/aoqat-v1.76.sha256
+          if-no-files-found: error
+          retention-days: 30
       - name: Download previous signed release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -153,6 +162,7 @@ jobs:
             adb shell pidof com.aoqat.calendar
             echo 'PASS: v1.76 upgrades installed v1.74 and launches without clearing data'
       - name: Publish installable verified APK
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
