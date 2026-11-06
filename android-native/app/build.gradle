@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 110 // Unified 12-icon navigation and centralized alert settings; preserve 1.74 audio fixes
-        versionName '1.75'
+        versionCode 111 // Restore existing adhan menu; theme-aware navigation; preserve all 1.75 alert services
+        versionName '1.76'
     }
 
     compileOptions {
