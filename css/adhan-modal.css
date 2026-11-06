@@ -122,3 +122,30 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog #adhanPanel .ad-section-icon {
   filter:drop-shadow(0 1px 1px #0004)!important;
 }
+
+/* Adhan timetable/voice view versus notification settings view.
+   Only presentation changes; the same buttons, event handlers and stored settings
+   remain in #adhanPanel and are never cloned. */
+#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel > :not(.ad-card:first-child):not(#aoqatVoiceOnly):not(#adStatus){
+  display:none!important;
+}
+#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel #aoqatVoiceOnly{
+  display:block!important;
+  margin:8px 0 16px!important;
+}
+#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel #aoqatVoiceOnly .ad-card{
+  display:block!important;
+  margin:0!important;
+  padding:14px!important;
+}
+#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel #aoqatVoiceOnly .ad-note{
+  margin:12px 6px!important;
+  text-align:right!important;
+  color:var(--wt-muted,#536a62)!important;
+}
+#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel > .ad-card:first-child,
+#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #aoqatVoiceOnly,
+#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel [data-ad-section="sound"],
+#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #adSection-sound{
+  display:none!important;
+}
