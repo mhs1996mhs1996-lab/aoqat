@@ -43,6 +43,9 @@
         <service android:name=".PrayerNotificationSoundService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".PrayerNotificationReceiver" android:exported="false" />
 
+        <service android:name=".CalendarPublishAlarmService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
+        <receiver android:name=".CalendarPublishAlarmReceiver" android:exported="false" />
+        <activity android:name=".CalendarPublishAlarmActivity" android:exported="false" android:excludeFromRecents="true" />
         <service android:name=".PrayerAlarmService" android:exported="false" android:stopWithTask="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".PrayerAlarmReceiver" android:exported="false" />
         <receiver android:name=".PrayerAlarmActionReceiver" android:exported="false" />
