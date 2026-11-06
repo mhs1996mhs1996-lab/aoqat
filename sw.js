@@ -1,7 +1,7 @@
-const CACHE_NAME = "aoqat-pwa-v180-help-support-20261030";
+const CACHE_NAME = "aoqat-pwa-v181-restored-adhan-theme-nav-20261106";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
-  "/js/help-support.js?v=1",
+  "/js/help-support.js?v=3",
   "/js/monthly-calendars-core.js?v=11",
   "/js/monthly-calendars-renderer.js?v=11",
   "/js/monthly-calendars.js?v=annual-gallery-explicit-card-v16-20261026",
@@ -70,7 +70,7 @@ const APP_SHELL = [
   "/index.html",
   "/css/style.css",
   "/css/adhan.css?v=qibla-no-inner-back-20261026",
-  "/css/adhan-modal.css?v=1",
+  "/css/adhan-modal.css?v=2",
   "/js/adhan-core.js?v=3",
   "/js/adhan-settings.js?v=qibla-back-removed-20261025",
   "/js/azkar.js?v=1",
@@ -109,7 +109,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
-  "/js/web-menu-order.js?v=31",
+  "/js/web-menu-order.js?v=33",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
