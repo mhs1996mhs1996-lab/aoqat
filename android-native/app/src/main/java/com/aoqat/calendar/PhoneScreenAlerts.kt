@@ -41,6 +41,25 @@ object PhoneScreenAlerts {
             .put("requiresGrant", Build.VERSION.SDK_INT >= 34)
     }
 
+    /** Best-effort brief illumination for normal reminders without opening an intrusive
+     * fullscreen Activity. Alarm/adhan foreground notifications continue using FSI.
+     * Device policy may restrict wake-ups; never change a user's lock-screen state.
+     */
+    @Suppress("DEPRECATION")
+    fun pulse(c: Context) {
+        if (!enabled(c)) return
+        try {
+            val power = c.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            if (power.isInteractive) return
+            val flags = android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
+                android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
+            val lock = power.newWakeLock(flags,"aoqat:notification-wake")
+            lock.acquire(2500L)
+        } catch (e: Exception) {
+            android.util.Log.w("PhoneScreenAlerts","Device blocked optional reminder illumination",e)
+        }
+    }
+
     /** These flags are applied only to actual alert Activities, never MainActivity. */
     fun applyWindow(activity: Activity) {
         val on = enabled(activity)
