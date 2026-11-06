@@ -8,6 +8,7 @@ on:
       - 'css/adhan-modal.css'
       - 'js/web-theme-settings.js'
       - 'tests/menu-button-theme-browser.cjs'
+      - 'tests/navigation-contrast-browser.cjs'
       - '.github/workflows/check-nested-navigation-theme.yml'
   workflow_dispatch:
 permissions:
@@ -22,8 +23,8 @@ jobs:
         run: |
           node --check js/web-menu-button-theme.js
           node --check js/web-menu-order.js
-          node --check tests/menu-button-theme-browser.cjs
+          node --check tests/navigation-contrast-browser.cjs
       - name: Run visual DOM and state regressions in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
-          CHROME_PATH=/usr/bin/google-chrome node tests/menu-button-theme-browser.cjs
+          CHROME_PATH=/usr/bin/google-chrome node tests/navigation-contrast-browser.cjs
