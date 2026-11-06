@@ -54,7 +54,7 @@ object CalendarPublishAlarm {
         if(!enabled(c))return
         if(Build.VERSION.SDK_INT>=31 && !am.canScheduleExactAlarms())return
         val now=ZonedDateTime.now(ZoneId.of("Asia/Baghdad"))
-        val time=try{LocalTime.parse(prefs(c).getString("time","09:00"))}catch(_:Exception){LocalTime.of(9,0)}
+        val time=try{LocalTime.parse(prefs(c).getString("time","09:00") ?: "09:00")}catch(_:Exception){LocalTime.of(9,0)}
         var day=now.toLocalDate().withDayOfMonth(now.toLocalDate().lengthOfMonth())
         var event=day.atTime(time).atZone(now.zone)
         if(!event.isAfter(now)) {
