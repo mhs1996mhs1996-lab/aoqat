@@ -71,6 +71,10 @@ object PrayerAlarm {
         alarm(c,71000+ids.indexOf(id),id,at,count+1)
         return true
     }
+    fun cancelSnooze(c:Context,id:String){
+        prefs(c).edit().remove("snooze_$id").remove("snoozeCount_$id").commit()
+        if(id in ids)cancel(c,71000+ids.indexOf(id))
+    }
     fun start(c:Context,id:String,count:Int=0,preview:Boolean=false){ContextCompat.startForegroundService(c,Intent(c,PrayerAlarmService::class.java).putExtra("id",id).putExtra("count",count).putExtra("preview",preview))}
 }
 class PrayerAlarmReceiver:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){val id=i.getStringExtra("id")?:return;if(id=="refresh"){val pending=goAsync();Thread{try{IqamaNativeScheduler.refresh(c);PrayerAlarm.schedule(c)}finally{pending.finish()}}.start();return};val count=i.getIntExtra("count",0);if(PrayerAlarm.claim(c,id,i.getLongExtra("at",0),count)){try{PrayerAlarm.start(c,id,count)}catch(e:Exception){PrayerAlarm.release(c,id,i.getLongExtra("at",0));android.util.Log.e("PrayerAlarm","Cannot start alarm: $id",e)};PrayerAlarm.schedule(c)}}}
