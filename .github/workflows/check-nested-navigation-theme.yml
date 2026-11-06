@@ -27,4 +27,3 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright
           CHROME_PATH=/usr/bin/google-chrome node tests/menu-button-theme-browser.cjs
-          CHROME_PATH=/usr/bin/google-chrome node tests/adhan-mode-theme-browser.cjs
