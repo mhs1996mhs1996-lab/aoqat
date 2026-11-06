@@ -248,6 +248,9 @@ class BootReceiver : BroadcastReceiver() {
             AlarmScheduler.scheduleFromDatabase(context)
         }
         CalendarPublishAlarm.schedule(context)
+        if(CalendarPublishAlarm.snoozeUntil(context)>System.currentTimeMillis())CalendarPublishAlarm.show(context,true)
+        AlarmUi.showSnoozedNotification(context)
+        PrayerAlarm.ids.forEach { PrayerAlarmNotice.showSnoozed(context,it) }
         OfflinePrayerSync.install(context)
         IqamaNativeScheduler.scheduleCached(context)
         AdhanSchedule.schedule(context)
