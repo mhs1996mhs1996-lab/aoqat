@@ -312,7 +312,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback_silent_v2","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val screenAlert = PhoneScreenAlerts.enabled(this) && !preview && mode=="sound"
+        val screenAlert = PhoneScreenAlerts.enabled(this) && config.optBoolean("screen",false) && !preview && mode=="sound"
         val screenActivity = Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer)
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val show=PendingIntent.getActivity(this,60412,screenActivity,
@@ -324,6 +324,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             .setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")
                 "حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true))
             .setContentText("اضغط إيقاف لإنهاء الأذان")
+            .setCustomContentView(AlarmNotificationControls.view(this,if(preview)"تجربة صوت الأذان" else "حان موعد الأذان","الأذان يعمل — اضغط إيقاف",stop,null))
+            .setCustomBigContentView(AlarmNotificationControls.view(this,if(preview)"تجربة صوت الأذان" else "حان موعد الأذان","الأذان يعمل — اضغط إيقاف",stop,null))
+            .setStyle(Notification.DecoratedCustomViewStyle())
             .setCategory(Notification.CATEGORY_ALARM)
             .setOnlyAlertOnce(true).setOngoing(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
@@ -333,6 +336,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         // 14+ the user may still need to allow 'full-screen notifications'.
         if(screenAlert)builder.setFullScreenIntent(show,true)
         startForeground(60400,builder.build())
+        if(!screenAlert&&!preview)PhoneScreenAlerts.pulse(this)
 
         started=SystemClock.elapsedRealtime()
         if(config.optBoolean("flip"))sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let{sensors.registerListener(this,it,SensorManager.SENSOR_DELAY_NORMAL)}
