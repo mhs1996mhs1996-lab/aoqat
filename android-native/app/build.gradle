@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 112 // Restore existing adhan menu; theme-aware navigation; preserve all 1.75 alert services
-        versionName '1.77'
+        versionCode 113 // Three isolated transparent home widgets; all alarm and notification services preserved
+        versionName '1.78'
     }
 
     compileOptions {
