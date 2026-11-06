@@ -60,9 +60,17 @@
         <receiver android:name=".CommunityReminderReceiver" android:exported="false" />
         <receiver android:name=".FridayReceiver" android:exported="false" />
         <receiver android:name=".AdhanReceiver" android:exported="false" />
-        <receiver android:name=".PrayerWidget" android:exported="true">
+        <receiver android:name=".PrayerWidget" android:exported="true" android:label="الصلاة القادمة">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_widget_info" />
+        </receiver>
+        <receiver android:name=".FivePrayerWidget" android:exported="true" android:label="مواقيت الصلاة الخمسة">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_times_widget_info" />
+        </receiver>
+        <receiver android:name=".IqamaCountdownWidget" android:exported="true" android:label="الإقامة القادمة">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_iqama_widget_info" />
         </receiver>
         <activity
             android:name=".MainActivity"
