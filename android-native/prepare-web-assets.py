@@ -263,6 +263,16 @@ transform('monthly-calendars.js', [
  ("img.src=canvas.toDataURL('image/png');await img.decode();if(id!==drawId||!p.isConnected)return;img.style.display='';const applied=", "img.src=canvas.toDataURL('image/png');img.style.display='';const applied=")
 ])
 
+# APK v1.77: native calendar reminder owns exact scheduling and persistent snooze,
+# while the same original web switch/time picker retain their saved choices.
+transform('monthly-calendars.js', [
+ ("save(s);paint();if(s.reminder.enabled", "save(s);window.AndroidNative?.configureMonthlyPublishReminder?.(JSON.stringify(s.reminder));paint();if(s.reminder.enabled"),
+ ("s.reminder.time=time.value;save(s);tick();", "s.reminder.time=time.value;save(s);window.AndroidNative?.configureMonthlyPublishReminder?.(JSON.stringify(s.reminder));tick();"),
+ ("function tick(now=new Date()){const event=C.reminderEvent(now,read());", "function tick(now=new Date()){if(window.AndroidNative?.configureMonthlyPublishReminder)return;const event=C.reminderEvent(now,read());"),
+ ("async function deliver(event){const entry=", "async function deliver(event){if(window.AndroidNative?.configureMonthlyPublishReminder)return;const entry="),
+ ("const target=new URLSearchParams(location.search).get('calendar');if(target)openDate(target);tick();", "window.AndroidNative?.configureMonthlyPublishReminder?.(JSON.stringify(read().reminder));const target=new URLSearchParams(location.search).get('calendar');if(target)openDate(target);tick();")
+])
+
 # APK-only: make the approved QCF V2 reader the sole Quran engine.
 # Preserve the user's chosen page, appearance and bookmarks without an SVG fallback.
 qcf=target/'js/quran-reader.js'
