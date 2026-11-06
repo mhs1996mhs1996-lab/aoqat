@@ -77,7 +77,7 @@ const assert=require('node:assert/strict');
     assert.equal(await page.locator('#adhanServicesDialog #adNext').count(),1,'Live prayer timetable stays in its original panel');
     assert.equal(await page.locator('#adhanServicesDialog [data-ad-section="sound"]').count(),1,'Original adhan sound selection is present');
     assert.equal(await page.locator('#adhanServicesDialog [data-ad-section="modes"]').count(),1,'Original adhan per-prayer modes are present');
-    await page.locator('#adhanServicesDialog [data-ad-section="sound"]').click();
+    // Disabled-by-default adhan options still exist; do not alter the user's saved default just for inspection.
     assert.equal(await page.locator('#adhanServicesDialog #adChoose').count(),1,'Original phone audio picker remains available');
     const linkStyle=await page.locator('#webSubBody .main-action').first().evaluate(el=>getComputedStyle(el).backgroundImage);
     assert.ok(linkStyle.includes('linear-gradient'), 'Nested navigation buttons use the active theme gradient');
