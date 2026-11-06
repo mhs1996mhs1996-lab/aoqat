@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_iqama_root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center"
+    android:padding="12dp" android:background="@android:color/transparent">
+    <TextView android:id="@+id/widget_iqama_title" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="باقي على الإقامة"
+        android:textColor="#FFFFFFFF" android:textSize="21sp" android:textStyle="bold"
+        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1"
+        android:gravity="center" />
+    <Chronometer android:id="@+id/widget_iqama_counter" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:textColor="#FFFFFFFF"
+        android:textSize="33sp" android:textStyle="bold"
+        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1"
+        android:gravity="center" android:format="%s"/>
+    <TextView android:id="@+id/widget_iqama_prayer" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:textColor="#FFFFFFFF"
+        android:textSize="18sp" android:textStyle="bold"
+        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1"
+        android:gravity="center" />
+</LinearLayout>
