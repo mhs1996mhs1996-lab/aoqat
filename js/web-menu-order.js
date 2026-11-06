@@ -243,6 +243,23 @@
   }
   function guideView(){const api=window.AoqatHelpSupport;if(api)openSub("شرح استخدام التطبيق",api.guide(),"main");}
   function contactView(){window.AoqatHelpSupport?.openWhatsApp?.();}
+  // Only this master control governs the requested screen-wake policy for ALL
+  // enabled alarms and reminders. It does not create or schedule notifications.
+  // The native Android services will honor this saved preference in the APK;
+  // a web page cannot wake a locked phone from the background.
+  const WAKE_ALERTS_KEY="aoqatAlertScreenWakeV1";
+  function screenWakeView(){
+    const wrap=document.createElement("section");wrap.className="web-settings-list";wrap.id="aoqatWakeAlertsSettings";wrap.dir="rtl";
+    const heading=document.createElement("p");heading.className="ad-note";
+    heading.textContent="إضاءة شاشة الهاتف عند وصول أي تنبيه مفعّل، سواء كان أذاناً أو منبّه صلاة أو إشعار صلاة أو تنبيه نشر مواقيت الغد أو التقويم أو الأذكار والجمعة والصيام. زر واحد للجميع، بدون تغيير الأصوات أو مواعيد التنبيهات.";
+    const button=document.createElement("button");button.type="button";button.id="aoqatWakeAllAlerts";button.className="main-action";
+    const enabled=()=>localStorage.getItem(WAKE_ALERTS_KEY)!=="0";
+    const refresh=()=>{const on=enabled();button.textContent="💡 إضاءة الشاشة لجميع التنبيهات: "+(on?"مفعّلة":"متوقفة");button.setAttribute("aria-pressed",String(on));};
+    button.onclick=()=>{localStorage.setItem(WAKE_ALERTS_KEY,enabled()?"0":"1");refresh();window.dispatchEvent(new Event("aoqatScreenWakePreferenceChanged"));};
+    const note=document.createElement("p");note.className="ad-note";
+    note.textContent="التحكم بإضاءة شاشة الهاتف وهي مقفلة يحتاج خدمات أندرويد وصلاحيات الهاتف؛ هذا الخيار يُحفظ هنا لتجهيزه لنسخة APK بعد اعتمادك. عرض الأذان بملء الشاشة خيار مستقل داخل «تنبيهات أوقات الصلاة»؛ أما الإشعارات العادية فيتحكم نظام أندرويد بكيفية إضاءتها.";
+    wrap.append(heading,button,note);refresh();openSub("إضاءة الشاشة عند التنبيهات",wrap,"alertSettings");
+  }
   function alertSettingsView(){
     const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
     const intro=document.createElement("p");intro.className="ad-note";
@@ -256,7 +273,7 @@
       ["azkar","📿","تنبيهات الأذكار"],
       ["publish","⏰","تنبيه نشر مواقيت اليوم التالي"],
       ["calendarNotice","📅","تنبيه نشر تقويم الشهر"],
-      ...(window.AndroidNative?.readScreenWakeEnabled?[["screen","💡","إضاءة شاشة الهاتف"]]:[])
+      ["screen","💡","إضاءة الشاشة لجميع التنبيهات"]
     ];
     options.forEach(([kind,ico,label])=>{
       const button=document.createElement("button");button.type="button";button.className="main-action";button.dataset.alertSection=kind;
@@ -267,7 +284,7 @@
   function openAlertSection(kind){
     const api=window.AoqatAlertsHub;
     if(kind==="prayer"){openAdhanServices("alerts");return;}
-    if(kind==="screen"){window.AoqatScreenAlerts?.open?.();return;}
+    if(kind==="screen"){screenWakeView();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
     if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");return;}
     if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
