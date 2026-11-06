@@ -247,6 +247,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED || intent?.action == Intent.ACTION_MY_PACKAGE_REPLACED) {
             AlarmScheduler.scheduleFromDatabase(context)
         }
+        CalendarPublishAlarm.schedule(context)
         OfflinePrayerSync.install(context)
         IqamaNativeScheduler.scheduleCached(context)
         AdhanSchedule.schedule(context)
