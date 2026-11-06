@@ -93,6 +93,13 @@
       body.design-menu-open #webDrawerSub .inline-control-panel,body.design-menu-open #webDrawerSub .panel,body.design-menu-open #webDrawerSub .font-panel{display:block!important;position:static!important;transform:none!important;inset:auto!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:12px!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#222)!important;border:1px solid var(--wt-border,#ddd)!important;border-radius:9px!important;box-shadow:none!important}
       body.design-menu-open #webDrawerSub .panel-title,body.design-menu-open #webDrawerSub .font-title{display:none!important}
       .web-settings-list{display:grid;gap:7px}.web-settings-list .main-action{width:100%!important;min-height:48px!important;height:auto!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important;border:1px solid var(--wt-border,#c5d5c8)!important;font-weight:600!important;text-align:right!important;box-shadow:none!important}.web-settings-list .main-action:nth-of-type(odd){background:linear-gradient(90deg,var(--wt-surface2,#f8efd9),var(--wt-surface,#fffaf0))!important}.web-settings-list .main-action[aria-pressed="true"]{outline:2px solid var(--wt-accent,#278052)!important;outline-offset:-2px!important}
+      /* Legible labels and icons on the exact same gradient as the main drawer. */
+      .web-settings-list .main-action{font-family:Tahoma,Arial,sans-serif!important;font-size:17px!important;font-weight:750!important;line-height:1.65!important;color:var(--wt-text,#233c32)!important;text-shadow:none!important}
+      .web-settings-list .main-action :is(span,strong,b,small,em,i){color:inherit!important;text-shadow:none!important;font-weight:inherit}
+      .web-settings-list .main-action span[aria-hidden="true"]{font-size:1.14em!important;text-shadow:0 1px 1px #0004!important}
+      #webExactDrawer #webDrawerMain .web-drawer-row :is(.txt,.ico){color:var(--wt-text,#233c32)!important}
+      #webExactDrawer #webDrawerMain .web-drawer-row .txt{font-weight:750!important}
+      #webExactDrawer #webDrawerMain .web-drawer-row .ico{filter:drop-shadow(0 1px 1px #0004)!important}
       body.design-menu-open #webDrawerSub #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;padding:8px!important}
       #saveToPhoneBtn{display:none!important}
       /* النص السفلي يُفتح فقط من الإعدادات؛ أخفِ الزر القديم المكرر من واجهة البرنامج. */
