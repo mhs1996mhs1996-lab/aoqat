@@ -38,9 +38,41 @@
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 
+  let adhanViewObserver=null, adhanViewQueued=false;
+  function arrangeAdhanView(){
+    adhanViewQueued=false;
+    const dialog=document.getElementById("adhanServicesDialog"),p=document.getElementById("adhanPanel");
+    if(!dialog||dialog.hidden||!p||!dialog.contains(p))return;
+    const voice=dialog.dataset.aoqatView==="voice";
+    let holder=p.querySelector("#aoqatVoiceOnly");
+    if(voice){
+      if(!holder){
+        holder=document.createElement("div");holder.id="aoqatVoiceOnly";
+        const timetable=p.querySelector(":scope > .ad-card");
+        if(timetable)timetable.after(holder);else p.prepend(holder);
+        const hint=document.createElement("p");hint.className="ad-note";
+        hint.textContent="تشغيل الأذان والمنبّه والصامت وعدم الإزعاج من أيقونة «ضبط التنبيهات».";
+        holder.append(hint);
+      }
+      const sound=p.querySelector("#adSection-sound .ad-card");
+      if(sound&&sound.parentElement!==holder)holder.prepend(sound);
+    }else if(holder){
+      const sound=holder.querySelector(".ad-card");
+      const home=p.querySelector("#adSection-sound .ad-leaf-body")||p.querySelector("#adSection-sound");
+      if(home&&sound)home.appendChild(sound);
+      holder.remove();
+    }
+  }
+  function queueAdhanView(){
+    if(adhanViewQueued)return;
+    adhanViewQueued=true;requestAnimationFrame(arrangeAdhanView);
+  }
   function closeAdhanServices(){
     const dialog=document.getElementById("adhanServicesDialog");
     if(!dialog||dialog.hidden)return false;
+    if(dialog.dataset.aoqatView==="voice"){
+      dialog.dataset.aoqatView="alerts";arrangeAdhanView();
+    }
     dialog.hidden=true;document.body.classList.remove("adhan-services-open");
     const p=document.getElementById("adhanPanel");
     if(p&&adhanHome){p.classList.remove("inline-open","active-panel");adhanHome.appendChild(p);}
@@ -48,7 +80,7 @@
     if(adhanReturnFocus?.isConnected)adhanReturnFocus.focus({preventScroll:true});
     return true;
   }
-  function openAdhanServices(){
+  function openAdhanServices(view="voice"){
     const p=document.getElementById("adhanPanel");if(!p)return;
     let dialog=document.getElementById("adhanServicesDialog");
     if(!dialog){
@@ -66,9 +98,23 @@
         else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
       });
     }
+    const mode=view==="alerts"?"alerts":"voice";
+    if(!dialog.hidden&&dialog.contains(p)){
+      dialog.dataset.aoqatView=mode;
+      dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"الأذان والتنبيه";
+      queueAdhanView();return;
+    }
     adhanReturnFocus=document.activeElement;adhanHome=p.parentElement;
     const sidebar=document.querySelector(".sidebar");sidebarWasInert=sidebar?.inert||false;if(sidebar)sidebar.inert=true;
+    dialog.dataset.aoqatView=mode;
+    dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"الأذان والتنبيه";
+    dialog.querySelector("#adhanServicesBack").setAttribute("aria-label",mode==="alerts"?"رجوع إلى ضبط التنبيهات":"رجوع إلى بيانات الأذان والإقامة");
     dialog.querySelector("#adhanServicesBody").appendChild(p);dialog.hidden=false;
+    if(!adhanViewObserver){
+      adhanViewObserver=new MutationObserver(queueAdhanView);
+      adhanViewObserver.observe(p,{childList:true});
+    }
+    queueAdhanView();
     document.body.classList.add("adhan-services-open");dialog.querySelector("#adhanServicesBody").scrollTop=0;
     dialog.querySelector("#adhanServicesBack").focus({preventScroll:true});
   }
@@ -199,10 +245,11 @@
   function alertSettingsView(){
     const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
     const intro=document.createElement("p");intro.className="ad-note";
-    intro.textContent="كل إعدادات التنبيهات في مكان واحد. نستخدم الأزرار والمواعيد والأصوات الأصلية المحفوظة، بدون إنشاء تنبيهات مكررة.";
+    intro.textContent="هنا تشغيل التنبيهات والصامت وعدم الإزعاج لكل صلاة، وكذلك تنبيهات الإقامة والجمعة والصيام والأذكار والنشر. نستخدم الأزرار الأصلية دون تكرار.";
     wrap.append(intro);
     const options=[
-      ["iqama","⏳","إشعار الإقامة والصامت بعد الإقامة"],
+      ["prayer","🔔","تنبيهات أوقات الصلاة والصامت وعدم الإزعاج"],
+      ["iqama","⏳","إشعار الإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
@@ -218,9 +265,13 @@
   }
   function openAlertSection(kind){
     const api=window.AoqatAlertsHub;
+    if(kind==="prayer"){openAdhanServices("alerts");return;}
     if(kind==="screen"){window.AoqatScreenAlerts?.open?.();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
     if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");return;}
+    if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
+      openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
+    }
     if(kind==="iqama"){
       const wrap=document.createElement("div");wrap.className="web-settings-list";
       const notification=document.createElement("button");notification.type="button";notification.className="main-action";notification.textContent="🔔 إشعار الإقامة";notification.onclick=()=>openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");wrap.append(notification);
