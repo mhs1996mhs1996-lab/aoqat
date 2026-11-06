@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:padding="3dp" android:background="#EDF5F7">
+    <TextView android:id="@+id/alarm_notice_title"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:singleLine="true" android:ellipsize="end"
+        android:textSize="14sp" android:textStyle="bold" android:textColor="#153C4C"
+        android:gravity="right" android:paddingEnd="6dp" />
+    <TextView android:id="@+id/alarm_notice_status"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:singleLine="true" android:ellipsize="end"
+        android:textSize="11sp" android:textColor="#31596B"
+        android:gravity="right" android:paddingEnd="6dp" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp"
+        android:orientation="horizontal" android:layoutDirection="rtl">
+        <TextView android:id="@+id/alarm_notice_stop"
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:text="إيقاف التنبيه" android:textColor="#153C4C"
+            android:background="#D4E6EF" android:gravity="center" android:textSize="13sp"
+            android:textStyle="bold" android:clickable="true" />
+        <TextView android:id="@+id/alarm_notice_snooze"
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:text="غفوة 10 دقائق" android:textColor="#153C4C"
+            android:background="#C7E2E2" android:gravity="center" android:textSize="13sp"
+            android:textStyle="bold" android:clickable="true" />
+    </LinearLayout>
+</LinearLayout>
