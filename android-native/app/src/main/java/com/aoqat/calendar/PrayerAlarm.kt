@@ -83,8 +83,9 @@ class PrayerAlarmActionReceiver:BroadcastReceiver(){override fun onReceive(c:Con
     if(id !in PrayerAlarm.ids)return
     val preview=i.getBooleanExtra("preview",false)
     val snoozed=!preview&&i.action=="SNOOZE"&&PrayerAlarm.snooze(c,id,i.getIntExtra("count",0))
-    if(!preview&&!snoozed)PrayerAlarm.finish(c,id)
+    if(!preview&&!snoozed){PrayerAlarm.cancelSnooze(c,id);PrayerAlarm.finish(c,id)}
     c.stopService(Intent(c,PrayerAlarmService::class.java))
+    if(snoozed)PrayerAlarmNotice.showSnoozed(c,id) else PrayerAlarmNotice.dismiss(c)
 }}
 class PrayerAlarmService:Service(){
     private var player:MediaPlayer?=null
@@ -118,7 +119,8 @@ class PrayerAlarmService:Service(){
         val channel=NotificationChannel("prayer_alarm_v1","منبّه الصلاة",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);lockscreenVisibility=Notification.VISIBILITY_PUBLIC};nm.createNotificationChannel(channel)
         fun action(name:String)=PendingIntent.getBroadcast(this,72000+PrayerAlarm.ids.indexOf(id)*2+(if(name=="SNOOZE")1 else 0),Intent(this,PrayerAlarmActionReceiver::class.java).setAction(name).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val show=PendingIntent.getActivity(this,73000,Intent(this,PrayerAlarmActivity::class.java).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification=Notification.Builder(this,"prayer_alarm_v1").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview || id=="third")p.optString("label",PrayerAlarm.names[id]) else PrayerNotifications.title(id,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY)).setContentText(if(preview)"تجربة النغمة" else p.optString("label",PrayerAlarm.names[id])).setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(show).addAction(Notification.Action.Builder(null,"إيقاف",action("STOP")).build())
+        val visible=AlarmNotificationControls.view(this,PrayerAlarm.names[id] ?: "منبّه الصلاة",if(preview)"تجربة المنبّه" else "المنبّه يعمل — إيقاف أو غفوة",action("STOP"),if(!preview&&count<p.optInt("count",3))action("SNOOZE")else null,"غفوة "+p.optInt("snooze",10)+" دقائق")
+        val notification=Notification.Builder(this,"prayer_alarm_v1").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setCustomContentView(visible).setCustomBigContentView(visible).setStyle(Notification.DecoratedCustomViewStyle()).setContentTitle(if(preview || id=="third")p.optString("label",PrayerAlarm.names[id]) else PrayerNotifications.title(id,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY)).setContentText(if(preview)"تجربة النغمة" else p.optString("label",PrayerAlarm.names[id])).setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(show).addAction(Notification.Action.Builder(null,"إيقاف",action("STOP")).build())
         if(!preview&&count<p.optInt("count",3))notification.addAction(Notification.Action.Builder(null,"غفوة",action("SNOOZE")).build())
         // The alert must be explicitly enabled and screen waking is user-controlled.
         if(!preview && PhoneScreenAlerts.enabled(this)) notification.setFullScreenIntent(show,true)
@@ -131,7 +133,7 @@ class PrayerAlarmService:Service(){
         sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",true))
         handler.postDelayed({if(!preview)PrayerAlarm.finish(this,id);stopSelf()},duration);return START_NOT_STICKY
     }
-    override fun onDestroy(){ringingId="";hardwareHandled=true;try{unregisterReceiver(screenOff)}catch(_:Exception){};PrayerAlarmAudio.restore(this);PrayerAudioDnd.end(this,"prayer-alarm");PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){val oldId=ringingId;ringingId="";hardwareHandled=true;try{unregisterReceiver(screenOff)}catch(_:Exception){};PrayerAlarmAudio.restore(this);PrayerAudioDnd.end(this,"prayer-alarm");PrayerAlarm.prefs(this).edit().remove("activeId").apply();handler.removeCallbacksAndMessages(null);player?.release();player=null;focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};wake?.let{if(it.isHeld)it.release()};sendBroadcast(Intent("com.aoqat.calendar.PRAYER_ALARM_ACTIVE").setPackage(packageName).putExtra("active",false));stopForeground(STOP_FOREGROUND_REMOVE);if(oldId.isNotBlank()&&PrayerAlarm.prefs(this).getLong("snooze_$oldId",0)>System.currentTimeMillis())PrayerAlarmNotice.showSnoozed(this,oldId)else PrayerAlarmNotice.dismiss(this);super.onDestroy()}
 }
 class PrayerAlarmActivity:Activity(){
     private val receiver=object:BroadcastReceiver(){
