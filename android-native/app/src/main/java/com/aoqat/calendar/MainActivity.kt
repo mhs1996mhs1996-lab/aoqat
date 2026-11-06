@@ -96,6 +96,8 @@ object IqamaPersistentNotification {
         context.stopService(Intent(context, IqamaNotificationService::class.java))
         val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
+        // Keep the home-screen iqama card in sync when the native cycle ends.
+        runCatching { PrayerWidget.update(context) }
         val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
         listOf("SWITCH" to REQUEST_SWITCH, "HIDE" to REQUEST_HIDE, "EXPIRE" to REQUEST_HIDE, "PHASE_BOUNDARY" to REQUEST_SWITCH).forEach { (action, request) ->
             val pi = PendingIntent.getBroadcast(context, request, Intent(context, IqamaNotificationReceiver::class.java).setAction(action), PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
@@ -142,6 +144,8 @@ class IqamaNotificationService : android.app.Service() {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
             publishedPhase = display.phase
+            // Existing native boundary is the only source of the widget phase update.
+            runCatching { PrayerWidget.update(this) }
         }
         handler.removeCallbacks(boundary)
         handler.postDelayed(boundary, (display.nextBoundary - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(1L))
@@ -182,6 +186,7 @@ class IqamaNotificationService : android.app.Service() {
         IqamaPersistentNotification.ensureChannel(this)
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
         publishedPhase = display.phase
+        runCatching { PrayerWidget.update(this) }
         val remaining = (durations.totalMs - (nowRealtime - startRealtime)).coerceAtLeast(1L)
         if (wakeLock?.isHeld == true) wakeLock?.release()
         run {
