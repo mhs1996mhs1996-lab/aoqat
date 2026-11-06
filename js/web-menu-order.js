@@ -52,7 +52,7 @@
         holder=document.createElement("div");holder.id="aoqatVoiceOnly";
         if(timetable)timetable.after(holder);else p.prepend(holder);
         const hint=document.createElement("p");hint.className="ad-note";
-        hint.textContent="تشغيل الأذان والمنبّه والصامت وعدم الإزعاج من أيقونة «ضبط التنبيهات».";
+        hint.textContent="تنبيهات الصلاة والصامت وعدم الإزعاج موجودة حصراً داخل «ضبط التنبيهات».";
         holder.append(hint);
       }
       const sound=p.querySelector("#adSection-sound .ad-card");
@@ -102,13 +102,13 @@
     const mode=view==="alerts"?"alerts":"voice";
     if(!dialog.hidden&&dialog.contains(p)){
       dialog.dataset.aoqatView=mode;
-      dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"الأذان والتنبيه";
+      dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"مواقيت الصلاة وصوت الأذان";
       queueAdhanView();return;
     }
     adhanReturnFocus=document.activeElement;adhanHome=p.parentElement;
     const sidebar=document.querySelector(".sidebar");sidebarWasInert=sidebar?.inert||false;if(sidebar)sidebar.inert=true;
     dialog.dataset.aoqatView=mode;
-    dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"الأذان والتنبيه";
+    dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"مواقيت الصلاة وصوت الأذان";
     dialog.querySelector("#adhanServicesBack").setAttribute("aria-label",mode==="alerts"?"رجوع إلى ضبط التنبيهات":"رجوع إلى بيانات الأذان والإقامة");
     dialog.querySelector("#adhanServicesBody").appendChild(p);dialog.hidden=false;
     if(!adhanViewObserver){
@@ -249,7 +249,7 @@
     intro.textContent="هنا تشغيل التنبيهات والصامت وعدم الإزعاج لكل صلاة، وكذلك تنبيهات الإقامة والجمعة والصيام والأذكار والنشر. نستخدم الأزرار الأصلية دون تكرار.";
     wrap.append(intro);
     const options=[
-      ["prayer","🔔","تنبيهات أوقات الصلاة والصامت وعدم الإزعاج"],
+      ["prayer","🔔","تنبيهات الصلاة والأذان والصامت وعدم الإزعاج"],
       ["iqama","⏳","إشعار الإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
@@ -338,7 +338,7 @@
   window.addEventListener('aoqatInboxChanged',()=>{if(document.getElementById('reminderInbox')&&['main','reminderInbox'].includes(returnMode)&&document.getElementById('webDrawerSub')?.classList.contains('open'))inboxView(inboxId);});
   function adhanIqamaView(){
     const wrap=document.createElement("div");wrap.className="web-settings-list";
-    [["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","أوقات بعد الإقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});openSub("بيانات الاذان والإقامة",wrap,"main");
+    [["🔊","مواقيت الصلاة وصوت الأذان","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","أوقات بعد الإقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});openSub("بيانات الاذان والإقامة",wrap,"main");
   }
   function themeView(){const p=document.createElement("div");p.className="web-theme-drawer-panel";const source=document.getElementById("webThemePanel");if(source){p.innerHTML=source.innerHTML;}else{p.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid"><button type="button" class="wt-card" data-theme="cream-blue">🟦 كريمي وأزرق فاتح</button><button type="button" class="wt-card" data-theme="cream-gold">🟨 كريمي وذهبي هادئ</button><button type="button" class="wt-card" data-theme="white-sky">🔵 أبيض وسماوي حديث</button><button type="button" class="wt-card" data-theme="cream-green">🟩 كريمي وأخضر هادئ</button><button type="button" class="wt-card" data-theme="beige-gold">🟫 بيج وذهبي أنيق</button><button type="button" class="wt-card" data-theme="dark-night">🌙 داكن كحلي (ليلي)</button></div>';}p.addEventListener("click",e=>{const card=e.target.closest(".wt-card");if(!card)return;if(typeof window.applyWebTheme==="function")window.applyWebTheme(card.dataset.theme);p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));window.refreshWebThemeControls?.();});p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));openSub("شكل التطبيق",p,"main");window.refreshWebThemeControls?.();}
   function savePhone(){
