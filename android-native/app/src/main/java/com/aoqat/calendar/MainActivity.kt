@@ -661,6 +661,9 @@ class MainActivity : Activity() {
         }}
         @JavascriptInterface fun readPrayerAudioPolicyStatus():String =
             PrayerSoundPolicy.status(this@MainActivity).toString()
+        @JavascriptInterface fun configureMonthlyPublishReminder(json:String) {
+            CalendarPublishAlarm.configure(this@MainActivity,json)
+        }
         @JavascriptInterface fun readScreenWakeEnabled(): Boolean =
             PhoneScreenAlerts.enabled(this@MainActivity)
 
