@@ -126,7 +126,7 @@ body.adhan-services-open{overflow:hidden!important}
 /* Adhan timetable/voice view versus notification settings view.
    Only presentation changes; the same buttons, event handlers and stored settings
    remain in #adhanPanel and are never cloned. */
-#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel > :not(.ad-card:first-child):not(#aoqatVoiceOnly):not(#adStatus){
+#adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel > :not(.aoqat-prayer-timetable):not(#aoqatVoiceOnly):not(#adStatus){
   display:none!important;
 }
 #adhanServicesDialog[data-aoqat-view="voice"] #adhanPanel #aoqatVoiceOnly{
@@ -143,7 +143,7 @@ body.adhan-services-open{overflow:hidden!important}
   text-align:right!important;
   color:var(--wt-muted,#536a62)!important;
 }
-#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel > .ad-card:first-child,
+#adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel > .aoqat-prayer-timetable,
 #adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #aoqatVoiceOnly,
 #adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel [data-ad-section="sound"],
 #adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #adSection-sound{
