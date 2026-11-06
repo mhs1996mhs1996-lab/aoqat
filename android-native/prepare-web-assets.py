@@ -91,11 +91,13 @@ transform('web-menu-order.js', [
  ('const id=b.dataset.drawer;',
   'const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}')
 ])
-# The legacy adhan-only screen switch is obsolete: one native setting controls
-# adhan, selected prayer notices, alarm and publishing alike. Remove duplicate UI.
-transform('adhan-settings.js', [
- ('${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}',
-  '<p class="ad-note">💡 إضاءة الشاشة لجميع التنبيهات تُضبط من «ضبط التنبيهات» في القائمة الرئيسية.</p>')
+# Keep the reviewed optional adhan fullscreen toggle separately from the master
+# screen-illumination preference. Never clone or remove the user's saved setting.
+transform('web-menu-order.js', [
+ ('const enabled=()=>localStorage.getItem(WAKE_ALERTS_KEY)!=="0";',
+  'const enabled=()=>window.AndroidNative?.readScreenWakeEnabled?.()??(localStorage.getItem(WAKE_ALERTS_KEY)!=="0");'),
+ ('button.onclick=()=>{localStorage.setItem(WAKE_ALERTS_KEY,enabled()?"0":"1");refresh();',
+  'button.onclick=()=>{const next=!enabled();localStorage.setItem(WAKE_ALERTS_KEY,next?"1":"0");window.AndroidNative?.configureScreenWake?.(next);refresh();')
 ])
 # The native scheduler owns background reminders; the web module supplies its reviewed controls only.
 transform('azkar-reminders.js', [
