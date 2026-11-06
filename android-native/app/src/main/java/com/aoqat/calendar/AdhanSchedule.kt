@@ -183,6 +183,7 @@ class AdhanReceiver : BroadcastReceiver() {
                 val n=Notification.Builder(c,channel).setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(title).setContentText(prayer).setVisibility(Notification.VISIBILITY_PUBLIC).setAutoCancel(true).setTimeoutAfter(60000L).setContentIntent(PendingIntent.getActivity(c,0,Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
                 if(screen)n.setCategory(Notification.CATEGORY_ALARM).setFullScreenIntent(PendingIntent.getActivity(c,if(intent.action=="SUHOOR")60422 else 60421,Intent(c,AdhanScreenActivity::class.java).putExtra("reminderMessage","$title • $prayer"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT),true)
                 nm.notify(if(intent.action=="SUHOOR")60402 else 60401,n.build())
+                PhoneScreenAlerts.pulse(c)
             }
             "IQAMA_QUIET" -> AfterIqamaQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
             "ADHAN_QUIET" -> AtAdhanQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
