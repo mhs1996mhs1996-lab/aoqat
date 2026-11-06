@@ -44,11 +44,12 @@
     const dialog=document.getElementById("adhanServicesDialog"),p=document.getElementById("adhanPanel");
     if(!dialog||dialog.hidden||!p||!dialog.contains(p))return;
     const voice=dialog.dataset.aoqatView==="voice";
+    const timetable=p.querySelector("#adNext")?.closest(".ad-card");
+    if(timetable)timetable.classList.add("aoqat-prayer-timetable");
     let holder=p.querySelector("#aoqatVoiceOnly");
     if(voice){
       if(!holder){
         holder=document.createElement("div");holder.id="aoqatVoiceOnly";
-        const timetable=p.querySelector(":scope > .ad-card");
         if(timetable)timetable.after(holder);else p.prepend(holder);
         const hint=document.createElement("p");hint.className="ad-note";
         hint.textContent="تشغيل الأذان والمنبّه والصامت وعدم الإزعاج من أيقونة «ضبط التنبيهات».";
