@@ -19,6 +19,11 @@ const assert=require('node:assert/strict');
     await page.getByRole('button',{name:'🔊 الأذان والتنبيه',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('#aoqatVoiceOnly [data-setting="sound"]'));
     assert.equal(await page.locator('#adhanServicesDialog').getAttribute('data-aoqat-view'),'voice');
+    console.log('VOICE_LAYOUT_DEBUG',JSON.stringify(await page.evaluate(()=>{
+      const el=document.getElementById('adNext'),card=el?.closest('.ad-card'),panel=document.getElementById('adhanPanel'),dialog=document.getElementById('adhanServicesDialog');
+      const attrs=node=>node?{tag:node.tagName,id:node.id,classes:node.className,hidden:node.hidden,display:getComputedStyle(node).display,rect:node.getBoundingClientRect().toJSON()}:null;
+      return {view:dialog?.dataset.aoqatView,dialog:attrs(dialog),panel:attrs(panel),first:[...panel.children].slice(0,9).map(attrs),card:attrs(card),text:attrs(el)};
+    })));
     assert.equal(await page.locator('#adNext').isVisible(),true,'Next prayer is in the timetable view');
     assert.equal(await page.locator('#adCountdown').isVisible(),true);
     assert.equal(await page.locator('#aoqatVoiceOnly [data-setting="sound"]').isVisible(),true,'Voice selection moved, not cloned');
