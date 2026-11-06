@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v182-nav-label-contrast-20261106";
+const CACHE_NAME = "aoqat-pwa-v183-central-alerts-20261106";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -69,7 +69,7 @@ const APP_SHELL = [
   "/index.html",
   "/css/style.css",
   "/css/adhan.css?v=qibla-no-inner-back-20261026",
-  "/css/adhan-modal.css?v=3-nav-label-contrast",
+  "/css/adhan-modal.css?v=4-central-alerts",
   "/js/adhan-core.js?v=3",
   "/js/adhan-settings.js?v=qibla-back-removed-20261025",
   "/js/azkar.js?v=1",
@@ -108,7 +108,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
-  "/js/web-menu-order.js?v=34-nav-label-contrast",
+  "/js/web-menu-order.js?v=35-central-alerts",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
