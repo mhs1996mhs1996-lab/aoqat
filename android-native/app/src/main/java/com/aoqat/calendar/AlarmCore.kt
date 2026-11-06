@@ -37,6 +37,12 @@ object AlarmScheduler {
     private fun prefs(c:Context)=c.getSharedPreferences("publish_alarm_settings",Context.MODE_PRIVATE)
     fun enabled(c:Context)=prefs(c).getBoolean("enabled",false)
     fun snoozeMinutes(c:Context)=prefs(c).getInt("snoozeMinutes",10).coerceIn(1,30)
+    fun snoozeUntil(c:Context)=prefs(c).getLong("snoozeUntil",0L)
+    @Synchronized fun clearSnooze(c:Context){
+        prefs(c).edit().remove("snoozeUntil").commit()
+        val pi=PendingIntent.getBroadcast(c,REQUEST_CODE,Intent(c,AlarmReceiver::class.java),PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+        if(pi!=null){(c.getSystemService(Context.ALARM_SERVICE)as AlarmManager).cancel(pi);pi.cancel()}
+    }
     fun setSnoozeMinutes(c:Context,minutes:Int){prefs(c).edit().putInt("snoozeMinutes",minutes.coerceIn(1,30)).commit()}
     @Synchronized fun migrate(c:Context,legacy:Boolean):Boolean{if(!prefs(c).contains("enabled")){prefs(c).edit().putBoolean("enabled",false).commit()};return enabled(c)}
     @Synchronized fun setEnabled(c:Context,on:Boolean){prefs(c).edit().putBoolean("enabled",on).commit();if(on)scheduleFromDatabase(c)else {prefs(c).edit().remove("snoozeUntil").commit();cancel(c)}}
@@ -277,7 +283,7 @@ object AlarmUi {
         manager.createNotificationChannel(channel)
     }
 
-    fun buildAlarmNotification(context: Context): Notification {
+    fun buildAlarmNotification(context: Context, snoozed: Boolean = false): Notification {
         ensureChannel(context)
 
         val fullIntent = Intent(context, AlarmActivity::class.java).apply {
@@ -290,11 +296,17 @@ object AlarmUi {
         val stopPending = PendingIntent.getBroadcast(context, 45103, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val snoozePending = PendingIntent.getBroadcast(context, 45104, snoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
+        val until=AlarmScheduler.snoozeUntil(context)
+        val notice="⏰ مواقيت الغد جاهزة"
+        val state=if(snoozed && until>System.currentTimeMillis()) "غفوة إلى " + java.text.SimpleDateFormat("h:mm a",java.util.Locale("ar")).format(java.util.Date(until)) + " — إيقاف أو إعادة غفوة" else "المنبّه يعمل — إيقاف أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق"
+        val visible=AlarmNotificationControls.view(context,notice,state,stopPending,snoozePending,"غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق")
         val notification=NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("⏰ مواقيت الغد جاهزة")
-            .setContentText("اضغط إيقاف التنبيه أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق")
-            .setStyle(NotificationCompat.BigTextStyle().bigText("تم تبديل التوقيت إلى اليوم التالي. اختر إيقاف التنبيه أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق."))
+            .setContentTitle(notice)
+            .setContentText(state)
+            .setCustomContentView(visible)
+            .setCustomBigContentView(visible)
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -307,13 +319,20 @@ object AlarmUi {
             .addAction(android.R.drawable.ic_media_pause, "إيقاف التنبيه", stopPending)
         // A full-screen alarm is requested only when the user allows screen waking.
         // Android 14+ can still show a heads-up alert until FSI access is granted.
-        if(PhoneScreenAlerts.enabled(context)) notification.setFullScreenIntent(fullPending,true)
+        if(!snoozed && PhoneScreenAlerts.enabled(context)) notification.setFullScreenIntent(fullPending,true)
         return notification.build()
     }
 
     fun showFullScreenNotification(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, buildAlarmNotification(context))
+    }
+
+    fun showSnoozedNotification(context: Context) {
+        if(AlarmScheduler.enabled(context)&&AlarmScheduler.snoozeUntil(context)>System.currentTimeMillis()) {
+            val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(NOTIFICATION_ID,buildAlarmNotification(context,true))
+        }
     }
 
     fun dismiss(context: Context) {
@@ -325,13 +344,16 @@ class AlarmActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         when (intent?.action) {
             "SNOOZE" -> {
-                AlarmSoundService.stop(context)
-                AlarmUi.dismiss(context)
                 AlarmScheduler.scheduleSnooze(context)
+                AlarmSoundService.stop(context)
+                AlarmUi.showSnoozedNotification(context)
             }
             else -> {
+                val wasSnoozed=AlarmScheduler.snoozeUntil(context)>System.currentTimeMillis()
+                if(wasSnoozed)AlarmScheduler.clearSnooze(context)
                 AlarmSoundService.stop(context)
                 AlarmUi.dismiss(context)
+                if(wasSnoozed)AlarmScheduler.scheduleFromDatabase(context)
             }
         }
     }
@@ -420,7 +442,8 @@ class AlarmSoundService : Service() {
             PrayerAlarmAudio.restore(this)
         }
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else @Suppress("DEPRECATION") stopForeground(true)
-        AlarmUi.dismiss(this)
+        if(AlarmScheduler.enabled(this) && AlarmScheduler.snoozeUntil(this)>System.currentTimeMillis()) AlarmUi.showSnoozedNotification(this)
+        else AlarmUi.dismiss(this)
         sendBroadcast(Intent(STOPPED).setPackage(packageName))
         super.onDestroy()
     }
