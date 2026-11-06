@@ -1,0 +1,30 @@
+name: Verify nested menu gradients (web only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'js/web-menu-button-theme.js'
+      - 'js/web-menu-order.js'
+      - 'css/adhan-modal.css'
+      - 'js/web-theme-settings.js'
+      - 'tests/menu-button-theme-browser.cjs'
+      - '.github/workflows/check-nested-navigation-theme.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  nested-menu-colors:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check js/web-menu-button-theme.js
+          node --check js/web-menu-order.js
+          node --check tests/menu-button-theme-browser.cjs
+      - name: Run visual DOM and state regressions in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/menu-button-theme-browser.cjs
+          CHROME_PATH=/usr/bin/google-chrome node tests/adhan-mode-theme-browser.cjs
