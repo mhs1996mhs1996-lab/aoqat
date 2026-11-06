@@ -247,6 +247,8 @@ class BootReceiver : BroadcastReceiver() {
         PrayerAlarm.schedule(context)
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) AdhanPlaybackService.restoreVolume(context)
         AdhanPlaybackService.restoreRingerIfExpired(context)
+        // Reboot / in-place upgrade must not strand user DND in an audio-only exception.
+        PrayerAudioDnd.restore(context)
         PrayerWidget.update(context)
         if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
         val pending = goAsync()
@@ -288,7 +290,7 @@ object AlarmUi {
         val stopPending = PendingIntent.getBroadcast(context, 45103, stopIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val snoozePending = PendingIntent.getBroadcast(context, 45104, snoozeIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
-        return NotificationCompat.Builder(context, CHANNEL_ID)
+        val notification=NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle("⏰ مواقيت الغد جاهزة")
             .setContentText("اضغط إيقاف التنبيه أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق")
@@ -301,10 +303,12 @@ object AlarmUi {
             .setOnlyAlertOnce(true)
             .setDeleteIntent(stopPending)
             .setContentIntent(fullPending)
-            .setFullScreenIntent(fullPending, true)
             .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق", snoozePending)
             .addAction(android.R.drawable.ic_media_pause, "إيقاف التنبيه", stopPending)
-            .build()
+        // A full-screen alarm is requested only when the user allows screen waking.
+        // Android 14+ can still show a heads-up alert until FSI access is granted.
+        if(PhoneScreenAlerts.enabled(context)) notification.setFullScreenIntent(fullPending,true)
+        return notification.build()
     }
 
     fun showFullScreenNotification(context: Context) {
@@ -334,9 +338,14 @@ class AlarmActionReceiver : BroadcastReceiver() {
 }
 
 class AlarmSoundService : Service() {
+    private var ringing=false
+    private var screenHandled=false
+    private var adjustedAlarmVolume=false
     private val screenOff=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){
-        if(i.action==Intent.ACTION_SCREEN_OFF&&AlarmScheduler.enabled(c)){
-            AlarmScheduler.scheduleSnooze(c);stopSelf()
+        if(i.action==Intent.ACTION_SCREEN_OFF&&ringing&&!screenHandled&&AlarmScheduler.enabled(c)){
+            screenHandled=true
+            AlarmActionReceiver().onReceive(this@AlarmSoundService,
+                Intent(this@AlarmSoundService,AlarmActionReceiver::class.java).setAction("SNOOZE"))
         }
     }}
     override fun onCreate(){super.onCreate();if(Build.VERSION.SDK_INT>=33)registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(screenOff,IntentFilter(Intent.ACTION_SCREEN_OFF))}
@@ -351,25 +360,36 @@ class AlarmSoundService : Service() {
         if(player!=null)return START_NOT_STICKY
         AlarmUi.ensureChannel(this)
         startForeground(AlarmUi.NOTIFICATION_ID, AlarmUi.buildAlarmNotification(this))
-
+        ringing=true
+        screenHandled=false
+        if(!PrayerAlarmAudio.running){
+            PrayerAlarmAudio.ensureAudible(this)
+            adjustedAlarmVolume=true
+        }
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "aoqat:alarm").apply { acquire(15 * 60_000L) }
 
+        val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
         try {
-            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
-            player = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .build()
-                )
-                setDataSource(this@AlarmSoundService, uri)
-                isLooping = true
+            val uri=RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: throw IllegalStateException("No system alarm tone")
+            player=MediaPlayer().apply{
+                setAudioAttributes(attrs)
+                setDataSource(this@AlarmSoundService,uri)
+                isLooping=true
                 prepare()
                 start()
             }
-        } catch (_: Exception) { }
+        } catch(e:Exception) {
+            android.util.Log.w("PublishAlarm","System alarm tone failed, using bundled offline sound",e)
+            try{player?.release()}catch(_:Exception){}
+            player=MediaPlayer.create(this,R.raw.prayer_alarm_fallback,attrs,0)?.apply{
+                isLooping=true
+                start()
+            }
+            if(player==null)android.util.Log.e("PublishAlarm","Unable to play bundled fallback alarm")
+        }
 
         vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val pattern = longArrayOf(0, 800, 300, 800, 300, 1200)
@@ -386,13 +406,19 @@ class AlarmSoundService : Service() {
     }
 
     override fun onDestroy() {
-        unregisterReceiver(screenOff)
+        ringing=false
+        screenHandled=true
+        try{unregisterReceiver(screenOff)}catch(_:Exception){}
         stopHandler.removeCallbacks(safetyStop)
         try { player?.stop() } catch (_: Exception) { }
         player?.release(); player = null
         vibrator?.cancel()
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null
+        if(adjustedAlarmVolume){
+            adjustedAlarmVolume=false
+            PrayerAlarmAudio.restore(this)
+        }
         if (Build.VERSION.SDK_INT >= 24) stopForeground(STOP_FOREGROUND_REMOVE) else @Suppress("DEPRECATION") stopForeground(true)
         AlarmUi.dismiss(this)
         sendBroadcast(Intent(STOPPED).setPackage(packageName))
@@ -419,23 +445,27 @@ class AlarmSoundService : Service() {
 
 class AlarmActivity : Activity() {
     private var snoozed=false
-    private fun snooze(){if(snoozed||!AlarmScheduler.enabled(this))return;snoozed=true;AlarmScheduler.scheduleSnooze(this);AlarmSoundService.stop(this);finish()}
+    private fun snooze(){if(snoozed||!AlarmScheduler.enabled(this))return;snoozed=true;AlarmActionReceiver().onReceive(this,Intent(this,AlarmActionReceiver::class.java).setAction("SNOOZE"));finish()}
     override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean{
         if(code==android.view.KeyEvent.KEYCODE_VOLUME_UP||code==android.view.KeyEvent.KEYCODE_VOLUME_DOWN){snooze();return true}
         return super.onKeyDown(code,event)
     }
+    override fun dispatchKeyEvent(event:android.view.KeyEvent):Boolean{
+        if(event.keyCode==android.view.KeyEvent.KEYCODE_VOLUME_UP||
+           event.keyCode==android.view.KeyEvent.KEYCODE_VOLUME_DOWN){
+            if(event.action==android.view.KeyEvent.ACTION_DOWN&&event.repeatCount==0)snooze()
+            return true
+        }
+        return super.dispatchKeyEvent(event)
+    }
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
-        if (Build.VERSION.SDK_INT >= 27) {
-            setShowWhenLocked(true)
-            setTurnScreenOn(true)
-        } else window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        PhoneScreenAlerts.applyWindow(this)
 
         if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter(AlarmSoundService.STOPPED))
         if(!AlarmScheduler.enabled(this)){finish();return}
 
-        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -458,11 +488,7 @@ class AlarmActivity : Activity() {
         val snooze = Button(this).apply {
             text = "غفوة ${AlarmScheduler.snoozeMinutes(this@AlarmActivity)} دقائق"
             textSize = 18f
-            setOnClickListener {
-                AlarmSoundService.stop(this@AlarmActivity)
-                AlarmScheduler.scheduleSnooze(this@AlarmActivity)
-                finish()
-            }
+            setOnClickListener { this@AlarmActivity.snooze() }
         }
         val stop = Button(this).apply {
             text = "إيقاف التنبيه"

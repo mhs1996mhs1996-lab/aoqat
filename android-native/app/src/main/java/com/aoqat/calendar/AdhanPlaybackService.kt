@@ -25,12 +25,203 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             try { if(am.getStreamVolume(AudioManager.STREAM_ALARM)==p.getInt("applied",-1))am.setStreamVolume(AudioManager.STREAM_ALARM,p.getInt("previous",0),0) } catch(_:SecurityException) { }
             p.edit().clear().commit()
         }
-        fun restoreRinger(c: Context) {
+        private fun auditQuiet(c:Context, result:String, scheduledStart:Long=0L, deadline:Long=0L) {
+            c.getSharedPreferences("adhan_quiet_diagnostics",Context.MODE_PRIVATE).edit()
+                .putString("result",result).putLong("at",System.currentTimeMillis())
+                .apply { if(scheduledStart>0L)putLong("scheduledStart",scheduledStart)
+                         if(deadline>0L)putLong("end",deadline) }.commit()
+        }
+        fun quietStatus(c:Context):JSONObject {
+            val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val active=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+            val history=c.getSharedPreferences("adhan_quiet_diagnostics",Context.MODE_PRIVATE)
+            val clock=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            return JSONObject()
+                .put("permission",nm.isNotificationPolicyAccessGranted)
+                .put("exactAlarm",android.os.Build.VERSION.SDK_INT<31 || clock.canScheduleExactAlarms())
+                .put("ringer",am.ringerMode)
+                .put("dnd",nm.currentInterruptionFilter)
+                .put("appOwnsQuiet",active.getBoolean("changed",false))
+                .put("activeUntil",active.getLong("end",0L))
+                .put("lastResult",history.getString("result","never"))
+                .put("lastAt",history.getLong("at",0L))
+                .put("scheduledStart",history.getLong("scheduledStart",0L))
+                .put("deadline",history.getLong("end",0L))
+        }
+        /**
+         * Some OEMs reject AudioManager's silent change while a manually
+         * scheduled DND filter is active. Temporarily lift the filter only
+         * around the ringtone operation and restore the exact previous filter
+         * immediately, without altering the user's DND rule or duration.
+         */
+        private fun switchRingerPreservingDnd(
+            am:AudioManager,nm:NotificationManager,target:Int
+        ):Boolean {
+            val before=nm.currentInterruptionFilter
+            try { am.ringerMode=target } catch(e:Exception) {
+                android.util.Log.w("IqamaQuiet","Ringer change under existing DND rejected",e)
+            }
+            if(am.ringerMode==target) {
+                // On some OEMs switching ringtone silently changes the DND
+                // filter as a side effect. Restore that filter immediately.
+                if(nm.currentInterruptionFilter!=before)try {
+                    if(nm.isNotificationPolicyAccessGranted)nm.setInterruptionFilter(before)
+                }catch(e:Exception){android.util.Log.w("IqamaQuiet","Could not preserve user DND",e)}
+                return am.ringerMode==target && nm.currentInterruptionFilter==before
+            }
+            if(before==NotificationManager.INTERRUPTION_FILTER_ALL ||
+               !nm.isNotificationPolicyAccessGranted)return false
+            try {
+                nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+                am.ringerMode=target
+            }catch(e:Exception) {
+                android.util.Log.w("IqamaQuiet","Temporary DND-compatible ringtone switch rejected",e)
+            }finally{
+                try {
+                    if(nm.currentInterruptionFilter!=before)nm.setInterruptionFilter(before)
+                }catch(e:Exception) {
+                    android.util.Log.e("IqamaQuiet","Could not immediately restore manually enabled DND",e)
+                }
+            }
+            return am.ringerMode==target && nm.currentInterruptionFilter==before
+        }
+        @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L, preserveUserDnd:Boolean=false): Boolean {
+            val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if(!nm.isNotificationPolicyAccessGranted) {
+                auditQuiet(c,"permission_missing",scheduledStart,end)
+                android.util.Log.w("IqamaQuiet","Notification policy access needed to activate silent mode")
+                return false
+            }
+            val alarmManager=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            if(Build.VERSION.SDK_INT>=31 && !alarmManager.canScheduleExactAlarms()) {
+                // Never silence a phone when Android cannot schedule its recovery.
+                auditQuiet(c,"exact_alarm_missing",scheduledStart,end)
+                return false
+            }
+            val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+            val already=p.getBoolean("changed",false)
+            val ringerBefore=am.ringerMode
+            val filterBefore=nm.currentInterruptionFilter
+            // Elapsed iqama countdown is a hard cap even if other quiet modes overlap.
+            val iqamaCap=p.getLong("iqamaEnd",0L).takeIf{it>System.currentTimeMillis()}
+            val until=when {
+                preserveUserDnd -> end
+                already && iqamaCap!=null -> minOf(maxOf(end,p.getLong("end",0L)),iqamaCap)
+                already -> maxOf(end,p.getLong("end",0L))
+                else -> end
+            }
+            if (until<=System.currentTimeMillis()) {
+                auditQuiet(c,"expired",scheduledStart,end)
+                return false
+            }
+            // A user-enabled Do Not Disturb filter is NOT the same as Android's
+            // ringer's silent state. The user may keep DND enabled while ringtone
+            // remains NORMAL or VIBRATE; iqama must still silence THAT ringer.
+            // Only skip when the ringer itself was silent before our action.
+            // Never claim ownership of the user's pre-existing DND setting.
+            if(!already && ringerBefore==AudioManager.RINGER_MODE_SILENT) {
+                auditQuiet(c,"already_silent",scheduledStart,end)
+                return true
+            }
+            if(already && ringerBefore==AudioManager.RINGER_MODE_SILENT) {
+                // Do not extend the quiet window unless we can still restore it.
+                try { AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until) }
+                catch (e: Exception) {
+                    auditQuiet(c,"recovery_alarm_failed",scheduledStart,until)
+                    android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
+                    return false
+                }
+                p.edit().putLong("end",until)
+                    .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
+                auditQuiet(c,"active",scheduledStart,until)
+                return true
+            }
+            val prior=if(already)p.getInt("previous",AudioManager.RINGER_MODE_NORMAL) else ringerBefore
+            val oldFilter=if(already)p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL) else filterBefore
+            // Schedule restoration BEFORE changing Android's sound mode, so a
+            // process death immediately after muting cannot strand the phone.
+            try { AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",until) }
+            catch (e: Exception) {
+                auditQuiet(c,"recovery_alarm_failed",scheduledStart,until)
+                android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
+                return false
+            }
+            val silentApplied=switchRingerPreservingDnd(
+                am,nm,AudioManager.RINGER_MODE_SILENT)
+            var dndApplied=p.getBoolean("dndApplied",false)
+            // Some OEMs turn on DND as a side effect of changing ringer mode.
+            // Record this as OUR change so the exact previous DND policy is restored.
+            if(nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE &&
+                oldFilter!=NotificationManager.INTERRUPTION_FILTER_NONE) dndApplied=true
+            if(!silentApplied && !preserveUserDnd) {
+                // This legacy DND fallback is ONLY for other quiet services.
+                // After iqama the user explicitly requests ringtone SILENT,
+                // never modification of their separately scheduled DND rule.
+                try {
+                    if(nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_NONE)
+                        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+                    dndApplied=nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE &&
+                        oldFilter!=NotificationManager.INTERRUPTION_FILTER_NONE
+                } catch (e: SecurityException) {
+                    android.util.Log.w("IqamaQuiet","Android rejected DND fallback",e)
+                }
+            }
+            if(!silentApplied && (preserveUserDnd || !dndApplied)) {
+                auditQuiet(c,"failed",scheduledStart,end)
+                android.util.Log.e("IqamaQuiet","Android did not apply ringtone silent; user DND was not changed")
+                return false
+            }
+            p.edit().putBoolean("changed",true).putInt("previous",prior)
+                .putBoolean("dndApplied",dndApplied).putInt("previousFilter",oldFilter)
+                .putLong("end",until)
+                .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
+            auditQuiet(c,"applied",scheduledStart,until)
+            return true
+        }
+        @Synchronized fun restoreRinger(c: Context) {
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
             if(!p.getBoolean("changed",false))return
             val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-            try { if(am.ringerMode==AudioManager.RINGER_MODE_SILENT) am.ringerMode=p.getInt("previous",AudioManager.RINGER_MODE_NORMAL) } catch (_: SecurityException) { }
-            p.edit().clear().commit()
+            val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            var ringerRestored=true
+            var dndRestored=true
+            val previous=p.getInt("previous",AudioManager.RINGER_MODE_NORMAL)
+            try {
+                if(previous!=AudioManager.RINGER_MODE_SILENT &&
+                    am.ringerMode==AudioManager.RINGER_MODE_SILENT) {
+                    // Restore NORMAL or VIBRATE even while the user's DND
+                    // schedule is active; never leave ringer stuck in SILENT.
+                    ringerRestored=switchRingerPreservingDnd(am,nm,previous)
+                }
+            } catch (e: Exception) {
+                ringerRestored=false
+                android.util.Log.w("IqamaQuiet","Will retry restoring previous ringer mode",e)
+            }
+            if(p.getBoolean("dndApplied",false)) {
+                try {
+                    if(nm.isNotificationPolicyAccessGranted &&
+                        nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE) {
+                        val filter=p.getInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_ALL)
+                        nm.setInterruptionFilter(filter)
+                        dndRestored=nm.currentInterruptionFilter==filter
+                    } else if(!nm.isNotificationPolicyAccessGranted) dndRestored=false
+                } catch (e: Exception) {
+                    dndRestored=false
+                    android.util.Log.w("IqamaQuiet","Will retry restoring previous DND mode",e)
+                }
+            }
+            if(ringerRestored && dndRestored) {
+                auditQuiet(c,"restored")
+                p.edit().clear().commit()
+            } else {
+                auditQuiet(c,"restore_failed")
+                // Never discard the saved previous sound mode after a failed
+                // restoration. Retry from a native alarm even with the app closed.
+                try { AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",System.currentTimeMillis()+60000L) }
+                catch (e: Exception) { android.util.Log.e("IqamaQuiet","Cannot schedule restore retry",e) }
+            }
         }
         fun restoreRingerIfExpired(c: Context) {
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
@@ -58,6 +249,11 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private var prayerAt=0L
     private var prayerId=""
     private var prepared=false
+    private var proceedWithoutFocus=false
+    private var playbackFailed=false
+    private val restoreDucked=Runnable {
+        try { if(player?.isPlaying==true)player?.setVolume(1f,1f) }catch(_:Exception){}
+    }
     private val progress=object:Runnable{override fun run(){
         if(!preview&&audioStarted&&prepared)try{getSharedPreferences("adhan_resume",MODE_PRIVATE).edit().putLong("at",prayerAt).putString("id",prayerId).putInt("position",player?.currentPosition?:0).apply()}catch(_:Exception){}
         handler.postDelayed(this,5000)
@@ -70,11 +266,15 @@ class AdhanPlaybackService : Service(), SensorEventListener {
     private val audioFocus=AdhanAudioFocus(
         resume={startPreparedAudio()},
         pause={if(prepared&&player?.isPlaying==true)player?.pause()},
-        volume={scale->player?.setVolume(scale,scale)},
+        volume={scale->
+            player?.setVolume(scale,scale)
+            handler.removeCallbacks(restoreDucked)
+            if(scale<1f)handler.postDelayed(restoreDucked,2500L)
+        },
         stop={manuallyStopped=true;stopSelf()})
     private fun startPreparedAudio(){
         val ready=player?:return
-        if(!prepared||!audioFocus.granted||manuallyStopped||successful||ready.isPlaying)return
+        if(!prepared||(!audioFocus.granted&&!proceedWithoutFocus)||manuallyStopped||successful||ready.isPlaying)return
         try{ready.start();audioStarted=true;if(!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt)}catch(e:Exception){android.util.Log.e("Adhan","Prepared audio failed to start",e);stopSelf();return}
         if(!preview&&prayerAt>0)getSharedPreferences("adhan_delivery_diagnostics",MODE_PRIVATE).edit().putLong("expected_$prayerId",prayerAt).putLong("started_$prayerId",System.currentTimeMillis()).apply()
         if(config.optString("sound")=="custom"&&config.optBoolean("partial")){handler.removeCallbacks(customStop);handler.post(customStop)}
@@ -86,7 +286,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         cleanup()
         wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:adhan").apply{acquire(10*60*1000L)}
         AdhanDispatch.release()
-        audioStarted=false;manuallyStopped=false;retryAllowed=false;stopRequested=false
+        audioStarted=false;proceedWithoutFocus=false;manuallyStopped=false;retryAllowed=false;playbackFailed=false;stopRequested=false
         prayerAt=intent?.getLongExtra("prayerAt",0)?:0L
         prayerId=intent?.getStringExtra("prayerId")?:"fajr"
         successful=false
@@ -95,35 +295,71 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         preview=intent?.getBooleanExtra("preview",false)==true
         val prayer=intent?.getStringExtra("prayerId")?:"fajr"
         activePrayerId=prayer
-        if(!preview&&PrayerNotifications.selected(this,prayer)){stopSelf();return START_NOT_STICKY}
+        // Prayer notifications are independent. They may briefly duck the adhan
+        // audio, but must never cancel a scheduled, explicitly enabled adhan.
         val special=prayer in listOf("fridayFirst","fridaySecond")
         if(!preview&&FridaySchedule.suppress(this,prayer,intent?.getLongExtra("prayerAt",0)?:0)){stopSelf();return START_NOT_STICKY}
         if(special&&!preview){val f=config.optJSONObject("friday")?:JSONObject();config.put("enabled",f.optBoolean("enabled")&&f.optBoolean(if(prayer=="fridayFirst")"firstSound" else "secondSound",true));config.put("modes",JSONObject().put("friday","sound"));config.put("afterSilent",0);config.put("overrideSilent",true);config.put("vibrate",false);config.put("screen",false);config.put("flip",false)}
         val mode=if(preview)"sound" else config.optJSONObject("modes")?.optString(if(special)"friday" else prayer,"sound")?:"sound"
         if(!preview && (!config.optBoolean("enabled") || mode=="silent")){stopSelf();return START_NOT_STICKY}
+        if(!preview && !special && mode=="sound" && !PrayerSoundPolicy.allowed(this,prayer,false,prayerAt)){
+            getSharedPreferences("adhan_delivery_diagnostics",MODE_PRIVATE).edit()
+                .putString("suppressed_$prayer","silent_or_dnd").putLong("expected_$prayer",prayerAt)
+                .apply()
+            stopSelf();return START_NOT_STICKY
+        }
         if(!preview&&prayerAt>0&&System.currentTimeMillis()-prayerAt !in 0L..600000L){stopSelf();return START_NOT_STICKY}
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback_silent_v2","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val builder=Notification.Builder(this,"adhan_playback_silent_v2").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")"حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true)).setContentText("اضغط إيقاف لإنهاء الأذان").setOnlyAlertOnce(true).setOngoing(true).setVisibility(Notification.VISIBILITY_PUBLIC).addAction(Notification.Action.Builder(null,"إيقاف",stop).build()).setContentIntent(PendingIntent.getActivity(this,60411,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
-        if(config.optBoolean("screen")&&!preview){val show=PendingIntent.getActivity(this,60412,Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT);builder.setFullScreenIntent(show,true)}
+        val screenAlert = PhoneScreenAlerts.enabled(this) && !preview && mode=="sound"
+        val screenActivity = Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        val show=PendingIntent.getActivity(this,60412,screenActivity,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val content=if(screenAlert)show else PendingIntent.getActivity(this,60411,
+            Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
+        val builder=Notification.Builder(this,"adhan_playback_silent_v2")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")
+                "حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true))
+            .setContentText("اضغط إيقاف لإنهاء الأذان")
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setOnlyAlertOnce(true).setOngoing(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .addAction(Notification.Action.Builder(null,"إيقاف",stop).build())
+            .setContentIntent(content)
+        // FSI is the supported alarm path to wake a sleeping phone. On Android
+        // 14+ the user may still need to allow 'full-screen notifications'.
+        if(screenAlert)builder.setFullScreenIntent(show,true)
         startForeground(60400,builder.build())
 
         started=SystemClock.elapsedRealtime()
         if(config.optBoolean("flip"))sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let{sensors.registerListener(this,it,SensorManager.SENSOR_DELAY_NORMAL)}
         val am=getSystemService(AUDIO_SERVICE) as AudioManager
-        val override=config.optBoolean("overrideSilent")
-        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL){if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate();handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
+        val override=if(special)true else PrayerSoundPolicy.chosen(config,prayer,"silent") || AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)
+        if(!preview && !override && am.ringerMode!=AudioManager.RINGER_MODE_NORMAL &&
+            !AtAdhanQuiet.ownsActiveRinger(this,prayer,prayerAt)){
+            if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
+            handler.postDelayed({stopSelf()},4000)
+            return START_NOT_STICKY
+        }
         if(mode=="vibrate"||config.optBoolean("vibrate"))vibrate()
         if(mode=="vibrate"){handler.postDelayed({stopSelf()},4000);return START_NOT_STICKY}
         retryAllowed=true
+        if(!preview&&PrayerSoundPolicy.chosen(config,prayer,"dnd"))PrayerAudioDnd.begin(this,"adhan")
         try {
             val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
-            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(true).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
+            focus=AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs).setAcceptsDelayedFocusGain(false).setOnAudioFocusChangeListener({change->audioFocus.changed(change)},handler).build()
             val result=am.requestAudioFocus(focus!!)
             audioFocus.requested(result)
-            if(result==AudioManager.AUDIOFOCUS_REQUEST_FAILED){stopSelf();return START_NOT_STICKY}
-            handler.postDelayed({if(!audioStarted)stopSelf()},60000L)
+            if(result!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
+                // Do not postpone a database-timed prayer for up to 60 seconds
+                // waiting for another app to yield focus. Attempt local alarm audio.
+                proceedWithoutFocus=true
+                android.util.Log.w("Adhan","Audio focus unavailable; starting due audio without an indefinite wait")
+            }
+            handler.postDelayed({if(!audioStarted)stopSelf()},12000L)
             previousVolume=am.getStreamVolume(AudioManager.STREAM_ALARM)
             val maxLevel=am.getStreamMaxVolume(AudioManager.STREAM_ALARM)
             val percent=config.optInt("volume",80).coerceIn(0,100)
@@ -137,7 +373,21 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 if(config.optString("sound","1")=="custom")setDataSource(File(filesDir,"custom-adhan").absolutePath)
                 else {val id=config.optString("sound","1").takeIf{it in listOf("1","2","3","4")}?:"1";val suffix=if(config.optBoolean("partial"))"-short" else "";val name=if(id=="3")"adhan-quba-suraihi" else "adhan-v124-$id";assets.openFd("www/assets/audio/$name$suffix.mp3").use{setDataSource(it.fileDescriptor,it.startOffset,it.length)}}
                 setVolume(1f,1f)
-                setOnCompletionListener{successful=true;stopSelf()};setOnErrorListener{_,_,_->Toast.makeText(this@AdhanPlaybackService,"تعذر تشغيل الصوت المختار؛ اختر ملفًا صوتيًا صالحًا",Toast.LENGTH_LONG).show();stopSelf();true}
+                setOnCompletionListener{
+                    successful=true
+                    getSharedPreferences("adhan_resume",MODE_PRIVATE).edit().clear().apply()
+                    stopSelf()
+                }
+                setOnErrorListener{_,what,extra->
+                    playbackFailed=true
+                    try {
+                        getSharedPreferences("adhan_resume",MODE_PRIVATE).edit()
+                            .putLong("at",prayerAt).putString("id",prayerId)
+                            .putInt("position",currentPosition.coerceAtLeast(0)).commit()
+                    }catch(_:Exception){}
+                    android.util.Log.e("Adhan","MediaPlayer failed ($what/$extra); retrying remaining audio")
+                    stopSelf();true
+                }
                 setOnPreparedListener { ready ->
                     if(player!==ready||manuallyStopped)return@setOnPreparedListener
                     prepared=true
@@ -151,24 +401,24 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 handler.postDelayed({if(player===preparing&&!prepared)stopSelf()},10000L)
             }
             handler.postDelayed({stopSelf()},9*60*1000L)
-        }catch(e:Exception){android.util.Log.e("Adhan","Audio playback failed",e);Toast.makeText(this,"تعذر تشغيل الأذان؛ جرّب اختيار صوت آخر",Toast.LENGTH_LONG).show();stopSelf()}
+        }catch(e:Exception){playbackFailed=true;android.util.Log.e("Adhan","Audio playback failed",e);Toast.makeText(this,"تعذر تشغيل الأذان؛ جرّب اختيار صوت آخر",Toast.LENGTH_LONG).show();stopSelf()}
         return if(preview)START_NOT_STICKY else START_REDELIVER_INTENT
     }
     private fun vibrate(){vibrator=getSystemService(VIBRATOR_SERVICE) as Vibrator;val p=when(config.optString("pattern")){"long"->longArrayOf(0,1000);"pulse"->longArrayOf(0,250,150,250,150,250);else->longArrayOf(0,250)};vibrator?.vibrate(VibrationEffect.createWaveform(p,-1))}
     private fun cleanup(){
-        prepared=false;audioFocus.close()
+        prepared=false;proceedWithoutFocus=false;audioFocus.close()
         restoreVolume(this)
         previousVolume=null;appliedVolume=null
         handler.removeCallbacksAndMessages(null);sensors.unregisterListener(this);player?.release();player=null;vibrator?.cancel();focus?.let{(getSystemService(AUDIO_SERVICE) as AudioManager).abandonAudioFocusRequest(it)};focus=null;if(wake?.isHeld==true)wake?.release();wake=null}
-    override fun onDestroy(){if((manuallyStopped||stopRequested)&&!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt);cleanup();AdhanDispatch.release();if(retryAllowed&&!preview&&!audioStarted&&!manuallyStopped&&!stopRequested&&prayerAt>0)AdhanSchedule.retry(this,prayerId,prayerAt);running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(duration>0&&nm.isNotificationPolicyAccessGranted){val am=getSystemService(AUDIO_SERVICE) as AudioManager;val p=getSharedPreferences("adhan_ringer",MODE_PRIVATE);val old=if(p.getBoolean("changed",false))p.getInt("previous",2) else am.ringerMode;val end=maxOf(System.currentTimeMillis()+duration*60000L,p.getLong("end",0));try{am.ringerMode=AudioManager.RINGER_MODE_SILENT;p.edit().putBoolean("changed",true).putInt("previous",old).putLong("end",end).commit();AdhanSchedule.alarm(this,60403,"RESTORE_SOUND",end)}catch(_:SecurityException){}}};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
+    override fun onDestroy(){if((manuallyStopped||stopRequested)&&!preview&&prayerAt>0)AdhanSchedule.confirmStarted(this,prayerId,prayerAt);cleanup();PrayerAudioDnd.end(this,"adhan");AdhanDispatch.release();if(retryAllowed&&!preview&&(!audioStarted||playbackFailed)&&!manuallyStopped&&!stopRequested&&prayerAt>0)AdhanSchedule.retry(this,prayerId,prayerAt);running=false;activePrayerId="";if(successful&&!preview){val duration=config.optInt("afterSilent",0).coerceIn(0,60);if(duration>0)activateQuiet(this,System.currentTimeMillis()+duration*60000L)};sendBroadcast(Intent("com.aoqat.calendar.ADHAN_STOPPED").setPackage(packageName));stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
     override fun onSensorChanged(e:SensorEvent){if(e.values[2]>-5)flipArmed=true;if(flipArmed && e.values[2]<-7 && SystemClock.elapsedRealtime()-started>1500){manuallyStopped=true;stopSelf()}}
     override fun onAccuracyChanged(s:Sensor?,a:Int){}
 }
 class AdhanScreenActivity: Activity(){
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
-    override fun onCreate(b:Bundle?){super.onCreate(b);if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}else window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or android.view.WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text=intent.getStringExtra("reminderMessage")?:"حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text=if(intent.hasExtra("reminderMessage"))"إغلاق" else "إيقاف الأذان";setOnClickListener{if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this@AdhanScreenActivity);finish()}});setContentView(layout);if(intent.hasExtra("reminderMessage"))android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(!isFinishing)finish()},30000);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
-    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean {if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_MEDIA_STOP)){AdhanPlaybackService.stop(this);finish();return true};return super.onKeyDown(code,event)}
-    @Deprecated("Deprecated in Java") override fun onBackPressed(){AdhanPlaybackService.stop(this);super.onBackPressed()}
+    override fun onCreate(b:Bundle?){super.onCreate(b);PhoneScreenAlerts.applyWindow(this);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text=intent.getStringExtra("reminderMessage")?:"حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text=if(intent.hasExtra("reminderMessage"))"إغلاق" else "إيقاف الأذان";setOnClickListener{if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this@AdhanScreenActivity);finish()}});setContentView(layout);if(intent.hasExtra("reminderMessage"))android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(!isFinishing)finish()},30000);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
+    override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean {if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_MEDIA_STOP)){if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this);finish();return true};return super.onKeyDown(code,event)}
+    @Deprecated("Deprecated in Java") override fun onBackPressed(){if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this);super.onBackPressed()}
     override fun onDestroy(){unregisterReceiver(stopped);super.onDestroy()}
 }
 

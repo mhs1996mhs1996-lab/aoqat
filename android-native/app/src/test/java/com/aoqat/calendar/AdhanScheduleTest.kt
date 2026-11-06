@@ -18,7 +18,7 @@ class AdhanScheduleTest{
  private fun set(s:JSONObject){c.getSharedPreferences("adhan_settings",Context.MODE_PRIVATE).edit().putString("settings",s.toString()).commit()}
  @Test fun defaultInstallationNeverSchedulesAudio(){seed();AdhanSchedule.schedule(c);assertFalse(AdhanSchedule.enabled(c));assertTrue(shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms.none{shadowOf(it.operation).savedIntent.action=="PLAY"})}
  @Test fun soundAlarmsUseDatabaseTimeWhileIqamaIsDisabled(){seed();set(JSONObject("{\"enabled\":true}"));AdhanSchedule.schedule(c);val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms.filter{shadowOf(it.operation).savedIntent.action=="PLAY"};val date=LocalDate.now().plusDays(1);val dayAlarms=alarms.filter{java.time.Instant.ofEpochMilli(it.triggerAtTime).atZone(java.time.ZoneId.systemDefault()).toLocalDate()==date};assertEquals(5,dayAlarms.size);val dhuhr=dayAlarms.first{shadowOf(it.operation).savedIntent.getStringExtra("prayerId")=="dhuhr"};assertEquals(PrayerTimes.events(c,date).first{it.id=="dhuhr"}.at,dhuhr.triggerAtTime);assertEquals(11,java.time.Instant.ofEpochMilli(dhuhr.triggerAtTime).atZone(java.time.ZoneId.systemDefault()).hour);assertNull(shadowOf(c as Application).nextStartedActivity)}
- @Test fun disableCancelsEverySoundAndReminder(){seed();set(JSONObject("{\"enabled\":true,\"reminder\":10,\"suhoor\":30}"));AdhanSchedule.schedule(c);val am=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager;assertTrue(shadowOf(am).scheduledAlarms.any{shadowOf(it.operation).savedIntent.action=="PLAY"});set(JSONObject("{\"enabled\":false}"));AdhanSchedule.schedule(c);assertTrue(shadowOf(am).scheduledAlarms.none{shadowOf(it.operation).savedIntent.action in listOf("PLAY","REMINDER","SUHOOR")})}
+ @Test fun disableCancelsEverySoundAndReminder(){seed();set(JSONObject("{\"enabled\":true,\"reminder\":10,\"suhoor\":30}"));AdhanSchedule.schedule(c);val am=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager;assertTrue(shadowOf(am).scheduledAlarms.any{shadowOf(it.operation).savedIntent.action=="PLAY"});set(JSONObject("{\"enabled\":false}"));AdhanSchedule.schedule(c);assertTrue(shadowOf(am).scheduledAlarms.none{shadowOf(it.operation).savedIntent.action in listOf("PLAY","PREWARM","REMINDER","SUHOOR")})}
  @Test fun staleAlarmsCannotStartAudioAndCurrentAlarmNeedsNoActivity(){seed();set(JSONObject("{\"enabled\":true}"));AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("PLAY").putExtra("prayerAt",System.currentTimeMillis()-180000).putExtra("prayerId","fajr"));assertNull(shadowOf(c as Application).nextStartedService);AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("PLAY").putExtra("prayerAt",System.currentTimeMillis()).putExtra("prayerId","fajr"));assertEquals(AdhanPlaybackService::class.java.name,shadowOf(c as Application).nextStartedService.component!!.className);assertNull(shadowOf(c as Application).nextStartedActivity)}
  @Test fun deliveryIsClaimedOnceAndRejectsFutureOrStaleAlarms(){
   set(JSONObject("{\"enabled\":true}"));val now=System.currentTimeMillis()
@@ -43,6 +43,60 @@ class AdhanScheduleTest{
   assertTrue(AdhanSchedule.claim(c,id,intent.getLongExtra("prayerAt",0)))
   AdhanSchedule.schedule(c)
   assertTrue(shadowOf(am).scheduledAlarms.none{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY"&&i.getStringExtra("prayerId")==id&&i.getLongExtra("prayerAt",0)==intent.getLongExtra("prayerAt",0)}})
+ }
+ @Test fun selectedPrayerNotificationNeverSuppressesEnabledAdhan() {
+  seed()
+  set(JSONObject("""{"enabled":true,"modes":{"asr":"sound"}}"""))
+  c.getSharedPreferences("prayer_notifications_v1",Context.MODE_PRIVATE).edit()
+    .putString("settings","""{"enabled":true,"prayers":{"asr":true}}""").commit()
+  assertTrue(PrayerNotifications.selected(c,"asr"))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  val asr=alarms.firstOrNull{shadowOf(it.operation).savedIntent.let{i->
+      i.action=="PLAY" && i.getStringExtra("prayerId")=="asr"}}
+  assertNotNull("Enabled notification must not cancel an enabled audible adhan",asr)
+  assertTrue(AdhanSchedule.claim(c,"asr",System.currentTimeMillis()-3000))
+ }
+ @Test fun silentAtIqamaIsScheduledEvenWhenAdhanAndIqamaNotificationsAreOff() {
+  seed()
+  val d=LocalDate.now().plusDays(1)
+  c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit()
+    .putBoolean("enabled",false).putString("minutes","""{"asr":15}""").commit()
+  set(JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"asr":7}}}"""))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  assertTrue(alarms.none{shadowOf(it.operation).savedIntent.action=="PLAY"})
+  val event=PrayerTimes.events(c,d).first{it.id=="asr" && java.time.Instant.ofEpochMilli(it.at).atZone(java.time.ZoneId.systemDefault()).toLocalDate()==d}
+  val quiet=alarms.firstOrNull{shadowOf(it.operation).savedIntent.let{i->
+      i.action=="IQAMA_QUIET" && i.getStringExtra("prayerId")=="asr" &&
+      i.getLongExtra("prayerAt",0)==event.at}}
+  assertNotNull("After-iqama quiet must have an exact native alarm",quiet)
+  assertEquals("Start exactly when iqama countdown reaches zero",event.at+15*60000L,quiet!!.triggerAtTime)
+  assertTrue(alarms.any{shadowOf(it.operation).savedIntent.action=="REFRESH"})
+ }
+ @Test fun prewarmWakesBeforePrayerButDoesNotPlayEarly() {
+  seed();set(JSONObject("""{"enabled":true,"modes":{"maghrib":"sound"}}"""))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  val play=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY" && i.getStringExtra("prayerId")=="maghrib"}}
+  val warm=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="PREWARM" && i.getStringExtra("prayerId")=="maghrib"}}
+  assertEquals(play.triggerAtTime-45000L,warm.triggerAtTime)
+  assertEquals(shadowOf(play.operation).savedIntent.getLongExtra("prayerAt",0),shadowOf(warm.operation).savedIntent.getLongExtra("prayerAt",0))
+ }
+ @Test fun backupDueAlarmUsesSamePrayerTimeAndCannotDoublePlay() {
+  seed()
+  set(JSONObject("""{"enabled":true,"modes":{"asr":"sound"}}"""))
+  AdhanSchedule.schedule(c)
+  val alarms=shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms
+  val main=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="PLAY"&&i.getStringExtra("prayerId")=="asr"}}
+  val backup=alarms.first{shadowOf(it.operation).savedIntent.let{i->i.action=="VERIFY_DUE"&&i.getStringExtra("prayerId")=="asr"}}
+  assertEquals(main.triggerAtTime+4000L,backup.triggerAtTime)
+  assertEquals(shadowOf(main.operation).savedIntent.getLongExtra("prayerAt",0),shadowOf(backup.operation).savedIntent.getLongExtra("prayerAt",0))
+  val due=System.currentTimeMillis()-1500L
+  assertTrue(AdhanSchedule.claim(c,"asr",due))
+  AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("VERIFY_DUE")
+    .putExtra("prayerId","asr").putExtra("prayerAt",due))
+  assertNull("The backup must never start a second adhan",shadowOf(c as Application).nextStartedService)
  }
  @Test fun parseHandlesMorningDhuhrAndAfternoon(){assertEquals(719,PrayerTimes.minutes("11:59","dhuhr"));assertEquals(922,PrayerTimes.minutes("3:22","asr"));assertEquals(364,PrayerTimes.minutes("6:04","sunrise"));assertNull(PrayerTimes.minutes("27:11","fajr"))}
 }

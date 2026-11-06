@@ -13,6 +13,56 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 class PrayerAlarmTest {
+ @Test @Config(sdk=[28]) fun volumeDownAndUpUsePerPrayerSnoozeWithoutChangingItsSettings(){
+  for(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_VOLUME_UP)){
+   val c=RuntimeEnvironment.getApplication()
+   PrayerAlarm.prefs(c).edit().clear().putString("settings",
+     """{"enabled":true,"items":{"fajr":{"enabled":true,"count":2,"snooze":7}}}""").commit()
+   val a=org.robolectric.Robolectric.buildActivity(PrayerAlarmActivity::class.java,
+     android.content.Intent(c,PrayerAlarmActivity::class.java).putExtra("id","fajr").putExtra("count",0)).create().start().resume().get()
+   assertTrue(a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN,code)))
+   assertTrue(a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP,code)))
+   assertTrue(a.isFinishing)
+   val at=PrayerAlarm.prefs(c).getLong("snooze_fajr",0)
+   assertTrue("Hardware snooze needs saved 7 minute interval",at-System.currentTimeMillis() in 419000L..420500L)
+   assertEquals(1,PrayerAlarm.prefs(c).getInt("snoozeCount_fajr",0))
+   assertTrue(PrayerAlarm.item(c,"fajr").optBoolean("enabled"))
+  }
+ }
+ @Test @Config(sdk=[28]) fun powerScreenOffSnoozesOnlyWhenThePrayerAlarmIsRinging(){
+  val c=RuntimeEnvironment.getApplication()
+  PrayerAlarm.prefs(c).edit().putString("settings",
+    """{"enabled":true,"items":{"asr":{"enabled":true,"count":3,"snooze":6}}}""").commit()
+  val controller=org.robolectric.Robolectric.buildService(PrayerAlarmService::class.java).create()
+  controller.get().onStartCommand(android.content.Intent(c,PrayerAlarmService::class.java).putExtra("id","asr").putExtra("count",0),0,1)
+  c.sendBroadcast(android.content.Intent(android.content.Intent.ACTION_SCREEN_OFF))
+  org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+  assertTrue("Power screen-off should schedule saved 6-minute snooze",PrayerAlarm.prefs(c).getLong("snooze_asr",0)-System.currentTimeMillis() in 359000L..360500L)
+  assertEquals(1,PrayerAlarm.prefs(c).getInt("snoozeCount_asr",0))
+  controller.destroy()
+ }
+ @Test fun endOfUserSnoozeLimitStopsAlarmInsteadOfSchedulingAgain(){
+  val c=RuntimeEnvironment.getApplication()
+  PrayerAlarm.prefs(c).edit().putString("settings",
+    """{"enabled":true,"items":{"asr":{"enabled":true,"count":1,"snooze":5,"repeat":"once"}}}""").commit()
+  assertTrue(PrayerAlarm.snooze(c,"asr",0))
+  val first=PrayerAlarm.prefs(c).getLong("snooze_asr",0)
+  assertFalse(PrayerAlarm.snooze(c,"asr",1))
+  assertEquals(first,PrayerAlarm.prefs(c).getLong("snooze_asr",0))
+  PrayerAlarmActionReceiver().onReceive(c,
+    android.content.Intent(c,PrayerAlarmActionReceiver::class.java).setAction("SNOOZE").putExtra("id","asr").putExtra("count",1))
+  assertFalse("Final ring should respect configured snooze limit",PrayerAlarm.item(c,"asr").optBoolean("enabled"))
+ }
+ @Test fun selectedPhoneNotificationDoesNotSuppressSeparatelyEnabledAlarm(){
+  val c=RuntimeEnvironment.getApplication()
+  PrayerAlarm.prefs(c).edit().putString("settings",
+    """{"enabled":true,"items":{"asr":{"enabled":true,"count":3,"snooze":4}}}""").commit()
+  val selected=org.json.JSONObject().put("enabled",true)
+    .put("prayers",org.json.JSONObject().put("asr",true))
+  PrayerNotifications.configure(c,selected.toString())
+  assertTrue(PrayerNotifications.selected(c,"asr"))
+  assertTrue(PrayerAlarm.claim(c,"asr",System.currentTimeMillis(),0))
+ }
  @Test fun independentMasterAndDaysGateDelivery(){val s=JSONObject("""{"enabled":true,"items":{"asr":{"enabled":true,"repeat":"days","days":[3]}}}""");val at=LocalDate.of(2026,10,7).atTime(15,16).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();assertTrue(PrayerAlarm.allowed(s,"asr",at));s.put("enabled",false);assertFalse(PrayerAlarm.allowed(s,"asr",at));}
  @Test fun midnightThirdUsesNextDayFajr(){val c=RuntimeEnvironment.getApplication();c.getSharedPreferences("iqama_schedule",0).edit().putString("rows","""[{"gregorian_month":10,"gregorian_day":7,"maghrib":"5:44"},{"gregorian_month":10,"gregorian_day":8,"fajr":"4:50"}]""").commit();val e=PrayerAlarm.events(c,LocalDate.of(2026,10,7));val m=e.first{it.id=="maghrib"&&Instant.ofEpochMilli(it.at).atZone(ZoneId.systemDefault()).toLocalDate()==LocalDate.of(2026,10,7)}.at;val f=e.first{it.id=="fajr"&&Instant.ofEpochMilli(it.at).atZone(ZoneId.systemDefault()).toLocalDate()==LocalDate.of(2026,10,8)}.at;assertEquals(m+(f-m)*2/3,e.first{it.id=="third"&&Instant.ofEpochMilli(it.at).atZone(ZoneId.systemDefault()).toLocalDate()==LocalDate.of(2026,10,8)}.at);}
  @Before fun cleanAlarmSettings(){PrayerAlarm.prefs(RuntimeEnvironment.getApplication()).edit().clear().commit()}

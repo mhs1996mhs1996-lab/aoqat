@@ -13,33 +13,26 @@ class MushafAssetStoreTest {
         assertEquals("assets/mushaf-phone-hafs/245.json.gz", MushafAssetStore.assetPath(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/245.json.gz")))
         for (url in listOf("http://aoqat.vercel.app/assets/mushaf-phone-hafs/001.json.gz", "https://other.example/assets/mushaf-phone-hafs/001.json.gz", "https://aoqat.vercel.app/assets/mushaf-phone-hafs/605.json.gz", "https://aoqat.vercel.app/assets/mushaf-phone-hafs/001.webp", "https://aoqat.vercel.app/assets/mushaf-phone-hafs/%2e%2e/001.json.gz", "https://aoqat.vercel.app/assets/mushaf-phone-hafs/001.json.gz?extra=1")) assertNull(url, MushafAssetStore.assetPath(Uri.parse(url)))
     }
-    @Test fun packagedSeedsWorkWithoutNetworkAndMatchReleaseChecksums() {
-        val store = MushafAssetStore(RuntimeEnvironment.getApplication())
-        for (name in listOf("mushaf-phone-hafs/001.json.gz", "mushaf-phone-hafs/604.json.gz")) {
-            val response = store.response(Uri.parse("https://aoqat.vercel.app/assets/$name"))!!
-            assertEquals(org.robolectric.shadows.ShadowLog.getLogs().joinToString { it.msg+" "+it.throwable },200, response.statusCode)
-            assertTrue(response.data.use { it.readBytes().size } > 100)
-        }
-        assertNull(store.response(Uri.parse("https://aoqat.vercel.app/js/app.js")))
-    }
-    @Test fun completeMushafAndMetadataOpenOfflineAsDecodedJson() {
+    @Test fun selectedQcfFontsExistLocallyWithoutAnySvgPageArchive() {
         val context=RuntimeEnvironment.getApplication()
-        assertEquals(604,context.assets.list("www/assets/mushaf-phone-hafs")!!.size)
-        assertEquals(0,context.assets.list("www/assets/mushaf-hafs-pocket")!!.size)
-        assertEquals(0,context.assets.list("www/assets/mushaf-tajwid")!!.size)
-        assertNull(MushafAssetStore.assetPath(Uri.parse("https://aoqat.vercel.app/assets/mushaf-hafs-pocket/001.webp")))
-        assertFalse(context.assets.list("www/assets")!!.any { it.startsWith("mushaf-hafs-") })
-        val store=MushafAssetStore(context)
-        for (page in listOf(3,245,499,604)) {
-            val response=store.response(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs/${page.toString().padStart(3,'0')}.json.gz"))!!
-            assertEquals(org.robolectric.shadows.ShadowLog.getLogs().joinToString { it.msg+" "+it.throwable },200,response.statusCode)
-            assertEquals("application/json",response.mimeType)
-            val json=org.json.JSONObject(response.data.bufferedReader().use { it.readText() })
-            assertEquals(page,json.getInt("page"))
-            assertTrue(json.getJSONArray("lines").length()>0)
+        val assets=context.assets
+        val fonts=assets.list("www/assets/qcf-v2-page-fonts")!!.filter { it.endsWith(".woff2") }
+        assertEquals(604,fonts.size)
+        for(page in listOf(1,2,102,245,499,604)) {
+            val bytes=assets.open("www/assets/qcf-v2-page-fonts/p$page.woff2").use { it.readNBytes(4) }
+            assertArrayEquals("wOF2".toByteArray(),bytes)
         }
-        val metadata=store.response(Uri.parse("https://aoqat.vercel.app/assets/mushaf-phone-hafs.json.gz"))!!
-        assertEquals(604,org.json.JSONObject(metadata.data.bufferedReader().use {it.readText()}).getJSONArray("pages").length())
+        assertTrue(assets.list("www/assets/mushaf-phone-hafs").isNullOrEmpty())
+        assertTrue(assets.list("www/pages").isNullOrEmpty())
+    }
+    @Test fun qcfManifestAndVerseIndexOpenFullyOffline() {
+        val context=RuntimeEnvironment.getApplication()
+        val bytes=context.assets.open("www/experiments/qcf604-web-verse-layouts.json.gz.bin").use { it.readBytes() }
+        val data=org.json.JSONObject(String(MushafAssetStore.decode(bytes),Charsets.UTF_8))
+        assertEquals(604,data.getInt("pageCount"))
+        assertEquals(604,data.getJSONObject("pages").length())
+        val metadata=context.assets.open("www/assets/mushaf-phone-hafs.json.gz.bin").use { it.readBytes() }
+        assertEquals(604,org.json.JSONObject(String(MushafAssetStore.decode(metadata),Charsets.UTF_8)).getJSONArray("pages").length())
     }
     @Test fun nativeGzipDecoderPreservesBytesAndRejectsCorruption() {
         val bytes="{\"page\":1}".toByteArray()

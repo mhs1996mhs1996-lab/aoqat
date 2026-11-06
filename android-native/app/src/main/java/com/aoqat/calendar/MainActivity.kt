@@ -136,6 +136,8 @@ class IqamaNotificationService : android.app.Service() {
         if (FridaySchedule.suppress(this,prayerId,prayerAt) || !IqamaNativeScheduler.enabled(this) || display == null) {
             finishCycle(); return
         }
+        if (display.phase == IqamaCycle.Phase.ELAPSED && publishedPhase != IqamaCycle.Phase.ELAPSED)
+            AfterIqamaQuiet.onCountdownZero(this, prayerAt)
         if (force || publishedPhase != display.phase) {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
@@ -173,6 +175,10 @@ class IqamaNotificationService : android.app.Service() {
         prefs.edit().putBoolean("active", true).putLong("prayerAt", prayerAt)
             .putString("prayerId", prayerId)
             .putLong("startRealtime", startRealtime).putInt("boot", boot).commit()
+        // If the service was restarted after the exact zero point, reconcile
+        // the same saved countdown instead of waiting until the app is opened.
+        if (display.phase == IqamaCycle.Phase.ELAPSED)
+            AfterIqamaQuiet.onCountdownZero(this, prayerAt)
         IqamaPersistentNotification.ensureChannel(this)
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
         publishedPhase = display.phase
@@ -194,6 +200,7 @@ class IqamaNotificationService : android.app.Service() {
         IqamaNotificationRenderer.build(this, display)
 
     private fun finishCycle() {
+        AfterIqamaQuiet.onCountdownComplete(this,prayerAt)
         IqamaPersistentNotification.releaseDispatchLock()
         handler.removeCallbacks(boundary)
         IqamaPersistentNotification.hide(this)
@@ -260,6 +267,12 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
             "PHASE_BOUNDARY", "EXPIRE" -> {
                 val prefs = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
                 if (prefs.getBoolean("active", false) && prefs.getLong("prayerAt", 0L) == intent.getLongExtra("prayerAt", -1L)) {
+                    // Independent real-time countdown boundary backs up the
+                    // dedicated after-iqama silent alarm on sleeping phones.
+                    if (intent.action == "PHASE_BOUNDARY")
+                        AfterIqamaQuiet.onCountdownZero(context, prefs.getLong("prayerAt", 0L))
+                    if (intent.action == "EXPIRE")
+                        AfterIqamaQuiet.onCountdownComplete(context, prefs.getLong("prayerAt", 0L))
                     // Reconcile from the persisted anchor, including a late delivery.
                     // Do not reset the zero point at the time the alarm is received.
                     val service = Intent(context, IqamaNotificationService::class.java).setAction("RECONCILE")
@@ -377,6 +390,7 @@ class MainActivity : Activity() {
         if(firstResume)firstResume=false else PrayerStartup.refresh(this)
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
+        PrayerAudioDnd.recover(this)
         if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
@@ -638,6 +652,50 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        @JavascriptInterface fun requestPrayerAudioDndPermission(){runOnUiThread{
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if(!nm.isNotificationPolicyAccessGranted){
+                try { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
+                catch(e:Exception){android.util.Log.w("PrayerSoundPolicy","Cannot open DND access",e)}
+            }
+        }}
+        @JavascriptInterface fun readPrayerAudioPolicyStatus():String =
+            PrayerSoundPolicy.status(this@MainActivity).toString()
+        @JavascriptInterface fun readScreenWakeEnabled(): Boolean =
+            PhoneScreenAlerts.enabled(this@MainActivity)
+
+        @JavascriptInterface fun screenWakeStatus(): String =
+            PhoneScreenAlerts.status(this@MainActivity).toString()
+
+        @JavascriptInterface fun configureScreenWake(on: Boolean) {
+            PhoneScreenAlerts.setEnabled(this@MainActivity, on)
+        }
+
+        @JavascriptInterface fun requestScreenWakeAccess() { runOnUiThread {
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            if(Build.VERSION.SDK_INT>=33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
+                requestNotificationPermissionIfNeeded()
+            } else if(Build.VERSION.SDK_INT>=34 && !nm.canUseFullScreenIntent()) {
+                try {
+                    startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                        Uri.parse("package:$packageName")))
+                } catch (e: Exception) {
+                    android.util.Log.w("PhoneScreenAlerts","Cannot open fullscreen access settings",e)
+                    Toast.makeText(this@MainActivity,"افتح أذونات العرض بملء الشاشة من إعدادات التطبيق",Toast.LENGTH_LONG).show()
+                }
+            } else Toast.makeText(this@MainActivity,"أذونات الشاشة والتنبيهات متاحة",Toast.LENGTH_SHORT).show()
+        }}
+
+        @JavascriptInterface fun openSupportWhatsApp(url:String) {
+            val target=try { Uri.parse(url) } catch (_:Exception) { return }
+            if(target.scheme!="https" || target.host!="wa.me" ||
+                !Regex("/[0-9]{8,15}").matches(target.path ?: "")) return
+            runOnUiThread {
+                try { startActivity(Intent(Intent.ACTION_VIEW,target).addCategory(Intent.CATEGORY_BROWSABLE)) }
+                catch (_:Exception) { Toast.makeText(this@MainActivity,"تعذر فتح واتساب",Toast.LENGTH_LONG).show() }
+            }
+        }
         @JavascriptInterface fun readCommunityReminderSettings():String = CommunityReminders.settings(this@MainActivity)
         @JavascriptInterface fun configureCommunityReminders(json:String){CommunityReminders.configure(this@MainActivity,json)}
         @JavascriptInterface fun readCommunityReminderInbox():String = CommunityReminders.inbox(this@MainActivity).toString()
@@ -700,8 +758,8 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
             try {
                 val settings=org.json.JSONObject(json)
-                if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true || settings.optBoolean("persistent") || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
-                if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
+                if(settings.optBoolean("enabled") || settings.optJSONObject("friday")?.optBoolean("enabled")==true || settings.optBoolean("persistent") || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || settings.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true) { requestNotificationPermissionIfNeeded(); requestExactAlarmAccessIfNeeded() }
+                if((settings.optInt("afterSilent")>0 || settings.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || settings.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true) && !(getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted) {
                     // Keep the user's chosen quiet durations: missing permission is temporary.
                     // Do not silently erase the enabled switch before the user returns from Settings.
                     startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
@@ -718,8 +776,22 @@ class MainActivity : Activity() {
             } catch(e:Exception){Toast.makeText(this@MainActivity,"تعذر حفظ إعدادات الأذان",Toast.LENGTH_LONG).show()}
         } }
         @JavascriptInterface fun readQuranAsset(name:String):String {
-            if (name !in listOf("quran.json", "quran-pages.json")) return "null"
-            return assets.open("www/assets/$name").bufferedReader().use { it.readText() }
+            // Use the native APK asset manager for local Quran JSON and gzip indexes.
+            // WebView fetch(file://...) differs across Android versions and must not
+            // be a dependency for opening the offline Mushaf.
+            val path=when(name) {
+                "quran.json","quran-pages.json" -> "www/assets/$name"
+                "mushaf-phone-hafs.json.gz" -> "www/assets/mushaf-phone-hafs.json.gz.bin"
+                "qcf604-web-verse-layouts.json.gz" -> "www/experiments/qcf604-web-verse-layouts.json.gz.bin"
+                else -> return "null"
+            }
+            return try {
+                val bytes=assets.open(path).use { it.readBytes() }
+                String(MushafAssetStore.decode(bytes),Charsets.UTF_8)
+            } catch(e:Exception) {
+                android.util.Log.e("QuranNativeAssets","Failed native Quran read: $name",e)
+                "null"
+            }
         }
         @JavascriptInterface fun readPrayerRows():String = OfflinePrayerSync.rows(this@MainActivity).toString()
         @JavascriptInterface fun readPrayerTimeChoice():String = PrayerTimeChoice.settings(this@MainActivity).toString()
@@ -730,6 +802,13 @@ class MainActivity : Activity() {
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
         @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
+        @JavascriptInterface fun readQuietModeStatus():String = AdhanPlaybackService.quietStatus(this@MainActivity).toString()
+        @JavascriptInterface fun hasQuietPolicyAccess():Boolean =
+            (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
+        @JavascriptInterface fun requestQuietPolicyAccess(){runOnUiThread{
+            if(!hasQuietPolicyAccess())
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+        }}
         @JavascriptInterface fun adhanPermissions(){runOnUiThread{requestNotificationPermissionIfNeeded();requestExactAlarmAccessIfNeeded();val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;if(!nm.isNotificationPolicyAccessGranted)startActivity(Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))else if(Build.VERSION.SDK_INT>=34&&!nm.canUseFullScreenIntent())startActivity(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,Uri.parse("package:$packageName")))else Toast.makeText(this@MainActivity,"أذونات الأذان وشاشة القفل متاحة",Toast.LENGTH_LONG).show()}}
 
         @JavascriptInterface fun readPublishSnoozeMinutes():Int=AlarmScheduler.snoozeMinutes(this@MainActivity)
