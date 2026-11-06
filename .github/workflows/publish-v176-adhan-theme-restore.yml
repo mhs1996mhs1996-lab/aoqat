@@ -1,8 +1,8 @@
-name: Verify and publish APK v1.76 restored adhan and theme navigation
+name: Verify and publish APK v1.76 restored adhan and theme-aware navigation
 on:
   push:
     branches:
-      - 'feature/v176-adhan-theme-restore-20261106'
+      - 'feature/v176-menu-alerts-20261105'
     paths:
       - '.github/workflows/publish-v176-adhan-theme-restore.yml'
       - 'js/**'
@@ -102,8 +102,7 @@ jobs:
               assert 'MENU_ROWS.push(["helpSupport"' not in menu
               assert 'js/apk-startup-bundle.js' in idx
               assert 'aoqatAlertSettingsParking' in bundle
-              assert '[["🔊","الأذان والتنبيه","adhanPanel"]' in menu
-              assert '["prayer","🔊","تنبيهات أوقات الصلاة' not in menu
+              assert 'الأذان والتنبيه' in menu
               assert 'linear-gradient(90deg,var(--wt-surface' in menu
               assert 'aoqatOpenCalendar' in bundle
               assert 'AoqatHelpSupport' in bundle and 'openWhatsApp' in bundle
@@ -152,7 +151,7 @@ jobs:
             adb shell am start -n com.aoqat.calendar/.MainActivity
             sleep 5
             adb shell pidof com.aoqat.calendar
-            echo 'PASS: v1.76 upgrades installed v1.75 and launches without clearing data'
+            echo 'PASS: v1.76 upgrades installed v1.74 and launches without clearing data'
       - name: Publish installable verified APK
         env:
           GH_TOKEN: ${{ github.token }}
@@ -162,7 +161,7 @@ jobs:
           set -euo pipefail
           tag=v1.76-adhan-theme-restore
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$SOURCE_SHA" --title "أوقات الصلاة في الحويجة v1.76 — عودة الأذان وتدرج الثيم" --prerelease --notes 'إصدار v1.76 فوق v1.75: إعادة الأذان والتنبيه واختيار صوت الأذان وطريقة تنبيه الصلاة إلى بيانات الأذان والإقامة دون تكرارها في ضبط التنبيهات، وتصميم أزرار التنقل الداخلية بتدرج الثيم المختار تلقائياً. الحفاظ على خدمات ومواعيد الأذان والإقامة وقاعدة البيانات والمصحف وجميع الإعدادات المحفوظة.'
+            gh release create "$tag" --target "$SOURCE_SHA" --title "أوقات الصلاة في الحويجة v1.76 — استعادة الأذان وتدرج الأزرار حسب الثيم" --prerelease --notes 'إصدار v1.76 فوق v1.74: ترتيب 12 أيقونة، فصل الشرح عن واتساب، مركز واحد للتحكم بتنبيهات الأذان والإقامة والصامت والجمعة والصيام والأذكار ونشر مواقيت الصلاة والتقاويم؛ نقل إضاءة الشاشة إليه. الحفاظ على خدمات ومواعيد الأذان والإقامة وقاعدة البيانات والمصحف وجميع الإعدادات المحفوظة.'
           fi
           gh release upload "$tag" /tmp/aoqat-v176/aoqat-v1.76-adhan-theme-restore.apk /tmp/aoqat-v176/aoqat-v1.76.sha256 --clobber
           gh release view "$tag" --json assets --jq '.assets[].name' | grep -Fx 'aoqat-v1.76-adhan-theme-restore.apk'
