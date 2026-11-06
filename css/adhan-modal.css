@@ -102,3 +102,23 @@ body.adhan-services-open{overflow:hidden!important}
   outline:2px solid var(--wt-accent,#278052)!important;
   outline-offset:-2px!important;
 }
+
+/* Adhan labels stay readable on all light/dark selected theme gradients.
+   Navigation labels only: enabled, disabled and selected controls are untouched. */
+#adhanServicesDialog #adhanPanel .ad-section-toggle,
+#adhanServicesDialog #adhanPanel #paMethodOpen,
+#adhanServicesDialog #adhanPanel #adRefresh {
+  font-family:Tahoma,Arial,sans-serif!important;
+  font-size:16px!important;
+  font-weight:750!important;
+  line-height:1.65!important;
+  color:var(--wt-text,#233c32)!important;
+  text-shadow:none!important;
+}
+#adhanServicesDialog #adhanPanel :is(.ad-section-toggle,#paMethodOpen) :is(span,strong,b,small) {
+  color:inherit!important;
+  font-weight:inherit;
+}
+#adhanServicesDialog #adhanPanel .ad-section-icon {
+  filter:drop-shadow(0 1px 1px #0004)!important;
+}
