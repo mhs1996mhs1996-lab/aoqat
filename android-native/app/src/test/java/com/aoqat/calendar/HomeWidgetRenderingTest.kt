@@ -70,8 +70,8 @@ class HomeWidgetRenderingTest {
         assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_before_counter))
         assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_after_counter))
         assertTrue(view.findViewById<TextView>(R.id.widget_combined_next_label).text.isNotBlank())
-        assertEquals("باقي على الإقامة",view.findViewById<TextView>(R.id.widget_combined_before_title).text)
-        assertEquals("مضى على الإقامة",view.findViewById<TextView>(R.id.widget_combined_after_title).text)
+        assertEquals("باقي على الإقامة",view.findViewById<TextView>(R.id.widget_combined_before_title).text.toString())
+        assertEquals("مضى على الإقامة",view.findViewById<TextView>(R.id.widget_combined_after_title).text.toString())
     }
 
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
