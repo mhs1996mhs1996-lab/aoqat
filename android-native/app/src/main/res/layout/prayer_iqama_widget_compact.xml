@@ -2,8 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_iqama_root"
     android:layout_width="match_parent" android:layout_height="match_parent"
-    android:orientation="vertical" android:gravity="center_vertical"
-    android:paddingLeft="6dp" android:paddingRight="6dp" android:paddingTop="3dp" android:paddingBottom="3dp" android:background="@android:color/transparent">
+    android:orientation="vertical" android:gravity="center"
+        android:background="@android:color/transparent">
+    <LinearLayout android:id="@+id/widget_iqama_card" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"  android:gravity="center_vertical" android:paddingLeft="6dp" android:paddingRight="6dp" android:paddingTop="3dp" android:paddingBottom="3dp" android:background="@android:color/transparent">
+
     <TextView android:id="@+id/widget_iqama_prayer"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:textColor="#FFFFFFFF" android:textSize="15sp" android:textStyle="bold"
@@ -40,4 +42,5 @@
         android:textColor="#FFFFFFFF" android:textSize="11sp" android:textStyle="bold"
         android:gravity="center" android:maxLines="1" android:ellipsize="end"
         android:shadowColor="#C0000000" android:shadowRadius="3" />
+    </LinearLayout>
 </LinearLayout>

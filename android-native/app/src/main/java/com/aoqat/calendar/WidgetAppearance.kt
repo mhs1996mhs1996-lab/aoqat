@@ -28,11 +28,22 @@ object WidgetAppearance {
         .put("color", "white")
         .put("font", "sans")
         .put("scale", 105)
-        .put("layout", "classic")
+        .put("layout", if (id == "times") "grid" else "classic")
 
     private fun preferences(c: Context) = c.getSharedPreferences("aoqat_widget_appearance_v1", Context.MODE_PRIVATE)
     fun all(c: Context): JSONObject {
-        val saved = try { JSONObject(preferences(c).getString(KEY, "{}")) } catch (_: Exception) { JSONObject() }
+        val prefs = preferences(c)
+        val saved = try { JSONObject(prefs.getString(KEY, "{}")) } catch (_: Exception) { JSONObject() }
+        // Migrate the old implicit tall list once; future classic selections remain respected.
+        if (!prefs.getBoolean("times_grid_v182_migrated", false)) {
+            val times = saved.optJSONObject("times") ?: JSONObject()
+            if (times.optString("layout", "classic") == "classic") {
+                times.put("layout", "grid")
+                saved.put("times", times)
+            }
+            prefs.edit().putString(KEY, saved.toString())
+                .putBoolean("times_grid_v182_migrated", true).commit()
+        }
         val valid = JSONObject()
         for (id in ids) {
             val input = saved.optJSONObject(id) ?: JSONObject()
