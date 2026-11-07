@@ -74,7 +74,13 @@ class FivePrayerWidget:AppWidgetProvider(){
                 minutes%60,if(hour<12)"ص" else "م")
         }
         fun views(c:Context):RemoteViews{
-            val v=RemoteViews(c.packageName,R.layout.prayer_times_widget)
+            val layout=WidgetAppearance.item(c,"times").optString("layout","classic")
+            val compact=layout=="grid"
+            val v=RemoteViews(c.packageName,when(layout){
+                "grid" -> R.layout.prayer_times_widget_grid
+                "featured" -> R.layout.prayer_times_widget_featured
+                else -> R.layout.prayer_times_widget
+            })
             val today=LocalDate.now()
             val rows=PrayerTimes.rows(c)
             val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{
@@ -82,8 +88,18 @@ class FivePrayerWidget:AppWidgetProvider(){
             val items=listOf("fajr" to R.id.widget_times_fajr, "dhuhr" to R.id.widget_times_dhuhr,
                 "asr" to R.id.widget_times_asr, "maghrib" to R.id.widget_times_maghrib,
                 "isha" to R.id.widget_times_isha)
-            val labels=mutableMapOf<Int,Pair<String,Float>>(R.id.widget_times_header to ("مواقيت الصلاة اليوم" to 19f))
-            items.forEach{(prayer,id)->
+            val labels=mutableMapOf<Int,Pair<String,Float>>(R.id.widget_times_header to ("مواقيت الصلاة اليوم" to if(compact)16f else 19f))
+            if (layout!="classic") {
+                val all=listOf("fajr" to R.id.widget_times_fajr, "sunrise" to R.id.widget_times_sunrise,
+                    "dhuhr" to R.id.widget_times_dhuhr, "asr" to R.id.widget_times_asr,
+                    "maghrib" to R.id.widget_times_maghrib, "isha" to R.id.widget_times_isha)
+                for ((prayer,id) in all) {
+                    val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
+                    val name=if(prayer=="sunrise") "الشروق" else PrayerTimes.names[prayer] ?: prayer
+                    labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)14f else 15f
+                }
+            }
+            if (layout=="classic") items.forEach{(prayer,id)->
                 val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                 labels[id]="${PrayerTimes.names[prayer]}     ${minutes?.let(::display) ?: "—"}" to 18f
             }
