@@ -109,7 +109,6 @@ jobs:
             /tmp/aoqat-v182/aoqat-v1.82-daily-prayer-widgets.apk
             /tmp/aoqat-v182/checksum.sha256
       - name: Publish installable APK
-        if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
