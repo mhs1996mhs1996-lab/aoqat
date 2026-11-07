@@ -21,11 +21,12 @@ class PrayerWidget:AppWidgetProvider(){
             PrayerWidget::class.java, FivePrayerWidget::class.java, IqamaCountdownWidget::class.java
         ).any{ids(c,it).isNotEmpty()}
 
-        fun views(c:Context,notification:Boolean=false):RemoteViews{
-            val v=RemoteViews(c.packageName,if(notification) R.layout.prayer_next_notification else R.layout.prayer_widget)
+        fun views(c:Context,notification:Boolean=false,compact:Boolean=false):RemoteViews{
+            val v=RemoteViews(c.packageName,if(notification) R.layout.prayer_next_notification else if(compact) R.layout.prayer_widget_compact else R.layout.prayer_widget)
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
-            v.setTextViewText(R.id.widget_prayer,if(next==null)"افتح التطبيق لتحميل المواقيت" else "${PrayerTimes.names[next.id]} بعد")
+            val prayerLabel=if(next==null)"افتح التطبيق لتحميل المواقيت" else if(notification)"${PrayerTimes.names[next.id]} بعد" else "باقي على صلاة ${PrayerTimes.names[next.id]}"
+            v.setTextViewText(R.id.widget_prayer,prayerLabel)
             v.setChronometer(R.id.widget_counter,SystemClock.elapsedRealtime()+((next?.at?:now)-now),"%s",next!=null)
             v.setChronometerCountDown(R.id.widget_counter,true)
             if(next==null)v.setTextViewText(R.id.widget_counter,"--:--")
@@ -37,10 +38,10 @@ class PrayerWidget:AppWidgetProvider(){
                 listOf(R.id.widget_prayer,R.id.widget_counter,R.id.widget_date).forEach{v.setTextColor(it,Color.WHITE)}
             }else{
                 WidgetAppearance.decorate(c,v,R.id.prayer_widget_root,mapOf(
-                    R.id.widget_prayer to ((if(next==null)"افتح التطبيق لتحميل المواقيت" else "${PrayerTimes.names[next.id]} بعد") to 23f),
+                    R.id.widget_prayer to (prayerLabel to if(compact)19f else 23f),
                     R.id.widget_date to (LocalDate.now().toString() to 15f)
                 ),"next")
-                WidgetAppearance.decorateCounter(c,v,R.id.widget_counter,"next",32f)
+                WidgetAppearance.decorateCounter(c,v,R.id.widget_counter,"next",if(compact)24f else 32f)
             }
             v.setOnClickPendingIntent(R.id.prayer_widget_root,PendingIntent.getActivity(c,60500,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -49,9 +50,13 @@ class PrayerWidget:AppWidgetProvider(){
 
         fun update(c:Context){
             val manager=AppWidgetManager.getInstance(c)
-            ids(c,PrayerWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,views(c))}
+            ids(c,PrayerWidget::class.java).forEach{id->
+                manager.updateAppWidget(id,views(c,compact=WidgetAppearance.compact(c,"next",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),205)))
+            }
             ids(c,FivePrayerWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,FivePrayerWidget.views(c))}
-            ids(c,IqamaCountdownWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,IqamaCountdownWidget.views(c))}
+            ids(c,IqamaCountdownWidget::class.java).forEach{id->
+                manager.updateAppWidget(id,IqamaCountdownWidget.views(c,compact=WidgetAppearance.compact(c,"iqama",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),260)))
+            }
             WidgetRefresh.schedule(c)
         }
     }
@@ -104,8 +109,8 @@ class IqamaCountdownWidget:AppWidgetProvider(){
          * A launcher widget must not depend on an iqama notification appearing;
          * that notification can be blocked by the device or user.
          */
-        fun views(c:Context):RemoteViews{
-            val v=RemoteViews(c.packageName,R.layout.prayer_iqama_widget)
+        fun views(c:Context,compact:Boolean=false):RemoteViews{
+            val v=RemoteViews(c.packageName,if(compact)R.layout.prayer_iqama_widget_compact else R.layout.prayer_iqama_widget)
             val now=System.currentTimeMillis()
             val active=if(IqamaNativeScheduler.enabled(c)){
                 PrayerTimes.events(c,LocalDate.now().minusDays(1)).lastOrNull{event->
@@ -123,10 +128,10 @@ class IqamaCountdownWidget:AppWidgetProvider(){
                 else -> "الإقامة — ${PrayerTimes.names[active.id]}"
             }
             val titles=mapOf(
-                R.id.widget_iqama_prayer to (prayerName to 19f),
-                R.id.widget_iqama_before_title to ("باقي على الإقامة" to 19f),
-                R.id.widget_iqama_elapsed_title to ("مضى على الإقامة" to 19f),
-                R.id.widget_iqama_state to (caption to 13f)
+                R.id.widget_iqama_prayer to (prayerName to if(compact)15f else 19f),
+                R.id.widget_iqama_before_title to ("باقي على الإقامة" to if(compact)16f else 19f),
+                R.id.widget_iqama_elapsed_title to ("مضى على الإقامة" to if(compact)16f else 19f),
+                R.id.widget_iqama_state to (caption to if(compact)11f else 13f)
             )
             WidgetAppearance.decorate(c,v,R.id.widget_iqama_root,titles,"iqama")
             val beforeId=R.id.widget_iqama_before_counter
@@ -150,8 +155,8 @@ class IqamaCountdownWidget:AppWidgetProvider(){
                 stopped(beforeId)
                 stopped(elapsedId)
             }
-            WidgetAppearance.decorateCounter(c,v,beforeId,"iqama",29f)
-            WidgetAppearance.decorateCounter(c,v,elapsedId,"iqama",29f)
+            WidgetAppearance.decorateCounter(c,v,beforeId,"iqama",if(compact)21f else 29f)
+            WidgetAppearance.decorateCounter(c,v,elapsedId,"iqama",if(compact)21f else 29f)
             v.setOnClickPendingIntent(R.id.widget_iqama_root,PendingIntent.getActivity(c,60531,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
