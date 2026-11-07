@@ -37,7 +37,7 @@ class PrayerWidget:AppWidgetProvider(){
                 v.setInt(R.id.prayer_widget_root,"setBackgroundColor",Color.rgb(8,35,47))
                 listOf(R.id.widget_prayer,R.id.widget_counter,R.id.widget_date).forEach{v.setTextColor(it,Color.WHITE)}
             }else{
-                WidgetAppearance.decorate(c,v,R.id.prayer_widget_root,mapOf(
+                WidgetAppearance.decorate(c,v,if(compact) R.id.widget_next_card else R.id.prayer_widget_root,mapOf(
                     R.id.widget_prayer to (prayerLabel to if(compact)19f else 23f),
                     R.id.widget_date to (LocalDate.now().toString() to 15f)
                 ),"next")
@@ -53,7 +53,10 @@ class PrayerWidget:AppWidgetProvider(){
             ids(c,PrayerWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,views(c,compact=WidgetAppearance.compact(c,"next",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),205)))
             }
-            ids(c,FivePrayerWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,FivePrayerWidget.views(c))}
+            ids(c,FivePrayerWidget::class.java).forEach{id->
+                val options=manager.getAppWidgetOptions(id)
+                manager.updateAppWidget(id,FivePrayerWidget.views(c,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,190)))
+            }
             ids(c,IqamaCountdownWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,IqamaCountdownWidget.views(c,compact=WidgetAppearance.compact(c,"iqama",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),260)))
             }
@@ -73,8 +76,10 @@ class FivePrayerWidget:AppWidgetProvider(){
             return String.format(Locale.US,"%d:%02d %s",if(hour%12==0)12 else hour%12,
                 minutes%60,if(hour<12)"ص" else "م")
         }
-        fun views(c:Context):RemoteViews{
-            val layout=WidgetAppearance.item(c,"times").optString("layout","classic")
+        fun views(c:Context,heightDp:Int=190):RemoteViews{
+            val selected=WidgetAppearance.item(c,"times").optString("layout","grid")
+            // Never crop the old five-line design when the launcher reduces height.
+            val layout=if(selected=="classic" && heightDp in 1..169) "grid" else selected
             val compact=layout=="grid"
             val v=RemoteViews(c.packageName,when(layout){
                 "grid" -> R.layout.prayer_times_widget_grid
@@ -103,7 +108,7 @@ class FivePrayerWidget:AppWidgetProvider(){
                 val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                 labels[id]="${PrayerTimes.names[prayer]}     ${minutes?.let(::display) ?: "—"}" to 18f
             }
-            WidgetAppearance.decorate(c,v,R.id.widget_times_root,labels,"times")
+            WidgetAppearance.decorate(c,v,R.id.widget_times_card,labels,"times")
             v.setOnClickPendingIntent(R.id.widget_times_root,PendingIntent.getActivity(c,60530,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
@@ -149,7 +154,7 @@ class IqamaCountdownWidget:AppWidgetProvider(){
                 R.id.widget_iqama_elapsed_title to ("مضى على الإقامة" to if(compact)16f else 19f),
                 R.id.widget_iqama_state to (caption to if(compact)11f else 13f)
             )
-            WidgetAppearance.decorate(c,v,R.id.widget_iqama_root,titles,"iqama")
+            WidgetAppearance.decorate(c,v,if(compact) R.id.widget_iqama_card else R.id.widget_iqama_root,titles,"iqama")
             val beforeId=R.id.widget_iqama_before_counter
             val elapsedId=R.id.widget_iqama_elapsed_counter
             fun stopped(id:Int) {
