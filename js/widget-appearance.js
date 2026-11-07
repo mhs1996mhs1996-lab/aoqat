@@ -51,7 +51,7 @@
       #aoqatWidgetAppearance .wa-line.wa-stacked{flex-direction:column;gap:0;text-align:center}
       #aoqatWidgetAppearance .wa-preview:has(.wa-line){display:flex;flex-direction:column;justify-content:center;min-height:90px}
 
-      #aoqatWidgetAppearance .wa-times-rows{display:grid;gap:2px;direction:rtl;width:100%;text-align:right}
+      #aoqatWidgetAppearance .wa-pair{display:flex;align-items:center;gap:5px;direction:rtl;width:100%;justify-content:center}\n      #aoqatWidgetAppearance .wa-pair-pill{display:flex;align-items:center;justify-content:space-between;gap:3px;flex:1;min-width:0;background:#1b353fdc;border:1px solid #7eaaa5;border-radius:13px;padding:6px 5px;color:white}\n      #aoqatWidgetAppearance .wa-pair-pill span{font-size:12px;text-align:right}\n      #aoqatWidgetAppearance .wa-pair-pill strong{font-size:13px;white-space:nowrap}\n      #aoqatWidgetAppearance .wa-times-rows{display:grid;gap:2px;direction:rtl;width:100%;text-align:right}
       #aoqatWidgetAppearance .wa-times-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff42;padding:2px 5px}
       #aoqatWidgetAppearance .wa-times-row.is-next{background:#467d6e88;border-radius:7px}
       #aoqatWidgetAppearance .wa-times-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;direction:rtl;width:100%;text-align:center}
@@ -93,7 +93,7 @@
       const stack=cfg.scale>=125;
       const sample=active==="next"?[["باقي على صلاة المغرب","01:20:15"]]:
         active==="iqama"?[["باقي على الإقامة","04:12"],["مضى على الإقامة","00:00"]]:
-        active==="combined"?[["باقي على صلاة الفجر","07:12:28"],["باقي على الإقامة","00:00"],["مضى على الإقامة","00:00"]]:null;
+        null;
       preview.replaceChildren();
       if(sample){
         if(active==="iqama"){
@@ -109,7 +109,7 @@
           clock.style.fontSize=(cfg.scale/100*(stack?24:21))+"px";
           line.append(name,clock);preview.append(line);
         });
-      }else if(active==="times"){
+      }else if(active==="combined"){\n        const pair=document.createElement("div");pair.className="wa-pair";\n        [["أذان الفجر بعد","07:12:28"],["باقي على الإقامة","00:00"]].forEach(([label,time])=>{\n          const pill=document.createElement("div");pill.className="wa-pair-pill";\n          const caption=document.createElement("span");caption.textContent=label;\n          const clock=document.createElement("strong");clock.textContent=time;\n          pill.append(caption,clock);pair.append(pill);\n        });preview.append(pair);\n      }else if(active==="times"){
         const count=document.createElement("div");count.className="wa-line";
         const next=document.createElement("span");next.textContent="باقي على صلاة الفجر";
         const timer=document.createElement("strong");timer.textContent="07:12:28";
@@ -155,7 +155,7 @@
           line.querySelector("span").style.fontSize=(scaleNow/100*(stacked?19:16))+"px";
           line.querySelector("strong").style.fontSize=(scaleNow/100*(stacked?24:21))+"px";
         });
-        if(active==="times"){
+        if(active==="combined"){\n          preview.querySelectorAll(".wa-pair-pill span").forEach(x=>x.style.fontSize=(scaleNow/100*12)+"px");\n          preview.querySelectorAll(".wa-pair-pill strong").forEach(x=>x.style.fontSize=(scaleNow/100*13)+"px");\n        }else if(active==="times"){
           preview.querySelectorAll(".wa-times-row").forEach(cell=>{cell.style.fontSize=(scaleNow/100*16)+"px";});
           preview.querySelectorAll("p").forEach(p=>{p.style.fontSize=(scaleNow/100*17)+"px";});
         }else preview.querySelectorAll("p").forEach((p,i)=>{p.style.fontSize=(scaleNow/100*(active==="iqama"?14:(i===1?22:17)))+"px";});
