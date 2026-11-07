@@ -818,6 +818,7 @@ class MainActivity : Activity() {
                 "times"->FivePrayerWidget::class.java
                 "five_grid"->FivePrayerCompactWidget::class.java
                 "five_featured"->FivePrayerFeaturedWidget::class.java
+                "combined"->PrayerCombinedWidget::class.java
                 "iqama"->IqamaCountdownWidget::class.java
                 else->return@runOnUiThread
             }
