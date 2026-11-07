@@ -62,6 +62,16 @@ object WidgetAppearance {
     }
     fun item(c: Context, id: String): JSONObject = all(c).getJSONObject(id)
 
+    /**
+     * Default one-line label/timer rows consume less launcher space.
+     * At enlarged text sizes (or insufficient width) use the existing
+     * vertically stacked layout so text and countdown never collide.
+     */
+    fun compact(c: Context, kind: String, widthDp: Int, minimumWidthDp: Int): Boolean {
+        val scale = item(c,kind).optInt("scale",105)
+        return scale < 125 && (widthDp <= 0 || widthDp >= minimumWidthDp)
+    }
+
     private fun paletteColor(key: String): Int = when (key) {
         "ivory" -> Color.rgb(255, 246, 214)
         "gold" -> Color.rgb(255, 219, 128)
