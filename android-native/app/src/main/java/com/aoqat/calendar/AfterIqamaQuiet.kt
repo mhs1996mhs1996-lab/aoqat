@@ -49,21 +49,20 @@ object AfterIqamaQuiet {
 
     fun onCountdownComplete(c: Context, prayerAt: Long) {
         val state=c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE)
-        if(!state.getBoolean("active",false) || state.getLong("prayerAt",0L)!=prayerAt)return
-        val id=state.getString("prayerId","") ?: return
-        if(id !in PrayerTimes.ids)return
-        val durations=IqamaNativeScheduler.durations(c,id)
-        val deadline=prayerAt+durations.totalMs
-        if(System.currentTimeMillis()<deadline)return
+        // Keep this recovery independent of the foreground notification. OEMs
+        // can close the service or the user can dismiss it before the boundary.
+        // A stale event must never restore a newer prayer's quiet period.
+        if(state.getLong("prayerAt",0L)!=prayerAt) {
+            AdhanPlaybackService.restoreRingerIfExpired(c)
+            return
+        }
         val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
-        // Independent fallback when the recovery alarm is delayed by Android.
-        // Never restore a ringer mode the user had already set to silent.
-        if(saved.getBoolean("changed",false) &&
-            (saved.getLong("iqamaEnd",0L)==deadline ||
-                (window(AdhanSchedule.settings(c),id,prayerAt,
-                    durations.beforeMinutes,durations.afterMinutes)!=null &&
-                    saved.getLong("end",0L)>=deadline))) {
+        val deadline=saved.getLong("iqamaEnd",0L)
+        if(saved.getBoolean("changed",false) && deadline>0 &&
+            System.currentTimeMillis()>=deadline) {
             AdhanPlaybackService.restoreRinger(c)
-        } else AdhanPlaybackService.restoreRingerIfExpired(c)
+        } else {
+            AdhanPlaybackService.restoreRingerIfExpired(c)
+        }
     }
 }
