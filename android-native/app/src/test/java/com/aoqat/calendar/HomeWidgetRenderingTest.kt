@@ -63,15 +63,21 @@ class HomeWidgetRenderingTest {
         assertTrue(view.findViewById<TextView>(R.id.widget_time_clock_sunrise).text.toString().contains("6:35"))
     }
 
-    @Test fun combinedCountdownAndIqamaWidgetInflatesWithoutBlankCard() {
+    @Test fun combinedCountdownAndIqamaWidgetInflatesAsTwoSideBySidePills() {
         seed()
         val view=PrayerCombinedWidget.views(c).apply(c,FrameLayout(c))
+        val container=view.findViewById<android.widget.LinearLayout>(R.id.widget_combined_card)
+        assertEquals("Two pills must be on the same horizontal row",android.widget.LinearLayout.HORIZONTAL,container.orientation)
+        val nextPill=view.findViewById<android.widget.LinearLayout>(R.id.widget_combined_next_pill)
+        val iqamaPill=view.findViewById<android.widget.LinearLayout>(R.id.widget_combined_iqama_pill)
+        assertNotNull(nextPill)
+        assertNotNull(iqamaPill)
+        assertEquals("Both pills must have the same parent",nextPill.parent,iqamaPill.parent)
         assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_next_counter))
-        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_before_counter))
-        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_after_counter))
-        assertTrue(view.findViewById<TextView>(R.id.widget_combined_next_label).text.isNotBlank())
-        assertEquals("باقي على الإقامة",view.findViewById<TextView>(R.id.widget_combined_before_title).text.toString())
-        assertEquals("مضى على الإقامة",view.findViewById<TextView>(R.id.widget_combined_after_title).text.toString())
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_iqama_counter))
+        assertTrue(view.findViewById<TextView>(R.id.widget_combined_next_label).text.toString().startsWith("أذان"))
+        assertEquals("باقي على الإقامة",
+            view.findViewById<TextView>(R.id.widget_combined_iqama_title).text.toString())
     }
 
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
