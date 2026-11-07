@@ -1,0 +1,40 @@
+const {chromium}=require('playwright');
+const assert=require('node:assert/strict');
+const {spawn}=require('node:child_process');
+(async()=>{
+ const server=spawn('python3',['-m','http.server','8791'],{stdio:'ignore'});
+ let browser;
+ try{
+   await new Promise(resolve=>setTimeout(resolve,700));
+   browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']});
+   const page=await browser.newPage({viewport:{width:390,height:800},serviceWorkers:'block'});
+   await page.route('**/rest/**',route=>route.abort());
+   await page.goto('http://127.0.0.1:8791',{waitUntil:'domcontentloaded'});
+   await page.waitForFunction(()=>window.aoqatUIReady&&window.AoqatWidgetAppearance&&document.querySelector('[data-drawer="appearance"]'),{timeout:45000});
+   await page.locator('#designSideMenuBtn').click();
+   await page.locator('[data-drawer="appearance"]').click();
+   await page.getByRole('button',{name:'🖼️ تخصيص بطاقات الشاشة الرئيسية'}).click();
+   await page.waitForSelector('#aoqatWidgetAppearance');
+   assert.equal(await page.locator('#webSubTitle').textContent(),'بطاقات الشاشة الرئيسية');
+   assert.equal(await page.locator('#aoqatWidgetAppearance .wa-tabs button').count(),3);
+   await page.locator('#aoqatWidgetAppearance .wa-tabs button').nth(1).click();
+   await page.locator('#aoqatWidgetAppearance select[aria-label="خلفية البطاقة"]').selectOption('blue');
+   await page.locator('#aoqatWidgetAppearance select[aria-label="لون الخط"]').selectOption('gold');
+   await page.locator('#aoqatWidgetAppearance select[aria-label="نوع الخط"]').selectOption('serif');
+   await page.locator('#aoqatWidgetAppearance input[type=range]').fill('130');
+   const settings=await page.evaluate(()=>window.AoqatWidgetAppearance.load());
+   assert.equal(settings.times.background,'blue');
+   assert.equal(settings.times.color,'gold');
+   assert.equal(settings.times.font,'serif');
+   assert.equal(settings.times.scale,130);
+   assert.equal(settings.next.background,'transparent','Card settings must be independent');
+   await page.locator('#aoqatWidgetAppearance .wa-tabs button').nth(2).click();
+   assert.ok((await page.locator('#aoqatWidgetAppearance .wa-preview').textContent()).includes('مضى على الإقامة'));
+   await page.locator('.web-back').click();
+   assert.equal(await page.locator('#webSubTitle').textContent(),'شكل التطبيق','Back from widgets returns to appearance settings');
+   await page.reload({waitUntil:'domcontentloaded'});
+   await page.waitForFunction(()=>window.AoqatWidgetAppearance&&window.aoqatUIReady);
+   assert.equal((await page.evaluate(()=>window.AoqatWidgetAppearance.load())).times.scale,130);
+   console.log('PASS: all three cards, independent live previews, persistent fonts, background, color and size, navigation');
+ }finally{await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1});
