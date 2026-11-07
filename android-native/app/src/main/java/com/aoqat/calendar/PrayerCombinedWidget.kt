@@ -6,11 +6,14 @@ import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
-import android.view.View
 import android.widget.RemoteViews
 import java.time.LocalDate
 
-/** Independent compact combination. Reads the same on-device prayer and iqama schedules. */
+/**
+ * Two adjacent capsules, matching the app's main countdown strip:
+ * next adhan on the right and the active before/after iqama on the left.
+ * Uses local prayer times, without changing notifications or alarm logic.
+ */
 class PrayerCombinedWidget:AppWidgetProvider(){
     companion object {
         fun views(c:Context):RemoteViews {
@@ -18,47 +21,37 @@ class PrayerCombinedWidget:AppWidgetProvider(){
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
             val active=if(IqamaNativeScheduler.enabled(c)){
-                PrayerTimes.events(c,LocalDate.now().minusDays(1)).lastOrNull{ event->
+                PrayerTimes.events(c,LocalDate.now().minusDays(1)).lastOrNull{event->
                     val duration=IqamaNativeScheduler.durations(c,event.id)
                     !FridaySchedule.suppress(c,event.id,event.at) &&
                         now>=event.at && now<event.at+duration.totalMs
                 }
-            } else null
-            val heading=if(next==null)"الصلاة القادمة" else "باقي على صلاة ${PrayerTimes.names[next.id]}"
+            }else null
+            val nextText=if(next==null) "الأذان القادم" else "أذان ${PrayerTimes.names[next.id]} بعد"
+            val boundary=active?.let{it.at+IqamaNativeScheduler.durations(c,it.id).beforeMs}
+            val afterIqama=boundary!=null && now>=boundary
+            val iqamaText=if(afterIqama)"مضى على الإقامة" else "باقي على الإقامة"
             WidgetAppearance.decorate(c,v,R.id.widget_combined_card,mapOf(
-                R.id.widget_combined_next_label to (heading to 18f),
-                R.id.widget_combined_prayer to ((PrayerTimes.names[active?.id ?: next?.id] ?: "") to 19f),
-                R.id.widget_combined_before_title to ("باقي على الإقامة" to 16f),
-                R.id.widget_combined_after_title to ("مضى على الإقامة" to 16f)
+                R.id.widget_combined_next_label to (nextText to 14f),
+                R.id.widget_combined_iqama_title to (iqamaText to 14f)
             ),"combined")
             v.setChronometer(R.id.widget_combined_next_counter,
                 SystemClock.elapsedRealtime()+((next?.at?:now)-now),"%s",next!=null)
             v.setChronometerCountDown(R.id.widget_combined_next_counter,true)
             if(next==null)v.setTextViewText(R.id.widget_combined_next_counter,"--:--")
-            fun stopped(id:Int) {
-                v.setChronometer(id,SystemClock.elapsedRealtime(),"%s",false)
-                v.setTextViewText(id,"00:00")
+            val iqamaCounter=R.id.widget_combined_iqama_counter
+            if(boundary==null) {
+                v.setChronometer(iqamaCounter,SystemClock.elapsedRealtime(),"%s",false)
+                v.setTextViewText(iqamaCounter,"00:00")
+            }else if(now<boundary){
+                v.setChronometer(iqamaCounter,SystemClock.elapsedRealtime()+boundary-now,"%s",true)
+                v.setChronometerCountDown(iqamaCounter,true)
+            }else{
+                v.setChronometer(iqamaCounter,SystemClock.elapsedRealtime()-(now-boundary),"%s",true)
+                v.setChronometerCountDown(iqamaCounter,false)
             }
-            val before=R.id.widget_combined_before_counter
-            val after=R.id.widget_combined_after_counter
-            if(active==null){ stopped(before); stopped(after) }
-            else{
-                val boundary=active.at+IqamaNativeScheduler.durations(c,active.id).beforeMs
-                if(now<boundary){
-                    v.setChronometer(before,SystemClock.elapsedRealtime()+boundary-now,"%s",true)
-                    v.setChronometerCountDown(before,true)
-                    stopped(after)
-                }else{
-                    stopped(before)
-                    v.setChronometer(after,SystemClock.elapsedRealtime()-(now-boundary),"%s",true)
-                    v.setChronometerCountDown(after,false)
-                }
-            }
-            for(id in listOf(R.id.widget_combined_next_counter,
-                R.id.widget_combined_before_counter,R.id.widget_combined_after_counter)) {
-                WidgetAppearance.decorateCounter(c,v,id,"combined",20f)
-            }
-            v.setViewVisibility(R.id.widget_combined_prayer,if(active!=null)View.VISIBLE else View.GONE)
+            WidgetAppearance.decorateCounter(c,v,R.id.widget_combined_next_counter,"combined",15f)
+            WidgetAppearance.decorateCounter(c,v,iqamaCounter,"combined",15f)
             v.setOnClickPendingIntent(R.id.widget_combined_root,PendingIntent.getActivity(c,60540,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
