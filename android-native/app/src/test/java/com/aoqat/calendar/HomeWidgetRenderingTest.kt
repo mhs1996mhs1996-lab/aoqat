@@ -80,6 +80,34 @@ class HomeWidgetRenderingTest {
             view.findViewById<TextView>(R.id.widget_combined_iqama_title).text.toString())
     }
 
+    @Test fun compactVerticalTimetableStillIncludesAllSixRows() {
+        seed()
+        val view=FivePrayerWidget.views(c,180,"classic").apply(c,FrameLayout(c))
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_times_next_counter))
+        val clocks=listOf(R.id.widget_time_clock_fajr,R.id.widget_time_clock_sunrise,
+            R.id.widget_time_clock_dhuhr,R.id.widget_time_clock_asr,
+            R.id.widget_time_clock_maghrib,R.id.widget_time_clock_isha)
+        for(id in clocks) assertTrue("Every row must keep its time",view.findViewById<TextView>(id).text.isNotBlank())
+    }
+
+    @Test fun veryShortTimetableFallsBackToSixTimeGridWithoutClipping() {
+        seed()
+        val view=FivePrayerWidget.views(c,135,"classic").apply(c,FrameLayout(c))
+        for(id in listOf(R.id.widget_times_fajr,R.id.widget_times_sunrise,
+            R.id.widget_times_dhuhr,R.id.widget_times_asr,
+            R.id.widget_times_maghrib,R.id.widget_times_isha)) {
+            assertTrue(view.findViewById<TextView>(id).text.isNotBlank())
+        }
+    }
+
+    @Test fun nextPrayerCardUsesWrapContentRatherThanTallEmptyRoot() {
+        seed()
+        val view=PrayerWidget.views(c,compact=true).apply(c,FrameLayout(c))
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+            view.findViewById<View>(R.id.prayer_widget_root).layoutParams.height)
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_counter))
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/prayer_widget_root"
-    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
     android:orientation="vertical" 
-    android:gravity="center"    
+    android:gravity="center_vertical"    
     android:background="@android:color/transparent">
     <LinearLayout android:id="@+id/widget_next_card" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layoutDirection="rtl" android:gravity="center_vertical" android:paddingLeft="6dp" android:paddingRight="6dp" android:paddingTop="2dp" android:paddingBottom="2dp" android:background="@android:color/transparent">
 
