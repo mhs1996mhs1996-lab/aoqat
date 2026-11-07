@@ -28,7 +28,7 @@ object WidgetAppearance {
         .put("color", "white")
         .put("font", "sans")
         .put("scale", 105)
-        .put("layout", "classic")
+        .put("layout", if (id == "times") "grid" else "classic")
 
     private fun preferences(c: Context) = c.getSharedPreferences("aoqat_widget_appearance_v1", Context.MODE_PRIVATE)
     fun all(c: Context): JSONObject {
