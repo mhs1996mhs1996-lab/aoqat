@@ -64,15 +64,15 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_widget_info" />
         </receiver>
-        <receiver android:name=".FivePrayerWidget" android:exported="true" android:label="مواقيت الصلاة الخمسة">
+        <receiver android:name=".FivePrayerWidget" android:exported="true" android:label="مواقيت الصلاة — الأصلية">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_times_widget_info" />
         </receiver>
-        <receiver android:name=".FivePrayerCompactWidget" android:exported="true" android:label="مواقيت الصلاة — صفّان مدمجان">
+        <receiver android:name=".FivePrayerCompactWidget" android:exported="true" android:label="مواقيت الصلاة — ٣ + ٣">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_five_compact_widget_info" />
         </receiver>
-        <receiver android:name=".FivePrayerFeaturedWidget" android:exported="true" android:label="مواقيت الصلاة — البطاقة المميزة">
+        <receiver android:name=".FivePrayerFeaturedWidget" android:exported="true" android:label="مواقيت الصلاة — مميزة ٣ + ٣">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_five_featured_widget_info" />
         </receiver>

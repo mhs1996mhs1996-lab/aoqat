@@ -6,31 +6,25 @@
     android:padding="14dp" android:background="@android:color/transparent">
     <TextView android:id="@+id/widget_iqama_prayer" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:textColor="#FFFFFFFF"
-        android:textSize="19sp" android:textStyle="bold" android:gravity="center"
-        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1" />
+        android:textSize="25sp" android:textStyle="bold" android:includeFontPadding="false" android:gravity="center" />
     <TextView android:id="@+id/widget_iqama_before_title" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:text="باقي على الإقامة"
-        android:textColor="#FFFFFFFF" android:textSize="19sp" android:textStyle="bold"
-        android:gravity="center" android:layout_marginTop="4dp"
-        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1"/>
+        android:textColor="#FFFFFFFF" android:textSize="19sp" android:textStyle="bold" android:includeFontPadding="false"
+        android:gravity="center" android:layout_marginTop="4dp"/>
     <Chronometer android:id="@+id/widget_iqama_before_counter"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center" android:format="%s"
-        android:textColor="#FFFFFFFF" android:textSize="29sp" android:textStyle="bold"
-        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1" />
+        android:textColor="#FFFFFFFF" android:textSize="29sp" android:textStyle="bold" android:includeFontPadding="false" />
     <TextView android:id="@+id/widget_iqama_elapsed_title" android:layout_width="match_parent"
         android:layout_height="wrap_content" android:text="مضى على الإقامة"
-        android:textColor="#FFFFFFFF" android:textSize="19sp" android:textStyle="bold"
-        android:gravity="center" android:layout_marginTop="5dp"
-        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1"/>
+        android:textColor="#FFFFFFFF" android:textSize="19sp" android:textStyle="bold" android:includeFontPadding="false"
+        android:gravity="center" android:layout_marginTop="5dp"/>
     <Chronometer android:id="@+id/widget_iqama_elapsed_counter"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:gravity="center" android:format="%s"
-        android:textColor="#FFFFFFFF" android:textSize="29sp" android:textStyle="bold"
-        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1" />
+        android:textColor="#FFFFFFFF" android:textSize="29sp" android:textStyle="bold" android:includeFontPadding="false" />
     <TextView android:id="@+id/widget_iqama_state" android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold"
-        android:gravity="center" android:layout_marginTop="6dp"
-        android:shadowColor="#C0000000" android:shadowRadius="3" android:shadowDx="1" android:shadowDy="1" />
+        android:layout_height="wrap_content" android:visibility="gone"
+        android:textColor="#FFFFFFFF" android:textSize="13sp" android:textStyle="bold" android:includeFontPadding="false"
+        android:gravity="center" android:layout_marginTop="6dp" />
 </LinearLayout>

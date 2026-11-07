@@ -162,7 +162,7 @@
       pin.onclick=()=>window.AndroidNative.pinWidget(active);
       root.append(pin);
       const variants=document.createElement("div");variants.style.cssText="display:grid;gap:6px";
-      [["five_grid","➕ إضافة بطاقة مستقلة: المواقيت الخمسة 3 + 2"],["five_featured","➕ إضافة بطاقة مستقلة: المواقيت الخمسة المميزة"]].forEach(([id,label])=>{
+      [["five_grid","➕ إضافة بطاقة مستقلة: المواقيت الستة 3 + 3"],["five_featured","➕ إضافة بطاقة مستقلة: المواقيت الستة المميزة"]].forEach(([id,label])=>{
         const button=document.createElement("button");button.type="button";button.className="wa-reset";button.textContent=label;
         button.onclick=()=>window.AndroidNative.pinWidget(id);variants.append(button);
       });root.append(variants);
