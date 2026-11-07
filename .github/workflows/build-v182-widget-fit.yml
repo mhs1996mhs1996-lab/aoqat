@@ -5,7 +5,7 @@ on:
       - 'fix/v182-widget-wrap-height-20261107'
   workflow_dispatch:
   pull_request:
-    branches: [main, fix/v182-smaller-home-widgets-20261107]
+    branches: [main, fix/v181-smaller-home-widgets-20261107]
 permissions:
   contents: write
   actions: read
@@ -82,7 +82,7 @@ jobs:
           aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
           "$signer" verify --print-certs "$apk" | tee /tmp/aoqat-v182/signature.txt
           grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' /tmp/aoqat-v182/signature.txt
-          "$aapt" dump badging "$apk" | grep -F "versionCode='116' versionName='1.82'"
+          "$aapt" dump badging "$apk" | grep -F "versionCode='117' versionName='1.82'"
           python3 - <<'PY'
           import zipfile
           p='/tmp/aoqat-v182/aoqat-v1.82-daily-prayer-widgets.apk'
