@@ -120,7 +120,18 @@
       const scale=document.createElement("label");scale.className="wa-control";scale.textContent="حجم الكتابة داخل البطاقة";
       const slider=document.createElement("input");slider.type="range";slider.min="75";slider.max="145";slider.step="5";slider.value=String(cfg.scale);
       const value=document.createElement("span");value.textContent=cfg.scale+"٪";
-      slider.oninput=()=>{value.textContent=slider.value+"٪";data[active].scale=Number(slider.value);refresh();};
+      slider.oninput=()=>{
+        value.textContent=slider.value+"٪";
+        data[active].scale=Number(slider.value);
+        const scaleNow=Number(slider.value);
+        preview.querySelectorAll(".wa-line").forEach(line=>{
+          const stacked=scaleNow>=125;
+          line.classList.toggle("wa-stacked",stacked);
+          line.querySelector("span").style.fontSize=(scaleNow/100*(stacked?19:16))+"px";
+          line.querySelector("strong").style.fontSize=(scaleNow/100*(stacked?24:21))+"px";
+        });
+        preview.querySelectorAll("p").forEach((p,i)=>{p.style.fontSize=(scaleNow/100*(active==="iqama"?14:(i===1?22:17)))+"px";});
+      };
       slider.onchange=()=>{feedback.textContent=save(data)?"تم حفظ حجم الكتابة.":"تعذر حفظ حجم الكتابة.";};
       scale.append(slider,value);controls.append(scale);
     }
