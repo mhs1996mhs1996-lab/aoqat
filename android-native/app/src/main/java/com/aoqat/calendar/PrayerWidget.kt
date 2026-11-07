@@ -55,7 +55,7 @@ class PrayerWidget:AppWidgetProvider(){
             }
             ids(c,FivePrayerWidget::class.java).forEach{id->
                 val options=manager.getAppWidgetOptions(id)
-                manager.updateAppWidget(id,FivePrayerWidget.views(c,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,270),layoutOverride="classic"))
+                manager.updateAppWidget(id,FivePrayerWidget.views(c,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,170),layoutOverride="classic"))
             }
             ids(c,FivePrayerCompactWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,FivePrayerWidget.views(c,layoutOverride="five_grid"))
@@ -88,12 +88,13 @@ class FivePrayerWidget:AppWidgetProvider(){
             // Never crop the old five-line design when the launcher reduces height.
             val layout=layoutOverride ?: if(selected=="classic" && heightDp in 1..169) "grid" else selected
             val compact=layout=="grid" || layout=="five_grid"
+            val compressedClassic=layout=="classic" && heightDp in 1..259
             val v=RemoteViews(c.packageName,when(layout){
                 "grid" -> R.layout.prayer_times_widget_grid
                 "featured" -> R.layout.prayer_times_widget_featured
                 "five_grid" -> R.layout.prayer_five_widget_grid
                 "five_featured" -> R.layout.prayer_five_widget_featured
-                "classic" -> R.layout.prayer_times_widget_classic_next
+                "classic" -> if(compressedClassic)R.layout.prayer_times_widget_classic_compact else R.layout.prayer_times_widget_classic_next
                 else -> R.layout.prayer_times_widget
             })
             val today=LocalDate.now()
@@ -117,7 +118,7 @@ class FivePrayerWidget:AppWidgetProvider(){
             if (layout=="classic") {
                 val now=System.currentTimeMillis()
                 val next=PrayerTimes.events(c).firstOrNull{it.at>now}
-                labels[R.id.widget_times_next_label]=(if(next==null) "الصلاة القادمة" else "باقي على صلاة ${PrayerTimes.names[next.id]}") to 17f
+                labels[R.id.widget_times_next_label]=(if(next==null) "الصلاة القادمة" else "باقي على صلاة ${PrayerTimes.names[next.id]}") to if(compressedClassic)12f else 17f
                 v.setChronometer(R.id.widget_times_next_counter,
                     SystemClock.elapsedRealtime()+((next?.at?:now)-now),"%s",next!=null)
                 v.setChronometerCountDown(R.id.widget_times_next_counter,true)
@@ -134,13 +135,13 @@ class FivePrayerWidget:AppWidgetProvider(){
                     R.id.widget_times_row_maghrib,R.id.widget_times_row_isha)
                 names.forEachIndexed{index,(prayer,id)->
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
-                    labels[id]=(if(prayer=="sunrise")"الشروق" else PrayerTimes.names[prayer] ?: prayer) to 16f
-                    labels[clockIds[index]]=(minutes?.let(::display) ?: "—") to 17f
+                    labels[id]=(if(prayer=="sunrise")"الشروق" else PrayerTimes.names[prayer] ?: prayer) to if(compressedClassic)12f else 16f
+                    labels[clockIds[index]]=(minutes?.let(::display) ?: "—") to if(compressedClassic)12f else 17f
                     if(prayer==next?.id) v.setInt(rowIds[index],"setBackgroundResource",R.drawable.aoqat_times_upcoming_row)
                 }
             }
             WidgetAppearance.decorate(c,v,R.id.widget_times_card,labels,"times")
-            if(layout=="classic")WidgetAppearance.decorateCounter(c,v,R.id.widget_times_next_counter,"times",20f)
+            if(layout=="classic")WidgetAppearance.decorateCounter(c,v,R.id.widget_times_next_counter,"times",if(compressedClassic)15f else 20f)
             v.setOnClickPendingIntent(R.id.widget_times_root,PendingIntent.getActivity(c,60530,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
