@@ -44,6 +44,36 @@ class HomeWidgetRenderingTest {
         }
     }
 
+    @Test fun originalVerticalCardShowsNextPrayerAndSixOrderedTimes() {
+        seed()
+        val view=FivePrayerWidget.views(c,270,"classic").apply(c,FrameLayout(c))
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_times_next_counter))
+        assertTrue(view.findViewById<TextView>(R.id.widget_times_next_label).text.isNotBlank())
+        val order=listOf("fajr","sunrise","dhuhr","asr","maghrib","isha")
+        val nameIds=listOf(R.id.widget_times_fajr,R.id.widget_times_sunrise,
+            R.id.widget_times_dhuhr,R.id.widget_times_asr,R.id.widget_times_maghrib,R.id.widget_times_isha)
+        val timeIds=listOf(R.id.widget_time_clock_fajr,R.id.widget_time_clock_sunrise,
+            R.id.widget_time_clock_dhuhr,R.id.widget_time_clock_asr,R.id.widget_time_clock_maghrib,
+            R.id.widget_time_clock_isha)
+        val labels=listOf("الفجر","الشروق","الظهر","العصر","المغرب","العشاء")
+        for(i in order.indices) {
+            assertEquals(labels[i],view.findViewById<TextView>(nameIds[i]).text.toString())
+            assertTrue(view.findViewById<TextView>(timeIds[i]).text.isNotBlank())
+        }
+        assertTrue(view.findViewById<TextView>(R.id.widget_time_clock_sunrise).text.toString().contains("6:35"))
+    }
+
+    @Test fun combinedCountdownAndIqamaWidgetInflatesWithoutBlankCard() {
+        seed()
+        val view=PrayerCombinedWidget.views(c).apply(c,FrameLayout(c))
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_next_counter))
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_before_counter))
+        assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_combined_after_counter))
+        assertTrue(view.findViewById<TextView>(R.id.widget_combined_next_label).text.isNotBlank())
+        assertEquals("باقي على الإقامة",view.findViewById<TextView>(R.id.widget_combined_before_title).text)
+        assertEquals("مضى على الإقامة",view.findViewById<TextView>(R.id.widget_combined_after_title).text)
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))
