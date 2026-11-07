@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 113 // Three isolated transparent home widgets; all alarm and notification services preserved
-        versionName '1.78'
+        versionCode 114 // Individually styled home widgets and exact iqama quiet recovery; preserve prior services
+        versionName '1.79'
     }
 
     compileOptions {
