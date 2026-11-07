@@ -18,7 +18,7 @@ class PrayerWidget:AppWidgetProvider(){
         private fun ids(c:Context,provider:Class<*>):IntArray =
             AppWidgetManager.getInstance(c).getAppWidgetIds(ComponentName(c,provider))
         fun exists(c:Context):Boolean = listOf(
-            PrayerWidget::class.java, FivePrayerWidget::class.java, FivePrayerCompactWidget::class.java, FivePrayerFeaturedWidget::class.java, IqamaCountdownWidget::class.java
+            PrayerWidget::class.java, FivePrayerWidget::class.java, FivePrayerCompactWidget::class.java, FivePrayerFeaturedWidget::class.java, PrayerCombinedWidget::class.java, IqamaCountdownWidget::class.java
         ).any{ids(c,it).isNotEmpty()}
 
         fun views(c:Context,notification:Boolean=false,compact:Boolean=false):RemoteViews{
@@ -55,7 +55,7 @@ class PrayerWidget:AppWidgetProvider(){
             }
             ids(c,FivePrayerWidget::class.java).forEach{id->
                 val options=manager.getAppWidgetOptions(id)
-                manager.updateAppWidget(id,FivePrayerWidget.views(c,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,190)))
+                manager.updateAppWidget(id,FivePrayerWidget.views(c,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,270),layoutOverride="classic"))
             }
             ids(c,FivePrayerCompactWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,FivePrayerWidget.views(c,layoutOverride="five_grid"))
@@ -63,6 +63,7 @@ class PrayerWidget:AppWidgetProvider(){
             ids(c,FivePrayerFeaturedWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,FivePrayerWidget.views(c,layoutOverride="five_featured"))
             }
+            ids(c,PrayerCombinedWidget::class.java).forEach{id->manager.updateAppWidget(id,PrayerCombinedWidget.views(c))}
             ids(c,IqamaCountdownWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,IqamaCountdownWidget.views(c,compact=WidgetAppearance.compact(c,"iqama",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),260)))
             }
@@ -92,6 +93,7 @@ class FivePrayerWidget:AppWidgetProvider(){
                 "featured" -> R.layout.prayer_times_widget_featured
                 "five_grid" -> R.layout.prayer_five_widget_grid
                 "five_featured" -> R.layout.prayer_five_widget_featured
+                "classic" -> R.layout.prayer_times_widget_classic_next
                 else -> R.layout.prayer_times_widget
             })
             val today=LocalDate.now()
@@ -112,11 +114,33 @@ class FivePrayerWidget:AppWidgetProvider(){
                     labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)14f else 15f
                 }
             }
-            if (layout=="classic") items.forEach{(prayer,id)->
-                val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
-                labels[id]="${PrayerTimes.names[prayer]}     ${minutes?.let(::display) ?: "—"}" to 18f
+            if (layout=="classic") {
+                val now=System.currentTimeMillis()
+                val next=PrayerTimes.events(c).firstOrNull{it.at>now}
+                labels[R.id.widget_times_next_label]=(if(next==null) "الصلاة القادمة" else "باقي على صلاة ${PrayerTimes.names[next.id]}") to 17f
+                v.setChronometer(R.id.widget_times_next_counter,
+                    SystemClock.elapsedRealtime()+((next?.at?:now)-now),"%s",next!=null)
+                v.setChronometerCountDown(R.id.widget_times_next_counter,true)
+                if(next==null)v.setTextViewText(R.id.widget_times_next_counter,"--:--")
+                val names=listOf("fajr" to R.id.widget_times_fajr,
+                    "sunrise" to R.id.widget_times_sunrise,"dhuhr" to R.id.widget_times_dhuhr,
+                    "asr" to R.id.widget_times_asr,"maghrib" to R.id.widget_times_maghrib,
+                    "isha" to R.id.widget_times_isha)
+                val clockIds=listOf(R.id.widget_time_clock_fajr,R.id.widget_time_clock_sunrise,
+                    R.id.widget_time_clock_dhuhr,R.id.widget_time_clock_asr,
+                    R.id.widget_time_clock_maghrib,R.id.widget_time_clock_isha)
+                val rowIds=listOf(R.id.widget_times_row_fajr,R.id.widget_times_row_sunrise,
+                    R.id.widget_times_row_dhuhr,R.id.widget_times_row_asr,
+                    R.id.widget_times_row_maghrib,R.id.widget_times_row_isha)
+                names.forEachIndexed{index,(prayer,id)->
+                    val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
+                    labels[id]=(if(prayer=="sunrise")"الشروق" else PrayerTimes.names[prayer] ?: prayer) to 16f
+                    labels[clockIds[index]]=(minutes?.let(::display) ?: "—") to 17f
+                    if(prayer==next?.id) v.setInt(rowIds[index],"setBackgroundResource",R.drawable.aoqat_times_upcoming_row)
+                }
             }
             WidgetAppearance.decorate(c,v,R.id.widget_times_card,labels,"times")
+            if(layout=="classic")WidgetAppearance.decorateCounter(c,v,R.id.widget_times_next_counter,"times",20f)
             v.setOnClickPendingIntent(R.id.widget_times_root,PendingIntent.getActivity(c,60530,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
