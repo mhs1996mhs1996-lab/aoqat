@@ -226,8 +226,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
             if(ringerRestored && dndRestored) {
                 // Do not clear ownership while the system still reports the
-                // wrong ringer mode. This matters on OEM scheduled-DND devices.
-                ringerRestored=(am.ringerMode==previous || previous==AudioManager.RINGER_MODE_SILENT)
+                // stuck SILENT. Respect manual changes to NORMAL/VIBRATE by the user.
+                ringerRestored=(previous==AudioManager.RINGER_MODE_SILENT || am.ringerMode!=AudioManager.RINGER_MODE_SILENT)
             }
             if(ringerRestored && dndRestored) {
                 auditQuiet(c,"restored")
