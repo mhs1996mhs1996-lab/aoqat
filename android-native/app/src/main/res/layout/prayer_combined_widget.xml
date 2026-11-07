@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/widget_combined_root" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:background="@android:color/transparent">
+  <LinearLayout android:id="@+id/widget_combined_card" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingLeft="9dp" android:paddingRight="9dp" android:paddingTop="7dp" android:paddingBottom="7dp" android:background="@android:color/transparent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layoutDirection="rtl" android:gravity="center_vertical">
+      <TextView android:id="@+id/widget_combined_next_label" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="باقي على صلاة الفجر" android:textColor="#FFFFFFFF" android:textSize="18sp" android:gravity="start|center_vertical" android:textStyle="bold"/>
+      <Chronometer android:id="@+id/widget_combined_next_counter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFFFF" android:textSize="22sp" android:textStyle="bold" android:format="%s" />
+    </LinearLayout>
+    <TextView android:id="@+id/widget_combined_prayer" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textSize="19sp" android:textStyle="bold" android:textColor="#FFFFFFFF" android:paddingTop="4dp"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layoutDirection="rtl" android:gravity="center_vertical">
+      <TextView android:id="@+id/widget_combined_before_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="باقي على الإقامة" android:textColor="#FFFFFFFF" android:textSize="16sp" android:textStyle="bold" />
+      <Chronometer android:id="@+id/widget_combined_before_counter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="20sp" android:textColor="#FFFFFFFF" android:textStyle="bold" android:format="%s"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layoutDirection="rtl" android:gravity="center_vertical">
+      <TextView android:id="@+id/widget_combined_after_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="مضى على الإقامة" android:textColor="#FFFFFFFF" android:textSize="16sp" android:textStyle="bold" />
+      <Chronometer android:id="@+id/widget_combined_after_counter" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="20sp" android:textColor="#FFFFFFFF" android:textStyle="bold" android:format="%s"/>
+    </LinearLayout>
+  </LinearLayout>
+</LinearLayout>
