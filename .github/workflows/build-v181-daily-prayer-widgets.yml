@@ -5,7 +5,7 @@ on:
       - 'feature/v181-prayer-times-layouts-20261107'
   workflow_dispatch:
   pull_request:
-    branches: [main]
+    branches: [main, fix/v181-smaller-home-widgets-20261107]
 permissions:
   contents: write
   actions: read
