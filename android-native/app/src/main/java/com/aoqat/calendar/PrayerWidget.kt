@@ -18,7 +18,7 @@ class PrayerWidget:AppWidgetProvider(){
         private fun ids(c:Context,provider:Class<*>):IntArray =
             AppWidgetManager.getInstance(c).getAppWidgetIds(ComponentName(c,provider))
         fun exists(c:Context):Boolean = listOf(
-            PrayerWidget::class.java, FivePrayerWidget::class.java, IqamaCountdownWidget::class.java
+            PrayerWidget::class.java, FivePrayerWidget::class.java, FivePrayerCompactWidget::class.java, FivePrayerFeaturedWidget::class.java, IqamaCountdownWidget::class.java
         ).any{ids(c,it).isNotEmpty()}
 
         fun views(c:Context,notification:Boolean=false,compact:Boolean=false):RemoteViews{
@@ -57,6 +57,12 @@ class PrayerWidget:AppWidgetProvider(){
                 val options=manager.getAppWidgetOptions(id)
                 manager.updateAppWidget(id,FivePrayerWidget.views(c,options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,190)))
             }
+            ids(c,FivePrayerCompactWidget::class.java).forEach{id->
+                manager.updateAppWidget(id,FivePrayerWidget.views(c,layoutOverride="five_grid"))
+            }
+            ids(c,FivePrayerFeaturedWidget::class.java).forEach{id->
+                manager.updateAppWidget(id,FivePrayerWidget.views(c,layoutOverride="five_featured"))
+            }
             ids(c,IqamaCountdownWidget::class.java).forEach{id->
                 manager.updateAppWidget(id,IqamaCountdownWidget.views(c,compact=WidgetAppearance.compact(c,"iqama",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),260)))
             }
@@ -76,14 +82,16 @@ class FivePrayerWidget:AppWidgetProvider(){
             return String.format(Locale.US,"%d:%02d %s",if(hour%12==0)12 else hour%12,
                 minutes%60,if(hour<12)"ص" else "م")
         }
-        fun views(c:Context,heightDp:Int=190):RemoteViews{
+        fun views(c:Context,heightDp:Int=190,layoutOverride:String?=null):RemoteViews{
             val selected=WidgetAppearance.item(c,"times").optString("layout","grid")
             // Never crop the old five-line design when the launcher reduces height.
-            val layout=if(selected=="classic" && heightDp in 1..169) "grid" else selected
-            val compact=layout=="grid"
+            val layout=layoutOverride ?: if(selected=="classic" && heightDp in 1..169) "grid" else selected
+            val compact=layout=="grid" || layout=="five_grid"
             val v=RemoteViews(c.packageName,when(layout){
                 "grid" -> R.layout.prayer_times_widget_grid
                 "featured" -> R.layout.prayer_times_widget_featured
+                "five_grid" -> R.layout.prayer_five_widget_grid
+                "five_featured" -> R.layout.prayer_five_widget_featured
                 else -> R.layout.prayer_times_widget
             })
             val today=LocalDate.now()
@@ -98,7 +106,7 @@ class FivePrayerWidget:AppWidgetProvider(){
                 val all=listOf("fajr" to R.id.widget_times_fajr, "sunrise" to R.id.widget_times_sunrise,
                     "dhuhr" to R.id.widget_times_dhuhr, "asr" to R.id.widget_times_asr,
                     "maghrib" to R.id.widget_times_maghrib, "isha" to R.id.widget_times_isha)
-                for ((prayer,id) in all) {
+                for ((prayer,id) in all.filter { layout !in setOf("five_grid","five_featured") || it.first != "sunrise" }) {
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                     val name=if(prayer=="sunrise") "الشروق" else PrayerTimes.names[prayer] ?: prayer
                     labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)14f else 15f
@@ -117,6 +125,15 @@ class FivePrayerWidget:AppWidgetProvider(){
     override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){PrayerWidget.update(c);AdhanSchedule.schedule(c)}
     override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:Bundle){PrayerWidget.update(c)}
     override fun onDeleted(c:Context,ids:IntArray){AdhanSchedule.schedule(c)}
+}
+
+class FivePrayerCompactWidget:AppWidgetProvider(){
+    override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){PrayerWidget.update(c)}
+    override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:Bundle){PrayerWidget.update(c)}
+}
+class FivePrayerFeaturedWidget:AppWidgetProvider(){
+    override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){PrayerWidget.update(c)}
+    override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:Bundle){PrayerWidget.update(c)}
 }
 
 /**
