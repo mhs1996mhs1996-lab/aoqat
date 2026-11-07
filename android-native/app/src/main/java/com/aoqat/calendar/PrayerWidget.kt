@@ -30,10 +30,18 @@ class PrayerWidget:AppWidgetProvider(){
             v.setChronometerCountDown(R.id.widget_counter,true)
             if(next==null)v.setTextViewText(R.id.widget_counter,"--:--")
             v.setTextViewText(R.id.widget_date,LocalDate.now().toString())
-            // Home-screen card always stays transparent and white, regardless of
-            // a saved legacy light/dark preference. Notification keeps its old dark style.
-            v.setInt(R.id.prayer_widget_root,"setBackgroundColor",if(notification) Color.rgb(8,35,47) else Color.TRANSPARENT)
-            listOf(R.id.widget_prayer,R.id.widget_counter,R.id.widget_date).forEach{v.setTextColor(it,Color.WHITE)}
+            // The persistent notification keeps its original appearance and is
+            // not affected by the user's independent home-screen widget styling.
+            if(notification){
+                v.setInt(R.id.prayer_widget_root,"setBackgroundColor",Color.rgb(8,35,47))
+                listOf(R.id.widget_prayer,R.id.widget_counter,R.id.widget_date).forEach{v.setTextColor(it,Color.WHITE)}
+            }else{
+                WidgetAppearance.decorate(c,v,R.id.prayer_widget_root,mapOf(
+                    R.id.widget_prayer to ((if(next==null)"افتح التطبيق لتحميل المواقيت" else "${PrayerTimes.names[next.id]} بعد") to 23f),
+                    R.id.widget_date to (LocalDate.now().toString() to 15f)
+                ),"next")
+                WidgetAppearance.decorateCounter(c,v,R.id.widget_counter,"next",32f)
+            }
             v.setOnClickPendingIntent(R.id.prayer_widget_root,PendingIntent.getActivity(c,60500,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
@@ -47,6 +55,7 @@ class PrayerWidget:AppWidgetProvider(){
         }
     }
     override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){update(c);AdhanSchedule.schedule(c);Thread{IqamaNativeScheduler.refresh(c)}.start()}
+    override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:Bundle){PrayerWidget.update(c)}
     override fun onDeleted(c:Context,ids:IntArray){AdhanSchedule.schedule(c)}
 }
 
@@ -67,18 +76,19 @@ class FivePrayerWidget:AppWidgetProvider(){
             val items=listOf("fajr" to R.id.widget_times_fajr, "dhuhr" to R.id.widget_times_dhuhr,
                 "asr" to R.id.widget_times_asr, "maghrib" to R.id.widget_times_maghrib,
                 "isha" to R.id.widget_times_isha)
+            val labels=mutableMapOf<Int,Pair<String,Float>>(R.id.widget_times_header to ("مواقيت الصلاة اليوم" to 19f))
             items.forEach{(prayer,id)->
                 val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
-                v.setTextViewText(id,"${PrayerTimes.names[prayer]}     ${minutes?.let(::display) ?: "—"}")
+                labels[id]="${PrayerTimes.names[prayer]}     ${minutes?.let(::display) ?: "—"}" to 18f
             }
-            v.setTextViewText(R.id.widget_times_header,"مواقيت الصلاة اليوم")
-            v.setInt(R.id.widget_times_root,"setBackgroundColor",Color.TRANSPARENT)
+            WidgetAppearance.decorate(c,v,R.id.widget_times_root,labels,"times")
             v.setOnClickPendingIntent(R.id.widget_times_root,PendingIntent.getActivity(c,60530,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
         }
     }
     override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){PrayerWidget.update(c);AdhanSchedule.schedule(c)}
+    override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:Bundle){PrayerWidget.update(c)}
     override fun onDeleted(c:Context,ids:IntArray){AdhanSchedule.schedule(c)}
 }
 
@@ -88,55 +98,66 @@ class FivePrayerWidget:AppWidgetProvider(){
  */
 class IqamaCountdownWidget:AppWidgetProvider(){
     companion object{
+        /**
+         * Independently calculate the two native phases from saved prayer times.
+         * A launcher widget must not depend on an iqama notification appearing;
+         * that notification can be blocked by the device or user.
+         */
         fun views(c:Context):RemoteViews{
             val v=RemoteViews(c.packageName,R.layout.prayer_iqama_widget)
-            v.setInt(R.id.widget_iqama_root,"setBackgroundColor",Color.TRANSPARENT)
             val now=System.currentTimeMillis()
-            var caption="الإقامة غير مفعّلة"
-            var prayer=""
-            var deadline:Long?=null
-            var countDown=true
-            if(IqamaNativeScheduler.enabled(c)){
-                val prefs=c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE)
-                val activeId=prefs.getString("prayerId","") ?: ""
-                val prayerAt=prefs.getLong("prayerAt",0L)
-                val before=if(activeId in PrayerTimes.ids)IqamaNativeScheduler.durations(c,activeId).beforeMs else 0L
-                val end=if(activeId in PrayerTimes.ids)IqamaNativeScheduler.durations(c,activeId).totalMs else 0L
-                if(prefs.getBoolean("active",false) && prayerAt>0L && now in prayerAt until (prayerAt+end)){
-                    prayer=PrayerTimes.names[activeId] ?: ""
-                    if(now<prayerAt+before){
-                        caption="باقي على الإقامة"
-                        deadline=prayerAt+before
-                    }else{
-                        caption="مضى على الإقامة"
-                        deadline=prayerAt+before
-                        countDown=false
-                    }
-                }else{
-                    val upcoming=PrayerTimes.events(c).firstOrNull{it.at>now}
-                    if(upcoming!=null){
-                        caption="الإقامة القادمة"
-                        prayer=PrayerTimes.names[upcoming.id] ?: ""
-                        deadline=upcoming.at+IqamaNativeScheduler.durations(c,upcoming.id).beforeMs
-                    }else caption="لا توجد مواقيت محفوظة"
+            val active=if(IqamaNativeScheduler.enabled(c)){
+                PrayerTimes.events(c,LocalDate.now().minusDays(1)).lastOrNull{event->
+                    val d=IqamaNativeScheduler.durations(c,event.id)
+                    !FridaySchedule.suppress(c,event.id,event.at) &&
+                        now>=event.at && now<event.at+d.totalMs
                 }
+            }else null
+            val next=if(active==null)PrayerTimes.events(c).firstOrNull{it.at>now} else null
+            val prayerName=PrayerTimes.names[active?.id ?: next?.id] ?: ""
+            val caption=when {
+                !IqamaNativeScheduler.enabled(c) -> "إعداد الإقامة متوقف"
+                active==null && next!=null -> "تبدأ العدادات عند الأذان القادم"
+                active==null -> "لا توجد مواقيت محفوظة"
+                else -> "الإقامة — ${PrayerTimes.names[active.id]}"
             }
-            v.setTextViewText(R.id.widget_iqama_title,caption)
-            v.setTextViewText(R.id.widget_iqama_prayer,prayer)
-            if(deadline!=null){
-                v.setChronometer(R.id.widget_iqama_counter,
-                    SystemClock.elapsedRealtime()+(deadline-now),"%s",true)
-                v.setChronometerCountDown(R.id.widget_iqama_counter,countDown)
+            val titles=mapOf(
+                R.id.widget_iqama_prayer to (prayerName to 19f),
+                R.id.widget_iqama_before_title to ("باقي على الإقامة" to 19f),
+                R.id.widget_iqama_elapsed_title to ("مضى على الإقامة" to 19f),
+                R.id.widget_iqama_state to (caption to 13f)
+            )
+            WidgetAppearance.decorate(c,v,R.id.widget_iqama_root,titles,"iqama")
+            val beforeId=R.id.widget_iqama_before_counter
+            val elapsedId=R.id.widget_iqama_elapsed_counter
+            fun stopped(id:Int) {
+                v.setChronometer(id,SystemClock.elapsedRealtime(),"%s",false)
+                v.setTextViewText(id,"00:00")
+            }
+            if(active!=null){
+                val threshold=active.at+IqamaNativeScheduler.durations(c,active.id).beforeMs
+                if(now<threshold){
+                    v.setChronometer(beforeId,SystemClock.elapsedRealtime()+(threshold-now),"%s",true)
+                    v.setChronometerCountDown(beforeId,true)
+                    stopped(elapsedId)
+                }else{
+                    stopped(beforeId)
+                    v.setChronometer(elapsedId,SystemClock.elapsedRealtime()-(now-threshold),"%s",true)
+                    v.setChronometerCountDown(elapsedId,false)
+                }
             }else{
-                v.setChronometer(R.id.widget_iqama_counter,SystemClock.elapsedRealtime(),"%s",false)
-                v.setTextViewText(R.id.widget_iqama_counter,"--:--")
+                stopped(beforeId)
+                stopped(elapsedId)
             }
+            WidgetAppearance.decorateCounter(c,v,beforeId,"iqama",29f)
+            WidgetAppearance.decorateCounter(c,v,elapsedId,"iqama",29f)
             v.setOnClickPendingIntent(R.id.widget_iqama_root,PendingIntent.getActivity(c,60531,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
         }
     }
     override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){PrayerWidget.update(c);AdhanSchedule.schedule(c)}
+    override fun onAppWidgetOptionsChanged(c:Context,m:AppWidgetManager,id:Int,options:Bundle){PrayerWidget.update(c)}
     override fun onDeleted(c:Context,ids:IntArray){AdhanSchedule.schedule(c)}
 }
 
