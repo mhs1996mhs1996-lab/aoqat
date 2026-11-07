@@ -3,7 +3,7 @@
   if(window.AoqatWidgetAppearance)return;
   const KEY="aoqatWidgetAppearanceV1";
   const IDS=["next","times","iqama","combined"];
-  const NAMES={next:"الصلاة القادمة",times:"مواقيت الصلاة مع القادمة",iqama:"باقي ومضى على الإقامة",combined:"الصلاة القادمة والإقامة"};
+  const NAMES={next:"الصلاة القادمة",times:"مواقيت الصلاة مع الصلاة القادمة",iqama:"باقي ومضى على الإقامة",combined:"الصلاة القادمة والإقامة"};
   const BG={transparent:["شفاف تماماً","transparent"],mist:["ضبابي هادئ","rgba(37,78,100,.50)"],blue:["أزرق هادئ","rgba(17,80,109,.83)"],dark:["داكن مميز","rgba(12,37,53,.88)"],cream:["عاجي نصف شفاف","rgba(239,230,213,.87)"]};
   const COLORS={white:["أبيض","#ffffff"],ivory:["عاجي","#fff6d6"],gold:["ذهبي","#ffdb80"],navy:["كحلي","#123143"],black:["فحمي","#1c2327"]};
   const FONTS={sans:["واضح حديث","Tahoma,Arial,sans-serif"],serif:["نسخي كلاسيكي","serif"],condensed:["مختصر","Arial Narrow,Tahoma,sans-serif"],medium:["عريض حديث","Arial,Tahoma,sans-serif"]};
