@@ -28,6 +28,7 @@ object WidgetAppearance {
         .put("color", "white")
         .put("font", "sans")
         .put("scale", 105)
+        .put("layout", "classic")
 
     private fun preferences(c: Context) = c.getSharedPreferences("aoqat_widget_appearance_v1", Context.MODE_PRIVATE)
     fun all(c: Context): JSONObject {
@@ -48,6 +49,7 @@ object WidgetAppearance {
         if (color in colors) o.put("color", color)
         if (font in fonts) o.put("font", font)
         if (input.has("scale")) o.put("scale", input.optInt("scale", 105).coerceIn(75, 145))
+        if (id == "times" && input.optString("layout") in setOf("classic", "grid", "featured")) o.put("layout", input.optString("layout"))
         return o
     }
     @Synchronized fun configure(c: Context, json: String): Boolean {
