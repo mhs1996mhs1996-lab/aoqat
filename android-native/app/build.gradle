@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 117 // Smaller widgets and selectable daily prayer-time layout; alerts unchanged
-        versionName '1.82'
+        versionCode 118 // Smaller widgets and selectable daily prayer-time layout; alerts unchanged
+        versionName '1.83'
     }
 
     compileOptions {
