@@ -2,12 +2,12 @@
   "use strict";
   if(window.AoqatWidgetAppearance)return;
   const KEY="aoqatWidgetAppearanceV1";
-  const IDS=["next","times","iqama"];
-  const NAMES={next:"الصلاة القادمة",times:"مواقيت الصلاة الخمسة",iqama:"باقي ومضى على الإقامة"};
+  const IDS=["next","times","iqama","combined"];
+  const NAMES={next:"الصلاة القادمة",times:"مواقيت الصلاة مع القادمة",iqama:"باقي ومضى على الإقامة",combined:"الصلاة القادمة والإقامة"};
   const BG={transparent:["شفاف تماماً","transparent"],mist:["ضبابي هادئ","rgba(37,78,100,.50)"],blue:["أزرق هادئ","rgba(17,80,109,.83)"],dark:["داكن مميز","rgba(12,37,53,.88)"],cream:["عاجي نصف شفاف","rgba(239,230,213,.87)"]};
   const COLORS={white:["أبيض","#ffffff"],ivory:["عاجي","#fff6d6"],gold:["ذهبي","#ffdb80"],navy:["كحلي","#123143"],black:["فحمي","#1c2327"]};
   const FONTS={sans:["واضح حديث","Tahoma,Arial,sans-serif"],serif:["نسخي كلاسيكي","serif"],condensed:["مختصر","Arial Narrow,Tahoma,sans-serif"],medium:["عريض حديث","Arial,Tahoma,sans-serif"]};
-  const defaults=id=>({background:id==="times"?"mist":"transparent",color:"white",font:"sans",scale:105,layout:id==="times"?"grid":"classic"});
+  const defaults=id=>({background:id==="times"||id==="combined"?"mist":"transparent",color:"white",font:"sans",scale:105,layout:"classic"});
   const LAYOUTS={classic:["القائمة الأصلية"],grid:["صفّان مدمجان (3 + 3)"],featured:["بطاقة مميزة بإطارات ذهبية"]};
   const clean=(id,from)=>{
     const a=defaults(id),v=(from&&typeof from==="object")?from:{};
@@ -40,7 +40,7 @@
     const sheet=document.createElement("style");sheet.id="aoqatWidgetAppearanceCss";
     sheet.textContent=`
       #aoqatWidgetAppearance{display:grid;gap:12px;direction:rtl;font-family:Tahoma,Arial,sans-serif;color:#203b42}
-      #aoqatWidgetAppearance .wa-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+      #aoqatWidgetAppearance .wa-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
       #aoqatWidgetAppearance .wa-tabs button{border:1px solid #b9d4d7;border-radius:11px;padding:9px 4px;background:#f2f9f7;color:#1d4451;font-size:13px;font-weight:750}
       #aoqatWidgetAppearance .wa-tabs button[aria-pressed=true]{background:#256e76;color:white}
       #aoqatWidgetAppearance .wa-preview{border-radius:20px;min-height:140px;display:grid;place-content:center;text-align:center;gap:7px;padding:16px;box-shadow:inset 0 0 0 1px #a7c5cc6b,0 5px 15px #10242f24}
@@ -51,6 +51,9 @@
       #aoqatWidgetAppearance .wa-line.wa-stacked{flex-direction:column;gap:0;text-align:center}
       #aoqatWidgetAppearance .wa-preview:has(.wa-line){display:flex;flex-direction:column;justify-content:center;min-height:90px}
 
+      #aoqatWidgetAppearance .wa-times-rows{display:grid;gap:2px;direction:rtl;width:100%;text-align:right}
+      #aoqatWidgetAppearance .wa-times-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff42;padding:2px 5px}
+      #aoqatWidgetAppearance .wa-times-row.is-next{background:#467d6e88;border-radius:7px}
       #aoqatWidgetAppearance .wa-times-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;direction:rtl;width:100%;text-align:center}
       #aoqatWidgetAppearance .wa-times-cell{min-width:0;white-space:pre-line;line-height:1.3;font-weight:800;padding:4px 1px}
       #aoqatWidgetAppearance .wa-times-featured .wa-times-cell{border:1px solid #e5c78d80;border-radius:9px;background:#283f5870}
@@ -73,7 +76,8 @@
     const feedback=document.createElement("p");feedback.className="wa-note";feedback.setAttribute("role","status");feedback.textContent="";
     const descriptions={
       next:["الصلاة القادمة","الظهر بعد 01:20:15","مواقيت الحويجة"],
-      times:["مواقيت الصلاة اليوم","الفجر 5:16 ص | الظهر 11:53 ص","العصر 2:49 م | المغرب 5:10 م | العشاء 6:30 م"],
+      times:["مواقيت الصلاة اليوم","الفجر 5:16 ص | الشروق 6:33 ص","الظهر 11:53 ص | العصر 2:49 م | المغرب 5:10 م | العشاء 6:30 م"],
+      combined:["باقي على صلاة الفجر 07:12:28","باقي على الإقامة 00:00","مضى على الإقامة 00:00"],
       iqama:["باقي على الإقامة: 04:12","مضى على الإقامة: 00:00","صلاة العصر"]
     };
     function refresh(){
@@ -88,7 +92,8 @@
       // Enlarging the font stacks them vertically to prevent overlap.
       const stack=cfg.scale>=125;
       const sample=active==="next"?[["باقي على صلاة المغرب","01:20:15"]]:
-        active==="iqama"?[["باقي على الإقامة","04:12"],["مضى على الإقامة","00:00"]]:null;
+        active==="iqama"?[["باقي على الإقامة","04:12"],["مضى على الإقامة","00:00"]]:
+        active==="combined"?[["باقي على صلاة الفجر","07:12:28"],["باقي على الإقامة","00:00"],["مضى على الإقامة","00:00"]]:null;
       preview.replaceChildren();
       if(sample){
         if(active==="iqama"){
@@ -104,12 +109,20 @@
           clock.style.fontSize=(cfg.scale/100*(stack?24:21))+"px";
           line.append(name,clock);preview.append(line);
         });
-      }else if(active==="times"&&cfg.layout!=="classic"){
-        const title=document.createElement("p");title.textContent="مواقيت الصلاة اليوم";title.style.fontWeight="800";title.style.fontSize=(cfg.scale/100*17)+"px";preview.append(title);
-        const grid=document.createElement("div");grid.className="wa-times-grid"+(cfg.layout==="featured"?" wa-times-featured":"");
-        [["الفجر","5:16 ص"],["الشروق","6:39 ص"],["الظهر","11:53 ص"],["العصر","2:49 م"],["المغرب","5:10 م"],["العشاء","6:30 م"]].forEach(([name,time])=>{
-          const cell=document.createElement("div");cell.className="wa-times-cell";cell.textContent=name+"\n"+time;cell.style.fontSize=(cfg.scale/100*(cfg.layout==="grid"?14:15))+"px";grid.append(cell);
-        });preview.append(grid);
+      }else if(active==="times"){
+        const count=document.createElement("div");count.className="wa-line";
+        const next=document.createElement("span");next.textContent="باقي على صلاة الفجر";
+        const timer=document.createElement("strong");timer.textContent="07:12:28";
+        count.append(next,timer);preview.append(count);
+        const header=document.createElement("p");header.textContent="مواقيت الصلاة اليوم";
+        header.style.fontWeight="800";preview.append(header);
+        const rows=document.createElement("div");rows.className="wa-times-rows";
+        [["الفجر","5:17 ص"],["الشروق","6:33 ص"],["الظهر","11:53 ص"],["العصر","2:49 م"],["المغرب","5:09 م"],["العشاء","6:29 م"]].forEach(([name,time])=>{
+          const line=document.createElement("div");line.className="wa-times-row"+(name==="الفجر"?" is-next":"");
+          const left=document.createElement("span");left.textContent=name;
+          const right=document.createElement("strong");right.textContent=time;
+          line.append(left,right);rows.append(line);
+        });preview.append(rows);
       }else{
         preview.replaceChildren(...descriptions[active].map((t,i)=>{
           const el=document.createElement("p");el.textContent=t;
@@ -125,7 +138,7 @@
         select.value=cfg[key];select.onchange=()=>{data[active][key]=select.value;feedback.textContent=save(data)?"تم حفظ الإعداد. تتحدث البطاقة على أندرويد.":"تعذر حفظ التعديل؛ أعد المحاولة.";refresh();};
         wrap.append(select);controls.append(wrap);
       }
-      if(active==="times")choice("layout","شكل مواقيت الصلاة",LAYOUTS,"layout");
+      // The original timetable is a permanent independent widget; the two 3+3 cards stay separate.
       choice("background","خلفية البطاقة",BG,"background");
       choice("color","لون الخط",COLORS,"color");
       choice("font","نوع الخط",FONTS,"font");
@@ -142,8 +155,8 @@
           line.querySelector("span").style.fontSize=(scaleNow/100*(stacked?19:16))+"px";
           line.querySelector("strong").style.fontSize=(scaleNow/100*(stacked?24:21))+"px";
         });
-        if(active==="times"&&cfg.layout!=="classic"){
-          preview.querySelectorAll(".wa-times-cell").forEach(cell=>{cell.style.fontSize=(scaleNow/100*(cfg.layout==="grid"?14:15))+"px";});
+        if(active==="times"){
+          preview.querySelectorAll(".wa-times-row").forEach(cell=>{cell.style.fontSize=(scaleNow/100*16)+"px";});
           preview.querySelectorAll("p").forEach(p=>{p.style.fontSize=(scaleNow/100*17)+"px";});
         }else preview.querySelectorAll("p").forEach((p,i)=>{p.style.fontSize=(scaleNow/100*(active==="iqama"?14:(i===1?22:17)))+"px";});
       };
