@@ -98,6 +98,12 @@
     const note=document.createElement("p");note.className="wa-note";
     note.textContent="لمساحة البطاقة نفسها، اضغط عليها مطولاً في شاشة الهاتف واسحب حوافها للتكبير أو التصغير. بعض المشغلات تقيّد الحد الأدنى. الخلفية الضبابية على أندرويد شفافية ملوّنة؛ معاينة الويب توضيحية.";
     const reset=document.createElement("button");reset.type="button";reset.className="wa-reset";reset.textContent="إرجاع هذا التصميم إلى الافتراضي";reset.onclick=()=>{data[active]=defaults(active);feedback.textContent=save(data)?"رجعت إعدادات هذه البطاقة.":"تعذر حفظ الإعداد.";refresh();};
+    if(window.AndroidNative?.pinWidget){
+      const pin=document.createElement("button");pin.type="button";pin.className="wa-reset";
+      pin.textContent="➕ إضافة البطاقة المحددة إلى شاشة الهاتف";
+      pin.onclick=()=>window.AndroidNative.pinWidget(active);
+      root.append(pin);
+    }
     root.append(title,tabs,preview,controls,note,reset,feedback);
     refresh();
     return root;
