@@ -76,6 +76,12 @@ object WidgetAppearance {
         "cream" -> R.drawable.aoqat_widget_cream
         else -> android.R.color.transparent
     }
+    fun decorateCounter(c: Context, views: RemoteViews, textId: Int, kind: String, baseSize: Float) {
+        val style=item(c,kind)
+        views.setTextColor(textId,paletteColor(style.optString("color","white")))
+        views.setTextViewTextSize(textId,TypedValue.COMPLEX_UNIT_SP,
+            (baseSize * (style.optInt("scale",105).coerceIn(75,145)/100f)).coerceIn(14f,53f))
+    }
     fun decorate(c: Context, views: RemoteViews, rootId: Int, labels: Map<Int, Pair<String, Float>>, kind: String) {
         val style = item(c, kind)
         val bg = style.optString("background", "transparent")
