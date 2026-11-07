@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 114 // Individually styled home widgets and exact iqama quiet recovery; preserve prior services
-        versionName '1.79'
+        versionCode 115 // Compact adaptive home countdown rows; preserve all 1.79 adhan, iqama and notification services
+        versionName '1.80'
     }
 
     compileOptions {
