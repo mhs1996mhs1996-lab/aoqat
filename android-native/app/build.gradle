@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 115 // Compact adaptive home countdown rows; preserve all 1.79 adhan, iqama and notification services
-        versionName '1.80'
+        versionCode 116 // Smaller widgets and selectable daily prayer-time layout; alerts unchanged
+        versionName '1.81'
     }
 
     compileOptions {
