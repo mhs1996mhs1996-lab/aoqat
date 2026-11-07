@@ -7,12 +7,14 @@
   const BG={transparent:["شفاف تماماً","transparent"],mist:["ضبابي هادئ","rgba(37,78,100,.50)"],blue:["أزرق هادئ","rgba(17,80,109,.83)"],dark:["داكن مميز","rgba(12,37,53,.88)"],cream:["عاجي نصف شفاف","rgba(239,230,213,.87)"]};
   const COLORS={white:["أبيض","#ffffff"],ivory:["عاجي","#fff6d6"],gold:["ذهبي","#ffdb80"],navy:["كحلي","#123143"],black:["فحمي","#1c2327"]};
   const FONTS={sans:["واضح حديث","Tahoma,Arial,sans-serif"],serif:["نسخي كلاسيكي","serif"],condensed:["مختصر","Arial Narrow,Tahoma,sans-serif"],medium:["عريض حديث","Arial,Tahoma,sans-serif"]};
-  const defaults=id=>({background:id==="times"?"mist":"transparent",color:"white",font:"sans",scale:105});
+  const defaults=id=>({background:id==="times"?"mist":"transparent",color:"white",font:"sans",scale:105,layout:"classic"});
+  const LAYOUTS={classic:["القائمة الأصلية"],grid:["صفّان مدمجان (3 + 3)"],featured:["بطاقة مميزة بإطارات ذهبية"]};
   const clean=(id,from)=>{
     const a=defaults(id),v=(from&&typeof from==="object")?from:{};
     if(BG[v.background])a.background=v.background;
     if(COLORS[v.color])a.color=v.color;
     if(FONTS[v.font])a.font=v.font;
+    if(id==="times"&&LAYOUTS[v.layout])a.layout=v.layout;
     if(Number.isFinite(Number(v.scale)))a.scale=Math.max(75,Math.min(145,Math.round(Number(v.scale)/5)*5));
     return a;
   };
@@ -49,6 +51,9 @@
       #aoqatWidgetAppearance .wa-line.wa-stacked{flex-direction:column;gap:0;text-align:center}
       #aoqatWidgetAppearance .wa-preview:has(.wa-line){display:flex;flex-direction:column;justify-content:center;min-height:90px}
 
+      #aoqatWidgetAppearance .wa-times-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;direction:rtl;width:100%;text-align:center}
+      #aoqatWidgetAppearance .wa-times-cell{min-width:0;white-space:pre-line;line-height:1.3;font-weight:800;padding:4px 1px}
+      #aoqatWidgetAppearance .wa-times-featured .wa-times-cell{border:1px solid #e5c78d80;border-radius:9px;background:#283f5870}
       #aoqatWidgetAppearance .wa-control{display:grid;gap:5px;font-size:15px;font-weight:750}
       #aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=range]{width:100%;min-width:0}
       #aoqatWidgetAppearance select{border:1px solid #bdd2d1;border-radius:9px;padding:9px;background:#fff;color:#233d44;font-size:15px}
@@ -99,6 +104,12 @@
           clock.style.fontSize=(cfg.scale/100*(stack?24:21))+"px";
           line.append(name,clock);preview.append(line);
         });
+      }else if(active==="times"&&cfg.layout!=="classic"){
+        const title=document.createElement("p");title.textContent="مواقيت الصلاة اليوم";title.style.fontWeight="800";title.style.fontSize=(cfg.scale/100*17)+"px";preview.append(title);
+        const grid=document.createElement("div");grid.className="wa-times-grid"+(cfg.layout==="featured"?" wa-times-featured":"");
+        [["الفجر","5:16 ص"],["الشروق","6:39 ص"],["الظهر","11:53 ص"],["العصر","2:49 م"],["المغرب","5:10 م"],["العشاء","6:30 م"]].forEach(([name,time])=>{
+          const cell=document.createElement("div");cell.className="wa-times-cell";cell.textContent=name+"\n"+time;cell.style.fontSize=(cfg.scale/100*(cfg.layout==="grid"?14:15))+"px";grid.append(cell);
+        });preview.append(grid);
       }else{
         preview.replaceChildren(...descriptions[active].map((t,i)=>{
           const el=document.createElement("p");el.textContent=t;
@@ -114,6 +125,7 @@
         select.value=cfg[key];select.onchange=()=>{data[active][key]=select.value;feedback.textContent=save(data)?"تم حفظ الإعداد. تتحدث البطاقة على أندرويد.":"تعذر حفظ التعديل؛ أعد المحاولة.";refresh();};
         wrap.append(select);controls.append(wrap);
       }
+      if(active==="times")choice("layout","شكل مواقيت الصلاة",LAYOUTS,"layout");
       choice("background","خلفية البطاقة",BG,"background");
       choice("color","لون الخط",COLORS,"color");
       choice("font","نوع الخط",FONTS,"font");
@@ -130,7 +142,10 @@
           line.querySelector("span").style.fontSize=(scaleNow/100*(stacked?19:16))+"px";
           line.querySelector("strong").style.fontSize=(scaleNow/100*(stacked?24:21))+"px";
         });
-        preview.querySelectorAll("p").forEach((p,i)=>{p.style.fontSize=(scaleNow/100*(active==="iqama"?14:(i===1?22:17)))+"px";});
+        if(active==="times"&&cfg.layout!=="classic"){
+          preview.querySelectorAll(".wa-times-cell").forEach(cell=>{cell.style.fontSize=(scaleNow/100*(cfg.layout==="grid"?14:15))+"px";});
+          preview.querySelectorAll("p").forEach(p=>{p.style.fontSize=(scaleNow/100*17)+"px";});
+        }else preview.querySelectorAll("p").forEach((p,i)=>{p.style.fontSize=(scaleNow/100*(active==="iqama"?14:(i===1?22:17)))+"px";});
       };
       slider.onchange=()=>{feedback.textContent=save(data)?"تم حفظ حجم الكتابة.":"تعذر حفظ حجم الكتابة.";};
       scale.append(slider,value);controls.append(scale);
