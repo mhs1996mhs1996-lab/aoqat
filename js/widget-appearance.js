@@ -43,6 +43,12 @@
       #aoqatWidgetAppearance .wa-tabs button[aria-pressed=true]{background:#256e76;color:white}
       #aoqatWidgetAppearance .wa-preview{border-radius:20px;min-height:140px;display:grid;place-content:center;text-align:center;gap:7px;padding:16px;box-shadow:inset 0 0 0 1px #a7c5cc6b,0 5px 15px #10242f24}
       #aoqatWidgetAppearance .wa-preview>*{margin:0;line-height:1.45;text-shadow:0 2px 4px #0009}
+      #aoqatWidgetAppearance .wa-line{display:flex;direction:rtl;align-items:center;justify-content:space-between;gap:14px;min-width:0;font-weight:800}
+      #aoqatWidgetAppearance .wa-line span{min-width:0;text-align:right}
+      #aoqatWidgetAppearance .wa-line strong{font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums}
+      #aoqatWidgetAppearance .wa-line.wa-stacked{flex-direction:column;gap:0;text-align:center}
+      #aoqatWidgetAppearance .wa-preview:has(.wa-line){display:flex;flex-direction:column;justify-content:center;min-height:90px}
+
       #aoqatWidgetAppearance .wa-control{display:grid;gap:5px;font-size:15px;font-weight:750}
       #aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=range]{width:100%;min-width:0}
       #aoqatWidgetAppearance select{border:1px solid #bdd2d1;border-radius:9px;padding:9px;background:#fff;color:#233d44;font-size:15px}
@@ -73,7 +79,33 @@
       preview.style.color=text;
       preview.style.fontFamily=font;
       preview.style.backdropFilter=cfg.background==="mist"?"blur(10px)":"none";
-      preview.replaceChildren(...descriptions[active].map((t,i)=>{const el=document.createElement("p");el.textContent=t;el.style.fontSize=(cfg.scale/100*(i===1?22:17))+"px";el.style.fontWeight="800";return el;}));
+      // Compact preview matches the actual launcher widget: label facing timer.
+      // Enlarging the font stacks them vertically to prevent overlap.
+      const stack=cfg.scale>=125;
+      const sample=active==="next"?[["باقي على صلاة المغرب","01:20:15"]]:
+        active==="iqama"?[["باقي على الإقامة","04:12"],["مضى على الإقامة","00:00"]]:null;
+      preview.replaceChildren();
+      if(sample){
+        if(active==="iqama"){
+          const prayer=document.createElement("p");prayer.textContent="المغرب";
+          prayer.style.cssText="font-size:14px;font-weight:800;margin:0";
+          preview.append(prayer);
+        }
+        sample.forEach(([label,time])=>{
+          const line=document.createElement("div");line.className="wa-line"+(stack?" wa-stacked":"");
+          const name=document.createElement("span");name.textContent=label;
+          const clock=document.createElement("strong");clock.textContent=time;
+          name.style.fontSize=(cfg.scale/100*(stack?19:16))+"px";
+          clock.style.fontSize=(cfg.scale/100*(stack?24:21))+"px";
+          line.append(name,clock);preview.append(line);
+        });
+      }else{
+        preview.replaceChildren(...descriptions[active].map((t,i)=>{
+          const el=document.createElement("p");el.textContent=t;
+          el.style.fontSize=(cfg.scale/100*(i===1?22:17))+"px";
+          el.style.fontWeight="800";return el;
+        }));
+      }
       controls.replaceChildren();
       function choice(name,label,options,key){
         const wrap=document.createElement("label");wrap.className="wa-control";wrap.textContent=label;
@@ -88,7 +120,7 @@
       const scale=document.createElement("label");scale.className="wa-control";scale.textContent="حجم الكتابة داخل البطاقة";
       const slider=document.createElement("input");slider.type="range";slider.min="75";slider.max="145";slider.step="5";slider.value=String(cfg.scale);
       const value=document.createElement("span");value.textContent=cfg.scale+"٪";
-      slider.oninput=()=>{value.textContent=slider.value+"٪";data[active].scale=Number(slider.value);preview.style.fontSize=slider.value+"%";preview.querySelectorAll("p").forEach((p,i)=>p.style.fontSize=(Number(slider.value)/100*(i===1?22:17))+"px");};
+      slider.oninput=()=>{value.textContent=slider.value+"٪";data[active].scale=Number(slider.value);refresh();};
       slider.onchange=()=>{feedback.textContent=save(data)?"تم حفظ حجم الكتابة.":"تعذر حفظ حجم الكتابة.";};
       scale.append(slider,value);controls.append(scale);
     }
