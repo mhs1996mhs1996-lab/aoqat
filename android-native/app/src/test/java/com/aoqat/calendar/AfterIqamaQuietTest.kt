@@ -110,4 +110,46 @@ class AfterIqamaQuietTest {
         assertEquals(AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
     }
 
+    @Test @Config(sdk = [34]) fun restoresNormalAfterAsrEvenIfIqamaNotificationWasDismissed() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        val audio=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        audio.ringerMode=AudioManager.RINGER_MODE_SILENT
+        val prayerAt=System.currentTimeMillis()-21*60000L
+        c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE).edit()
+            .putLong("prayerAt",prayerAt).putBoolean("active",false).commit()
+        val previous=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        previous.edit().putBoolean("changed",true)
+            .putInt("previous",AudioManager.RINGER_MODE_NORMAL)
+            .putInt("previousFilter",NotificationManager.INTERRUPTION_FILTER_NONE)
+            .putBoolean("dndApplied",false)
+            .putLong("end",System.currentTimeMillis()-1000)
+            .putLong("iqamaEnd",System.currentTimeMillis()-1000).commit()
+        // The foreground notification can be dismissed before the final phase
+        // alarm. This must never strand the ringer after the elapsed timer.
+        AfterIqamaQuiet.onCountdownComplete(c,prayerAt)
+        assertEquals(AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
+        assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
+        assertFalse(previous.getBoolean("changed",false))
+    }
+
+    @Test @Config(sdk = [34]) fun staleIqamaExpiryNeverStopsAnotherActiveQuietPeriod() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        val current=System.currentTimeMillis()
+        c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE).edit()
+            .putLong("prayerAt",current).putBoolean("active",true).commit()
+        val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        saved.edit().putBoolean("changed",true)
+            .putInt("previous",AudioManager.RINGER_MODE_NORMAL)
+            .putLong("end",current+600000L).putLong("iqamaEnd",current+600000L).commit()
+        AfterIqamaQuiet.onCountdownComplete(c,current-3600000L)
+        assertTrue(saved.getBoolean("changed",false))
+    }
+
 }
