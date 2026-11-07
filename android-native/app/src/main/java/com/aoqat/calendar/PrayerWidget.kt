@@ -52,6 +52,7 @@ class PrayerWidget:AppWidgetProvider(){
             ids(c,PrayerWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,views(c))}
             ids(c,FivePrayerWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,FivePrayerWidget.views(c))}
             ids(c,IqamaCountdownWidget::class.java).takeIf{it.isNotEmpty()}?.let{manager.updateAppWidget(it,IqamaCountdownWidget.views(c))}
+            WidgetRefresh.schedule(c)
         }
     }
     override fun onUpdate(c:Context,m:AppWidgetManager,ids:IntArray){update(c);AdhanSchedule.schedule(c);Thread{IqamaNativeScheduler.refresh(c)}.start()}
