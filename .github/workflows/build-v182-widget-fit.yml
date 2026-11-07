@@ -54,7 +54,15 @@ jobs:
           assert 'R.id.widget_times_card' in k and 'R.id.widget_iqama_card' in k
           assert 'heightDp in 1..169' in k
           assert "versionName '1.82'" in Path('android-native/app/build.gradle').read_text()
-          print('PASS: six times in two rows, three styles, user scaling, no audio modifications')
+          for provider in ['FivePrayerCompactWidget','FivePrayerFeaturedWidget']:
+              assert 'class '+provider+':' in k
+              assert provider in (p/'AndroidManifest.xml').read_text()
+          for name in ['prayer_five_widget_grid','prayer_five_widget_featured']:
+              xml=ET.parse(p/f'res/layout/{name}.xml')
+              ids=[n.attrib.get('{http://schemas.android.com/apk/res/android}id','') for n in xml.iter()]
+              assert len([x for x in ids if x.startswith('@+id/widget_times_') and not x.endswith('_header')])==5,name
+              assert not any(x.endswith('_sunrise') for x in ids),name
+          print('PASS: original + independently installed 3+2 and featured five-prayer widgets')
           PY
       - name: Verify XML layouts and resize targets
         run: |
