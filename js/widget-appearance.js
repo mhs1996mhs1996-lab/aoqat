@@ -7,7 +7,7 @@
   const BG={transparent:["شفاف تماماً","transparent"],mist:["ضبابي هادئ","rgba(37,78,100,.50)"],blue:["أزرق هادئ","rgba(17,80,109,.83)"],dark:["داكن مميز","rgba(12,37,53,.88)"],cream:["عاجي نصف شفاف","rgba(239,230,213,.87)"]};
   const COLORS={white:["أبيض","#ffffff"],ivory:["عاجي","#fff6d6"],gold:["ذهبي","#ffdb80"],navy:["كحلي","#123143"],black:["فحمي","#1c2327"]};
   const FONTS={sans:["واضح حديث","Tahoma,Arial,sans-serif"],serif:["نسخي كلاسيكي","serif"],condensed:["مختصر","Arial Narrow,Tahoma,sans-serif"],medium:["عريض حديث","Arial,Tahoma,sans-serif"]};
-  const defaults=id=>({background:id==="times"?"mist":"transparent",color:"white",font:"sans",scale:105,layout:"classic"});
+  const defaults=id=>({background:id==="times"?"mist":"transparent",color:"white",font:"sans",scale:105,layout:id==="times"?"grid":"classic"});
   const LAYOUTS={classic:["القائمة الأصلية"],grid:["صفّان مدمجان (3 + 3)"],featured:["بطاقة مميزة بإطارات ذهبية"]};
   const clean=(id,from)=>{
     const a=defaults(id),v=(from&&typeof from==="object")?from:{};
