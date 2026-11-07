@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v189-fit-cards-20261107";
+const CACHE_NAME = "aoqat-pwa-v190-side-by-side-20261108";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -108,7 +108,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
-  "/js/widget-appearance.js?v=4-original-combined",
+  "/js/widget-appearance.js?v=5-side-by-side",
   "/js/web-menu-order.js?v=39-widget-style-20261107",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
