@@ -106,7 +106,7 @@ class FivePrayerWidget:AppWidgetProvider(){
                 val all=listOf("fajr" to R.id.widget_times_fajr, "sunrise" to R.id.widget_times_sunrise,
                     "dhuhr" to R.id.widget_times_dhuhr, "asr" to R.id.widget_times_asr,
                     "maghrib" to R.id.widget_times_maghrib, "isha" to R.id.widget_times_isha)
-                for ((prayer,id) in all.filter { layout !in setOf("five_grid","five_featured") || it.first != "sunrise" }) {
+                for ((prayer,id) in all) {
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                     val name=if(prayer=="sunrise") "الشروق" else PrayerTimes.names[prayer] ?: prayer
                     labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)14f else 15f
@@ -161,17 +161,19 @@ class IqamaCountdownWidget:AppWidgetProvider(){
             val prayerName=PrayerTimes.names[active?.id ?: next?.id] ?: ""
             val caption=when {
                 !IqamaNativeScheduler.enabled(c) -> "إعداد الإقامة متوقف"
-                active==null && next!=null -> "تبدأ العدادات عند الأذان القادم"
+                active==null && next!=null -> ""
                 active==null -> "لا توجد مواقيت محفوظة"
                 else -> "الإقامة — ${PrayerTimes.names[active.id]}"
             }
             val titles=mapOf(
-                R.id.widget_iqama_prayer to (prayerName to if(compact)15f else 19f),
-                R.id.widget_iqama_before_title to ("باقي على الإقامة" to if(compact)16f else 19f),
-                R.id.widget_iqama_elapsed_title to ("مضى على الإقامة" to if(compact)16f else 19f),
+                R.id.widget_iqama_prayer to (prayerName to if(compact)23f else 25f),
+                R.id.widget_iqama_before_title to ("باقي على الإقامة" to if(compact)17f else 19f),
+                R.id.widget_iqama_elapsed_title to ("مضى على الإقامة" to if(compact)17f else 19f),
                 R.id.widget_iqama_state to (caption to if(compact)11f else 13f)
             )
             WidgetAppearance.decorate(c,v,if(compact) R.id.widget_iqama_card else R.id.widget_iqama_root,titles,"iqama")
+            // Hide the explanatory footer in the home widget: the two counters are self-explanatory.
+            v.setViewVisibility(R.id.widget_iqama_state,android.view.View.GONE)
             val beforeId=R.id.widget_iqama_before_counter
             val elapsedId=R.id.widget_iqama_elapsed_counter
             fun stopped(id:Int) {
