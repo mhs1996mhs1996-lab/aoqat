@@ -816,6 +816,8 @@ class MainActivity : Activity() {
             val provider=when(kind){
                 "next"->PrayerWidget::class.java
                 "times"->FivePrayerWidget::class.java
+                "five_grid"->FivePrayerCompactWidget::class.java
+                "five_featured"->FivePrayerFeaturedWidget::class.java
                 "iqama"->IqamaCountdownWidget::class.java
                 else->return@runOnUiThread
             }
