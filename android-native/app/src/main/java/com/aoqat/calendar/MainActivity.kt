@@ -808,6 +808,22 @@ class MainActivity : Activity() {
         @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}
         @JavascriptInterface fun stopAdhan(){AdhanPlaybackService.stop(this@MainActivity)}
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
+        @JavascriptInterface fun readWidgetAppearance():String =
+            WidgetAppearance.all(this@MainActivity).toString()
+        @JavascriptInterface fun configureWidgetAppearance(json:String):Boolean =
+            WidgetAppearance.configure(this@MainActivity,json)
+        @JavascriptInterface fun pinWidget(kind:String){runOnUiThread{
+            val provider=when(kind){
+                "next"->PrayerWidget::class.java
+                "times"->FivePrayerWidget::class.java
+                "iqama"->IqamaCountdownWidget::class.java
+                else->return@runOnUiThread
+            }
+            val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity)
+            if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(
+                ComponentName(this@MainActivity,provider),null,null)
+            else Toast.makeText(this@MainActivity,"أضف البطاقة من قائمة الأدوات المصغّرة في شاشة الهاتف",Toast.LENGTH_LONG).show()
+        }}
         @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
         @JavascriptInterface fun readQuietModeStatus():String = AdhanPlaybackService.quietStatus(this@MainActivity).toString()
