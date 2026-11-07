@@ -21,7 +21,7 @@ const {spawn}=require('node:child_process');
    await page.locator('#aoqatWidgetAppearance select[aria-label="خلفية البطاقة"]').selectOption('blue');
    await page.locator('#aoqatWidgetAppearance select[aria-label="لون الخط"]').selectOption('gold');
    await page.locator('#aoqatWidgetAppearance select[aria-label="نوع الخط"]').selectOption('serif');
-   await page.locator('#aoqatWidgetAppearance input[type=range]').fill('130');
+   await page.locator('#aoqatWidgetAppearance input[type=range]').evaluate(el=>{el.value='130';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
    const settings=await page.evaluate(()=>window.AoqatWidgetAppearance.load());
    assert.equal(settings.times.background,'blue');
    assert.equal(settings.times.color,'gold');
