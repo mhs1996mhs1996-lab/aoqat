@@ -18,13 +18,13 @@ import org.json.JSONObject
  */
 object WidgetAppearance {
     private const val KEY = "appearance"
-    private val ids = setOf("next", "times", "iqama")
+    private val ids = setOf("next", "times", "iqama", "combined")
     private val backgrounds = setOf("transparent", "mist", "blue", "dark", "cream")
     private val colors = setOf("white", "ivory", "gold", "navy", "black")
     private val fonts = setOf("sans", "serif", "condensed", "medium")
 
     fun defaults(id: String): JSONObject = JSONObject()
-        .put("background", if (id == "times") "mist" else "transparent")
+        .put("background", if (id == "times" || id == "combined") "mist" else "transparent")
         .put("color", "white")
         .put("font", "sans")
         .put("scale", 105)
