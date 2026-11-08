@@ -137,7 +137,7 @@ jobs:
               for prayer in ['fajr','sunrise','dhuhr','asr','maghrib','isha']:
                   e=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_'+prayer)
                   assert e.attrib.get(ns+'lineSpacingExtra')=='-2dp'
-          assert 'availableWidthDp' in k
+          assert 'availableWidthDp' in Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt').read_text()
           print('PASS: centered padded headings, responsive countdown, compact six-time grid, native alert actions')
           meta=ET.parse(Path('android-native/app/src/main/res/xml/prayer_widget_info.xml')).getroot()
           assert meta.attrib[ns+'targetCellHeight']=='1'
