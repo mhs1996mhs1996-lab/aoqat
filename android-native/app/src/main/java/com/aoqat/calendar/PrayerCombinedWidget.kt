@@ -32,8 +32,8 @@ class PrayerCombinedWidget:AppWidgetProvider(){
             val afterIqama=boundary!=null && now>=boundary
             val iqamaText=if(afterIqama)"مضى على الإقامة" else "باقي على الإقامة"
             WidgetAppearance.decorate(c,v,R.id.widget_combined_card,mapOf(
-                R.id.widget_combined_next_label to (nextText to 14f),
-                R.id.widget_combined_iqama_title to (iqamaText to 14f)
+                R.id.widget_combined_next_label to (nextText to 12f),
+                R.id.widget_combined_iqama_title to (iqamaText to 12f)
             ),"combined")
             v.setChronometer(R.id.widget_combined_next_counter,
                 SystemClock.elapsedRealtime()+((next?.at?:now)-now),"%s",next!=null)
@@ -50,7 +50,7 @@ class PrayerCombinedWidget:AppWidgetProvider(){
                 v.setChronometer(iqamaCounter,SystemClock.elapsedRealtime()-(now-boundary),"%s",true)
                 v.setChronometerCountDown(iqamaCounter,false)
             }
-            WidgetAppearance.decorateCounter(c,v,R.id.widget_combined_next_counter,"combined",15f)
+            WidgetAppearance.decorateCounter(c,v,R.id.widget_combined_next_counter,"combined",13f)
             WidgetAppearance.decorateCounter(c,v,iqamaCounter,"combined",15f)
             v.setOnClickPendingIntent(R.id.widget_combined_root,PendingIntent.getActivity(c,60540,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
