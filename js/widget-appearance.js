@@ -1,199 +1,235 @@
 (function(){
-  "use strict";
-  if(window.AoqatWidgetAppearance)return;
-  const KEY="aoqatWidgetAppearanceV1";
-  const IDS=["next","times","iqama","combined"];
-  const NAMES={next:"الصلاة القادمة",times:"مواقيت الصلاة مع الصلاة القادمة",iqama:"باقي ومضى على الإقامة",combined:"الصلاة القادمة والإقامة"};
-  const BG={transparent:["شفاف تماماً","transparent"],mist:["ضبابي هادئ","rgba(37,78,100,.50)"],blue:["أزرق هادئ","rgba(17,80,109,.83)"],dark:["داكن مميز","rgba(12,37,53,.88)"],cream:["عاجي نصف شفاف","rgba(239,230,213,.87)"]};
-  const COLORS={white:["أبيض","#ffffff"],ivory:["عاجي","#fff6d6"],gold:["ذهبي","#ffdb80"],navy:["كحلي","#123143"],black:["فحمي","#1c2327"]};
-  const FONTS={sans:["واضح حديث","Tahoma,Arial,sans-serif"],serif:["نسخي كلاسيكي","serif"],condensed:["مختصر","Arial Narrow,Tahoma,sans-serif"],medium:["عريض حديث","Arial,Tahoma,sans-serif"]};
-  const defaults=id=>({background:id==="times"||id==="combined"?"mist":"transparent",color:"white",font:"sans",scale:105,layout:"classic"});
-  const LAYOUTS={classic:["القائمة الأصلية"],grid:["صفّان مدمجان (3 + 3)"],featured:["بطاقة مميزة بإطارات ذهبية"]};
-  const clean=(id,from)=>{
-    const a=defaults(id),v=(from&&typeof from==="object")?from:{};
-    if(BG[v.background])a.background=v.background;
-    if(COLORS[v.color])a.color=v.color;
-    if(FONTS[v.font])a.font=v.font;
-    if(id==="times"&&LAYOUTS[v.layout])a.layout=v.layout;
-    if(Number.isFinite(Number(v.scale)))a.scale=Math.max(75,Math.min(145,Math.round(Number(v.scale)/5)*5));
-    return a;
-  };
-  function load(){
-    let saved={};
-    try{
-      const raw=window.AndroidNative?.readWidgetAppearance?.()||localStorage.getItem(KEY)||"{}";
-      saved=JSON.parse(raw)||{};
-    }catch(_){}
-    return Object.fromEntries(IDS.map(id=>[id,clean(id,saved[id])]));
+"use strict";
+if(window.AoqatWidgetAppearance)return;
+const KEY="aoqatWidgetAppearanceV1";
+const IDS=["next","times","five_grid","five_featured","iqama","combined"];
+const NAMES={
+ next:"الصلاة القادمة",
+ times:"مواقيت الصلاة مع الصلاة القادمة",
+ five_grid:"المواقيت الستة 3 + 3",
+ five_featured:"المواقيت الستة بإطارات مميزة",
+ iqama:"باقي ومضى على الإقامة",
+ combined:"الصلاة القادمة والإقامة"
+};
+const BG={
+ transparent:["شفاف","transparent"],
+ mist:["ضبابي هادئ","rgba(37,78,100,.50)"],
+ blue:["أزرق هادئ","rgba(17,80,109,.83)"],
+ dark:["داكن مميز","rgba(12,37,53,.88)"],
+ cream:["عاجي شفاف","rgba(239,230,213,.87)"]
+};
+const FONTS={
+ sans:["واضح حديث","Tahoma,Arial,sans-serif"],
+ serif:["نسخي كلاسيكي","serif"],
+ condensed:["خط مختصر","Arial Narrow,Tahoma,sans-serif"],
+ medium:["حديث متوسط","Arial,Tahoma,sans-serif"]
+};
+const WEIGHTS={normal:"عادي",bold:"عريض"};
+const COLOR_NAMES={white:"#ffffff",ivory:"#fff6d6",gold:"#ffdb80",navy:"#123143",black:"#1c2327",emerald:"#237f60"};
+const GROUP_DEFAULT={font:"sans",size:105,weight:"bold",color:"#ffffff"};
+const group=(item,legacy)=>({
+ font:FONTS[item?.font]?item.font:legacy.font,
+ size:Math.max(65,Math.min(170,Number(item?.size)||legacy.size)),
+ weight:WEIGHTS[item?.weight]?item.weight:legacy.weight,
+ color:/^#[0-9a-fA-F]{6}$/.test(item?.color||"")?item.color:(COLOR_NAMES[item?.color]||legacy.color)
+});
+const defaults=id=>({
+ background:id==="times"||id==="combined"?"mist":"transparent",
+ labels:{...GROUP_DEFAULT},
+ numbers:{...GROUP_DEFAULT},
+ color:"white",font:"sans",scale:105,layout:"classic"
+});
+const normalize=(id,value)=>{
+ const v=value&&typeof value==="object"?value:{};
+ const d=defaults(id);
+ if(BG[v.background])d.background=v.background;
+ if(typeof v.layout==="string")d.layout=v.layout;
+ const legacy={
+  font:FONTS[v.font]?v.font:"sans",
+  color:COLOR_NAMES[v.color]||( /^#[0-9a-fA-F]{6}$/.test(v.color||"")?v.color:"#ffffff"),
+  size:Math.max(75,Math.min(145,Number(v.scale)||105)),weight:"bold"
+ };
+ d.color=v.color||"white";d.font=legacy.font;d.scale=legacy.size;
+ d.labels=group(v.labels,legacy);d.numbers=group(v.numbers,legacy);
+ return d;
+};
+function load(){
+ let saved={};
+ try{saved=JSON.parse(window.AndroidNative?.readWidgetAppearance?.()||localStorage.getItem(KEY)||"{}")||{};}catch(_){}
+ return Object.fromEntries(IDS.map(id=>[id,normalize(id,saved[id])]));
+}
+function save(data){
+ try{
+  const value=JSON.stringify(data);
+  if(window.AndroidNative?.configureWidgetAppearance && window.AndroidNative.configureWidgetAppearance(value)===false)return false;
+  localStorage.setItem(KEY,value);return true;
+ }catch(e){console.warn("Widget style could not save",e);return false;}
+}
+function css(){
+ if(document.getElementById("aoqatWidgetAppearanceCss"))return;
+ const sheet=document.createElement("style");sheet.id="aoqatWidgetAppearanceCss";
+ sheet.textContent=[
+ "#aoqatWidgetAppearance{display:grid;gap:9px;direction:rtl;font-family:Tahoma,Arial,sans-serif;color:#1d3d44}",
+ "#aoqatWidgetAppearance button,#aoqatWidgetAppearance select,#aoqatWidgetAppearance input{font:inherit}",
+ "#aoqatWidgetAppearance .wa-primary{width:100%;border:1px solid #a7bdb7;border-radius:10px;background:#edf4f2;color:#204650;padding:10px;font-weight:800;text-align:center}",
+ "#aoqatWidgetAppearance .wa-chooser{display:grid;grid-template-columns:1fr 1fr;gap:5px}",
+ "#aoqatWidgetAppearance .wa-chooser[hidden],#aoqatWidgetAppearance .wa-style-editor[hidden]{display:none!important}",
+ "#aoqatWidgetAppearance .wa-chooser button{border:1px solid #b5cbca;border-radius:9px;background:#f8f9f7;padding:9px 5px;font-size:12px;color:#173a43}",
+ "#aoqatWidgetAppearance .wa-chooser button[aria-pressed=true]{background:#1b6161;color:white}",
+ "#aoqatWidgetAppearance .wa-preview{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:18px;padding:10px;gap:5px;min-height:75px;max-width:100%;overflow:hidden;box-shadow:inset 0 0 0 1px #c2d2d1a8}",
+ "#aoqatWidgetAppearance .wa-preview *{box-sizing:border-box;min-width:0}",
+ "#aoqatWidgetAppearance .wa-line{display:flex;align-items:center;justify-content:center;direction:rtl;gap:8px;max-width:100%;line-height:1.25}",
+ "#aoqatWidgetAppearance .wa-line .wa-number{white-space:nowrap;direction:ltr;unicode-bidi:isolate}",
+ "#aoqatWidgetAppearance .wa-timetable{display:grid;gap:3px;min-width:55%;max-width:100%}",
+ "#aoqatWidgetAppearance .wa-time-row{display:flex;justify-content:center;align-items:center;gap:13px;direction:rtl;border-radius:7px;padding:1px 4px}",
+ "#aoqatWidgetAppearance .wa-time-row.is-next{background:#21766379;outline:1px solid #e6cf9b}",
+ "#aoqatWidgetAppearance .wa-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;width:100%;direction:rtl;text-align:center}",
+ "#aoqatWidgetAppearance .wa-grid-cell{display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 0}",
+ "#aoqatWidgetAppearance .wa-grid:not(.wa-featured) .wa-grid-cell{border-bottom:1px solid #e5f2ef66}",
+ "#aoqatWidgetAppearance .wa-grid.wa-featured .wa-grid-cell{border:1px solid #dcc28c;border-radius:8px}",
+ "#aoqatWidgetAppearance .wa-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;width:100%;direction:rtl}",
+ "#aoqatWidgetAppearance .wa-pair>.wa-line{border:1px solid #8aa7aa;border-radius:11px;padding:5px 3px;gap:4px}",
+ "#aoqatWidgetAppearance .wa-style-editor{display:grid;gap:7px}",
+ "#aoqatWidgetAppearance .wa-style-group{border:1px solid #a8c6c8;border-radius:10px;padding:8px;display:grid;gap:6px}",
+ "#aoqatWidgetAppearance .wa-style-group>strong{font-size:14px}",
+ "#aoqatWidgetAppearance .wa-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}",
+ "#aoqatWidgetAppearance .wa-field{display:grid;gap:3px;font-size:12px;font-weight:700}",
+ "#aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=color]{height:37px;border:1px solid #adc5c6;border-radius:8px;width:100%;background:white;color:#18353f}",
+ "#aoqatWidgetAppearance input[type=range]{width:100%;accent-color:#25766a}",
+ "#aoqatWidgetAppearance .wa-note{font-size:12px;color:#4b5c63;line-height:1.7}",
+ "#aoqatWidgetAppearance .wa-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}"
+ ].join("\n");
+ document.head.append(sheet);
+}
+function createPanel(){
+ css();
+ const data=load();
+ let active="next",showList=false,showEditor=false;
+ const root=document.createElement("section");root.id="aoqatWidgetAppearance";root.dir="rtl";
+ const title=document.createElement("strong");title.textContent="تعديل بطاقات الشاشة الرئيسية";
+ const chooserBtn=document.createElement("button");chooserBtn.type="button";chooserBtn.className="wa-primary";
+ const chooser=document.createElement("div");chooser.className="wa-chooser";chooser.hidden=true;
+ const buttons={};
+ const preview=document.createElement("div");preview.className="wa-preview";
+ const typographyBtn=document.createElement("button");typographyBtn.className="wa-primary";typographyBtn.type="button";
+ typographyBtn.textContent="🔤 تنسيق الخط — العبارات والأرقام بشكل منفصل";
+ const styleEditor=document.createElement("div");styleEditor.className="wa-style-editor";styleEditor.hidden=true;
+ const bgField=document.createElement("label");bgField.className="wa-field";bgField.textContent="خلفية البطاقة";
+ const bgSelect=document.createElement("select");bgSelect.setAttribute("aria-label","خلفية البطاقة");
+ Object.entries(BG).forEach(([id,arr])=>{const o=document.createElement("option");o.value=id;o.textContent=arr[0];bgSelect.append(o);});
+ bgField.append(bgSelect);
+ const actions=document.createElement("div");actions.className="wa-actions";
+ const pin=document.createElement("button");pin.type="button";pin.className="wa-primary";pin.textContent="إضافة إلى الشاشة الرئيسية";
+ const reset=document.createElement("button");reset.type="button";reset.className="wa-primary";reset.textContent="إرجاع البطاقة للأصل";
+ actions.append(pin,reset);
+ const note=document.createElement("p");note.className="wa-note";
+ note.textContent="تختلف مساحة شبكة الشاشة بحسب مشغّل الهاتف. على الأجهزة التي تدعم ويدجت شاشة القفل يمكن اختيار هذه البطاقات من إعدادات شاشة القفل، وليس من زر الإضافة إلى الشاشة الرئيسية.";
+ const status=document.createElement("p");status.className="wa-note";status.setAttribute("role","status");
+ const line=(parent,a,b)=>{
+  const el=document.createElement("div");el.className="wa-line";
+  const label=document.createElement("span");label.className="wa-label";label.textContent=a;
+  const time=document.createElement("strong");time.className="wa-number";time.textContent=b;
+  el.append(label,time);parent.append(el);return el;
+ };
+ function demo(){
+  const cfg=data[active];preview.replaceChildren();
+  preview.style.background=BG[cfg.background][1];
+  const prayers=[["الفجر","5:17 ص"],["الشروق","6:33 ص"],["الظهر","11:53 ص"],
+                 ["العصر","2:49 م"],["المغرب","5:09 م"],["العشاء","6:29 م"]];
+  if(active==="next"){
+   line(preview,"باقي على صلاة الفجر","06:23:03");
+  }else if(active==="combined"){
+   const both=document.createElement("div");both.className="wa-pair";
+   line(both,"أذان الفجر بعد","06:23:03");line(both,"باقي على الإقامة","00:00");preview.append(both);
+  }else if(active==="iqama"){
+   const title=document.createElement("strong");title.className="wa-label";title.textContent="الفجر";preview.append(title);
+   line(preview,"باقي على الإقامة","00:00");line(preview,"مضى على الإقامة","00:00");
+  }else if(active==="times"){
+   line(preview,"باقي على صلاة الفجر","06:23:03");
+   const header=document.createElement("strong");header.className="wa-label";header.textContent="مواقيت الصلاة اليوم";preview.append(header);
+   const rows=document.createElement("div");rows.className="wa-timetable";
+   prayers.forEach(([a,b],i)=>{const r=document.createElement("div");r.className="wa-time-row"+(i===0?" is-next":"");
+    line(r,a,b);rows.append(r);});preview.append(rows);
+  }else{
+   const header=document.createElement("strong");header.className="wa-label";header.textContent="مواقيت الصلاة اليوم";preview.append(header);
+   const grid=document.createElement("div");grid.className="wa-grid"+(active==="five_featured"?" wa-featured":"");
+   prayers.forEach(([a,b])=>{const cell=document.createElement("div");cell.className="wa-grid-cell";
+    const n=document.createElement("span");n.className="wa-label";n.textContent=a;
+    const t=document.createElement("strong");t.className="wa-number";t.textContent=b;
+    cell.append(n,t);grid.append(cell);});preview.append(grid);
   }
-  function save(settings){
-    const value=JSON.stringify(settings);
-    try{
-      if(window.AndroidNative?.configureWidgetAppearance &&
-         window.AndroidNative.configureWidgetAppearance(value)===false)return false;
-      localStorage.setItem(KEY,value);
-      return true;
-    }catch(err){console.warn("Widget appearance not saved",err);return false;}
+  preview.querySelectorAll(".wa-label").forEach(el=>{
+   el.style.fontFamily=FONTS[cfg.labels.font][1];
+   el.style.fontWeight=cfg.labels.weight==="bold"?"800":"400";
+   el.style.color=cfg.labels.color;
+   el.style.fontSize=(15*cfg.labels.size/100)+"px";
+  });
+  preview.querySelectorAll(".wa-number").forEach(el=>{
+   el.style.fontFamily=FONTS[cfg.numbers.font][1];
+   el.style.fontWeight=cfg.numbers.weight==="bold"?"800":"400";
+   el.style.color=cfg.numbers.color;
+   el.style.fontSize=(18*cfg.numbers.size/100)+"px";
+  });
+ }
+ function persist(){
+  status.textContent=save(data)?"تم حفظ إعدادات هذه البطاقة وتحديثها.":"تعذر الحفظ؛ أعد المحاولة.";
+  demo();
+ }
+ function field(label,name,element){
+  const wrap=document.createElement("label");wrap.className="wa-field";wrap.textContent=label;
+  element.setAttribute("aria-label",label);wrap.append(element);return wrap;
+ }
+ function choices(options,value,onChange){
+  const select=document.createElement("select");
+  Object.entries(options).forEach(([id,label])=>{
+   const option=document.createElement("option");option.value=id;
+   option.textContent=Array.isArray(label)?label[0]:label;
+   select.append(option);
+  });
+  select.value=value;select.onchange=()=>onChange(select.value);return select;
+ }
+ function buildGroups(){
+  styleEditor.replaceChildren();
+  for(const key of ["labels","numbers"]){
+   const g=data[active][key];const groupBox=document.createElement("div");groupBox.className="wa-style-group";
+   const name=document.createElement("strong");name.textContent=key==="labels"?"تنسيق العبارات وأسماء الصلوات":"تنسيق الأرقام والأوقات والعدادات";
+   const fields=document.createElement("div");fields.className="wa-fields";
+   fields.append(
+     field("نوع الخط",key==="labels"?"labels-font":"numbers-font",
+       choices(FONTS,g.font,value=>{g.font=value;persist();})),
+     field("سمك الخط",key==="labels"?"labels-weight":"numbers-weight",
+       choices(WEIGHTS,g.weight,value=>{g.weight=value;persist();}))
+   );
+   const size=document.createElement("input");size.type="range";size.min="65";size.max="170";size.step="5";size.value=g.size;
+   const sizeValue=document.createElement("span");sizeValue.textContent=g.size+"٪";
+   size.oninput=()=>{g.size=Number(size.value);sizeValue.textContent=size.value+"٪";demo();};
+   size.onchange=persist;
+   const sz=field("حجم الخط",key+"-size",size);sz.append(sizeValue);
+   const color=document.createElement("input");color.type="color";color.value=g.color;
+   color.oninput=()=>{g.color=color.value;demo();};color.onchange=persist;
+   fields.append(sz,field("لون الخط",key+"-color",color));
+   groupBox.append(name,fields);styleEditor.append(groupBox);
   }
-  function css(){
-    if(document.getElementById("aoqatWidgetAppearanceCss"))return;
-    const sheet=document.createElement("style");sheet.id="aoqatWidgetAppearanceCss";
-    sheet.textContent=`
-      #aoqatWidgetAppearance{display:grid;gap:12px;direction:rtl;font-family:Tahoma,Arial,sans-serif;color:#203b42}
-      #aoqatWidgetAppearance .wa-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
-      #aoqatWidgetAppearance .wa-tabs button{border:1px solid #b9d4d7;border-radius:11px;padding:9px 4px;background:#f2f9f7;color:#1d4451;font-size:13px;font-weight:750}
-      #aoqatWidgetAppearance .wa-tabs button[aria-pressed=true]{background:#256e76;color:white}
-      #aoqatWidgetAppearance .wa-preview{border-radius:20px;min-height:140px;display:grid;place-content:center;text-align:center;gap:7px;padding:16px;box-shadow:inset 0 0 0 1px #a7c5cc6b,0 5px 15px #10242f24}
-      #aoqatWidgetAppearance .wa-preview>*{margin:0;line-height:1.45;text-shadow:0 2px 4px #0009}
-      #aoqatWidgetAppearance .wa-line{display:flex;direction:rtl;align-items:center;justify-content:space-between;gap:14px;min-width:0;font-weight:800}
-      #aoqatWidgetAppearance .wa-line span{min-width:0;text-align:right}
-      #aoqatWidgetAppearance .wa-line strong{font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums}
-      #aoqatWidgetAppearance .wa-line.wa-stacked{flex-direction:column;gap:0;text-align:center}
-      #aoqatWidgetAppearance .wa-preview:has(.wa-line){display:flex;flex-direction:column;justify-content:center;min-height:90px}
-
-      #aoqatWidgetAppearance .wa-pair{display:flex;align-items:center;gap:5px;direction:rtl;width:100%;justify-content:center}\n      #aoqatWidgetAppearance .wa-pair-pill{display:flex;align-items:center;justify-content:space-between;gap:3px;flex:1;min-width:0;background:#1b353fdc;border:1px solid #7eaaa5;border-radius:13px;padding:6px 5px;color:white}\n      #aoqatWidgetAppearance .wa-pair-pill span{font-size:12px;text-align:right}\n      #aoqatWidgetAppearance .wa-pair-pill strong{font-size:13px;white-space:nowrap}\n      #aoqatWidgetAppearance .wa-times-rows{display:grid;gap:2px;direction:rtl;width:100%;text-align:right}
-      #aoqatWidgetAppearance .wa-times-row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffffff42;padding:2px 5px}
-      #aoqatWidgetAppearance .wa-times-row.is-next{background:#467d6e88;border-radius:7px}
-      #aoqatWidgetAppearance .wa-times-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;direction:rtl;width:100%;text-align:center}
-      #aoqatWidgetAppearance .wa-times-cell{min-width:0;white-space:pre-line;line-height:1.3;font-weight:800;padding:4px 1px}
-      #aoqatWidgetAppearance .wa-times-featured .wa-times-cell{border:1px solid #e5c78d80;border-radius:9px;background:#283f5870}
-      #aoqatWidgetAppearance .wa-control{display:grid;gap:5px;font-size:15px;font-weight:750}
-      #aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=range]{width:100%;min-width:0}
-      #aoqatWidgetAppearance select{border:1px solid #bdd2d1;border-radius:9px;padding:9px;background:#fff;color:#233d44;font-size:15px}
-      #aoqatWidgetAppearance .wa-note{font-size:13px;color:#4b5c63;line-height:1.8}
-      #aoqatWidgetAppearance .wa-reset{padding:10px;border:1px solid #b5cac9;background:#eff6f4;border-radius:10px;color:#254653;font-weight:bold}
-    `;document.head.appendChild(sheet);
-  }
-  function createPanel(){
-    css();
-    const data=load(), root=document.createElement("section");root.id="aoqatWidgetAppearance";root.setAttribute("dir","rtl");
-    let active="next";
-    const title=document.createElement("strong");title.textContent="🎨 تخصيص بطاقات شاشة الهاتف";
-    const tabs=document.createElement("div");tabs.className="wa-tabs";
-    const tabButtons={};
-    const preview=document.createElement("div");preview.className="wa-preview";
-    const controls=document.createElement("div");controls.style.cssText="display:grid;gap:10px";
-    const feedback=document.createElement("p");feedback.className="wa-note";feedback.setAttribute("role","status");feedback.textContent="";
-    const descriptions={
-      next:["الصلاة القادمة","الظهر بعد 01:20:15","مواقيت الحويجة"],
-      times:["مواقيت الصلاة اليوم","الفجر 5:16 ص | الشروق 6:33 ص","الظهر 11:53 ص | العصر 2:49 م | المغرب 5:10 م | العشاء 6:30 م"],
-      combined:["باقي على صلاة الفجر 07:12:28","باقي على الإقامة 00:00","مضى على الإقامة 00:00"],
-      iqama:["باقي على الإقامة: 04:12","مضى على الإقامة: 00:00","صلاة العصر"]
-    };
-    function refresh(){
-      const cfg=data[active];
-      Object.entries(tabButtons).forEach(([id,b])=>b.setAttribute("aria-pressed",String(id===active)));
-      const bg=BG[cfg.background][1],text=COLORS[cfg.color][1],font=FONTS[cfg.font][1];
-      preview.style.background=bg;
-      preview.style.color=text;
-      preview.style.fontFamily=font;
-      preview.style.backdropFilter=cfg.background==="mist"?"blur(10px)":"none";
-      // Compact preview matches the actual launcher widget: label facing timer.
-      // Enlarging the font stacks them vertically to prevent overlap.
-      const stack=cfg.scale>=125;
-      const sample=active==="next"?[["باقي على صلاة المغرب","01:20:15"]]:
-        active==="iqama"?[["باقي على الإقامة","04:12"],["مضى على الإقامة","00:00"]]:
-        null;
-      preview.replaceChildren();
-      if(sample){
-        if(active==="iqama"){
-          const prayer=document.createElement("p");prayer.textContent="المغرب";
-          prayer.style.cssText="font-size:14px;font-weight:800;margin:0";
-          preview.append(prayer);
-        }
-        sample.forEach(([label,time])=>{
-          const line=document.createElement("div");line.className="wa-line"+(stack?" wa-stacked":"");
-          const name=document.createElement("span");name.textContent=label;
-          const clock=document.createElement("strong");clock.textContent=time;
-          name.style.fontSize=(cfg.scale/100*(stack?19:16))+"px";
-          clock.style.fontSize=(cfg.scale/100*(stack?24:21))+"px";
-          line.append(name,clock);preview.append(line);
-        });
-      }else if(active==="combined"){
-        const pair=document.createElement("div");pair.className="wa-pair";
-        [["أذان الفجر بعد","07:12:28"],["باقي على الإقامة","00:00"]].forEach(([label,time])=>{
-          const pill=document.createElement("div");pill.className="wa-pair-pill";
-          const caption=document.createElement("span");caption.textContent=label;
-          const clock=document.createElement("strong");clock.textContent=time;
-          pill.append(caption,clock);pair.append(pill);
-        });preview.append(pair);
-      }else if(active==="times"){
-        const count=document.createElement("div");count.className="wa-line";
-        const next=document.createElement("span");next.textContent="باقي على صلاة الفجر";
-        const timer=document.createElement("strong");timer.textContent="07:12:28";
-        count.append(next,timer);preview.append(count);
-        const header=document.createElement("p");header.textContent="مواقيت الصلاة اليوم";
-        header.style.fontWeight="800";preview.append(header);
-        const rows=document.createElement("div");rows.className="wa-times-rows";
-        [["الفجر","5:17 ص"],["الشروق","6:33 ص"],["الظهر","11:53 ص"],["العصر","2:49 م"],["المغرب","5:09 م"],["العشاء","6:29 م"]].forEach(([name,time])=>{
-          const line=document.createElement("div");line.className="wa-times-row"+(name==="الفجر"?" is-next":"");
-          const left=document.createElement("span");left.textContent=name;
-          const right=document.createElement("strong");right.textContent=time;
-          line.append(left,right);rows.append(line);
-        });preview.append(rows);
-      }else{
-        preview.replaceChildren(...descriptions[active].map((t,i)=>{
-          const el=document.createElement("p");el.textContent=t;
-          el.style.fontSize=(cfg.scale/100*(i===1?22:17))+"px";
-          el.style.fontWeight="800";return el;
-        }));
-      }
-      controls.replaceChildren();
-      function choice(name,label,options,key){
-        const wrap=document.createElement("label");wrap.className="wa-control";wrap.textContent=label;
-        const select=document.createElement("select");select.setAttribute("aria-label",label);
-        Object.entries(options).forEach(([id,[text]])=>{const o=document.createElement("option");o.value=id;o.textContent=text;select.append(o);});
-        select.value=cfg[key];select.onchange=()=>{data[active][key]=select.value;feedback.textContent=save(data)?"تم حفظ الإعداد. تتحدث البطاقة على أندرويد.":"تعذر حفظ التعديل؛ أعد المحاولة.";refresh();};
-        wrap.append(select);controls.append(wrap);
-      }
-      // The original timetable is a permanent independent widget; the two 3+3 cards stay separate.
-      choice("background","خلفية البطاقة",BG,"background");
-      choice("color","لون الخط",COLORS,"color");
-      choice("font","نوع الخط",FONTS,"font");
-      const scale=document.createElement("label");scale.className="wa-control";scale.textContent="حجم الكتابة داخل البطاقة";
-      const slider=document.createElement("input");slider.type="range";slider.min="75";slider.max="145";slider.step="5";slider.value=String(cfg.scale);
-      const value=document.createElement("span");value.textContent=cfg.scale+"٪";
-      slider.oninput=()=>{
-        value.textContent=slider.value+"٪";
-        data[active].scale=Number(slider.value);
-        const scaleNow=Number(slider.value);
-        preview.querySelectorAll(".wa-line").forEach(line=>{
-          const stacked=scaleNow>=125;
-          line.classList.toggle("wa-stacked",stacked);
-          line.querySelector("span").style.fontSize=(scaleNow/100*(stacked?19:16))+"px";
-          line.querySelector("strong").style.fontSize=(scaleNow/100*(stacked?24:21))+"px";
-        });
-        if(active==="combined"){
-          preview.querySelectorAll(".wa-pair-pill span").forEach(x=>x.style.fontSize=(scaleNow/100*12)+"px");
-          preview.querySelectorAll(".wa-pair-pill strong").forEach(x=>x.style.fontSize=(scaleNow/100*13)+"px");
-        }else if(active==="times"){
-          preview.querySelectorAll(".wa-times-row").forEach(cell=>{cell.style.fontSize=(scaleNow/100*16)+"px";});
-          preview.querySelectorAll("p").forEach(p=>{p.style.fontSize=(scaleNow/100*17)+"px";});
-        }else preview.querySelectorAll("p").forEach((p,i)=>{p.style.fontSize=(scaleNow/100*(active==="iqama"?14:(i===1?22:17)))+"px";});
-      };
-      slider.onchange=()=>{feedback.textContent=save(data)?"تم حفظ حجم الكتابة.":"تعذر حفظ حجم الكتابة.";};
-      scale.append(slider,value);controls.append(scale);
-    }
-    IDS.forEach(id=>{
-      const b=document.createElement("button");b.type="button";b.textContent=NAMES[id];b.onclick=()=>{active=id;feedback.textContent="";refresh();};tabs.append(b);tabButtons[id]=b;
-    });
-    const note=document.createElement("p");note.className="wa-note";
-    note.textContent="لمساحة البطاقة نفسها، اضغط عليها مطولاً في شاشة الهاتف واسحب حوافها للتكبير أو التصغير. بعض المشغلات تقيّد الحد الأدنى. الخلفية الضبابية على أندرويد شفافية ملوّنة؛ معاينة الويب توضيحية.";
-    const reset=document.createElement("button");reset.type="button";reset.className="wa-reset";reset.textContent="إرجاع هذا التصميم إلى الافتراضي";reset.onclick=()=>{data[active]=defaults(active);feedback.textContent=save(data)?"رجعت إعدادات هذه البطاقة.":"تعذر حفظ الإعداد.";refresh();};
-    if(window.AndroidNative?.pinWidget){
-      const pin=document.createElement("button");pin.type="button";pin.className="wa-reset";
-      pin.textContent="➕ إضافة البطاقة المحددة إلى شاشة الهاتف";
-      pin.onclick=()=>window.AndroidNative.pinWidget(active);
-      root.append(pin);
-      const variants=document.createElement("div");variants.style.cssText="display:grid;gap:6px";
-      [["five_grid","➕ إضافة بطاقة مستقلة: المواقيت الستة 3 + 3"],["five_featured","➕ إضافة بطاقة مستقلة: المواقيت الستة المميزة"]].forEach(([id,label])=>{
-        const button=document.createElement("button");button.type="button";button.className="wa-reset";button.textContent=label;
-        button.onclick=()=>window.AndroidNative.pinWidget(id);variants.append(button);
-      });root.append(variants);
-    }
-    root.append(title,tabs,preview,controls,note,reset,feedback);
-    refresh();
-    return root;
-  }
-  window.AoqatWidgetAppearance={createPanel,load};
+ }
+ function render(){
+  chooserBtn.textContent="اختيار البطاقة (6): "+NAMES[active]+(showList?" ▲":" ▼");
+  chooser.hidden=!showList;styleEditor.hidden=!showEditor;
+  typographyBtn.setAttribute("aria-expanded",String(showEditor));
+  Object.entries(buttons).forEach(([id,el])=>el.setAttribute("aria-pressed",String(id===active)));
+  bgSelect.value=data[active].background;buildGroups();demo();
+ }
+ IDS.forEach(id=>{
+  const b=document.createElement("button");b.type="button";b.textContent=NAMES[id];b.onclick=()=>{active=id;showList=false;status.textContent="";render();};
+  chooser.append(b);buttons[id]=b;
+ });
+ chooserBtn.onclick=()=>{showList=!showList;render();};
+ typographyBtn.onclick=()=>{showEditor=!showEditor;render();};
+ bgSelect.onchange=()=>{data[active].background=bgSelect.value;persist();};
+ pin.onclick=()=>{if(window.AndroidNative?.pinWidget)window.AndroidNative.pinWidget(active);
+  else status.textContent="إضافة البطاقات تتم من تطبيق أندرويد؛ هذه معاينة الويب فقط.";};
+ reset.onclick=()=>{data[active]=defaults(active);persist();render();};
+ root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,note,status);
+ render();return root;
+}
+window.AoqatWidgetAppearance={createPanel,load};
 })();
