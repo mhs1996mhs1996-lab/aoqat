@@ -206,19 +206,28 @@ class HomeWidgetRenderingTest {
         assertTrue((timer.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 6..14)
     }
 
-    @Test fun bothVerticalTimetablesKeepCountdownCloseToTitle() {
+    @Test fun bothVerticalTimetablesHaveFullWidthOutlinedTopCountdown() {
         seed()
         for(height in listOf(180,270)) {
             val root=FivePrayerWidget.views(c,height,"classic").apply(c,FrameLayout(c))
             val name=root.findViewById<TextView>(R.id.widget_times_next_label)
             val counter=root.findViewById<android.widget.Chronometer>(R.id.widget_times_next_counter)
             val parent=name.parent as android.widget.LinearLayout
-            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,parent.layoutParams.width)
-            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,name.layoutParams.width)
-            assertEquals(0f,(name.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
-            assertTrue((counter.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 6..14)
+            assertEquals(android.view.ViewGroup.LayoutParams.MATCH_PARENT,parent.layoutParams.width)
+            assertEquals(0,name.layoutParams.width)
+            assertEquals(1f,(name.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
+            assertEquals(5,(counter.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart)
+            assertNotNull("The top row needs a distinct pill outline",parent.background)
             assertEquals(parent,counter.parent)
         }
+    }
+    @Test fun pairedIqamaCapsulesKeepDistinctBackgroundFromWidgetStyle() {
+        seed()
+        val root=PrayerCombinedWidget.views(c).apply(c,FrameLayout(c))
+        assertNotNull(root.findViewById<View>(R.id.widget_combined_next_pill))
+        assertNotNull(root.findViewById<View>(R.id.widget_combined_iqama_pill))
+        assertEquals(android.widget.LinearLayout.HORIZONTAL,
+            root.findViewById<android.widget.LinearLayout>(R.id.widget_combined_card).orientation)
     }
 
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
