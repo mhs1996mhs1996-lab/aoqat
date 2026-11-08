@@ -140,7 +140,10 @@ class FivePrayerWidget:AppWidgetProvider(){
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                     labels[id]=(if(prayer=="sunrise")"الشروق" else PrayerTimes.names[prayer] ?: prayer) to if(compressedClassic)12f else 16f
                     labels[clockIds[index]]=(minutes?.let(::display) ?: "—") to if(compressedClassic)12f else 17f
-                    if(prayer==next?.id) v.setInt(rowIds[index],"setBackgroundResource",R.drawable.aoqat_times_upcoming_row)
+                    // RemoteViews updates can reuse the old launcher views. Clear every row
+                    // before applying the sole upcoming prayer background.
+                    v.setInt(rowIds[index],"setBackgroundResource",
+                        if(prayer==next?.id)R.drawable.aoqat_times_upcoming_row else android.R.color.transparent)
                 }
             }
             WidgetAppearance.decorate(c,v,R.id.widget_times_card,labels,"times")
