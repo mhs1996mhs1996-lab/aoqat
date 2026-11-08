@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="240dp" android:minHeight="165dp"
-    android:minResizeWidth="220dp" android:minResizeHeight="152dp"
-    android:targetCellHeight="3" android:targetCellWidth="3"
+    android:minWidth="240dp" android:minHeight="155dp"
+    android:minResizeWidth="220dp" android:minResizeHeight="150dp"
+    android:targetCellHeight="2" android:targetCellWidth="3"
     android:updatePeriodMillis="1800000" android:initialLayout="@layout/prayer_times_widget_classic_compact"
     android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" />
