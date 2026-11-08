@@ -17,7 +17,7 @@ import java.time.LocalDate
 class PrayerCombinedWidget:AppWidgetProvider(){
     companion object {
         fun views(c:Context):RemoteViews {
-            val v=RemoteViews(c.packageName,R.layout.prayer_combined_widget)
+            val v=RemoteViews(c.packageName,WidgetAppearance.counterLayout(c,"combined",R.layout.prayer_combined_widget))
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
             val active=if(IqamaNativeScheduler.enabled(c)){
