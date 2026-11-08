@@ -21,7 +21,7 @@ android {
         minSdk 26
         targetSdk 34
         versionCode 127 // Six independent widget font editors and adaptive compact content
-        versionName '1.91'
+        versionName '1.92'
     }
 
     compileOptions {
