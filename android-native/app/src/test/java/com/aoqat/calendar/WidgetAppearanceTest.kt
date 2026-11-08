@@ -27,6 +27,32 @@ class WidgetAppearanceTest {
         assertEquals("sans",WidgetAppearance.item(c,"next").getString("font"))
         assertEquals(75,WidgetAppearance.item(c,"next").getInt("scale"))
     }
+    @Test fun sixWidgetsHaveIndependentLabelAndNumberFamiliesWeightsSizesAndColors() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val ids=listOf("next","times","five_grid","five_featured","iqama","combined")
+        val settings=JSONObject()
+        ids.forEachIndexed{index,id->
+            settings.put(id,JSONObject()
+                .put("labels",JSONObject().put("font","serif").put("weight","normal")
+                    .put("color","#aabbcc").put("size",80+index*5))
+                .put("numbers",JSONObject().put("font","medium").put("weight","bold")
+                    .put("color","#112233").put("size",130-index*5)))
+        }
+        assertTrue(WidgetAppearance.configure(c,settings.toString()))
+        for((i,id) in ids.withIndex()) {
+            val item=WidgetAppearance.item(c,id)
+            assertEquals("serif",item.getJSONObject("labels").getString("font"))
+            assertEquals("normal",item.getJSONObject("labels").getString("weight"))
+            assertEquals(80+i*5,item.getJSONObject("labels").getInt("size"))
+            assertEquals("#aabbcc",item.getJSONObject("labels").getString("color"))
+            assertEquals("medium",item.getJSONObject("numbers").getString("font"))
+            assertEquals("bold",item.getJSONObject("numbers").getString("weight"))
+            assertEquals(130-i*5,item.getJSONObject("numbers").getInt("size"))
+            assertEquals("#112233",item.getJSONObject("numbers").getString("color"))
+        }
+        assertEquals("mist",WidgetAppearance.item(c,"five_grid").getString("background"))
+    }
+
     @Test fun malformedInputIsRejectedWithoutDestroyingSavedPreferences() {
         val c=RuntimeEnvironment.getApplication() as Application
         val before=WidgetAppearance.all(c).toString()

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_combined_root"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:gravity="center_vertical"
+    android:background="@android:color/transparent">
+    <LinearLayout android:id="@+id/widget_combined_card"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layoutDirection="rtl" android:orientation="horizontal"
+        android:gravity="center_vertical" android:baselineAligned="false"
+        android:paddingLeft="2dp" android:paddingRight="2dp"
+        android:background="@android:color/transparent">
+        <LinearLayout android:id="@+id/widget_combined_next_pill"
+            android:layout_width="0dp" android:layout_weight="1.15"
+            android:layout_height="wrap_content" android:minHeight="39dp"
+            android:orientation="horizontal" android:layoutDirection="rtl"
+            android:gravity="center" android:paddingLeft="6dp"
+            android:paddingRight="6dp" android:paddingTop="5dp" android:paddingBottom="5dp"
+            android:background="@drawable/aoqat_combined_pill">
+            <TextView android:id="@+id/widget_combined_next_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="أذان الفجر بعد" android:textColor="#FFFFFFFF"
+                android:textSize="12sp" android:includeFontPadding="false"
+                android:textStyle="bold" android:maxLines="2"
+                android:gravity="start|center_vertical"/>
+            <Chronometer android:id="@+id/widget_combined_next_counter"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFFFFFFF" android:textSize="13sp" android:layout_marginStart="4dp"
+                android:includeFontPadding="false"
+                android:format="%s" android:gravity="center_vertical" android:fontFamily="sans-serif-condensed" android:textStyle="bold" />
+        </LinearLayout>
+        <TextView android:layout_width="6dp" android:layout_height="wrap_content"
+            android:gravity="center" android:text="│" android:textColor="#C6D4BC79"
+            android:textSize="15sp"/>
+        <LinearLayout android:id="@+id/widget_combined_iqama_pill"
+            android:layout_width="0dp" android:layout_weight="1"
+            android:layout_height="wrap_content" android:minHeight="39dp"
+            android:orientation="horizontal" android:layoutDirection="rtl"
+            android:gravity="center" android:paddingLeft="5dp"
+            android:paddingRight="5dp" android:paddingTop="5dp" android:paddingBottom="5dp"
+            android:background="@drawable/aoqat_combined_pill">
+            <TextView android:id="@+id/widget_combined_iqama_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="باقي على الإقامة"
+                android:textColor="#FFFFFFFF" android:textSize="14sp"
+                android:includeFontPadding="false" android:textStyle="bold"
+                android:maxLines="2" android:gravity="start|center_vertical"/>
+            <Chronometer android:id="@+id/widget_combined_iqama_counter"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:textColor="#FFFFFFFF" android:textSize="13sp" android:layout_marginStart="4dp"
+                android:includeFontPadding="false"
+                android:format="%s" android:gravity="center_vertical" android:fontFamily="sans-serif-condensed" android:textStyle="bold" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

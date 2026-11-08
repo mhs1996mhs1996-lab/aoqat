@@ -359,10 +359,10 @@
   }
   function widgetAppearanceView(){
     const panel=window.AoqatWidgetAppearance?.createPanel?.();
-    if(panel)openSub("بطاقات الشاشة الرئيسية",panel,"appearance");
+    if(panel)openSub("تعديل بطاقات الشاشة الرئيسية",panel,"appearance");
   }
   function themeView(){const p=document.createElement("div");p.className="web-theme-drawer-panel";const source=document.getElementById("webThemePanel");if(source){p.innerHTML=source.innerHTML;}else{p.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid"><button type="button" class="wt-card" data-theme="cream-blue">🟦 كريمي وأزرق فاتح</button><button type="button" class="wt-card" data-theme="cream-gold">🟨 كريمي وذهبي هادئ</button><button type="button" class="wt-card" data-theme="white-sky">🔵 أبيض وسماوي حديث</button><button type="button" class="wt-card" data-theme="cream-green">🟩 كريمي وأخضر هادئ</button><button type="button" class="wt-card" data-theme="beige-gold">🟫 بيج وذهبي أنيق</button><button type="button" class="wt-card" data-theme="dark-night">🌙 داكن كحلي (ليلي)</button></div>';}p.addEventListener("click",e=>{const card=e.target.closest(".wt-card");if(!card)return;if(typeof window.applyWebTheme==="function")window.applyWebTheme(card.dataset.theme);p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));window.refreshWebThemeControls?.();});p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));const widgets=document.createElement("button");widgets.type="button";widgets.className="main-action";
-    widgets.textContent="🖼️ تخصيص بطاقات الشاشة الرئيسية";
+    widgets.textContent="🖼️ تعديل بطاقات الشاشة الرئيسية";
     widgets.style.cssText="display:block;width:100%;margin:4px 0 14px;padding:12px;border-radius:12px;text-align:center;font-weight:800;background:linear-gradient(90deg,var(--wt-surface,#f9f7f0),var(--wt-surface2,#e1eeec));color:var(--wt-text,#193f42);border:1px solid var(--wt-border,#b4cbd1)";
     widgets.onclick=widgetAppearanceView;p.prepend(widgets);
     openSub("شكل التطبيق",p,"main");window.refreshWebThemeControls?.();}
