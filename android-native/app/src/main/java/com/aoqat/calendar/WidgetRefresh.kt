@@ -20,7 +20,9 @@ object WidgetRefresh {
     fun schedule(c:Context) {
         val manager=AppWidgetManager.getInstance(c)
         val installed=listOf(PrayerWidget::class.java,
-            FivePrayerWidget::class.java,IqamaCountdownWidget::class.java).any {
+            FivePrayerWidget::class.java,FivePrayerCompactWidget::class.java,
+            FivePrayerFeaturedWidget::class.java,PrayerCombinedWidget::class.java,
+            IqamaCountdownWidget::class.java).any {
             manager.getAppWidgetIds(ComponentName(c,it)).isNotEmpty()
         }
         val am=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
