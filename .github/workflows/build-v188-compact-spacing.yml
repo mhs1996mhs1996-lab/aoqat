@@ -2,7 +2,7 @@ name: Build v1.88 compact daily prayer cards APK
 on:
   push:
     branches:
-      - 'fix/v188-single-highlight-widget-bounds-20261108'
+      - 'fix/v188-widget-inner-outer-spacing-20261108'
   workflow_dispatch:
   pull_request:
     branches: [main, fix/v187-single-highlight-widget-bounds-20261108]
