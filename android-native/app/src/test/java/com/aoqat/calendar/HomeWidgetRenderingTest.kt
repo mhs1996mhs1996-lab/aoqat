@@ -193,6 +193,56 @@ class HomeWidgetRenderingTest {
         }
     }
 
+    @Test fun nextPrayerPillUsesTightCenteredTextAndCounter() {
+        seed()
+        val root=PrayerWidget.views(c,compact=true).apply(c,FrameLayout(c))
+        val pill=root.findViewById<android.widget.LinearLayout>(R.id.widget_next_card)
+        val title=root.findViewById<TextView>(R.id.widget_prayer)
+        val counter=root.findViewById<android.widget.Chronometer>(R.id.widget_counter)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,pill.layoutParams.width)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,title.layoutParams.width)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,counter.layoutParams.width)
+        assertEquals(0f,(title.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
+        assertTrue((counter.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 8..14)
+        assertTrue(title.text.toString().startsWith("باقي على صلاة"))
+    }
+
+    @Test fun topOfBothVerticalPrayerListsGroupsCountdownWithPrayerName() {
+        seed()
+        for(height in listOf(155,270)) {
+            val view=FivePrayerWidget.views(c,height,"classic").apply(c,FrameLayout(c))
+            val title=view.findViewById<TextView>(R.id.widget_times_next_label)
+            val timer=view.findViewById<android.widget.Chronometer>(R.id.widget_times_next_counter)
+            val container=title.parent as android.widget.LinearLayout
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,container.layoutParams.width)
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,title.layoutParams.width)
+            assertEquals(0f,(title.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
+            assertTrue((timer.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 8..14)
+            for(id in listOf(R.id.widget_times_fajr,R.id.widget_times_sunrise,
+                R.id.widget_times_dhuhr,R.id.widget_times_asr,
+                R.id.widget_times_maghrib,R.id.widget_times_isha)) {
+                assertNotNull(view.findViewById<TextView>(id))
+            }
+        }
+    }
+
+    @Test fun compactThreeByThreeCardsShowSixTimesAtSmallerLineHeight() {
+        seed()
+        for(layout in listOf("grid","five_grid")) {
+            val view=FivePrayerWidget.views(c,120,layout).apply(c,FrameLayout(c))
+            val header=view.findViewById<TextView>(R.id.widget_times_header)
+            assertTrue("Title must remain readable but compact",header.textSize>0f)
+            for(id in listOf(R.id.widget_times_fajr,R.id.widget_times_sunrise,
+                R.id.widget_times_dhuhr,R.id.widget_times_asr,
+                R.id.widget_times_maghrib,R.id.widget_times_isha)) {
+                val cell=view.findViewById<TextView>(id)
+                assertTrue("All 3x3 times must be visible",cell.text.contains("\n"))
+                assertTrue("3x3 text must not be enlarged to the former 14sp baseline",
+                    cell.textSize/header.textSize < 1f)
+            }
+        }
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))
