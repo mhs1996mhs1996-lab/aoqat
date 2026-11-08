@@ -76,7 +76,7 @@ object AdhanSchedule {
         schedule(c)
         IqamaNativeScheduler.scheduleCached(c)
         PrayerAlarm.schedule(c)
-        if (s.optBoolean("persistent")) NextPrayerService.start(c) else c.stopService(Intent(c, NextPrayerService::class.java))
+        if (s.optBoolean("persistent") || LockScreenPrayer.enabled(c)) NextPrayerService.start(c) else c.stopService(Intent(c, NextPrayerService::class.java))
         PrayerWidget.update(c)
         Thread { IqamaNativeScheduler.refresh(c) }.start()
     }
@@ -133,9 +133,9 @@ object AdhanSchedule {
         }
         for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60800+i to "PREWARM",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET",60700+i to "ADHAN_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
         cancel(c, 60300, "NEXT")
-        events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
+        events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
-        if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
 }
 class AdhanReceiver : BroadcastReceiver() {
@@ -189,7 +189,7 @@ class AdhanReceiver : BroadcastReceiver() {
             "ADHAN_QUIET" -> AtAdhanQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
             "RESTORE_SOUND" -> AdhanPlaybackService.restoreRingerIfExpired(c)
             "REFRESH" -> { AdhanSchedule.schedule(c); val pending=goAsync(); Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start() }
-            "NEXT" -> { PrayerWidget.update(c); if(AdhanSchedule.settings(c).optBoolean("persistent"))NextPrayerService.start(c); AdhanSchedule.schedule(c) }
+            "NEXT" -> { PrayerWidget.update(c); if(NextPrayerService.wanted(c))NextPrayerService.start(c); AdhanSchedule.schedule(c) }
         }
     }
 }

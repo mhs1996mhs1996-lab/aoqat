@@ -123,8 +123,39 @@ function createPanel(){
  const reset=document.createElement("button");reset.type="button";reset.className="wa-primary";reset.textContent="إرجاع البطاقة للأصل";
  actions.append(pin,reset);
  const note=document.createElement("p");note.className="wa-note";
- note.textContent="تختلف مساحة شبكة الشاشة بحسب مشغّل الهاتف. على الأجهزة التي تدعم ويدجت شاشة القفل يمكن اختيار هذه البطاقات من إعدادات شاشة القفل، وليس من زر الإضافة إلى الشاشة الرئيسية.";
+ note.textContent="مساحة البطاقات الست على الشاشة الرئيسية يتحكم بها مشغّل الهاتف. خيار شاشة القفل أدناه يعرض عدّاد الصلاة بإشعار أندرويد، وليس ويدجت قابلاً للسحب على كل أجهزة Honor.";
  const status=document.createElement("p");status.className="wa-note";status.setAttribute("role","status");
+ const lockSection=document.createElement("section");lockSection.className="wa-style-group";
+ const lockHeading=document.createElement("strong");lockHeading.textContent="الصلاة القادمة على شاشة القفل";
+ const lockExplanation=document.createElement("p");lockExplanation.className="wa-note";
+ lockExplanation.textContent="على هواتف Honor التي لا تعرض بطاقات التطبيقات في محرّر شاشة القفل، يمكن عرض الصلاة القادمة وعدّادها بإشعار ثابت وصامت على شاشة القفل. الظهور يعتمد على سماح الهاتف بإظهار الإشعارات على شاشة القفل.";
+ const lockToggle=document.createElement("button");lockToggle.className="wa-primary";lockToggle.type="button";
+ const lockSettings=document.createElement("button");lockSettings.className="wa-primary";lockSettings.type="button";
+ lockSettings.textContent="إعدادات إشعارات شاشة القفل في الهاتف";
+ const hasLock=!!window.AndroidNative?.configureLockScreenPrayer;
+ let lockEnabled=hasLock&&window.AndroidNative.readLockScreenPrayerEnabled?.()===true;
+ const syncLock=()=>{
+   lockToggle.textContent=lockEnabled?"إيقاف عرض الصلاة القادمة على شاشة القفل":"تشغيل عرض الصلاة القادمة على شاشة القفل";
+   lockToggle.setAttribute("aria-pressed",String(lockEnabled));
+ };
+ lockToggle.onclick=()=>{
+   if(!hasLock)return;
+   const next=!lockEnabled;
+   if(window.AndroidNative.configureLockScreenPrayer(next)!==true){
+     status.textContent="تعذر حفظ إعداد شاشة القفل.";return;
+   }
+   lockEnabled=next;syncLock();
+   status.textContent=next?"تم التفعيل. اسمح بعرض إشعارات التطبيق على شاشة القفل من إعدادات الهاتف.":"تم إيقاف عرض الصلاة القادمة على شاشة القفل.";
+ };
+ lockSettings.onclick=()=>window.AndroidNative?.openLockScreenNotificationSettings?.();
+ lockSection.append(lockHeading,lockExplanation);
+ if(hasLock){syncLock();lockSection.append(lockToggle,lockSettings);}
+ else{
+   const webNote=document.createElement("p");webNote.className="wa-note";
+   webNote.textContent="خيار شاشة القفل متاح في تطبيق أندرويد فقط.";
+   lockSection.append(webNote);
+ }
+
  const line=(parent,a,b)=>{
   const el=document.createElement("div");el.className="wa-line";
   const label=document.createElement("span");label.className="wa-label";label.textContent=a;
@@ -228,7 +259,7 @@ function createPanel(){
  pin.onclick=()=>{if(window.AndroidNative?.pinWidget)window.AndroidNative.pinWidget(active);
   else status.textContent="إضافة البطاقات تتم من تطبيق أندرويد؛ هذه معاينة الويب فقط.";};
  reset.onclick=()=>{data[active]=defaults(active);persist();render();};
- root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,note,status);
+ root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,lockSection,note,status);
  render();return root;
 }
 window.AoqatWidgetAppearance={createPanel,load};
