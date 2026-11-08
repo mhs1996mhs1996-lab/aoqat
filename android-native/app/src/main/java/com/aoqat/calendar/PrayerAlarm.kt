@@ -66,7 +66,7 @@ object PrayerAlarm {
         if(!settings(c).optBoolean("enabled")||id !in ids||!item(c,id).optBoolean("enabled"))return false
         val p=item(c,id)
         if(count>=p.optInt("count",3).coerceIn(0,10))return false
-        val at=System.currentTimeMillis()+p.optInt("snooze",10).coerceIn(1,30)*60000L
+        val at=System.currentTimeMillis()+10*60000L
         prefs(c).edit().putLong("snooze_$id",at).putInt("snoozeCount_$id",count+1).commit()
         alarm(c,71000+ids.indexOf(id),id,at,count+1)
         return true
@@ -119,11 +119,23 @@ class PrayerAlarmService:Service(){
         val channel=NotificationChannel("prayer_alarm_v1","منبّه الصلاة",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);lockscreenVisibility=Notification.VISIBILITY_PUBLIC};nm.createNotificationChannel(channel)
         fun action(name:String)=PendingIntent.getBroadcast(this,72000+PrayerAlarm.ids.indexOf(id)*2+(if(name=="SNOOZE")1 else 0),Intent(this,PrayerAlarmActionReceiver::class.java).setAction(name).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val show=PendingIntent.getActivity(this,73000,Intent(this,PrayerAlarmActivity::class.java).putExtra("id",id).putExtra("count",count).putExtra("preview",preview),PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val visible=AlarmNotificationControls.view(this,PrayerAlarm.names[id] ?: "منبّه الصلاة",if(preview)"تجربة المنبّه" else "المنبّه يعمل — إيقاف أو غفوة",action("STOP"),if(!preview&&count<p.optInt("count",3))action("SNOOZE")else null,"غفوة "+p.optInt("snooze",10)+" دقائق")
-        val notification=Notification.Builder(this,"prayer_alarm_v1").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setCustomContentView(visible).setCustomBigContentView(visible).setStyle(Notification.DecoratedCustomViewStyle()).setContentTitle(if(preview || id=="third")p.optString("label",PrayerAlarm.names[id]) else PrayerNotifications.title(id,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY)).setContentText(if(preview)"تجربة النغمة" else p.optString("label",PrayerAlarm.names[id])).setCategory(Notification.CATEGORY_ALARM).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setContentIntent(show).addAction(Notification.Action.Builder(null,"إيقاف",action("STOP")).build())
-        if(!preview&&count<p.optInt("count",3))notification.addAction(Notification.Action.Builder(null,"غفوة",action("SNOOZE")).build())
-        // The alert must be explicitly enabled and screen waking is user-controlled.
-        if(!preview && PhoneScreenAlerts.enabled(this)) notification.setFullScreenIntent(show,true)
+        // A standard notification, not a widget-like custom card. Controls
+        // remain in the shade and the system full-screen alarm interface.
+        val notification=Notification.Builder(this,"prayer_alarm_v1")
+            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setContentTitle(if(preview || id=="third")p.optString("label",PrayerAlarm.names[id]) else PrayerNotifications.title(id,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY))
+            .setContentText(if(preview)"تجربة المنبّه" else "منبّه الصلاة يعمل — إيقاف التنبيه أو غفوة 10 دقائق")
+            .setCategory(Notification.CATEGORY_ALARM)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setPriority(Notification.PRIORITY_MAX)
+            .setOngoing(true)
+            .setContentIntent(show)
+            .addAction(Notification.Action.Builder(null,"إيقاف التنبيه",action("STOP")).build())
+        if(!preview&&count<p.optInt("count",3))
+            notification.addAction(Notification.Action.Builder(null,"غفوة 10 دقائق",action("SNOOZE")).build())
+        // The OS may require explicit full-screen notification access.
+        // Even when denied, the ongoing notification is still available.
+        if(!preview)notification.setFullScreenIntent(show,true)
         startForeground(73100,notification.build());if(!preview&&PrayerSoundPolicy.chosen(AdhanSchedule.settings(this),id,"dnd",true))PrayerAudioDnd.begin(this,"prayer-alarm");val duration=if(preview)5000L else p.optInt("duration",5).coerceIn(1,30)*60000L
         wake?.let{if(it.isHeld)it.release()};wake=(getSystemService(POWER_SERVICE) as PowerManager).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"aoqat:prayerAlarm").apply{acquire(duration+10000)}
         val attrs=AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
@@ -157,6 +169,10 @@ class PrayerAlarmActivity:Activity(){
     override fun onCreate(b:Bundle?){
         super.onCreate(b)
         PhoneScreenAlerts.applyWindow(this)
+        if(Build.VERSION.SDK_INT>=27){setShowWhenLocked(true);setTurnScreenOn(true)}
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         prayerId=intent.getStringExtra("id")?:run{finish();return}
         snoozeCount=intent.getIntExtra("count",0)
         preview=intent.getBooleanExtra("preview",false)
@@ -187,20 +203,20 @@ class PrayerAlarmActivity:Activity(){
             textSize=26f;gravity=Gravity.CENTER;setTextColor(android.graphics.Color.WHITE)
             setPadding(0,36,0,28)
         },LinearLayout.LayoutParams(-1,0,1f))
-        val snoozeMin=PrayerAlarm.item(this,prayerId).optInt("snooze",10).coerceIn(1,30)
+        val snoozeMin=10
         panel.addView(Button(this).apply{
-            text="التذكير بعد $snoozeMin دقائق"
+            text="غفوة $snoozeMin دقائق"
             textSize=18f
             isEnabled=!preview&&snoozeCount<PrayerAlarm.item(this@PrayerAlarmActivity,prayerId).optInt("count",3)
             setOnClickListener{decide("SNOOZE")}
         },LinearLayout.LayoutParams(-1,-2))
         panel.addView(TextView(this).apply{
-            text="اسحب لإيقاف المنبه"
+            text="إيقاف التنبيه أو غفوة 10 دقائق"
             textSize=20f;gravity=Gravity.CENTER;setTextColor(android.graphics.Color.WHITE)
             setPadding(0,25,0,12)
         },LinearLayout.LayoutParams(-1,0,0.7f))
         val stop=Button(this).apply{
-            text="◯  اسحب للإيقاف"
+            text="إيقاف التنبيه"
             textSize=20f
             setOnClickListener{decide("STOP")}
         }
