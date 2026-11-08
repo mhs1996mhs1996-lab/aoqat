@@ -677,6 +677,22 @@ class MainActivity : Activity() {
 
         @JavascriptInterface fun configureScreenWake(on: Boolean) {
             PhoneScreenAlerts.setEnabled(this@MainActivity, on)
+            if (on) runOnUiThread {
+                // Enabling the in-app switch alone cannot grant Android 14+
+                // permission to display alarms over the lock screen.
+                val manager=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                if(Build.VERSION.SDK_INT>=33 &&
+                    checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
+                    requestNotificationPermissionIfNeeded()
+                }else if(Build.VERSION.SDK_INT>=34 && !manager.canUseFullScreenIntent()) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                            Uri.parse("package:$packageName")))
+                    }catch(e:Exception){
+                        android.util.Log.w("PhoneScreenAlerts","Cannot request full-screen access",e)
+                    }
+                }
+            }
         }
 
         @JavascriptInterface fun requestScreenWakeAccess() { runOnUiThread {
