@@ -133,6 +133,36 @@ class HomeWidgetRenderingTest {
         assertNotNull(view.findViewById<android.widget.Chronometer>(R.id.widget_counter))
     }
 
+    @Test fun prayerTimetableRootWrapsContentInsteadOfFillingUnusedLauncherRows() {
+        seed()
+        for(height in listOf(180,270)) {
+            val view=FivePrayerWidget.views(c,height,"classic").apply(c,FrameLayout(c))
+            assertEquals("Timetable must not draw its root across unused home grid space",
+                android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                view.findViewById<View>(R.id.widget_times_root).layoutParams.height)
+            for(id in listOf(R.id.widget_time_clock_fajr,R.id.widget_time_clock_sunrise,
+                R.id.widget_time_clock_dhuhr,R.id.widget_time_clock_asr,
+                R.id.widget_time_clock_maghrib,R.id.widget_time_clock_isha)) {
+                assertTrue("No prayer may disappear when the widget is compact",
+                    view.findViewById<TextView>(id).text.isNotBlank())
+            }
+        }
+    }
+
+    @Test fun gridsWrapContentAndKeepAllSixPrayerTimes() {
+        seed()
+        for(layout in listOf("five_grid","five_featured")) {
+            val view=FivePrayerWidget.views(c,120,layout).apply(c,FrameLayout(c))
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                view.findViewById<View>(R.id.widget_times_root).layoutParams.height)
+            for(id in listOf(R.id.widget_times_fajr,R.id.widget_times_sunrise,
+                R.id.widget_times_dhuhr,R.id.widget_times_asr,
+                R.id.widget_times_maghrib,R.id.widget_times_isha)) {
+                assertTrue(view.findViewById<TextView>(id).text.isNotBlank())
+            }
+        }
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))
