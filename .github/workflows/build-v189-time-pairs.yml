@@ -110,7 +110,15 @@ jobs:
                   assert label.attrib[ns+'layout_width']=='wrap_content'
                   assert ns+'layout_weight' not in label.attrib
                   assert clock.attrib.get(ns+'layout_marginStart') in ['9dp','14dp']
-          print('PASS: six full prayer times grouped side-by-side with fixed small spacing')
+          alarm=(Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerAlarm.kt')).read_text()
+          adhan=(Path('android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt')).read_text()
+          for src in [alarm,adhan]:
+              assert '.setCustomContentView(' not in src
+              assert '.setCustomBigContentView(' not in src
+              assert 'setFullScreenIntent(' in src
+          assert 'action("SNOOZE")' in alarm and 'action("STOP")' in alarm
+          assert 'addAction(Notification.Action.Builder(null,"إيقاف",stop)' in adhan
+          print('PASS: six compact prayer pairs, native notification actions, and full-screen alarm intents')
           meta=ET.parse(Path('android-native/app/src/main/res/xml/prayer_widget_info.xml')).getroot()
           assert meta.attrib[ns+'targetCellHeight']=='1'
           combined=ET.parse(r/'prayer_combined_widget.xml').getroot()
