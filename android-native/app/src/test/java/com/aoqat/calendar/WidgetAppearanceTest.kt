@@ -50,7 +50,7 @@ class WidgetAppearanceTest {
             assertEquals(130-i*5,item.getJSONObject("numbers").getInt("size"))
             assertEquals("#112233",item.getJSONObject("numbers").getString("color"))
         }
-        assertEquals("transparent",WidgetAppearance.item(c,"five_grid").getString("background"))
+        assertEquals("mist",WidgetAppearance.item(c,"five_grid").getString("background"))
     }
 
     @Test fun malformedInputIsRejectedWithoutDestroyingSavedPreferences() {
