@@ -80,6 +80,31 @@ class HomeWidgetRenderingTest {
             view.findViewById<TextView>(R.id.widget_combined_iqama_title).text.toString())
     }
 
+    @Test fun refreshingWidgetClearsPreviousPrayerHighlight() {
+        seed()
+        val rowIds=listOf(
+            "fajr" to R.id.widget_times_row_fajr,
+            "sunrise" to R.id.widget_times_row_sunrise,
+            "dhuhr" to R.id.widget_times_row_dhuhr,
+            "asr" to R.id.widget_times_row_asr,
+            "maghrib" to R.id.widget_times_row_maghrib,
+            "isha" to R.id.widget_times_row_isha
+        )
+        val view=FivePrayerWidget.views(c,270,"classic").apply(c,FrameLayout(c))
+        // Simulate the phone retaining highlights from the previous prayer.
+        for((_,id) in rowIds) view.findViewById<View>(id)
+            .setBackgroundResource(R.drawable.aoqat_times_upcoming_row)
+        FivePrayerWidget.views(c,270,"classic").reapply(c,view)
+        val next=PrayerTimes.events(c).firstOrNull{it.at>System.currentTimeMillis()}?.id
+        val highlighted=rowIds.filter{(_,id)->
+            val background=view.findViewById<View>(id).background
+            background !is android.graphics.drawable.ColorDrawable ||
+                background.color != android.graphics.Color.TRANSPARENT
+        }.map{it.first}
+        assertEquals("No stale highlight from yesterday or earlier prayer",
+            next?.let{listOf(it)} ?: emptyList<String>(),highlighted)
+    }
+
     @Test fun compactVerticalTimetableStillIncludesAllSixRows() {
         seed()
         val view=FivePrayerWidget.views(c,180,"classic").apply(c,FrameLayout(c))
