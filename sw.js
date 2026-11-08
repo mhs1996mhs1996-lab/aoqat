@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v191-adaptive-cards-20261108";
+const CACHE_NAME = "aoqat-pwa-v192-six-font-groups-20261108";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
