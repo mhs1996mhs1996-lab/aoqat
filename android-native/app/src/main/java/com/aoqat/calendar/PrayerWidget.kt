@@ -253,14 +253,78 @@ class IqamaCountdownWidget:AppWidgetProvider(){
 }
 
 class NextPrayerService:Service(){
-    companion object{fun start(c:Context){if(AdhanSchedule.settings(c).optBoolean("persistent"))try{androidx.core.content.ContextCompat.startForegroundService(c,Intent(c,NextPrayerService::class.java))}catch(e:Exception){android.util.Log.w("NextPrayer","Cannot start background notification",e)}}}
+    companion object {
+        const val LOCK_CHANNEL = "next_prayer_lockscreen_v1"
+        fun wanted(c:Context):Boolean =
+            AdhanSchedule.settings(c).optBoolean("persistent") || LockScreenPrayer.enabled(c)
+        fun start(c:Context) {
+            if(!wanted(c))return
+            try {
+                androidx.core.content.ContextCompat.startForegroundService(
+                    c,Intent(c,NextPrayerService::class.java))
+            } catch(e:Exception) {
+                android.util.Log.w("NextPrayer","Cannot start background notification",e)
+            }
+        }
+        /** Android's native live countdown is readable on lock screens where
+         * the owner allows public notification contents. No audio or wakeups. */
+        fun lockNotification(c:Context):Notification {
+            val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(NotificationChannel(
+                LOCK_CHANNEL,"الصلاة القادمة على شاشة القفل",NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                setSound(null,null)
+                enableVibration(false)
+                setShowBadge(false)
+                lockscreenVisibility=Notification.VISIBILITY_PUBLIC
+                description="عرض الصلاة القادمة وعدّادها على شاشة القفل دون تنبيه صوتي"
+            })
+            val now=System.currentTimeMillis()
+            val next=PrayerTimes.events(c).firstOrNull{it.at>now}
+            val prayerName=next?.let{PrayerTimes.names[it.id]} ?: "الصلاة القادمة"
+            val title=if(next!=null)"باقي على صلاة $prayerName" else "مواقيت الصلاة في الحويجة"
+            val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            return Notification.Builder(c,LOCK_CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle(title)
+                .setContentText(if(next!=null)"مواقيت الصلاة في الحويجة" else "افتح التطبيق لعرض المواقيت")
+                .setShowWhen(next!=null)
+                .setWhen(next?.at ?: now)
+                .setUsesChronometer(next!=null)
+                .setChronometerCountDown(true)
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(tap)
+                .build()
+        }
+    }
     override fun onBind(i:Intent?) : IBinder?=null
-    override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int{
-        if(!AdhanSchedule.settings(this).optBoolean("persistent")){stopSelf();return START_NOT_STICKY}
-        val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager;nm.createNotificationChannel(NotificationChannel("next_prayer","الصلاة القادمة",NotificationManager.IMPORTANCE_LOW).apply{setSound(null,null)})
-        val views=PrayerWidget.views(this,true)
-        val n=Notification.Builder(this,"next_prayer").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setContentTitle("الصلاة القادمة").setCustomContentView(views).setCustomBigContentView(views).setPublicVersion(Notification.Builder(this,"next_prayer").setSmallIcon(android.R.drawable.ic_lock_idle_alarm).setCustomContentView(views).build()).setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true).setOnlyAlertOnce(true).setContentIntent(PendingIntent.getActivity(this,60501,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)).build()
-        startForeground(60502,n);return START_STICKY
+    override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int {
+        if(!wanted(this)){stopSelf();return START_NOT_STICKY}
+        val n=if(LockScreenPrayer.enabled(this))lockNotification(this) else {
+            val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            nm.createNotificationChannel(NotificationChannel(
+                "next_prayer","الصلاة القادمة",NotificationManager.IMPORTANCE_LOW
+            ).apply{setSound(null,null)})
+            val views=PrayerWidget.views(this,true)
+            Notification.Builder(this,"next_prayer")
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("الصلاة القادمة")
+                .setCustomContentView(views).setCustomBigContentView(views)
+                .setPublicVersion(Notification.Builder(this,"next_prayer")
+                    .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                    .setCustomContentView(views).build())
+                .setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(PendingIntent.getActivity(this,60501,
+                    Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
+                .build()
+        }
+        startForeground(60502,n)
+        return START_STICKY
     }
     override fun onDestroy(){stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
 }
