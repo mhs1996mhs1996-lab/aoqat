@@ -34,7 +34,7 @@ const group=(item,legacy)=>({
  color:/^#[0-9a-fA-F]{6}$/.test(item?.color||"")?item.color:(COLOR_NAMES[item?.color]||legacy.color)
 });
 const defaults=id=>({
- background:id==="times"||id==="combined"?"mist":"transparent",
+ background:["times","combined","five_grid","five_featured"].includes(id)?"mist":"transparent",
  labels:{...GROUP_DEFAULT},
  numbers:{...GROUP_DEFAULT},
  color:"white",font:"sans",scale:105,layout:"classic"
@@ -56,7 +56,7 @@ const normalize=(id,value)=>{
 function load(){
  let saved={};
  try{saved=JSON.parse(window.AndroidNative?.readWidgetAppearance?.()||localStorage.getItem(KEY)||"{}")||{};}catch(_){}
- return Object.fromEntries(IDS.map(id=>[id,normalize(id,saved[id])]));
+ return Object.fromEntries(IDS.map(id=>[id,normalize(id,saved[id]||((id==="five_grid"||id==="five_featured")?saved.times:undefined))]));
 }
 function save(data){
  try{
