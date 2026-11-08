@@ -107,7 +107,7 @@ class FivePrayerWidget:AppWidgetProvider(){
             val items=listOf("fajr" to R.id.widget_times_fajr, "dhuhr" to R.id.widget_times_dhuhr,
                 "asr" to R.id.widget_times_asr, "maghrib" to R.id.widget_times_maghrib,
                 "isha" to R.id.widget_times_isha)
-            val labels=mutableMapOf<Int,Pair<String,Float>>(R.id.widget_times_header to ("مواقيت الصلاة اليوم" to if(compact)16f else 19f))
+            val labels=mutableMapOf<Int,Pair<String,Float>>(R.id.widget_times_header to ("مواقيت الصلاة اليوم" to if(compact)15f else 19f))
             if (layout!="classic") {
                 val all=listOf("fajr" to R.id.widget_times_fajr, "sunrise" to R.id.widget_times_sunrise,
                     "dhuhr" to R.id.widget_times_dhuhr, "asr" to R.id.widget_times_asr,
@@ -115,7 +115,7 @@ class FivePrayerWidget:AppWidgetProvider(){
                 for ((prayer,id) in all) {
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                     val name=if(prayer=="sunrise") "الشروق" else PrayerTimes.names[prayer] ?: prayer
-                    labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)14f else 15f
+                    labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)13f else 15f
                 }
             }
             if (layout=="classic") {
