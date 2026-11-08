@@ -89,7 +89,7 @@ class FivePrayerWidget:AppWidgetProvider(){
             val requested=layoutOverride ?: selected
             // Launchers can grant less space than the requested minHeight. Keep every time visible.
             // A very short widget switches to the existing 3+3 grid rather than cropping rows.
-            val layout=if(requested=="classic" && heightDp in 1..164) "grid" else requested
+            val layout=if(requested=="classic" && heightDp in 1..145) "grid" else requested
             val compact=layout=="grid" || layout=="five_grid"
             val compressedClassic=layout=="classic" && heightDp in 1..259
             val v=RemoteViews(c.packageName,when(layout){
