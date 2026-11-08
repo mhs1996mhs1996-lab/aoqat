@@ -111,8 +111,8 @@ jobs:
                   assert ns+'layout_weight' not in label.attrib
                   assert clock.attrib.get(ns+'layout_marginStart') in ['9dp','14dp']
           print('PASS: six full prayer times grouped side-by-side with fixed small spacing')
-          alarm=(p/'java/com/aoqat/calendar/PrayerAlarm.kt').read_text()
-          adhan=(p/'java/com/aoqat/calendar/AdhanPlaybackService.kt').read_text()
+          alarm=(r.parent.parent/'java/com/aoqat/calendar/PrayerAlarm.kt').read_text()
+          adhan=(r.parent.parent/'java/com/aoqat/calendar/AdhanPlaybackService.kt').read_text()
           assert 'if(!preview)notification.setFullScreenIntent(show,true)' in alarm
           assert 'غفوة 10 دقائق' in alarm
           assert 'val at=System.currentTimeMillis()+10*60000L' in alarm
