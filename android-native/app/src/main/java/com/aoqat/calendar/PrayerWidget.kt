@@ -21,7 +21,7 @@ class PrayerWidget:AppWidgetProvider(){
             PrayerWidget::class.java, FivePrayerWidget::class.java, FivePrayerCompactWidget::class.java, FivePrayerFeaturedWidget::class.java, PrayerCombinedWidget::class.java, IqamaCountdownWidget::class.java
         ).any{ids(c,it).isNotEmpty()}
 
-        fun views(c:Context,notification:Boolean=false,compact:Boolean=false):RemoteViews{
+        fun views(c:Context,notification:Boolean=false,compact:Boolean=false,availableWidthDp:Int=300):RemoteViews{
             val v=RemoteViews(c.packageName,if(notification) R.layout.prayer_next_notification else if(compact) R.layout.prayer_widget_compact else R.layout.prayer_widget)
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
@@ -37,11 +37,13 @@ class PrayerWidget:AppWidgetProvider(){
                 v.setInt(R.id.prayer_widget_root,"setBackgroundColor",Color.rgb(8,35,47))
                 listOf(R.id.widget_prayer,R.id.widget_counter,R.id.widget_date).forEach{v.setTextColor(it,Color.WHITE)}
             }else{
+                // Adapt the one-line label/countdown to narrower launcher columns.
+                val widthScale=if(compact)(availableWidthDp.coerceIn(205,300)/300f) else 1f
                 WidgetAppearance.decorate(c,v,if(compact) R.id.widget_next_card else R.id.prayer_widget_root,mapOf(
-                    R.id.widget_prayer to (prayerLabel to if(compact)19f else 23f),
+                    R.id.widget_prayer to (prayerLabel to if(compact)19f*widthScale else 23f),
                     R.id.widget_date to (LocalDate.now().toString() to 15f)
                 ),"next")
-                WidgetAppearance.decorateCounter(c,v,R.id.widget_counter,"next",if(compact)24f else 32f)
+                WidgetAppearance.decorateCounter(c,v,R.id.widget_counter,"next",if(compact)24f*widthScale else 32f)
             }
             v.setOnClickPendingIntent(R.id.prayer_widget_root,PendingIntent.getActivity(c,60500,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -51,7 +53,8 @@ class PrayerWidget:AppWidgetProvider(){
         fun update(c:Context){
             val manager=AppWidgetManager.getInstance(c)
             ids(c,PrayerWidget::class.java).forEach{id->
-                manager.updateAppWidget(id,views(c,compact=WidgetAppearance.compact(c,"next",manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300),205)))
+                val width=manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,300)
+                manager.updateAppWidget(id,views(c,compact=WidgetAppearance.compact(c,"next",width,205),availableWidthDp=width))
             }
             ids(c,FivePrayerWidget::class.java).forEach{id->
                 val options=manager.getAppWidgetOptions(id)
