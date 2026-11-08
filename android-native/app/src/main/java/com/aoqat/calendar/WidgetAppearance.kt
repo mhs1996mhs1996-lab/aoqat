@@ -33,7 +33,7 @@ object WidgetAppearance {
         JSONObject().put("font",font).put("size",size).put("weight","bold").put("color",color)
 
     fun defaults(id:String):JSONObject = JSONObject()
-        .put("background",if(id=="times" || id=="combined")"mist" else "transparent")
+        .put("background",if(id in setOf("times","combined","five_grid","five_featured"))"mist" else "transparent")
         .put("color","white").put("font","sans").put("scale",105)
         .put("layout",if(id=="times")"classic" else "classic")
         .put("labels",fontDefaults("white","sans",105))
@@ -75,7 +75,11 @@ object WidgetAppearance {
     fun all(c:Context):JSONObject {
         val saved=try{JSONObject(prefs(c).getString(KEY,"{}"))}catch(_:Exception){JSONObject()}
         val out=JSONObject()
-        for(id in ids)out.put(id,normalized(id,saved.optJSONObject(id)?:JSONObject()))
+        for(id in ids) {
+            val previous=saved.optJSONObject(id)
+                ?: if(id=="five_grid" || id=="five_featured")saved.optJSONObject("times") else null
+            out.put(id,normalized(id,previous?:JSONObject()))
+        }
         return out
     }
     @Synchronized fun configure(c:Context,json:String):Boolean {
