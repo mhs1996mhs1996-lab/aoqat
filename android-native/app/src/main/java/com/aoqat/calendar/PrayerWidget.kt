@@ -22,7 +22,8 @@ class PrayerWidget:AppWidgetProvider(){
         ).any{ids(c,it).isNotEmpty()}
 
         fun views(c:Context,notification:Boolean=false,compact:Boolean=false):RemoteViews{
-            val v=RemoteViews(c.packageName,if(notification) R.layout.prayer_next_notification else if(compact) R.layout.prayer_widget_compact else R.layout.prayer_widget)
+            val base=if(notification)R.layout.prayer_next_notification else if(compact)R.layout.prayer_widget_compact else R.layout.prayer_widget
+            val v=RemoteViews(c.packageName,if(notification)base else WidgetAppearance.counterLayout(c,"next",base))
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
             val prayerLabel=if(next==null)"افتح التطبيق لتحميل المواقيت" else if(notification)"${PrayerTimes.names[next.id]} بعد" else "باقي على صلاة ${PrayerTimes.names[next.id]}"
@@ -92,14 +93,16 @@ class FivePrayerWidget:AppWidgetProvider(){
             val layout=if(requested=="classic" && heightDp in 1..164) "grid" else requested
             val compact=layout=="grid" || layout=="five_grid"
             val compressedClassic=layout=="classic" && heightDp in 1..259
-            val v=RemoteViews(c.packageName,when(layout){
+            val kind=when(layout){"five_grid"->"five_grid";"five_featured"->"five_featured";else->"times"}
+            val base=when(layout){
                 "grid" -> R.layout.prayer_times_widget_grid
                 "featured" -> R.layout.prayer_times_widget_featured
                 "five_grid" -> R.layout.prayer_five_widget_grid
                 "five_featured" -> R.layout.prayer_five_widget_featured
                 "classic" -> if(compressedClassic)R.layout.prayer_times_widget_classic_compact else R.layout.prayer_times_widget_classic_next
                 else -> R.layout.prayer_times_widget
-            })
+            }
+            val v=RemoteViews(c.packageName,if(layout=="classic")WidgetAppearance.counterLayout(c,kind,base) else base)
             val today=LocalDate.now()
             val rows=PrayerTimes.rows(c)
             val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{
@@ -108,6 +111,8 @@ class FivePrayerWidget:AppWidgetProvider(){
                 "asr" to R.id.widget_times_asr, "maghrib" to R.id.widget_times_maghrib,
                 "isha" to R.id.widget_times_isha)
             val labels=mutableMapOf<Int,Pair<String,Float>>(R.id.widget_times_header to ("مواقيت الصلاة اليوم" to if(compact)16f else 19f))
+            val numberLabels=mutableMapOf<Int,Pair<String,Float>>()
+            val cellData=mutableListOf<Triple<Int,String,String>>()
             if (layout!="classic") {
                 val all=listOf("fajr" to R.id.widget_times_fajr, "sunrise" to R.id.widget_times_sunrise,
                     "dhuhr" to R.id.widget_times_dhuhr, "asr" to R.id.widget_times_asr,
@@ -116,6 +121,7 @@ class FivePrayerWidget:AppWidgetProvider(){
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                     val name=if(prayer=="sunrise") "الشروق" else PrayerTimes.names[prayer] ?: prayer
                     labels[id]="$name\n${minutes?.let(::display) ?: "—"}" to if(compact)14f else 15f
+                    cellData.add(Triple(id,name,minutes?.let(::display) ?: "—"))
                 }
             }
             if (layout=="classic") {
@@ -139,15 +145,22 @@ class FivePrayerWidget:AppWidgetProvider(){
                 names.forEachIndexed{index,(prayer,id)->
                     val minutes=row?.let{PrayerTimes.minutes(it.optString(prayer),prayer)}
                     labels[id]=(if(prayer=="sunrise")"الشروق" else PrayerTimes.names[prayer] ?: prayer) to if(compressedClassic)12f else 16f
-                    labels[clockIds[index]]=(minutes?.let(::display) ?: "—") to if(compressedClassic)12f else 17f
+                    numberLabels[clockIds[index]]=(minutes?.let(::display) ?: "—") to if(compressedClassic)12f else 17f
                     // RemoteViews updates can reuse the old launcher views. Clear every row
                     // before applying the sole upcoming prayer background.
                     v.setInt(rowIds[index],"setBackgroundResource",
                         if(prayer==next?.id)R.drawable.aoqat_times_upcoming_row else android.R.color.transparent)
                 }
             }
-            WidgetAppearance.decorate(c,v,R.id.widget_times_card,labels,"times")
-            if(layout=="classic")WidgetAppearance.decorateCounter(c,v,R.id.widget_times_next_counter,"times",if(compressedClassic)15f else 20f)
+            WidgetAppearance.decorate(c,v,R.id.widget_times_card,labels,kind)
+            if(layout=="classic"){
+                for((id,number) in numberLabels)
+                    WidgetAppearance.decorateNumber(c,v,id,kind,number.first,number.second)
+                WidgetAppearance.decorateCounter(c,v,R.id.widget_times_next_counter,kind,if(compressedClassic)15f else 20f)
+            }else{
+                for((id,name,time) in cellData)
+                    WidgetAppearance.decorateCell(c,v,id,kind,name,time,if(compact)14f else 15f)
+            }
             v.setOnClickPendingIntent(R.id.widget_times_root,PendingIntent.getActivity(c,60530,
                 Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             return v
@@ -179,7 +192,8 @@ class IqamaCountdownWidget:AppWidgetProvider(){
          * that notification can be blocked by the device or user.
          */
         fun views(c:Context,compact:Boolean=false):RemoteViews{
-            val v=RemoteViews(c.packageName,if(compact)R.layout.prayer_iqama_widget_compact else R.layout.prayer_iqama_widget)
+            val base=if(compact)R.layout.prayer_iqama_widget_compact else R.layout.prayer_iqama_widget
+            val v=RemoteViews(c.packageName,WidgetAppearance.counterLayout(c,"iqama",base))
             val now=System.currentTimeMillis()
             val active=if(IqamaNativeScheduler.enabled(c)){
                 PrayerTimes.events(c,LocalDate.now().minusDays(1)).lastOrNull{event->
