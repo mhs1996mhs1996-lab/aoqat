@@ -163,6 +163,36 @@ class HomeWidgetRenderingTest {
         }
     }
 
+    @Test fun verticalTimetableKeepsPrayerLabelsBesideTheirTimes() {
+        seed()
+        for(height in listOf(180,270)) {
+            val rendered=FivePrayerWidget.views(c,height,"classic").apply(c,FrameLayout(c))
+            val names=listOf(R.id.widget_times_fajr,R.id.widget_times_sunrise,
+                R.id.widget_times_dhuhr,R.id.widget_times_asr,
+                R.id.widget_times_maghrib,R.id.widget_times_isha)
+            val clocks=listOf(R.id.widget_time_clock_fajr,R.id.widget_time_clock_sunrise,
+                R.id.widget_time_clock_dhuhr,R.id.widget_time_clock_asr,
+                R.id.widget_time_clock_maghrib,R.id.widget_time_clock_isha)
+            val rows=listOf(R.id.widget_times_row_fajr,R.id.widget_times_row_sunrise,
+                R.id.widget_times_row_dhuhr,R.id.widget_times_row_asr,
+                R.id.widget_times_row_maghrib,R.id.widget_times_row_isha)
+            for(i in names.indices){
+                val name=rendered.findViewById<TextView>(names[i])
+                val clock=rendered.findViewById<TextView>(clocks[i])
+                val parent=rendered.findViewById<android.widget.LinearLayout>(rows[i])
+                assertTrue(name.text.isNotBlank())
+                assertTrue(clock.text.isNotBlank())
+                assertEquals("Rows must center the time pair rather than fill the widget width",
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,parent.layoutParams.width)
+                assertEquals("Prayer names must not have a stretching weight",
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,name.layoutParams.width)
+                assertTrue("Compact labels should be sized consistently",name.minWidth>0)
+                assertTrue("Time should follow its name with a small fixed gap",
+                    (clock.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 1..20)
+            }
+        }
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))
