@@ -206,18 +206,18 @@ class HomeWidgetRenderingTest {
         assertTrue((timer.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 6..14)
     }
 
-    @Test fun bothVerticalTimetablesHaveFullWidthOutlinedTopCountdown() {
+    @Test fun bothVerticalTimetablesKeepCountdownCloseAndCentered() {
         seed()
         for(height in listOf(180,270)) {
             val root=FivePrayerWidget.views(c,height,"classic").apply(c,FrameLayout(c))
             val name=root.findViewById<TextView>(R.id.widget_times_next_label)
             val counter=root.findViewById<android.widget.Chronometer>(R.id.widget_times_next_counter)
             val parent=name.parent as android.widget.LinearLayout
-            assertEquals(android.view.ViewGroup.LayoutParams.MATCH_PARENT,parent.layoutParams.width)
-            assertEquals(0,name.layoutParams.width)
-            assertEquals(1f,(name.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
-            assertEquals(5,(counter.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart)
-            assertNotNull("The top row needs a distinct pill outline",parent.background)
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,parent.layoutParams.width)
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,name.layoutParams.width)
+            assertEquals(0f,(name.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
+            assertEquals(8,(counter.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart)
+            assertNotNull("The title/time pair retains its outline",parent.background)
             assertEquals(parent,counter.parent)
         }
     }
@@ -228,6 +228,43 @@ class HomeWidgetRenderingTest {
         assertNotNull(root.findViewById<View>(R.id.widget_combined_iqama_pill))
         assertEquals(android.widget.LinearLayout.HORIZONTAL,
             root.findViewById<android.widget.LinearLayout>(R.id.widget_combined_card).orientation)
+    }
+
+    @Test fun separateSixCardTextAndTimeStylesDoNotBreakLiveChronometers() {
+        seed()
+        val styles=org.json.JSONObject()
+        for(id in listOf("next","times","five_grid","five_featured","iqama","combined")) {
+            val label=org.json.JSONObject().put("font","serif").put("weight","normal")
+                .put("size",85).put("color","#123456")
+            val number=org.json.JSONObject().put("font","condensed").put("weight","bold")
+                .put("size",125).put("color","#ffeedd")
+            styles.put(id,org.json.JSONObject().put("labels",label).put("numbers",number))
+        }
+        assertTrue(WidgetAppearance.configure(c,styles.toString()))
+        val next=PrayerWidget.views(c,compact=true).apply(c,FrameLayout(c))
+        assertEquals(android.graphics.Color.parseColor("#123456"),
+            next.findViewById<TextView>(R.id.widget_prayer).currentTextColor)
+        assertEquals(android.graphics.Color.parseColor("#ffeedd"),
+            next.findViewById<TextView>(R.id.widget_counter).currentTextColor)
+        val timetable=FivePrayerWidget.views(c,180,"classic").apply(c,FrameLayout(c))
+        assertEquals(android.graphics.Color.parseColor("#ffeedd"),
+            timetable.findViewById<TextView>(R.id.widget_times_next_counter).currentTextColor)
+        assertEquals(android.graphics.Color.parseColor("#ffeedd"),
+            timetable.findViewById<TextView>(R.id.widget_time_clock_sunrise).currentTextColor)
+        for(layout in listOf("five_grid","five_featured")) {
+            val view=FivePrayerWidget.views(c,120,layout).apply(c,FrameLayout(c))
+            val cell=view.findViewById<TextView>(R.id.widget_times_fajr).text
+            assertTrue("Cells must hold label and numeric time in separate spans",
+                cell is android.text.Spanned)
+            val spans=(cell as android.text.Spanned).getSpans(0,cell.length,
+                android.text.style.ForegroundColorSpan::class.java)
+            assertEquals(2,spans.size)
+        }
+        val paired=PrayerCombinedWidget.views(c).apply(c,FrameLayout(c))
+        assertEquals(android.graphics.Color.parseColor("#ffeedd"),
+            paired.findViewById<TextView>(R.id.widget_combined_iqama_counter).currentTextColor)
+        assertNotNull(IqamaCountdownWidget.views(c,true).apply(c,FrameLayout(c))
+            .findViewById<android.widget.Chronometer>(R.id.widget_iqama_before_counter))
     }
 
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
