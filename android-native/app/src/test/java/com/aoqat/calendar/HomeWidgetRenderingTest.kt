@@ -193,6 +193,34 @@ class HomeWidgetRenderingTest {
         }
     }
 
+    @Test fun nextPrayerCountdownIsCenteredBesideLabelWithoutStretching() {
+        seed()
+        val root=PrayerWidget.views(c,compact=true).apply(c,FrameLayout(c))
+        val card=root.findViewById<android.widget.LinearLayout>(R.id.widget_next_card)
+        val name=root.findViewById<TextView>(R.id.widget_prayer)
+        val timer=root.findViewById<android.widget.Chronometer>(R.id.widget_counter)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, card.layoutParams.width)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, name.layoutParams.width)
+        assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, timer.layoutParams.width)
+        assertEquals(0f,(name.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
+        assertTrue((timer.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 6..14)
+    }
+
+    @Test fun bothVerticalTimetablesKeepCountdownCloseToTitle() {
+        seed()
+        for(height in listOf(180,270)) {
+            val root=FivePrayerWidget.views(c,height,"classic").apply(c,FrameLayout(c))
+            val name=root.findViewById<TextView>(R.id.widget_times_next_label)
+            val counter=root.findViewById<android.widget.Chronometer>(R.id.widget_times_next_counter)
+            val parent=name.parent as android.widget.LinearLayout
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,parent.layoutParams.width)
+            assertEquals(android.view.ViewGroup.LayoutParams.WRAP_CONTENT,name.layoutParams.width)
+            assertEquals(0f,(name.layoutParams as android.widget.LinearLayout.LayoutParams).weight)
+            assertTrue((counter.layoutParams as android.widget.LinearLayout.LayoutParams).marginStart in 6..14)
+            assertEquals(parent,counter.parent)
+        }
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))
