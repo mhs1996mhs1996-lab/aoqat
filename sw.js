@@ -108,7 +108,7 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=17",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
-  "/js/widget-appearance.js?v=6-adaptive-cards",
+  "/js/widget-appearance.js?v=7-six-card-fonts",
   "/js/web-menu-order.js?v=39-widget-style-20261107",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
