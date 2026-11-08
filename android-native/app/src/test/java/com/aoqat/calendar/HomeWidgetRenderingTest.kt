@@ -243,6 +243,22 @@ class HomeWidgetRenderingTest {
         }
     }
 
+    @Test fun nextPrayerCountDownRespectsNarrowWidgetWidth() {
+        seed()
+        val large=PrayerWidget.views(c,compact=true,availableWidthDp=300)
+            .apply(c,FrameLayout(c))
+        val small=PrayerWidget.views(c,compact=true,availableWidthDp=220)
+            .apply(c,FrameLayout(c))
+        val largeLabel=large.findViewById<TextView>(R.id.widget_prayer)
+        val smallLabel=small.findViewById<TextView>(R.id.widget_prayer)
+        val largeTimer=large.findViewById<TextView>(R.id.widget_counter)
+        val smallTimer=small.findViewById<TextView>(R.id.widget_counter)
+        assertTrue("Label must shrink slightly on narrow launcher columns",
+            smallLabel.textSize < largeLabel.textSize)
+        assertTrue("Count-down must also shrink to keep its edge inset",
+            smallTimer.textSize < largeTimer.textSize)
+    }
+
     @Test fun compactIqamaInflatesWithLargeTitleAndNoFooter() {
         seed()
         val view = IqamaCountdownWidget.views(c, compact = true).apply(c, FrameLayout(c))
