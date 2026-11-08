@@ -231,6 +231,9 @@ object IqamaNativeScheduler {
 class AlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if(!AlarmScheduler.claim(context,intent?.getLongExtra("at",0)?:0))return
+        // Best-effort screen illumination as soon as the publish alarm fires; the
+        // full-screen notification remains the primary OS-approved wake path.
+        PhoneScreenAlerts.pulse(context)
         AlarmSoundService.start(context)
         AlarmUi.showFullScreenNotification(context)
         try {
@@ -269,6 +272,7 @@ class BootReceiver : BroadcastReceiver() {
 object AlarmUi {
     const val CHANNEL_ID = "prayer_publish_alarm_screen_v3"
     const val NOTIFICATION_ID = 45101
+    const val SNOOZED_NOTIFICATION_ID = 45102
 
     fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < 26) return
@@ -303,14 +307,10 @@ object AlarmUi {
         val until=AlarmScheduler.snoozeUntil(context)
         val notice="⏰ مواقيت الغد جاهزة"
         val state=if(snoozed && until>System.currentTimeMillis()) "غفوة إلى " + java.text.SimpleDateFormat("h:mm a",java.util.Locale("ar")).format(java.util.Date(until)) + " — إيقاف أو إعادة غفوة" else "المنبّه يعمل — إيقاف أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق"
-        val visible=AlarmNotificationControls.view(context,notice,state,stopPending,snoozePending,"غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق")
         val notification=NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(notice)
             .setContentText(state)
-            .setCustomContentView(visible)
-            .setCustomBigContentView(visible)
-            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
@@ -319,8 +319,11 @@ object AlarmUi {
             .setOnlyAlertOnce(true)
             .setDeleteIntent(stopPending)
             .setContentIntent(fullPending)
-            .addAction(android.R.drawable.ic_lock_idle_alarm, "غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق", snoozePending)
             .addAction(android.R.drawable.ic_media_pause, "إيقاف التنبيه", stopPending)
+        // During a snooze only Stop remains relevant; keep it in the notification
+        // shade, and do not request a new full-screen Activity until the alarm is due.
+        if(!snoozed) notification.addAction(android.R.drawable.ic_lock_idle_alarm,
+            "غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق", snoozePending)
         // A full-screen alarm is requested only when the user allows screen waking.
         // Android 14+ can still show a heads-up alert until FSI access is granted.
         if(!snoozed && PhoneScreenAlerts.enabled(context)) notification.setFullScreenIntent(fullPending,true)
@@ -329,18 +332,24 @@ object AlarmUi {
 
     fun showFullScreenNotification(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.cancel(SNOOZED_NOTIFICATION_ID)
         manager.notify(NOTIFICATION_ID, buildAlarmNotification(context))
     }
 
     fun showSnoozedNotification(context: Context) {
         if(AlarmScheduler.enabled(context)&&AlarmScheduler.snoozeUntil(context)>System.currentTimeMillis()) {
             val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            nm.notify(NOTIFICATION_ID,buildAlarmNotification(context,true))
+            // The service owns NOTIFICATION_ID as its foreground notification.
+            // A separate ID survives stopForeground(REMOVE) during snooze.
+            nm.notify(SNOOZED_NOTIFICATION_ID,buildAlarmNotification(context,true))
         }
     }
 
     fun dismiss(context: Context) {
-        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(NOTIFICATION_ID)
+        (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).apply {
+            cancel(NOTIFICATION_ID)
+            cancel(SNOOZED_NOTIFICATION_ID)
+        }
     }
 }
 
@@ -350,6 +359,8 @@ class AlarmActionReceiver : BroadcastReceiver() {
             "SNOOZE" -> {
                 AlarmScheduler.scheduleSnooze(context)
                 AlarmSoundService.stop(context)
+                // Keep an independently owned notification while the full-screen
+                // Activity closes, with a Stop action that cancels the pending alarm.
                 AlarmUi.showSnoozedNotification(context)
             }
             else -> {

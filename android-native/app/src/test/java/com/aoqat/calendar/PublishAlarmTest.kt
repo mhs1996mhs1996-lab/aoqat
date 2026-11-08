@@ -43,6 +43,31 @@ class PublishAlarmTest {
   assertTrue(activity.isFinishing)
   assertTrue(shadowOf(c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).scheduledAlarms.any{it.triggerAtTime-System.currentTimeMillis() in 359000L..360000L})
  }
+ @Test fun snoozeKeepsCancelableNotificationInShadeWithoutFullScreen() {
+  on()
+  AlarmScheduler.setSnoozeMinutes(c,10)
+  val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+  val ringing=AlarmUi.buildAlarmNotification(c)
+  assertNotNull(ringing.fullScreenIntent)
+  AlarmActionReceiver().onReceive(c,Intent(c,AlarmActionReceiver::class.java).setAction("SNOOZE"))
+  val until=AlarmScheduler.snoozeUntil(c)
+  assertTrue("Snooze must schedule a 10-minute return",until-System.currentTimeMillis() in 599000L..600000L)
+  val waiting=shadowOf(nm).getNotification(AlarmUi.SNOOZED_NOTIFICATION_ID)
+  assertNotNull("Snooze must stay visible after the foreground alarm stops",waiting)
+  assertNull("A waiting notification must never launch the full-screen alarm automatically",
+     waiting.fullScreenIntent)
+  assertEquals("STOP",shadowOf(waiting.deleteIntent).savedIntent.action)
+  AlarmActionReceiver().onReceive(c,Intent(c,AlarmActionReceiver::class.java).setAction("STOP"))
+  assertEquals(0L,AlarmScheduler.snoozeUntil(c))
+  assertNull("Stop must clear the reminder before ten minutes",shadowOf(nm).getNotification(AlarmUi.SNOOZED_NOTIFICATION_ID))
+ }
+ @Test fun wakeSettingCanStillBuildARegularAlarmWithoutFullScreenPermission() {
+  on()
+  PhoneScreenAlerts.setEnabled(c,false)
+  assertNull(AlarmUi.buildAlarmNotification(c).fullScreenIntent)
+  PhoneScreenAlerts.setEnabled(c,true)
+  assertNotNull(AlarmUi.buildAlarmNotification(c).fullScreenIntent)
+ }
  private fun on(){c.getSharedPreferences("publish_alarm_settings",0).edit().putBoolean("enabled",true).commit();if(android.os.Build.VERSION.SDK_INT>=31)org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)}
  @Test fun freshInstallAndOldPendingBroadcastNeverStartPublishingAlarm(){assertFalse(AlarmScheduler.enabled(c));AlarmScheduler.scheduleFromDatabase(c);AlarmReceiver().onReceive(c,Intent(c,AlarmReceiver::class.java).putExtra("at",System.currentTimeMillis()));assertNull(shadowOf(c as Application).nextStartedService);assertTrue(shadowOf(c.getSystemService(Context.ALARM_SERVICE)as AlarmManager).scheduledAlarms.isEmpty());val service=Robolectric.buildService(AlarmSoundService::class.java).create().get();assertEquals(Service.START_NOT_STICKY,service.onStartCommand(null,0,1))}
  @Test fun disablingCancelsSnoozeAndRejectsRacingReceiver(){on();AlarmScheduler.scheduleSnooze(c);val am=c.getSystemService(Context.ALARM_SERVICE)as AlarmManager;assertFalse(shadowOf(am).scheduledAlarms.isEmpty());AlarmScheduler.setEnabled(c,false);assertTrue(shadowOf(am).scheduledAlarms.isEmpty());AlarmReceiver().onReceive(c,Intent(c,AlarmReceiver::class.java).putExtra("at",System.currentTimeMillis()));assertNull(shadowOf(c as Application).nextStartedService)}

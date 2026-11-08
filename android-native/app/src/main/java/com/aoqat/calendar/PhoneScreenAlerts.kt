@@ -54,7 +54,7 @@ object PhoneScreenAlerts {
             val flags = android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
                 android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP
             val lock = power.newWakeLock(flags,"aoqat:notification-wake")
-            lock.acquire(2500L)
+            lock.acquire(8000L)
         } catch (e: Exception) {
             android.util.Log.w("PhoneScreenAlerts","Device blocked optional reminder illumination",e)
         }
