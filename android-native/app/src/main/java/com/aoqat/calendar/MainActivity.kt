@@ -362,7 +362,7 @@ class MainActivity : Activity() {
         requestExactAlarmAccessIfNeeded()
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
-        if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
+        if (NextPrayerService.wanted(this)) NextPrayerService.start(this)
         if (AdhanSchedule.enabled(this)) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
         else if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
@@ -396,7 +396,7 @@ class MainActivity : Activity() {
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         PrayerAudioDnd.recover(this)
-        if (AdhanSchedule.settings(this).optBoolean("persistent")) NextPrayerService.start(this)
+        if (NextPrayerService.wanted(this)) NextPrayerService.start(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
         }
@@ -824,6 +824,21 @@ class MainActivity : Activity() {
         @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}
         @JavascriptInterface fun stopAdhan(){AdhanPlaybackService.stop(this@MainActivity)}
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
+        @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
+            LockScreenPrayer.enabled(this@MainActivity)
+        @JavascriptInterface fun configureLockScreenPrayer(on:Boolean):Boolean {
+            val saved=LockScreenPrayer.configure(this@MainActivity,on)
+            if(saved && on)runOnUiThread{requestNotificationPermissionIfNeeded()}
+            return saved
+        }
+        @JavascriptInterface fun openLockScreenNotificationSettings(){runOnUiThread {
+            try{
+                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+            }catch(e:Exception){
+                android.util.Log.w("LockScreenPrayer","Cannot open notification settings",e)
+            }
+        }}
         @JavascriptInterface fun readWidgetAppearance():String =
             WidgetAppearance.all(this@MainActivity).toString()
         @JavascriptInterface fun configureWidgetAppearance(json:String):Boolean =
