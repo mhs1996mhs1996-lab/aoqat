@@ -840,10 +840,15 @@ class MainActivity : Activity() {
         @JavascriptInterface fun openLockScreenNotificationSettings(){runOnUiThread {
             try {
                 // Open the exact channel rather than the global app settings.
-                NextPrayerService.lockNotification(this@MainActivity)
-                startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                    .putExtra(Settings.EXTRA_APP_PACKAGE,packageName)
-                    .putExtra(Settings.EXTRA_CHANNEL_ID,NextPrayerService.LOCK_CHANNEL))
+                if (!LockScreenPrayer.notificationsAllowed(this@MainActivity)) {
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+                } else {
+                    NextPrayerService.lockNotification(this@MainActivity)
+                    startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE,packageName)
+                        .putExtra(Settings.EXTRA_CHANNEL_ID,NextPrayerService.LOCK_CHANNEL))
+                }
             }catch(e:Exception){
                 try {
                     startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
