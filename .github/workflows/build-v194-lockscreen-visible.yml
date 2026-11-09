@@ -48,6 +48,11 @@ jobs:
                   assert '@+id/widget_times_'+prayer in ids, (name,prayer)
           for f in ['PrayerWidget.kt','WidgetAppearance.kt']:
               assert (p/'java/com/aoqat/calendar'/f).exists()
+          lock=(p/'java/com/aoqat/calendar/LockScreenPrayer.kt').read_text()
+          notification=(p/'java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          native=(p/'java/com/aoqat/calendar/MainActivity.kt').read_text()
+          schedule=(p/'java/com/aoqat/calendar/AdhanSchedule.kt').read_text()
+          panel=Path('js/widget-appearance.js').read_text()
           assert 'versionCode 129' in Path('android-native/app/build.gradle').read_text()
           assert 'next_prayer_lockscreen_v2' in notification
           assert 'NotificationManager.IMPORTANCE_DEFAULT' in notification
