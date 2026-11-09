@@ -362,7 +362,9 @@ class MainActivity : Activity() {
         requestExactAlarmAccessIfNeeded()
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
-        if (NextPrayerService.wanted(this)) NextPrayerService.start(this)
+        if (LockScreenPrayer.enabled(this) && LockScreenPrayer.notificationsAllowed(this))
+            LockScreenPrayer.showNow(this)
+        else if (NextPrayerService.wanted(this)) NextPrayerService.start(this)
         if (AdhanSchedule.enabled(this)) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
         else if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
@@ -826,17 +828,34 @@ class MainActivity : Activity() {
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
+        @JavascriptInterface fun readLockScreenPrayerStatus():String =
+            LockScreenPrayer.status(this@MainActivity)
+        @JavascriptInterface fun refreshLockScreenPrayer():Boolean =
+            LockScreenPrayer.showNow(this@MainActivity)
         @JavascriptInterface fun configureLockScreenPrayer(on:Boolean):Boolean {
             val saved=LockScreenPrayer.configure(this@MainActivity,on)
             if(saved && on)runOnUiThread{requestNotificationPermissionIfNeeded()}
             return saved
         }
         @JavascriptInterface fun openLockScreenNotificationSettings(){runOnUiThread {
-            try{
-                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                    .putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+            try {
+                // Open the exact channel rather than the global app settings.
+                if (!LockScreenPrayer.notificationsAllowed(this@MainActivity)) {
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+                } else {
+                    NextPrayerService.lockNotification(this@MainActivity)
+                    startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE,packageName)
+                        .putExtra(Settings.EXTRA_CHANNEL_ID,NextPrayerService.LOCK_CHANNEL))
+                }
             }catch(e:Exception){
-                android.util.Log.w("LockScreenPrayer","Cannot open notification settings",e)
+                try {
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+                }catch(t:Exception){
+                    android.util.Log.w("LockScreenPrayer","Cannot open notification settings",t)
+                }
             }
         }}
         @JavascriptInterface fun readWidgetAppearance():String =
@@ -1090,6 +1109,20 @@ class MainActivity : Activity() {
         requestIqamaBackgroundAccessIfNeeded(force=force,forAdhan=true)
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         if(!nm.areNotificationsEnabled()&&(Build.VERSION.SDK_INT<33||checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED))startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode:Int, permissions:Array<out String>, grantResults:IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults)
+        if(requestCode==NOTIFICATION_PERMISSION_REQUEST &&
+           grantResults.isNotEmpty() &&
+           grantResults[0]==PackageManager.PERMISSION_GRANTED &&
+           LockScreenPrayer.enabled(this)) {
+            // The previous release started the service before consent, making
+            // the silent foreground notification invisible on Android 13+.
+            LockScreenPrayer.showNow(this)
+        }
     }
 
     private fun requestNotificationPermissionIfNeeded() {

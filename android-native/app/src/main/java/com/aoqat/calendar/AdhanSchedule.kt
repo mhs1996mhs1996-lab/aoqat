@@ -76,7 +76,9 @@ object AdhanSchedule {
         schedule(c)
         IqamaNativeScheduler.scheduleCached(c)
         PrayerAlarm.schedule(c)
-        if (s.optBoolean("persistent") || LockScreenPrayer.enabled(c)) NextPrayerService.start(c) else c.stopService(Intent(c, NextPrayerService::class.java))
+        if (LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c)) LockScreenPrayer.showNow(c)
+        else if (s.optBoolean("persistent")) NextPrayerService.start(c)
+        else c.stopService(Intent(c, NextPrayerService::class.java))
         PrayerWidget.update(c)
         Thread { IqamaNativeScheduler.refresh(c) }.start()
     }
@@ -188,8 +190,20 @@ class AdhanReceiver : BroadcastReceiver() {
             "IQAMA_QUIET" -> AfterIqamaQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
             "ADHAN_QUIET" -> AtAdhanQuiet.start(c,intent.getStringExtra("prayerId") ?: return,intent.getLongExtra("prayerAt",0))
             "RESTORE_SOUND" -> AdhanPlaybackService.restoreRingerIfExpired(c)
-            "REFRESH" -> { AdhanSchedule.schedule(c); val pending=goAsync(); Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start() }
-            "NEXT" -> { PrayerWidget.update(c); if(NextPrayerService.wanted(c))NextPrayerService.start(c); AdhanSchedule.schedule(c) }
+            "REFRESH" -> {
+                AdhanSchedule.schedule(c)
+                if(LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c))
+                    LockScreenPrayer.showNow(c)
+                val pending=goAsync()
+                Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start()
+            }
+            "NEXT" -> {
+                PrayerWidget.update(c)
+                if(LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c))
+                    LockScreenPrayer.showNow(c)
+                else if(NextPrayerService.wanted(c))NextPrayerService.start(c)
+                AdhanSchedule.schedule(c)
+            }
         }
     }
 }

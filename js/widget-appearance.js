@@ -131,25 +131,51 @@ function createPanel(){
  lockExplanation.textContent="على هواتف Honor التي لا تعرض بطاقات التطبيقات في محرّر شاشة القفل، يمكن عرض الصلاة القادمة وعدّادها بإشعار ثابت وصامت على شاشة القفل. الظهور يعتمد على سماح الهاتف بإظهار الإشعارات على شاشة القفل.";
  const lockToggle=document.createElement("button");lockToggle.className="wa-primary";lockToggle.type="button";
  const lockSettings=document.createElement("button");lockSettings.className="wa-primary";lockSettings.type="button";
- lockSettings.textContent="إعدادات إشعارات شاشة القفل في الهاتف";
+ lockSettings.textContent="إعدادات قناة الإشعار في الهاتف";
+ const lockCheck=document.createElement("button");lockCheck.className="wa-primary";lockCheck.type="button";
+ lockCheck.textContent="فحص سبب عدم ظهور العدّاد";
+ const lockRetry=document.createElement("button");lockRetry.className="wa-primary";lockRetry.type="button";
+ lockRetry.textContent="إظهار الإشعار الآن";
+ const lockStatus=document.createElement("p");lockStatus.className="wa-note";lockStatus.setAttribute("role","status");
  const hasLock=!!window.AndroidNative?.configureLockScreenPrayer;
  let lockEnabled=hasLock&&window.AndroidNative.readLockScreenPrayerEnabled?.()===true;
  const syncLock=()=>{
    lockToggle.textContent=lockEnabled?"إيقاف عرض الصلاة القادمة على شاشة القفل":"تشغيل عرض الصلاة القادمة على شاشة القفل";
    lockToggle.setAttribute("aria-pressed",String(lockEnabled));
  };
+ function checkLock(){
+  if(!hasLock)return;
+  try{
+   const state=JSON.parse(window.AndroidNative.readLockScreenPrayerStatus?.()||"{}");
+   if(!state.enabled)lockStatus.textContent="العرض متوقف. فعّل الخيار أولاً.";
+   else if(state.notificationsAllowed===false)
+    lockStatus.textContent="إذن إشعارات التطبيق غير مسموح. اسمح بالإشعارات من إعدادات الهاتف، ثم اضغط إظهار الإشعار الآن.";
+   else if(state.channelAllowed===false)
+    lockStatus.textContent="قناة عدّاد الصلاة محجوبة. افتح إعدادات قناة الإشعار وفعّل عرضها على شاشة القفل.";
+   else if(state.notificationActive===false)
+    lockStatus.textContent="الإشعارات مسموحة، لكن العدّاد غير منشور. اضغط إظهار الإشعار الآن.";
+   else lockStatus.textContent="العدّاد منشور في قائمة الإشعارات. إذا ما يظهر على القفل، فعّل عرض المحتوى والإشعارات الصامتة في إعدادات Honor.";
+  }catch(_){lockStatus.textContent="تعذر فحص الإشعار؛ تحقق من إعدادات الهاتف.";}
+ }
  lockToggle.onclick=()=>{
-   if(!hasLock)return;
-   const next=!lockEnabled;
-   if(window.AndroidNative.configureLockScreenPrayer(next)!==true){
-     status.textContent="تعذر حفظ إعداد شاشة القفل.";return;
-   }
-   lockEnabled=next;syncLock();
-   status.textContent=next?"تم التفعيل. اسمح بعرض إشعارات التطبيق على شاشة القفل من إعدادات الهاتف.":"تم إيقاف عرض الصلاة القادمة على شاشة القفل.";
+  if(!hasLock)return;
+  const next=!lockEnabled;
+  if(window.AndroidNative.configureLockScreenPrayer(next)!==true){
+   status.textContent="تعذر حفظ إعداد شاشة القفل.";return;
+  }
+  lockEnabled=next;syncLock();
+  status.textContent=next?"تم حفظ التفعيل. إذا ظهرت نافذة إذن الإشعارات، اختر سماح.":"تم إيقاف عرض الصلاة القادمة على شاشة القفل.";
+  checkLock();
  };
+ lockRetry.onclick=()=>{
+  const ok=window.AndroidNative?.refreshLockScreenPrayer?.()===true;
+  status.textContent=ok?"تم إرسال إشعار الصلاة القادمة إلى الهاتف.":"تعذر إظهار الإشعار. افحص إذن الإشعارات وقناتها.";
+  checkLock();
+ };
+ lockCheck.onclick=checkLock;
  lockSettings.onclick=()=>window.AndroidNative?.openLockScreenNotificationSettings?.();
  lockSection.append(lockHeading,lockExplanation);
- if(hasLock){syncLock();lockSection.append(lockToggle,lockSettings);}
+ if(hasLock){syncLock();lockSection.append(lockToggle,lockRetry,lockCheck,lockSettings,lockStatus);checkLock();}
  else{
    const webNote=document.createElement("p");webNote.className="wa-note";
    webNote.textContent="خيار شاشة القفل متاح في تطبيق أندرويد فقط.";

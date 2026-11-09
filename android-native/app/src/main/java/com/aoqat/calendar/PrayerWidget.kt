@@ -254,9 +254,11 @@ class IqamaCountdownWidget:AppWidgetProvider(){
 
 class NextPrayerService:Service(){
     companion object {
-        const val LOCK_CHANNEL = "next_prayer_lockscreen_v1"
+        const val LOCK_CHANNEL = "next_prayer_lockscreen_v2"
+        const val NOTIFICATION_ID = 60502
         fun wanted(c:Context):Boolean =
-            AdhanSchedule.settings(c).optBoolean("persistent") || LockScreenPrayer.enabled(c)
+            AdhanSchedule.settings(c).optBoolean("persistent") ||
+                (LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c))
         fun start(c:Context) {
             if(!wanted(c))return
             try {
@@ -271,13 +273,13 @@ class NextPrayerService:Service(){
         fun lockNotification(c:Context):Notification {
             val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(NotificationChannel(
-                LOCK_CHANNEL,"الصلاة القادمة على شاشة القفل",NotificationManager.IMPORTANCE_LOW
+                LOCK_CHANNEL,"الصلاة القادمة على شاشة القفل",NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 setSound(null,null)
                 enableVibration(false)
                 setShowBadge(false)
                 lockscreenVisibility=Notification.VISIBILITY_PUBLIC
-                description="عرض الصلاة القادمة وعدّادها على شاشة القفل دون تنبيه صوتي"
+                description="عدّاد الصلاة القادمة على شاشة القفل مع إظهار المحتوى دون صوت"
             })
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
@@ -288,13 +290,14 @@ class NextPrayerService:Service(){
             return Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
-                .setContentText(if(next!=null)"مواقيت الصلاة في الحويجة" else "افتح التطبيق لعرض المواقيت")
+                .setContentText(if(next!=null)"أوقات الصلاة في الحويجة — عدّاد تنازلي" else "افتح التطبيق لعرض المواقيت")
                 .setShowWhen(next!=null)
                 .setWhen(next?.at ?: now)
                 .setUsesChronometer(next!=null)
                 .setChronometerCountDown(true)
                 .setCategory(Notification.CATEGORY_STATUS)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setPriority(Notification.PRIORITY_DEFAULT)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setContentIntent(tap)
@@ -323,7 +326,7 @@ class NextPrayerService:Service(){
                     Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE))
                 .build()
         }
-        startForeground(60502,n)
+        startForeground(NOTIFICATION_ID,n)
         return START_STICKY
     }
     override fun onDestroy(){stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
