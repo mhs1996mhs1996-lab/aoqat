@@ -20,6 +20,29 @@ class LockScreenPrayerTest {
         assertFalse(LockScreenPrayer.enabled(c))
     }
 
+    @Test fun visibleLockScreenChannelKeepsNormalImportanceWithoutSoundOrVibration() {
+        val notification=NextPrayerService.lockNotification(c)
+        val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val channel=manager.getNotificationChannel(NextPrayerService.LOCK_CHANNEL)
+        assertNotNull(channel)
+        assertEquals(android.app.NotificationManager.IMPORTANCE_DEFAULT,channel.importance)
+        assertNull("The visible notification must not play an audible alert",channel.sound)
+        assertFalse(channel.shouldVibrate())
+        assertEquals(Notification.VISIBILITY_PUBLIC,channel.lockscreenVisibility)
+        assertEquals(Notification.VISIBILITY_PUBLIC,notification.visibility)
+        assertTrue("Dedicated v2 channel prevents old low-importance setting from being reused",
+            NextPrayerService.LOCK_CHANNEL.endsWith("_v2"))
+    }
+
+    @Test fun notificationStatusReportsDisabledWithoutAssumingHonorShowsLockWidget() {
+        c.getSharedPreferences("lockscreen_prayer_v1",Context.MODE_PRIVATE).edit().clear().commit()
+        val state=org.json.JSONObject(LockScreenPrayer.status(c))
+        assertFalse(state.getBoolean("enabled"))
+        assertTrue(state.has("notificationsAllowed"))
+        assertTrue(state.has("channelAllowed"))
+        assertTrue(state.has("notificationActive"))
+    }
+
     @Test fun nativeCountdownIsSilentPublicOngoingAndHasNoFullScreenTakeover() {
         val notification=NextPrayerService.lockNotification(c)
         assertEquals(NextPrayerService.LOCK_CHANNEL,notification.channelId)
