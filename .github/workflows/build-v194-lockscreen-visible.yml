@@ -2,7 +2,7 @@ name: Build v1.94 visible lock-screen prayer notification APK
 on:
   push:
     branches:
-      - 'feature/v194-lockscreen-visible-notification-20261109'
+      - 'fix/v194-lockscreen-visible-notification-20261109'
   workflow_dispatch:
   pull_request:
     branches: [main, feature/v193-lockscreen-prayer-countdown-20261109]
