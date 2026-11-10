@@ -2,7 +2,7 @@ name: Build v1.96 live wallpaper for lock screen APK
 on:
   push:
     branches:
-      - 'fix/v196-home-countdowns-and-lock-visibility-20261110'
+      - 'feature/v196-lockscreen-live-wallpaper-20261110'
   workflow_dispatch:
   pull_request:
     branches: [main, fix/v195-home-countdowns-and-lock-visibility-20261110]
