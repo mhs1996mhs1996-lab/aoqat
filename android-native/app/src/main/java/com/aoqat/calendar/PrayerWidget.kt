@@ -257,8 +257,7 @@ class NextPrayerService:Service(){
         const val LOCK_CHANNEL = "next_prayer_lockscreen_v2"
         const val NOTIFICATION_ID = 60502
         fun wanted(c:Context):Boolean =
-            AdhanSchedule.settings(c).optBoolean("persistent") ||
-                (LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c))
+            AdhanSchedule.settings(c).optBoolean("persistent") && !LockScreenPrayer.enabled(c)
         fun start(c:Context) {
             if(!wanted(c))return
             try {
