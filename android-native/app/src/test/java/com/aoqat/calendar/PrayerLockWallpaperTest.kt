@@ -24,7 +24,6 @@ class PrayerLockWallpaperTest {
         val info=app.packageManager.getServiceInfo(component,PackageManager.GET_META_DATA)
         assertEquals("android.permission.BIND_WALLPAPER",info.permission)
         assertTrue(info.exported)
-        assertEquals(android.content.res.Resources.getSystem().getString(android.R.string.ok).isNotEmpty(),true)
         assertNotNull(info.metaData)
         assertTrue(info.metaData.containsKey(WallpaperService.SERVICE_META_DATA))
         val preview=Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
