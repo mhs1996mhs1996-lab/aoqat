@@ -164,7 +164,8 @@ class PrayerLockWallpaperService : WallpaperService() {
 
             // Leave room for the system lock clock, status bar and notifications.
             // Heights depend on the user's selected components, not blank padding.
-            val options = getSharedPreferences("prayer_lock_wallpaper", MODE_PRIVATE)
+            val options = this@PrayerLockWallpaperService.getSharedPreferences(
+                "prayer_lock_wallpaper", android.content.Context.MODE_PRIVATE)
             val showTimes = options.getBoolean("show_times", true)
             val rows = if (showTimes) 6 else 0
             val rowHeight = 33f * scale
