@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v194-lock-notification-diagnostics-20261109";
+const CACHE_NAME = "aoqat-pwa-v195-main-prayer-nowrap-20261110";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -105,7 +105,7 @@ const APP_SHELL = [
   "/js/push-notifications.js?v=9",
   "/js/quran-reader.js?v=qcf-style8-surah-ayah-20261029",
   "/js/iqama-timing.js?v=1",
-  "/js/prayer-countdown.js?v=17",
+  "/js/prayer-countdown.js?v=18-main-row-fit",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
   "/js/widget-appearance.js?v=9-lock-notification-diagnostics",

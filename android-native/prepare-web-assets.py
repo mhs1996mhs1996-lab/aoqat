@@ -233,8 +233,9 @@ transform('compact-design-menu.js', [("let state={};try{state=JSON.parse(localSt
 transform('interface-clock.js', [('#liveClockTime{font-size:12.5px}#liveClockDate{font-size:11px}', '#liveClockTime{font-size:16px}#liveClockDate{font-size:14px}')])
 transform('prayer-countdown.js', [
  ('.next-prayer span,.iqama-status span{font-size:9px}', '#nextPrayerLabel,#iqamaLabel{font-size:12px}.next-prayer span,.iqama-status span{font-size:12px}'),
- ('.next-prayer b,.iqama-status b{font-size:12px}', '.next-prayer b,.iqama-status b{font-size:15px}'),
- ('.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}', '.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:wrap!important}')])
+ ('.next-prayer b,.iqama-status b{font-size:12px}', '.next-prayer b,.iqama-status b{font-size:15px}')])
+# Keep main app prayer / iqama pills side by side. The APK-only wrapping
+# regression was introduced during launcher-widget adaptations.
 
 # Include current calendar/search services in Android and use its image sharing bridge.
 transform('web-menu-order.js', [('if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={', 'window.AoqatWebSettingsNavigation={')])

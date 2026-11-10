@@ -43,6 +43,21 @@ class LockScreenPrayerTest {
         assertTrue(state.has("notificationActive"))
     }
 
+    @Test @Config(sdk=[32]) fun directLockScreenReminderIsIndependentOfForegroundService() {
+        c.getSharedPreferences("lockscreen_prayer_v1",Context.MODE_PRIVATE)
+            .edit().putBoolean("enabled",true).commit()
+        assertTrue("Android lock notification must post without a running FGS",
+            LockScreenPrayer.showNow(c))
+        val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val posted=org.robolectric.Shadows.shadowOf(manager)
+            .getNotification(LockScreenPrayer.LOCK_NOTIFICATION_ID)
+        assertNotNull("Dedicated lock notification must be posted",posted)
+        assertNull("Do not reuse the service notification ID",
+            org.robolectric.Shadows.shadowOf(manager).getNotification(NextPrayerService.NOTIFICATION_ID))
+        assertTrue(posted.flags and Notification.FLAG_ONGOING_EVENT != 0)
+        assertNull(posted.fullScreenIntent)
+    }
+
     @Test fun nativeCountdownIsSilentPublicOngoingAndHasNoFullScreenTakeover() {
         val notification=NextPrayerService.lockNotification(c)
         assertEquals(NextPrayerService.LOCK_CHANNEL,notification.channelId)
