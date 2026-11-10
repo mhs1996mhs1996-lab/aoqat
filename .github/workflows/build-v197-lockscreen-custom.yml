@@ -123,7 +123,7 @@ jobs:
           assert 'R.color.transparent' in k
           assert 'if(prayer==next?.id)' in k
           assert 'مواقيت الصلاة مع الصلاة القادمة' in (p/'AndroidManifest.xml').read_text()
-          assert "versionName '1.96'" in Path('android-native/app/build.gradle').read_text()
+          assert "versionName '1.97'" in Path('android-native/app/build.gradle').read_text()
           for provider in ['FivePrayerCompactWidget','FivePrayerFeaturedWidget','PrayerCombinedWidget']:
               assert 'class '+provider+':' in (k+(p/'java/com/aoqat/calendar/PrayerCombinedWidget.kt').read_text())
               assert provider in (p/'AndroidManifest.xml').read_text()
@@ -275,7 +275,7 @@ jobs:
           aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
           "$signer" verify --print-certs "$apk" | tee /tmp/aoqat-v197/signature.txt
           grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' /tmp/aoqat-v197/signature.txt
-          "$aapt" dump badging "$apk" | grep -F "versionCode='131' versionName='1.96'"
+          "$aapt" dump badging "$apk" | grep -F "versionCode='131' versionName='1.97'"
           python3 - <<'PY'
           import zipfile
           p='/tmp/aoqat-v197/aoqat-v1.97-lockscreen-custom.apk'

@@ -130,8 +130,6 @@ function createPanel(){
  liveTitle.textContent="بطاقات شاشة القفل — الخلفية الحية";
  const liveInfo=document.createElement("p");liveInfo.className="wa-note";
  liveInfo.textContent="خلفية حية تعرض عدّاد الصلاة القادمة ومواقيت الحويجة من قاعدة بيانات التطبيق. تُعاينها أولاً، ثم تختار من شاشة أندرويد تطبيقها على القفل إن كان جهازك يدعم ذلك. لا تتغير خلفية هاتفك تلقائياً.";
- const wallpaperPreview=document.createElement("button");wallpaperPreview.type="button";
- wallpaperPreview.className="wa-primary";wallpaperPreview.textContent="معاينة بطاقة القفل الحية واختيار تطبيقها";
  const canPreview=!!window.AndroidNative?.previewPrayerLockWallpaper;
  const canCustomize=canPreview&&!!window.AndroidNative?.configurePrayerLockWallpaperConfig;
  const cfg=(()=>{
