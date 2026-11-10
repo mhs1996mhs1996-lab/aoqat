@@ -2,7 +2,7 @@ name: Build v1.95 home countdown and lock-screen notification APK
 on:
   push:
     branches:
-      - 'fix/v195-home-countdown-lock-20261109'
+      - 'fix/v195-home-countdowns-and-lock-visibility-20261110'
   workflow_dispatch:
   pull_request:
     branches: [main, fix/v194-lockscreen-visible-notification-20261109]
