@@ -132,26 +132,84 @@ function createPanel(){
  liveInfo.textContent="خلفية حية تعرض عدّاد الصلاة القادمة ومواقيت الحويجة من قاعدة بيانات التطبيق. تُعاينها أولاً، ثم تختار من شاشة أندرويد تطبيقها على القفل إن كان جهازك يدعم ذلك. لا تتغير خلفية هاتفك تلقائياً.";
  const wallpaperPreview=document.createElement("button");wallpaperPreview.type="button";
  wallpaperPreview.className="wa-primary";wallpaperPreview.textContent="معاينة بطاقة القفل الحية واختيار تطبيقها";
- const showTimesRow=document.createElement("label");showTimesRow.className="wa-field";
- showTimesRow.textContent="محتويات الخلفية الحية";
- const showTimesToggle=document.createElement("input");showTimesToggle.type="checkbox";
  const canPreview=!!window.AndroidNative?.previewPrayerLockWallpaper;
- showTimesToggle.checked=canPreview?window.AndroidNative.readPrayerLockWallpaperShowTimes?.()!==false:true;
- const timesLabel=document.createElement("span");timesLabel.textContent="عرض المواقيت الستة تحت عدّاد الصلاة القادمة";
- showTimesRow.append(showTimesToggle,timesLabel);
- showTimesToggle.onchange=()=>{
-   const ok=window.AndroidNative?.configurePrayerLockWallpaperShowTimes?.(showTimesToggle.checked);
-   if(ok===false){showTimesToggle.checked=!showTimesToggle.checked;status.textContent="تعذر حفظ محتويات الخلفية.";}
- };
+ const canCustomize=canPreview&&!!window.AndroidNative?.configurePrayerLockWallpaperConfig;
+ const cfg=(()=>{
+  if(canCustomize)try{return JSON.parse(window.AndroidNative.readPrayerLockWallpaperConfig?.()||"{}");}catch(_){}
+  return {items:{next:true,iqama:false,date:false,fajr:true,sunrise:true,dhuhr:true,asr:true,maghrib:true,isha:true},
+   labelFont:"sans",numberFont:"sans",size:100,labelColor:"#FFF7DE",numberColor:"#F8D37E",background:"emerald"};
+ })();
+ const editorButton=document.createElement("button");editorButton.type="button";
+ editorButton.className="wa-primary";editorButton.textContent="إضافة أو حذف عناصر بطاقة شاشة القفل";
+ const editor=document.createElement("div");editor.className="wa-style-editor";editor.hidden=true;
+ editorButton.onclick=()=>{editor.hidden=!editor.hidden;editorButton.setAttribute("aria-expanded",String(!editor.hidden));};
+ const labels={next:"عدّاد الصلاة القادمة",iqama:"عداد باقي ومضى على الإقامة",date:"التاريخ الميلادي",fajr:"الفجر",sunrise:"الشروق",dhuhr:"الظهر",asr:"العصر",maghrib:"المغرب",isha:"العشاء"};
+ const editorStatus=document.createElement("p");editorStatus.className="wa-note";editorStatus.setAttribute("role","status");
+ function saveLock(){
+  const ok=window.AndroidNative?.configurePrayerLockWallpaperConfig?.(JSON.stringify(cfg))===true;
+  editorStatus.textContent=ok?"تم حفظ بطاقة القفل. افتح المعاينة لمشاهدة الترتيب.":"تعذّر حفظ محتويات بطاقة القفل.";
+  return ok;
+ }
+ const elements=document.createElement("div");elements.className="wa-fields";
+ Object.entries(labels).forEach(([id,name])=>{
+  const row=document.createElement("label");row.className="wa-field";row.style.cssText="display:flex;align-items:center;gap:8px";
+  const toggle=document.createElement("input");toggle.type="checkbox";toggle.checked=cfg.items?.[id]===true;
+  const word=document.createElement("span");word.textContent=name;
+  toggle.onchange=()=>{
+   const previous=cfg.items[id];cfg.items[id]=toggle.checked;
+   if(!Object.values(cfg.items).some(Boolean)){
+    cfg.items[id]=previous;toggle.checked=previous;
+    editorStatus.textContent="يجب إبقاء عنصر واحد على الأقل في البطاقة.";return;
+   }
+   if(!saveLock()){cfg.items[id]=previous;toggle.checked=previous;}
+  };
+  row.append(toggle,word);elements.append(row);
+ });
+ function lockSelect(title,key,values){
+  const wrap=document.createElement("label");wrap.className="wa-field";wrap.textContent=title;
+  const select=document.createElement("select");
+  Object.entries(values).forEach(([value,name])=>{const option=document.createElement("option");option.value=value;option.textContent=name;select.append(option);});
+  select.value=cfg[key];select.onchange=()=>{
+   const prev=cfg[key];cfg[key]=select.value;
+   if(!saveLock()){cfg[key]=prev;select.value=prev;}
+  };wrap.append(select);return wrap;
+ }
+ const typefaces={sans:"واضح حديث",serif:"نسخي كلاسيكي",condensed:"مختصر",medium:"متوسط"};
+ const fields=document.createElement("div");fields.className="wa-fields";
+ fields.append(lockSelect("نوع خط العبارات","labelFont",typefaces),
+  lockSelect("نوع خط الأرقام","numberFont",typefaces),
+  lockSelect("خلفية الحاوية","background",{emerald:"زمردي",navy:"أزرق داكن",transparent:"شفاف"}));
+ for(const [key,label] of [["labelColor","لون العبارات"],["numberColor","لون الأرقام"]]){
+  const wrap=document.createElement("label");wrap.className="wa-field";wrap.textContent=label;
+  const picker=document.createElement("input");picker.type="color";picker.value=cfg[key];
+  picker.onchange=()=>{
+   const prev=cfg[key];cfg[key]=picker.value;
+   if(!saveLock()){cfg[key]=prev;picker.value=prev;}
+  };wrap.append(picker);fields.append(wrap);
+ }
+ const sizeField=document.createElement("label");sizeField.className="wa-field";sizeField.textContent="حجم الخط";
+ const fontSize=document.createElement("input");fontSize.type="range";fontSize.min="65";fontSize.max="160";fontSize.step="5";fontSize.value=String(cfg.size);
+ const sizeText=document.createElement("span");sizeText.textContent=cfg.size+"٪";
+ fontSize.oninput=()=>{sizeText.textContent=fontSize.value+"٪";};
+ fontSize.onchange=()=>{
+  const old=cfg.size;cfg.size=Number(fontSize.value);
+  if(!saveLock()){cfg.size=old;fontSize.value=String(old);sizeText.textContent=old+"٪";}
+ };sizeField.append(fontSize,sizeText);
+ const wallpaperPreview=document.createElement("button");wallpaperPreview.type="button";
+ wallpaperPreview.className="wa-primary";wallpaperPreview.textContent="معاينة بطاقة القفل الحية واختيار تطبيقها";
  wallpaperPreview.onclick=()=>window.AndroidNative?.previewPrayerLockWallpaper?.();
  const liveHelp=document.createElement("p");liveHelp.className="wa-note";
- liveHelp.textContent="للبطاقة الأصلية: أضف «الصلاة القادمة» من محرر شاشة القفل إذا ظهرت ضمن الأدوات المتاحة. بعض إصدارات أندرويد لا تسمح ببطاقات التطبيقات الخارجية؛ لذلك وفرنا الخلفية الحية والإشعار بديلين.";
+ liveHelp.textContent="الحاوية تكبر وتصغر حسب العناصر، وعند تكبير الخط تنتقل العدادات إلى سطرين. معاينة نظام أندرويد توضح النتيجة. تطبيق الخلفية على القفل فقط يعتمد على دعم هاتفك؛ ولا تتغير خلفية هاتفك تلقائياً.";
  liveSection.append(liveTitle,liveInfo);
- if(canPreview)liveSection.append(showTimesRow,wallpaperPreview,liveHelp);
- else{
-   const onlyAndroid=document.createElement("p");onlyAndroid.className="wa-note";
-   onlyAndroid.textContent="معاينة خلفية شاشة القفل متاحة من تطبيق أندرويد فقط.";
-   liveSection.append(onlyAndroid);
+ if(canCustomize){
+  editor.append(elements,fields,sizeField,editorStatus);
+  liveSection.append(editorButton,editor,wallpaperPreview,liveHelp);
+ }else if(canPreview){
+  liveSection.append(wallpaperPreview,liveHelp);
+ }else{
+  const onlyAndroid=document.createElement("p");onlyAndroid.className="wa-note";
+  onlyAndroid.textContent="معاينة بطاقة القفل وتخصيصها متاحان من تطبيق أندرويد فقط.";
+  liveSection.append(onlyAndroid);
  }
  const lockSection=document.createElement("section");lockSection.className="wa-style-group";
  const lockHeading=document.createElement("strong");lockHeading.textContent="الصلاة القادمة على شاشة القفل";

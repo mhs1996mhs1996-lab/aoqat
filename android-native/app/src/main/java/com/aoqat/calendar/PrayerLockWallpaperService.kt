@@ -17,6 +17,7 @@ import android.text.TextPaint
 import android.util.Log
 import android.view.SurfaceHolder
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.min
 import org.json.JSONObject
@@ -41,6 +42,7 @@ class PrayerLockWallpaperService : WallpaperService() {
         private var cachedAt = 0L
         private var cachedDate: LocalDate? = null
         private var cachedNext: PrayerTimes.Prayer? = null
+        private var cachedIqama: PrayerTimes.Prayer? = null
         private var cachedToday: JSONObject? = null
         private val prayers = listOf(
             "fajr" to "الفجر", "sunrise" to "الشروق",
@@ -86,12 +88,20 @@ class PrayerLockWallpaperService : WallpaperService() {
         private fun refreshPrayerData(now: Long) {
             val date = LocalDate.now()
             if (cachedAt != 0L && now - cachedAt < 60_000L &&
-                cachedDate == date && cachedNext?.at?.let { it > now } != false) return
+                cachedDate == date && cachedNext?.at?.let { it > now } != false &&
+                cachedIqama?.let { it.at + IqamaNativeScheduler.durations(this@PrayerLockWallpaperService,it.id).totalMs > now } != false) return
             cachedAt = now
             cachedDate = date
             try {
-                cachedNext = PrayerTimes.events(this@PrayerLockWallpaperService)
-                    .firstOrNull { it.at > now }
+                val events = PrayerTimes.events(this@PrayerLockWallpaperService,date.minusDays(1))
+                cachedNext = events.firstOrNull { it.at > now }
+                cachedIqama = if(IqamaNativeScheduler.enabled(this@PrayerLockWallpaperService)){
+                    events.lastOrNull { event ->
+                        val duration=IqamaNativeScheduler.durations(this@PrayerLockWallpaperService,event.id)
+                        !FridaySchedule.suppress(this@PrayerLockWallpaperService,event.id,event.at) &&
+                            now>=event.at && now<event.at+duration.totalMs
+                    }
+                }else null
                 val rows = PrayerTimes.rows(this@PrayerLockWallpaperService)
                 cachedToday = (0 until rows.length()).mapNotNull { rows.optJSONObject(it) }
                     .firstOrNull { it.optInt("gregorian_month") == date.monthValue &&
@@ -99,6 +109,7 @@ class PrayerLockWallpaperService : WallpaperService() {
             } catch (e: Exception) {
                 Log.w("PrayerLockWallpaper", "Offline prayer times could not be read", e)
                 cachedNext = null
+                cachedIqama = null
                 cachedToday = null
             }
         }
@@ -119,11 +130,12 @@ class PrayerLockWallpaperService : WallpaperService() {
 
         private fun arabic(canvas: Canvas, value: String, center: Float, top: Float,
                            width: Float, fontSize: Float, color: Int,
-                           bold: Boolean = false) {
+                           bold: Boolean = false, font: String = "sans") {
             val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
                 this.color = color
                 textSize = fontSize
-                typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
+                val family=when(font){"serif"->"serif";"condensed"->"sans-serif-condensed";"medium"->"sans-serif-medium";else->"sans-serif"}
+                typeface = Typeface.create(family, if (bold) Typeface.BOLD else Typeface.NORMAL)
             }
             val w = width.toInt().coerceAtLeast(1)
             val layout = StaticLayout.Builder.obtain(value, 0, value.length, paint, w)
@@ -150,70 +162,99 @@ class PrayerLockWallpaperService : WallpaperService() {
                 if (hour < 12) "ص" else "م")
         }
 
+        private fun iqamaCounter(ms:Long):String {
+            val s=(ms.coerceAtLeast(0L)+999L)/1000L
+            return String.format(Locale.US,"%02d:%02d",s/60L,s%60L)
+        }
+
         private fun drawWallpaper(canvas: Canvas) {
-            val w = canvas.width.toFloat()
-            val h = canvas.height.toFloat()
-            if (w < 1 || h < 1) return
-            val now = System.currentTimeMillis()
+            val w=canvas.width.toFloat();val h=canvas.height.toFloat()
+            if(w<1f||h<1f)return
+            val now=System.currentTimeMillis()
             refreshPrayerData(now)
-            val scale = min(w / 390f, h / 780f).coerceIn(0.65f, 3f)
-            backdrop.shader = LinearGradient(0f, 0f, w, h,
-                Color.rgb(8, 45, 51), Color.rgb(7, 72, 67), Shader.TileMode.CLAMP)
-            canvas.drawRect(0f, 0f, w, h, backdrop)
-            backdrop.shader = null
+            val cfg=LockWallpaperOptions.read(this@PrayerLockWallpaperService)
+            val selectedRows=LockWallpaperOptions.visiblePrayers(cfg)
+            val scale=min(min(w/390f,h/780f).coerceIn(.60f,3f),
+                h*.59f/LockWallpaperOptions.cardHeight(cfg))
+            val size=cfg.optInt("size",100)/100f
+            val labelFont=cfg.optString("labelFont","sans")
+            val numberFont=cfg.optString("numberFont","sans")
+            val ivory=Color.parseColor(cfg.optString("labelColor","#FFF7DE"))
+            val gold=Color.parseColor(cfg.optString("numberColor","#F8D37E"))
+            backdrop.shader=LinearGradient(0f,0f,w,h,Color.rgb(8,45,51),
+                Color.rgb(7,72,67),Shader.TileMode.CLAMP)
+            canvas.drawRect(0f,0f,w,h,backdrop)
+            backdrop.shader=null
 
-            // Leave room for the system lock clock, status bar and notifications.
-            // Heights depend on the user's selected components, not blank padding.
-            val options = this@PrayerLockWallpaperService.getSharedPreferences(
-                "prayer_lock_wallpaper", android.content.Context.MODE_PRIVATE)
-            val showTimes = options.getBoolean("show_times", true)
-            val rows = if (showTimes) 6 else 0
-            val rowHeight = 33f * scale
-            val cardHeight = (143f + rows * 34f) * scale
-            val cardWidth = (w - 30f * scale).coerceAtMost(368f * scale)
-            val left = (w - cardWidth) / 2f
-            val top = (h * 0.33f).coerceAtMost(h - cardHeight - 25f * scale)
-                .coerceAtLeast(20f * scale)
-            val right = left + cardWidth
-            val bottom = top + cardHeight
+            val cardHeight=LockWallpaperOptions.cardHeight(cfg)*scale
+            val cardWidth=(w-30f*scale).coerceAtMost(368f*scale)
+            val left=(w-cardWidth)/2f
+            val top=(h*.33f).coerceAtMost(h-cardHeight-25f*scale).coerceAtLeast(20f*scale)
+            val right=left+cardWidth
+            val card=RectF(left,top,right,top+cardHeight)
+            backdrop.color=when(cfg.optString("background")){
+                "navy"->Color.argb(221,17,36,57)
+                "transparent"->Color.argb(85,13,51,57)
+                else->Color.argb(215,13,51,57)
+            }
+            canvas.drawRoundRect(card,20f*scale,20f*scale,backdrop)
+            edge.strokeWidth=1f*scale
+            canvas.drawRoundRect(card,20f*scale,20f*scale,edge)
+            val center=w/2f
+            var y=top+13f*scale
+            val large=size>1.25f
 
-            val card = RectF(left, top, right, bottom)
-            backdrop.color = Color.argb(215, 13, 51, 57)
-            canvas.drawRoundRect(card, 20f * scale, 20f * scale, backdrop)
-            edge.strokeWidth = 1f * scale
-            canvas.drawRoundRect(card, 20f * scale, 20f * scale, edge)
-
-            val center = w / 2f
-            val ivory = Color.rgb(255, 247, 222)
-            val gold = Color.rgb(248, 211, 126)
-            val next = cachedNext
-            val nextName = next?.id?.let { PrayerTimes.names[it] }
-            arabic(canvas, if (nextName != null) "باقي على صلاة $nextName"
-                else "أوقات الصلاة في الحويجة", center, top + 14f * scale,
-                cardWidth - 12f * scale, 21f * scale, ivory, true)
-            val remaining = next?.let { clockText(it.at, now) } ?: "--:--:--"
-            arabic(canvas, remaining, center, top + 48f * scale,
-                cardWidth - 25f * scale, 36f * scale, gold, true)
-
-            if (showTimes) {
-                arabic(canvas, "مواقيت الصلاة اليوم", center, top + 102f * scale,
-                    cardWidth - 18f * scale, 17f * scale, ivory, true)
-                val firstRowTop = top + 137f * scale
-                prayers.forEachIndexed { index, (id, name) ->
-                    val y = firstRowTop + index * rowHeight
-                    if (next?.id == id) {
-                        backdrop.color = Color.argb(118, 28, 120, 101)
-                        canvas.drawRoundRect(RectF(left + 9f * scale, y - 3f * scale,
-                            right - 9f * scale, y + rowHeight - 3f * scale),
-                            8f * scale, 8f * scale, backdrop)
+            if(LockWallpaperOptions.selected(cfg,"next")){
+                val nextName=cachedNext?.id?.let{PrayerTimes.names[it]}
+                val label=if(nextName==null)"الصلاة القادمة" else "باقي على صلاة $nextName"
+                val value=cachedNext?.let{clockText(it.at,now)}?:"--:--:--"
+                if(large){
+                    arabic(canvas,label,center,y,cardWidth-16f*scale,18f*size*scale,ivory,true,labelFont)
+                    arabic(canvas,value,center,y+34f*scale,cardWidth-16f*scale,28f*size*scale,gold,true,numberFont)
+                }else{
+                    arabic(canvas,label,center+cardWidth*.215f,y+12f*scale,cardWidth*.52f,18f*size*scale,ivory,true,labelFont)
+                    arabic(canvas,value,center-cardWidth*.245f,y+9f*scale,cardWidth*.43f,21f*size*scale,gold,true,numberFont)
+                }
+                y+=LockWallpaperOptions.countdownHeight(cfg)*scale
+            }
+            if(LockWallpaperOptions.selected(cfg,"iqama")){
+                val event=cachedIqama
+                val threshold=event?.let{it.at+IqamaNativeScheduler.durations(this@PrayerLockWallpaperService,it.id).beforeMs}
+                val after=threshold!=null&&now>=threshold
+                val label=if(event==null)"الإقامة" else if(after)"مضى على الإقامة" else "باقي على الإقامة"
+                val value=if(threshold==null)"00:00" else iqamaCounter(if(after)now-threshold else threshold-now)
+                if(large){
+                    arabic(canvas,label,center,y,cardWidth-16f*scale,18f*size*scale,ivory,true,labelFont)
+                    arabic(canvas,value,center,y+32f*scale,cardWidth-16f*scale,25f*size*scale,gold,true,numberFont)
+                }else{
+                    arabic(canvas,label,center+cardWidth*.215f,y+9f*scale,cardWidth*.52f,17f*size*scale,ivory,true,labelFont)
+                    arabic(canvas,value,center-cardWidth*.245f,y+6f*scale,cardWidth*.43f,20f*size*scale,gold,true,numberFont)
+                }
+                y+=LockWallpaperOptions.iqamaHeight(cfg)*scale
+            }
+            if(LockWallpaperOptions.selected(cfg,"date")){
+                val date=LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy",Locale.US))
+                arabic(canvas,date,center,y,cardWidth-16f*scale,17f*size*scale,ivory,false,numberFont)
+                y+=29f*scale
+            }
+            if(selectedRows.isNotEmpty()){
+                arabic(canvas,"مواقيت الصلاة اليوم",center,y+2f*scale,
+                    cardWidth-16f*scale,17f*size*scale,ivory,true,labelFont)
+                y+=28f*scale
+                val rowHeight=LockWallpaperOptions.rowHeight(cfg)*scale
+                for(id in selectedRows){
+                    if(cachedNext?.id==id){
+                        backdrop.color=Color.argb(118,28,120,101)
+                        canvas.drawRoundRect(RectF(left+9f*scale,y-2f*scale,
+                            right-9f*scale,y+rowHeight-2f*scale),8f*scale,8f*scale,backdrop)
                     }
-                    val xLabel = center + cardWidth * 0.23f
-                    val xTime = center - cardWidth * 0.23f
-                    arabic(canvas, name, xLabel, y, cardWidth * 0.43f, 17f * scale, ivory,
-                        next?.id == id)
-                    arabic(canvas, formattedTime(id, cachedToday?.optString(id).orEmpty()),
-                        xTime, y, cardWidth * 0.43f, 17f * scale, gold,
-                        next?.id == id)
+                    val name=prayers.firstOrNull{it.first==id}?.second?:id
+                    arabic(canvas,name,center+cardWidth*.23f,y+4f*scale,
+                        cardWidth*.43f,17f*size*scale,ivory,cachedNext?.id==id,labelFont)
+                    arabic(canvas,formattedTime(id,cachedToday?.optString(id).orEmpty()),
+                        center-cardWidth*.23f,y+4f*scale,cardWidth*.43f,17f*size*scale,
+                        gold,cachedNext?.id==id,numberFont)
+                    y+=rowHeight
                 }
             }
         }

@@ -853,6 +853,10 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configurePrayerLockWallpaperShowTimes(show:Boolean):Boolean =
             getSharedPreferences("prayer_lock_wallpaper",MODE_PRIVATE)
                 .edit().putBoolean("show_times",show).commit()
+        @JavascriptInterface fun readPrayerLockWallpaperConfig():String =
+            LockWallpaperOptions.read(this@MainActivity).toString()
+        @JavascriptInterface fun configurePrayerLockWallpaperConfig(json:String):Boolean =
+            LockWallpaperOptions.configure(this@MainActivity,json)
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
         @JavascriptInterface fun readLockScreenPrayerStatus():String =
