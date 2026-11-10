@@ -826,6 +826,33 @@ class MainActivity : Activity() {
         @JavascriptInterface fun previewAdhan(json:String){runOnUiThread{requestNotificationPermissionIfNeeded();try{val s=org.json.JSONObject(json);androidx.core.content.ContextCompat.startForegroundService(this@MainActivity,Intent(this@MainActivity,AdhanPlaybackService::class.java).putExtra("settings",json).putExtra("preview",true).putExtra("prayerId",s.optString("prayerId","fajr")))}catch(_:Exception){Toast.makeText(this@MainActivity,"تعذر تشغيل الصوت",Toast.LENGTH_LONG).show()}}}
         @JavascriptInterface fun stopAdhan(){AdhanPlaybackService.stop(this@MainActivity)}
         @JavascriptInterface fun chooseAdhanAudio(){runOnUiThread{startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)},ADHAN_AUDIO_REQUEST)}}
+        // A wallpaper preview is opened only by an explicit tap; Android asks
+        // the owner whether to apply it to the home screen or lock screen.
+        @JavascriptInterface fun previewPrayerLockWallpaper(){runOnUiThread {
+            val component=ComponentName(this@MainActivity,PrayerLockWallpaperService::class.java)
+            try {
+                startActivity(Intent(android.app.WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+                    .putExtra(android.app.WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,component))
+            }catch(e:Exception){
+                try {
+                    startActivity(Intent(android.app.WallpaperManager.ACTION_LIVE_WALLPAPER_CHOOSER))
+                    Toast.makeText(this@MainActivity,
+                        "اختر خلفية أوقات الصلاة من القائمة. توفر خيار شاشة القفل فقط يعتمد على جهازك.",
+                        Toast.LENGTH_LONG).show()
+                }catch(failure:Exception){
+                    android.util.Log.w("PrayerLockWallpaper","Wallpaper preview unavailable",failure)
+                    Toast.makeText(this@MainActivity,
+                        "الهاتف لا يتيح معاينة الخلفية الحية من التطبيق.",
+                        Toast.LENGTH_LONG).show()
+                }
+            }
+        }}
+        @JavascriptInterface fun readPrayerLockWallpaperShowTimes():Boolean =
+            getSharedPreferences("prayer_lock_wallpaper",MODE_PRIVATE)
+                .getBoolean("show_times",true)
+        @JavascriptInterface fun configurePrayerLockWallpaperShowTimes(show:Boolean):Boolean =
+            getSharedPreferences("prayer_lock_wallpaper",MODE_PRIVATE)
+                .edit().putBoolean("show_times",show).commit()
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
         @JavascriptInterface fun readLockScreenPrayerStatus():String =
