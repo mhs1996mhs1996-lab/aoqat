@@ -234,7 +234,9 @@ transform('interface-clock.js', [('#liveClockTime{font-size:12.5px}#liveClockDat
 transform('prayer-countdown.js', [
  ('.next-prayer span,.iqama-status span{font-size:9px}', '#nextPrayerLabel,#iqamaLabel{font-size:12px}.next-prayer span,.iqama-status span{font-size:12px}'),
  ('.next-prayer b,.iqama-status b{font-size:12px}', '.next-prayer b,.iqama-status b{font-size:15px}'),
- ('.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}', '.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:wrap!important}')])
+ # Keep main app prayer / iqama pills side by side. The removed wrapping
+ # behavior was incorrectly introduced while adapting the launcher widgets.
+ # Font size adaptation belongs exclusively to prayer-countdown.js.])
 
 # Include current calendar/search services in Android and use its image sharing bridge.
 transform('web-menu-order.js', [('if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={', 'window.AoqatWebSettingsNavigation={')])
