@@ -32,6 +32,20 @@
         android:forceDarkAllowed="false"
         android:usesCleartextTraffic="false">
 
+        <!-- The system wallpaper picker owns activation; never set wallpaper silently. -->
+        <service
+            android:name=".PrayerLockWallpaperService"
+            android:permission="android.permission.BIND_WALLPAPER"
+            android:exported="true"
+            android:label="أوقات الصلاة في الحويجة — خلفية حية">
+            <intent-filter>
+                <action android:name="android.service.wallpaper.WallpaperService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.wallpaper"
+                android:resource="@xml/prayer_lock_wallpaper" />
+        </service>
+
         <service android:name=".PrayerSyncJob" android:permission="android.permission.BIND_JOB_SERVICE" android:exported="true" />
 
         <activity

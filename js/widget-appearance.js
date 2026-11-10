@@ -125,6 +125,34 @@ function createPanel(){
  const note=document.createElement("p");note.className="wa-note";
  note.textContent="مساحة البطاقات الست على الشاشة الرئيسية يتحكم بها مشغّل الهاتف. خيار شاشة القفل أدناه يعرض عدّاد الصلاة بإشعار أندرويد، وليس ويدجت قابلاً للسحب على كل أجهزة Honor.";
  const status=document.createElement("p");status.className="wa-note";status.setAttribute("role","status");
+ const liveSection=document.createElement("section");liveSection.className="wa-style-group";
+ const liveTitle=document.createElement("strong");
+ liveTitle.textContent="بطاقات شاشة القفل — الخلفية الحية";
+ const liveInfo=document.createElement("p");liveInfo.className="wa-note";
+ liveInfo.textContent="خلفية حية تعرض عدّاد الصلاة القادمة ومواقيت الحويجة من قاعدة بيانات التطبيق. تُعاينها أولاً، ثم تختار من شاشة أندرويد تطبيقها على القفل إن كان جهازك يدعم ذلك. لا تتغير خلفية هاتفك تلقائياً.";
+ const wallpaperPreview=document.createElement("button");wallpaperPreview.type="button";
+ wallpaperPreview.className="wa-primary";wallpaperPreview.textContent="معاينة بطاقة القفل الحية واختيار تطبيقها";
+ const showTimesRow=document.createElement("label");showTimesRow.className="wa-field";
+ showTimesRow.textContent="محتويات الخلفية الحية";
+ const showTimesToggle=document.createElement("input");showTimesToggle.type="checkbox";
+ const canPreview=!!window.AndroidNative?.previewPrayerLockWallpaper;
+ showTimesToggle.checked=canPreview?window.AndroidNative.readPrayerLockWallpaperShowTimes?.()!==false:true;
+ const timesLabel=document.createElement("span");timesLabel.textContent="عرض المواقيت الستة تحت عدّاد الصلاة القادمة";
+ showTimesRow.append(showTimesToggle,timesLabel);
+ showTimesToggle.onchange=()=>{
+   const ok=window.AndroidNative?.configurePrayerLockWallpaperShowTimes?.(showTimesToggle.checked);
+   if(ok===false){showTimesToggle.checked=!showTimesToggle.checked;status.textContent="تعذر حفظ محتويات الخلفية.";}
+ };
+ wallpaperPreview.onclick=()=>window.AndroidNative?.previewPrayerLockWallpaper?.();
+ const liveHelp=document.createElement("p");liveHelp.className="wa-note";
+ liveHelp.textContent="للبطاقة الأصلية: أضف «الصلاة القادمة» من محرر شاشة القفل إذا ظهرت ضمن الأدوات المتاحة. بعض إصدارات أندرويد لا تسمح ببطاقات التطبيقات الخارجية؛ لذلك وفرنا الخلفية الحية والإشعار بديلين.";
+ liveSection.append(liveTitle,liveInfo);
+ if(canPreview)liveSection.append(showTimesRow,wallpaperPreview,liveHelp);
+ else{
+   const onlyAndroid=document.createElement("p");onlyAndroid.className="wa-note";
+   onlyAndroid.textContent="معاينة خلفية شاشة القفل متاحة من تطبيق أندرويد فقط.";
+   liveSection.append(onlyAndroid);
+ }
  const lockSection=document.createElement("section");lockSection.className="wa-style-group";
  const lockHeading=document.createElement("strong");lockHeading.textContent="الصلاة القادمة على شاشة القفل";
  const lockExplanation=document.createElement("p");lockExplanation.className="wa-note";
@@ -285,7 +313,7 @@ function createPanel(){
  pin.onclick=()=>{if(window.AndroidNative?.pinWidget)window.AndroidNative.pinWidget(active);
   else status.textContent="إضافة البطاقات تتم من تطبيق أندرويد؛ هذه معاينة الويب فقط.";};
  reset.onclick=()=>{data[active]=defaults(active);persist();render();};
- root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,lockSection,note,status);
+ root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,liveSection,lockSection,note,status);
  render();return root;
 }
 window.AoqatWidgetAppearance={createPanel,load};
