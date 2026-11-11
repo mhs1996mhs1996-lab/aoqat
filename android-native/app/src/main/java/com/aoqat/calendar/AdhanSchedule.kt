@@ -136,6 +136,15 @@ object AdhanSchedule {
         for(i in 0..39)for((slot,action) in listOf(60000+i to "PLAY",60600+i to "VERIFY_DUE",60800+i to "PREWARM",60100+i to "REMINDER",60200+i to "SUHOOR",60500+i to "IQAMA_QUIET",60700+i to "ADHAN_QUIET"))if((slot to action) !in wanted)cancel(c,slot,action)
         cancel(c, 60300, "NEXT")
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
+        // Lock notification iqama clock changes phase exactly at the user's
+        // configured zero and disappears after the configured elapsed period.
+        // No extra notification ID and no modifications to adhan alarms.
+        cancel(c,60302,"LOCK_IQAMA_BOUNDARY")
+        if(LockScreenPrayer.enabled(c)) {
+            LockIqamaCountdown.nextBoundary(c,now)?.let{
+                alarm(c,60302,"LOCK_IQAMA_BOUNDARY",it)
+            }
+        }
         cancel(c,60301,"REFRESH")
         if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
     }
@@ -196,6 +205,11 @@ class AdhanReceiver : BroadcastReceiver() {
                     LockScreenPrayer.showNow(c)
                 val pending=goAsync()
                 Thread { try { IqamaNativeScheduler.refresh(c) } finally { pending.finish() } }.start()
+            }
+            "LOCK_IQAMA_BOUNDARY" -> {
+                if(LockScreenPrayer.enabled(c)&&LockScreenPrayer.notificationsAllowed(c))
+                    LockScreenPrayer.showNow(c)
+                AdhanSchedule.schedule(c)
             }
             "NEXT" -> {
                 PrayerWidget.update(c)

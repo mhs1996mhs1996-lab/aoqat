@@ -67,6 +67,8 @@ class LockScreenPrayerTest {
         assertNotNull(notification.contentIntent)
         assertNotNull("A digital countdown is provided even when the phone hides system chronology",notification.contentView)
         assertEquals(R.layout.notification_lock_next,notification.contentView.layoutId)
+        assertNotNull("The same notification has an iqama clock",notification.contentView)
+
         assertNotNull(notification.publicVersion)
         assertNull(notification.fullScreenIntent)
     }

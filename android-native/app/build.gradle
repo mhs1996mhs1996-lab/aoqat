@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 133 // Six independent widget font editors and adaptive compact content
-        versionName '1.98'
+        versionCode 134 // Six independent widget font editors and adaptive compact content
+        versionName '1.99'
     }
 
     compileOptions {

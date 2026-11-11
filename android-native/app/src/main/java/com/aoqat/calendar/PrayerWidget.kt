@@ -301,12 +301,23 @@ class NextPrayerService:Service(){
                 views.setViewVisibility(R.id.lock_prayer_clock,android.view.View.GONE)
                 views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
             }
+            val iqama=LockIqamaCountdown.active(c,now,SystemClock.elapsedRealtime())
+            if(iqama!=null){
+                views.setViewVisibility(R.id.lock_iqama_row,android.view.View.VISIBLE)
+                views.setTextViewText(R.id.lock_iqama_label,iqama.label)
+                views.setChronometer(R.id.lock_iqama_clock,iqama.baseRealtime,"%s",true)
+                views.setChronometerCountDown(R.id.lock_iqama_clock,iqama.countDown)
+            }else{
+                views.setViewVisibility(R.id.lock_iqama_row,android.view.View.GONE)
+            }
+            val detail=if(iqama==null)fallback+" — أوقات الصلاة في الحويجة"
+                else fallback+" | "+iqama.label+" "+iqama.clock()
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
-                .setContentText(fallback+" — أوقات الصلاة في الحويجة")
+                .setContentText(detail)
                 .setShowWhen(next!=null)
                 .setWhen(next?.at?:now)
                 .setUsesChronometer(next!=null)
@@ -319,7 +330,7 @@ class NextPrayerService:Service(){
             return Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
-                .setContentText(fallback+" — أوقات الصلاة في الحويجة")
+                .setContentText(detail)
                 .setShowWhen(next!=null)
                 .setWhen(next?.at?:now)
                 .setUsesChronometer(next!=null)

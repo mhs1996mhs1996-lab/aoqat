@@ -96,6 +96,9 @@ object IqamaPersistentNotification {
         context.stopService(Intent(context, IqamaNotificationService::class.java))
         val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
+        // Re-publish the SAME lock notification without an expired iqama row.
+        if(LockScreenPrayer.enabled(context)&&LockScreenPrayer.notificationsAllowed(context))
+            LockScreenPrayer.showNow(context)
         // Keep the home-screen iqama card in sync when the native cycle ends.
         runCatching { PrayerWidget.update(context) }
         val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
@@ -144,6 +147,8 @@ class IqamaNotificationService : android.app.Service() {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
             publishedPhase = display.phase
+            if(LockScreenPrayer.enabled(this)&&LockScreenPrayer.notificationsAllowed(this))
+                LockScreenPrayer.showNow(this)
             // Existing native boundary is the only source of the widget phase update.
             runCatching { PrayerWidget.update(this) }
         }
@@ -186,6 +191,8 @@ class IqamaNotificationService : android.app.Service() {
         IqamaPersistentNotification.ensureChannel(this)
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
         publishedPhase = display.phase
+        if(LockScreenPrayer.enabled(this)&&LockScreenPrayer.notificationsAllowed(this))
+            LockScreenPrayer.showNow(this)
         runCatching { PrayerWidget.update(this) }
         val remaining = (durations.totalMs - (nowRealtime - startRealtime)).coerceAtLeast(1L)
         if (wakeLock?.isHeld == true) wakeLock?.release()
