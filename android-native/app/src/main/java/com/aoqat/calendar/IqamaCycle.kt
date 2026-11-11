@@ -9,7 +9,7 @@ object IqamaCycle {
         val beforeMs get() = beforeMinutes * 60_000L
         val totalMs get() = beforeMs + afterMinutes * 60_000L
     }
-    private val OPTIONS = setOf(5, 10, 15, 20, 25, 30)
+    private val OPTIONS = (1..30).toSet()
     fun minutes(value: Int, fallback: Int): Int = if (value in OPTIONS) value else fallback
     enum class Phase { WAITING, REMAINING, ELAPSED, FINISHED }
     data class Frame(val phase: Phase, val seconds: Long) {
