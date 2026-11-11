@@ -34,7 +34,7 @@
   function queueNativeIqamaSync(){
     if(!nativeIqama)return;
     if(minuteNativeSyncTimer!==null)clearTimeout(minuteNativeSyncTimer);
-    minuteNativeSyncTimer=setTimeout(()=>{minuteNativeSyncTimer=null;syncNativeIqama();},360);
+    minuteNativeSyncTimer=setTimeout(()=>{minuteNativeSyncTimer=null;syncNativeIqama();},650);
   }
   function queueMinutePreview(){
     if(minutePreviewTimer!==null)clearTimeout(minutePreviewTimer);
