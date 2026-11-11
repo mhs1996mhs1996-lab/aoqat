@@ -45,7 +45,7 @@ jobs:
           assert 'LOCK_IQAMA_BOUNDARY' in s and 'LockIqamaCountdown.nextBoundary' in s
           assert 'LockScreenPrayer.showNow(this)' in n and 'LockScreenPrayer.showNow(context)' in n
           assert 'IqamaCycle.display' in q and 'FridaySchedule.suppress' in q
-          assert (j.parent.parent/'test/java/com/aoqat/calendar/LockIqamaCountdownTest.kt').exists()
+          assert Path('android-native/app/src/test/java/com/aoqat/calendar/LockIqamaCountdownTest.kt').exists()
           print('PASS: same silent lock notification with next prayer + before/after iqama')
           PY
           node --check js/prayer-countdown.js
