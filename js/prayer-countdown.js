@@ -62,21 +62,84 @@
   async function fetchRow(month,day){const row=await readAnnualPrayer(month,day);return window.AoqatPrayerTimeChoice?.applyRow(row)||row;}
   async function loadToday(){if(busy||typeof SUPABASE_URL==="undefined"||typeof dbHeaders!=="function")return;busy=true;try{const n=new Date(),key=`${n.getFullYear()}-${n.getMonth()+1}-${n.getDate()}`;if(key!==todayKey||!todayRow){todayRow=await fetchRow(n.getMonth()+1,n.getDate());todayKey=key;}const t=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,12);const tk=`${t.getFullYear()}-${t.getMonth()+1}-${t.getDate()}`;if(tk!==tomorrowKey){const row=await fetchRow(t.getMonth()+1,t.getDate());tomorrowFajr=row?parse(row.fajr,"fajr"):null;tomorrowKey=tk;}}catch(e){console.error("prayer countdown",e)}finally{busy=false;}}
   function createDisplay(){let host=document.querySelector(".workspace")||document.querySelector(".main-content")||document.body;let old=document.getElementById("mainPrayerCountdownHost");if(!old){old=document.createElement("div");old.id="mainPrayerCountdownHost";old.className="preview-header prayer-countdown-host";const preview=host.querySelector(".previewBox")||host.firstElementChild;if(preview)host.insertBefore(old,preview);else host.prepend(old);}old.innerHTML=`<div class="live-prayer-status"><div class="next-prayer"><span id="nextPrayerLabel">الأذان القادم بعد</span><b id="nextPrayerCountdown">--:--:--</b></div><div class="countdown-separator" id="countdownSeparator" aria-hidden="true"></div><div class="iqama-status" id="iqamaStatus"><span id="iqamaLabel">باقي على الإقامة</span><b id="iqamaCountdown">00:00</b></div></div>`;}
-  function createPanel(){const main=document.querySelector(".sidebar .main-panel");if(!main||document.getElementById("iqamaPanel"))return;const prayerBtn=main.querySelector('[data-open-panel="prayerPanel"]');const btn=document.createElement("button");btn.type="button";btn.className="main-action iqama-action";btn.dataset.openPanel="iqamaPanel";btn.innerHTML="⏳ <span>أوقات الإقامة</span>";prayerBtn?.insertAdjacentElement("afterend",btn);const p=document.createElement("section");p.id="iqamaPanel";p.className="panel inline-control-panel";const opts=[5,10,15,20,25,30].map(v=>`<option value="${v}">${v} دقيقة</option>`).join("");p.innerHTML=`<div class="iqama-help">حدد المدة من وقت الأذان حتى الإقامة.</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-iqama="${id}">${opts}</select></label>`).join("")}<label>الجمعة الأولى<select data-iqama="friday">${opts}</select></label><div class="iqama-friday-help">الجمعة الأولى تكون قبل أذان الظهر بالمدة المحددة.</div>`;btn.insertAdjacentElement("afterend",p);const s=settings();p.querySelectorAll("[data-iqama]").forEach(el=>{el.value=String(s[el.dataset.iqama]||DEFAULTS[el.dataset.iqama]);el.addEventListener("change",()=>{const q=settings();q[el.dataset.iqama]=+el.value;save(q);tick();});});btn.addEventListener("click",()=>{const open=p.classList.toggle("inline-open");document.querySelectorAll(".inline-control-panel.inline-open").forEach(x=>{if(x!==p)x.classList.remove("inline-open")});btn.classList.toggle("inline-active",open);});}
+  // Both settings pages use this same compact control. Timings and native
+  // notification scheduling remain in their existing components.
+  function minuteStepperStyles(){
+    if(document.getElementById('aoqatIqamaMinuteStepperStyles'))return;
+    const style=document.createElement('style');
+    style.id='aoqatIqamaMinuteStepperStyles';
+    style.textContent="\n#iqamaPanel .iqama-minute-row,#afterIqamaPanel .iqama-minute-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;margin:4px 0;min-height:51px;direction:rtl}\n#iqamaPanel .iqama-minute-name,#afterIqamaPanel .iqama-minute-name{font-size:17px;font-weight:650;line-height:1.5;color:#183b33;min-width:0}\n#iqamaPanel .iqama-minute-stepper,#afterIqamaPanel .iqama-minute-stepper{display:inline-flex;align-items:center;justify-content:center;gap:4px;direction:ltr;flex-shrink:0;box-sizing:border-box;padding:4px;border:1px solid #aac6bb;background:#edf3f0;border-radius:13px;box-shadow:0 1px 3px rgba(8,49,39,.11)}\n#iqamaPanel .iqama-minute-stepper button,#afterIqamaPanel .iqama-minute-stepper button{width:35px;min-width:35px;height:35px;min-height:35px;padding:0;margin:0;display:inline-flex;justify-content:center;align-items:center;border:1px solid #acc6bb;border-radius:9px;background:#fff;color:#215741;font-size:23px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;box-shadow:none}\n#iqamaPanel .iqama-minute-stepper button:active,#afterIqamaPanel .iqama-minute-stepper button:active{background:#d8e9df;transform:scale(.97)}\n#iqamaPanel .iqama-minute-stepper button:focus-visible,#afterIqamaPanel .iqama-minute-stepper button:focus-visible{outline:2px solid #387457;outline-offset:2px}\n#iqamaPanel .iqama-minute-stepper button:disabled,#afterIqamaPanel .iqama-minute-stepper button:disabled{opacity:.35;cursor:default;transform:none}\n#iqamaPanel .iqama-minute-stepper output,#afterIqamaPanel .iqama-minute-stepper output{display:inline-flex;justify-content:center;align-items:baseline;gap:4px;min-width:89px;text-align:center;direction:rtl;color:#183b33;white-space:nowrap;font-variant-numeric:tabular-nums}\n#iqamaPanel .iqama-minute-stepper output strong,#afterIqamaPanel .iqama-minute-stepper output strong{font-size:21px;font-weight:750}\n#iqamaPanel .iqama-minute-stepper output small,#afterIqamaPanel .iqama-minute-stepper output small{font-size:12px;font-weight:500}\n@media(max-width:360px){#iqamaPanel .iqama-minute-name,#afterIqamaPanel .iqama-minute-name{font-size:15px}#iqamaPanel .iqama-minute-stepper output,#afterIqamaPanel .iqama-minute-stepper output{min-width:74px}#iqamaPanel .iqama-minute-stepper button,#afterIqamaPanel .iqama-minute-stepper button{width:32px;min-width:32px;height:33px;min-height:33px}}\n";
+    document.head.appendChild(style);
+  }
+  function minuteStepperMarkup(id,name,attribute,value){
+    return '<div class="iqama-minute-row"><span class="iqama-minute-name">'+name+'</span>'+
+      '<div class="iqama-minute-stepper" role="group" aria-label="مدة '+name+'">'+
+      '<button type="button" data-minute-step="-1" aria-label="تقليل مدة '+name+' دقيقة واحدة">−</button>'+
+      '<output '+attribute+'="'+id+'" aria-live="polite" aria-atomic="true"><strong>'+value+'</strong><small>دقيقة</small></output>'+
+      '<button type="button" data-minute-step="1" aria-label="زيادة مدة '+name+' دقيقة واحدة">+</button>'+
+      '</div></div>';
+  }
+  function bindMinuteSteppers(panel,attribute,read,persist){
+    panel.querySelectorAll('output['+attribute+']').forEach(out=>{
+      const id=out.getAttribute(attribute),wrap=out.parentElement;
+      const minus=wrap.querySelector('[data-minute-step="-1"]');
+      const plus=wrap.querySelector('[data-minute-step="1"]');
+      function render(value){
+        out.querySelector('strong').textContent=String(value);
+        minus.disabled=value<=1;plus.disabled=value>=30;
+      }
+      function change(delta){
+        const current=read();
+        const before=current[id];
+        const next=Math.max(1,Math.min(30,before+delta));
+        if(next===before)return;
+        current[id]=next;
+        persist(current);
+        render(next);
+        tick();
+      }
+      minus.addEventListener('click',()=>change(-1));
+      plus.addEventListener('click',()=>change(1));
+      render(read()[id]);
+    });
+  }
+  function createPanel(){
+    const main=document.querySelector(".sidebar .main-panel");
+    if(!main||document.getElementById("iqamaPanel"))return;
+    minuteStepperStyles();
+    const prayerBtn=main.querySelector('[data-open-panel="prayerPanel"]');
+    const btn=document.createElement("button");
+    btn.type="button";btn.className="main-action iqama-action";btn.dataset.openPanel="iqamaPanel";
+    btn.innerHTML="⏳ <span>أوقات الإقامة</span>";
+    prayerBtn?.insertAdjacentElement("afterend",btn);
+    const panel=document.createElement("section");
+    panel.id="iqamaPanel";panel.className="panel inline-control-panel";
+    const values=settings();
+    panel.innerHTML='<div class="iqama-help">حدد المدة من وقت الأذان حتى الإقامة.</div>'+
+      [...IDS,"friday"].map(id=>minuteStepperMarkup(id,id==="friday"?"الجمعة الأولى":NAMES[id],"data-iqama",values[id])).join("")+
+      '<div class="iqama-friday-help">الجمعة الأولى تكون قبل أذان الظهر بالمدة المحددة.</div>';
+    btn.insertAdjacentElement("afterend",panel);
+    bindMinuteSteppers(panel,"data-iqama",settings,updated=>save(updated));
+    btn.addEventListener("click",()=>{
+      const open=panel.classList.toggle("inline-open");
+      document.querySelectorAll(".inline-control-panel.inline-open").forEach(x=>{
+        if(x!==panel)x.classList.remove("inline-open");
+      });
+      btn.classList.toggle("inline-active",open);
+    });
+  }
   function createAfterPanel(){
     const main=document.querySelector(".sidebar .main-panel");
     if(!main||document.getElementById("afterIqamaPanel"))return;
+    minuteStepperStyles();
     const panel=document.createElement("section");
     panel.id="afterIqamaPanel";panel.className="panel inline-control-panel";
-    const options=TIMING.OPTIONS.map(value=>`<option value="${value}">${value} دقيقة</option>`).join("");
-    panel.innerHTML=`<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يختفي الإشعار فقط؛ وتبقى واجهة البرنامج «باقي على الإقامة 00:00».</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-after-iqama="${id}">${options}</select></label>`).join("")}`;
     const values=afterSettings();
-    panel.querySelectorAll("[data-after-iqama]").forEach(select=>{
-      select.value=String(values[select.dataset.afterIqama]);
-      select.addEventListener("change",()=>{
-        const updated=afterSettings();updated[select.dataset.afterIqama]=Number(select.value);
-        localStorage.setItem(AFTER_KEY,JSON.stringify(updated));syncNativeIqama();tick();
-      });
+    panel.innerHTML='<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يختفي الإشعار فقط؛ وتبقى واجهة البرنامج «باقي على الإقامة 00:00».</div>'+
+      IDS.map(id=>minuteStepperMarkup(id,NAMES[id],"data-after-iqama",values[id])).join("");
+    bindMinuteSteppers(panel,"data-after-iqama",afterSettings,updated=>{
+      localStorage.setItem(AFTER_KEY,JSON.stringify(updated));
+      syncNativeIqama();
     });
     main.appendChild(panel);
   }
