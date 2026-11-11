@@ -405,7 +405,9 @@ class MainActivity : Activity() {
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         PrayerAudioDnd.recover(this)
-        if (NextPrayerService.wanted(this)) NextPrayerService.start(this)
+        if (LockScreenPrayer.enabled(this) && LockScreenPrayer.notificationsAllowed(this))
+            LockScreenPrayer.showNow(this)
+        else if (NextPrayerService.wanted(this)) NextPrayerService.start(this)
         if (::webView.isInitialized) {
             webView.postDelayed({ applyAndroidCompatibilityFixes(webView) }, 250L)
         }

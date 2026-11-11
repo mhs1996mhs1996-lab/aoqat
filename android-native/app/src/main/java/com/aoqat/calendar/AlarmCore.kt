@@ -264,7 +264,8 @@ class BootReceiver : BroadcastReceiver() {
         // Reboot / in-place upgrade must not strand user DND in an audio-only exception.
         PrayerAudioDnd.restore(context)
         PrayerWidget.update(context)
-        if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
+        if (LockScreenPrayer.enabled(context)) LockScreenPrayer.showNow(context)
+        else if (AdhanSchedule.settings(context).optBoolean("persistent")) NextPrayerService.start(context)
         val pending = goAsync()
         Thread { try { IqamaNativeScheduler.refresh(context);CommunityReminders.refreshNow(context) } finally { pending.finish() } }.start()
     }

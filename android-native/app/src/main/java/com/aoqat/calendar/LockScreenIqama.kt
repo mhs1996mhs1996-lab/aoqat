@@ -23,6 +23,19 @@ object LockScreenIqama {
         return Display(prayerId,if(now<zero)Phase.REMAINING else Phase.ELAPSED,
             prayerAt,zero,prayerAt+totalMs)
     }
+
+    // Clock boundaries are sourced from the saved offline prayer schedule.
+    fun nextWakeAt(now:Long,active:Display?,upcoming:List<Long>):Long? {
+        val phaseEnd=active?.let { if(it.phase==Phase.REMAINING)it.threshold else it.endAt }
+        return phaseEnd?.takeIf{it>now} ?: upcoming.firstOrNull{it>now}
+    }
+    fun nextRefreshAt(context:Context,now:Long=System.currentTimeMillis()):Long? {
+        val current=current(context,now)
+        val future=if(current==null)PrayerTimes.events(context,LocalDate.now().minusDays(1))
+            .filter{it.at>now && !FridaySchedule.suppress(context,it.id,it.at)}
+            .map{it.at} else emptyList()
+        return nextWakeAt(now,current,future)
+    }
     fun current(context:Context,now:Long=System.currentTimeMillis()):Display? {
         // Lock-screen countdown uses saved durations even when the separate
         // foreground iqama notification is turned off.

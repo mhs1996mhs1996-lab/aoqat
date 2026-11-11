@@ -85,6 +85,7 @@ object AdhanSchedule {
     fun storeRows(c: Context, value: String) {
         try { val a = JSONArray(value); if (a.length() > 0) c.getSharedPreferences("iqama_schedule", Context.MODE_PRIVATE).edit().putString("rows", OfflinePrayerSync.merge(OfflinePrayerSync.rows(c), a).toString()).commit() } catch (_: Exception) { return }
         schedule(c); IqamaNativeScheduler.scheduleCached(c); PrayerAlarm.schedule(c); PrayerWidget.update(c); CommunityReminders.refresh(c)
+        if (LockScreenPrayer.enabled(c)) LockScreenPrayer.showNow(c)
     }
     fun alarm(c: Context, id: Int, action: String, at: Long, prayer: PrayerTimes.Prayer? = null) {
         val am = c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
@@ -138,6 +139,7 @@ object AdhanSchedule {
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
         if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+        if (LockScreenPrayer.enabled(c)) LockScreenIqamaBoundaryReceiver.schedule(c)
     }
 }
 class AdhanReceiver : BroadcastReceiver() {

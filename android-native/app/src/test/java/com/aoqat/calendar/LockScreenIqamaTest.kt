@@ -26,6 +26,15 @@ class LockScreenIqamaTest {
         assertEquals("باقي على الإقامة",state.title)
         assertEquals(before,state.remaining(prayerAt))
     }
+    @Test fun upcomingPrayerAlwaysHasABackgroundAlarm(){
+        assertEquals(prayerAt,LockScreenIqama.nextWakeAt(prayerAt-5_000L,null,
+            listOf(prayerAt,prayerAt+3600_000L)))
+    }
+    @Test fun zeroAndFinishHaveIndependentBoundaryAlarms(){
+        assertEquals(prayerAt+before,LockScreenIqama.nextWakeAt(prayerAt,phase(prayerAt),emptyList()))
+        assertEquals(prayerAt+total,LockScreenIqama.nextWakeAt(prayerAt+before,phase(prayerAt+before),emptyList()))
+        assertEquals(prayerAt+3600_000L,LockScreenIqama.nextWakeAt(prayerAt+total,null,listOf(prayerAt+3600_000L)))
+    }
     @Test fun zeroSwitchesToElapsedWithNoOverlap() {
         assertEquals(LockScreenIqama.Phase.REMAINING,phase(prayerAt+before-1)!!.phase)
         val atZero=phase(prayerAt+before)!!

@@ -82,45 +82,66 @@
   }
   function css(){if(document.getElementById("prayerCountdownStyles"))return;const s=document.createElement("style");s.id="prayerCountdownStyles";s.textContent=`#mainPrayerCountdownHost{display:block!important;width:100%;min-height:36px;margin:0 auto 8px;padding:0;position:relative;z-index:20}.live-prayer-status{width:max-content;max-width:100%;margin:auto;display:flex;flex-wrap:nowrap!important;justify-content:center;align-items:center;gap:6px;direction:rtl;white-space:nowrap}.live-prayer-status .next-prayer,.live-prayer-status .iqama-status{flex:0 1 auto;min-width:0}.live-prayer-status :is(#nextPrayerLabel,#iqamaLabel,#nextPrayerCountdown,#iqamaCountdown){flex-shrink:0;white-space:nowrap}.next-prayer,.iqama-status{display:inline-flex;width:auto;align-items:center;justify-content:center;gap:4px;padding:4px 7px;border-radius:9px;background:rgba(5,28,39,.88);border:1px solid rgba(255,255,255,.12);white-space:nowrap}#nextPrayerLabel,#nextPrayerCountdown,#iqamaLabel,#iqamaCountdown{color:#fff!important}.next-prayer span,.iqama-status span{font-size:12px;font-weight:700}.next-prayer b,.iqama-status b{font-size:15px;direction:ltr;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0}#iqamaStatus[hidden],#countdownSeparator[hidden]{display:none!important}${nativeIqama?'.iqama-status{background:rgba(126,84,14,.9)}':''}.countdown-separator{display:block;width:1px;height:28px;flex:0 0 1px;margin:0 2px;background:linear-gradient(to bottom,transparent,rgba(218,178,82,.95),transparent);box-shadow:0 0 5px rgba(218,178,82,.25)}.main-action.iqama-action{background:#8a6518}.iqama-help,.iqama-friday-help{font-size:12px;opacity:.85;margin-bottom:8px}#iqamaPanel label,#afterIqamaPanel label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}#iqamaPanel select,#afterIqamaPanel select{max-width:125px}@media(max-width:600px){.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}.next-prayer,.iqama-status{padding:3px 5px!important;gap:3px!important}#nextPrayerLabel,#nextPrayerCountdown,#iqamaLabel,#iqamaCountdown{color:#fff!important}.next-prayer span,.iqama-status span{font-size:9px}.next-prayer b,.iqama-status b{font-size:12px}.countdown-separator{height:23px;margin:0 1px}}`;document.head.appendChild(s);}
   // Local to the main interface, never shares home-widget typography state.
-  function fitLiveCountdownRow(){
-    const row=document.querySelector('#mainPrayerCountdownHost .live-prayer-status');
-    if(!row)return;
-    const next=row.querySelector('.next-prayer'),iqama=row.querySelector('.iqama-status');
-    if(!next||!iqama)return;
-    const txt=['nextPrayerLabel','nextPrayerCountdown','iqamaLabel','iqamaCountdown']
-      .map(id=>document.getElementById(id)).filter(Boolean);
-    // Preserve the saved adhan/iqama font settings while only scaling to fit.
-    // Never erase the font size selected in Settings > Font Formatting.
-    const base=txt.map(x=>{
-      const key=x.id.startsWith('iqama')?'aoqat-live-iqama-style-v1':'aoqat-live-adhan-style-v1';
-      let chosen=0;
+  function savedLiveSize(el){
+      const k=el.id.startsWith('iqama')?'aoqat-live-iqama-style-v1':'aoqat-live-adhan-style-v1';
       try{
-        const fallback=JSON.parse(localStorage.getItem('aoqat-live-countdown-style-v2')||'{}');
-        const saved=JSON.parse(localStorage.getItem(key)||'{}');
-        chosen=Number(Object.assign({},fallback,saved).fontSize);
+        const old=JSON.parse(localStorage.getItem('aoqat-live-countdown-style-v2')||'{}');
+        const custom=JSON.parse(localStorage.getItem(k)||'{}');
+        const size=Number(Object.assign({},old,custom).fontSize);
+        if(Number.isFinite(size)&&size>0)return {size,custom:true};
       }catch(_){}
-      if(Number.isFinite(chosen)&&chosen>0)return chosen;
-      if(!x.dataset.countdownBaseSize)
-        x.dataset.countdownBaseSize=String(parseFloat(getComputedStyle(x).fontSize)||12);
-      return Number(x.dataset.countdownBaseSize);
-    });
-    const container=row.parentElement?.clientWidth||window.innerWidth;
-    const available=Math.max(200,Math.min(container,window.innerWidth||container)-12);
-    row.style.setProperty('flex-wrap','nowrap','important');
-    row.style.setProperty('max-width',available+'px','important');
-    const sep=row.querySelector('#countdownSeparator');
-    let scale=1;
-    for(let attempt=0;attempt<20;attempt++){
-      txt.forEach((x,i)=>x.style.setProperty('font-size',(base[i]*scale).toFixed(2)+'px','important'));
-      const second=iqama.hidden?0:Math.max(iqama.scrollWidth,iqama.offsetWidth);
-      const middle=sep&&!sep.hidden&&!iqama.hidden?sep.offsetWidth+6:0;
-      const needed=Math.max(next.scrollWidth,next.offsetWidth)+second+middle;
-      if(needed<=available-2)break;
-      scale=Math.max(.58,scale-.025);
+      if(!el.dataset.countdownBaseSize)
+        el.dataset.countdownBaseSize=String(parseFloat(getComputedStyle(el).fontSize)||12);
+      return {size:Number(el.dataset.countdownBaseSize)||12,custom:false};
     }
-    row.style.setProperty('justify-content','center','important');
-  }
-  function tick(){if(!todayRow){loadToday();return;}const n=new Date(),now=n.getHours()*3600+n.getMinutes()*60+n.getSeconds(),s=settings();const times=IDS.map(id=>({id,min:parse(todayRow[id],id)})).filter(x=>x.min!=null);let next=times.find(x=>x.min*60>now),left=null;if(next){left=next.min*60-now;}else{next={id:"fajr"};if(tomorrowFajr!=null)left=(24*3600-now)+tomorrowFajr*60;}
+    // Keep custom typography unchanged; on overflow stack rather than reset.
+    function fitLiveCountdownRow(){
+      const row=document.querySelector('#mainPrayerCountdownHost .live-prayer-status');
+      if(!row)return;
+      const next=row.querySelector('.next-prayer'),iqama=row.querySelector('.iqama-status');
+      if(!next||!iqama)return;
+      const txt=['nextPrayerLabel','nextPrayerCountdown','iqamaLabel','iqamaCountdown']
+        .map(id=>document.getElementById(id)).filter(Boolean);
+      const sizes=txt.map(savedLiveSize);
+      const container=row.parentElement?.clientWidth||window.innerWidth;
+      const available=Math.max(160,Math.min(container,window.innerWidth||container)-12);
+      const sep=row.querySelector('#countdownSeparator');
+      row.style.setProperty('max-width',available+'px','important');
+      row.style.setProperty('flex-wrap','nowrap','important');
+      for(const block of [next,iqama]){
+        block.style.removeProperty('max-width');
+        block.style.setProperty('flex-wrap','nowrap','important');
+        block.style.removeProperty('white-space');
+      }
+      const paint=(scale)=>txt.forEach((el,i)=>{
+        const item=sizes[i];
+        const n=item.custom?item.size:Math.max(8,item.size*scale);
+        el.style.setProperty('font-size',n.toFixed(2)+'px','important');
+      });
+      const needed=()=>Math.max(next.scrollWidth,next.offsetWidth)+
+        (iqama.hidden?0:Math.max(iqama.scrollWidth,iqama.offsetWidth))+
+        (sep&&!sep.hidden&&!iqama.hidden?sep.offsetWidth+6:0);
+      let scale=1;
+      for(let i=0;i<19;i++){
+        paint(scale);
+        if(needed()<=available-2||sizes.every(x=>x.custom))break;
+        scale=Math.max(.58,scale-.025);
+      }
+      if(needed()>available-2){
+        row.style.setProperty('flex-wrap','wrap','important');
+        for(const block of [next,iqama]){
+          block.style.setProperty('max-width','100%','important');
+          if(block.scrollWidth>available){
+            block.style.setProperty('flex-wrap','wrap','important');
+            block.style.setProperty('white-space','normal','important');
+          }
+        }
+      }
+      row.style.setProperty('justify-content','center','important');
+    }
+    window.aoqatLiveCountdownFit=fitLiveCountdownRow;
+    window.addEventListener('aoqatLiveCountdownStyleChanged',fitLiveCountdownRow);
+    function tick(){if(!todayRow){loadToday();return;}const n=new Date(),now=n.getHours()*3600+n.getMinutes()*60+n.getSeconds(),s=settings();const times=IDS.map(id=>({id,min:parse(todayRow[id],id)})).filter(x=>x.min!=null);let next=times.find(x=>x.min*60>now),left=null;if(next){left=next.min*60-now;}else{next={id:"fajr"};if(tomorrowFajr!=null)left=(24*3600-now)+tomorrowFajr*60;}
     const label=document.getElementById("nextPrayerLabel"),counter=document.getElementById("nextPrayerCountdown");if(label)label.textContent=`أذان ${NAMES[next.id]} بعد`;if(counter)counter.textContent=left==null?"--:--:--":fmt(left);
     const iq=document.getElementById("iqamaStatus"),sep=document.getElementById("countdownSeparator"),iqLabel=document.getElementById("iqamaLabel"),iqCounter=document.getElementById("iqamaCountdown");
     let friday={};try{friday=window.AoqatAdhanCore.normalizeFriday(JSON.parse(localStorage.getItem('aoqatAdhanV1')||'{}').friday);}catch(_){}

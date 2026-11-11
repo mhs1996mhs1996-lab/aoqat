@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v198-lockscreen-permissions-countdown-20261111";
+const CACHE_NAME = "aoqat-pwa-v200-lockscreen-background-font-20261111";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -36,9 +36,9 @@ const APP_SHELL = [
   "/js/export-toolbar.js?v=4",
   "/js/compact-design-menu.js?v=1",
   "/js/exact-export.js?v=19",
-  "/js/prayer-countdown.js?v=6",
+  "/js/prayer-countdown.js?v=20-font-stable",
   "/js/prayer-countdown-mobile-fix.js?v=2",
-  "/js/prayer-countdown-edit-bridge.js?v=2",
+  "/js/prayer-countdown-edit-bridge.js?v=3-font-stable",
   "/js/carousel-unified-fix.js?v=9",
 
   "/js/fasting-posts-calendar.js",
@@ -105,7 +105,7 @@ const APP_SHELL = [
   "/js/push-notifications.js?v=9",
   "/js/quran-reader.js?v=qcf-style8-surah-ayah-20261029",
   "/js/iqama-timing.js?v=1",
-  "/js/prayer-countdown.js?v=19-preserve-font-settings",
+  "/js/prayer-countdown.js?v=20-font-stable",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
   "/js/widget-appearance.js?v=12-lockscreen-simple",

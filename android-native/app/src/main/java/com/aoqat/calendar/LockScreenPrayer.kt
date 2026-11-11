@@ -99,9 +99,8 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
             cancel(c)
             if(!LockScreenPrayer.enabled(c))return
             val now=System.currentTimeMillis()
-            val display=LockScreenIqama.current(c,now)?:return
-            val boundary=if(display.phase==LockScreenIqama.Phase.REMAINING)
-                display.threshold else display.endAt
+            // Schedule prayer start even when the WebView and service are closed.
+            val boundary=LockScreenIqama.nextRefreshAt(c,now)?:return
             val delay=boundary-now
             if(delay<=0L)return
             val pi=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
