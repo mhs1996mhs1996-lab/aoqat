@@ -131,6 +131,7 @@ object IqamaNativeScheduler {
         prefs(context).edit().putBoolean("enabled", enabled).putString("minutes", settings.toString())
             .putString("afterMinutes", after.toString()).commit()
         AdhanSchedule.schedule(context)
+        if(LockScreenPrayer.enabled(context))LockScreenPrayer.showNow(context)
         CommunityReminders.refresh(context)
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(context)
         PrayerAlarm.schedule(context)

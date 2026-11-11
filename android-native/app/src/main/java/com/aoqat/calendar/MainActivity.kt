@@ -96,6 +96,7 @@ object IqamaPersistentNotification {
         context.stopService(Intent(context, IqamaNotificationService::class.java))
         val manager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.cancel(NOTIFICATION_ID)
+        if(LockScreenPrayer.enabled(context))LockScreenPrayer.showNow(context)
         // Keep the home-screen iqama card in sync when the native cycle ends.
         runCatching { PrayerWidget.update(context) }
         val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as AlarmManager
@@ -144,6 +145,7 @@ class IqamaNotificationService : android.app.Service() {
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
                 .notify(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
             publishedPhase = display.phase
+            if(LockScreenPrayer.enabled(this))LockScreenPrayer.showNow(this)
             // Existing native boundary is the only source of the widget phase update.
             runCatching { PrayerWidget.update(this) }
         }
@@ -186,6 +188,7 @@ class IqamaNotificationService : android.app.Service() {
         IqamaPersistentNotification.ensureChannel(this)
         startForeground(IqamaPersistentNotification.NOTIFICATION_ID, buildNotification(display))
         publishedPhase = display.phase
+        if(LockScreenPrayer.enabled(this))LockScreenPrayer.showNow(this)
         runCatching { PrayerWidget.update(this) }
         val remaining = (durations.totalMs - (nowRealtime - startRealtime)).coerceAtLeast(1L)
         if (wakeLock?.isHeld == true) wakeLock?.release()
@@ -270,6 +273,9 @@ class IqamaNotificationReceiver : android.content.BroadcastReceiver() {
                 IqamaNativeScheduler.scheduleCached(context, recoverActive = false)
             }
             "PHASE_BOUNDARY", "EXPIRE" -> {
+                // The lock-screen companion reacts immediately, even if the
+                // existing foreground service's boundary delivery is delayed.
+                if(LockScreenPrayer.enabled(context))LockScreenPrayer.showNow(context)
                 val prefs = context.getSharedPreferences("iqama_service_state", android.content.Context.MODE_PRIVATE)
                 if (prefs.getBoolean("active", false) && prefs.getLong("prayerAt", 0L) == intent.getLongExtra("prayerAt", -1L)) {
                     // Independent real-time countdown boundary backs up the
