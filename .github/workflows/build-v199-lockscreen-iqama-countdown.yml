@@ -56,6 +56,12 @@ jobs:
           assert 'if(LockScreenPrayer.enabled(this))LockScreenPrayer.showNow(this)' in main
           assert 'if(LockScreenPrayer.enabled(context))LockScreenPrayer.showNow(context)' in main
           assert Path('android-native/app/src/test/java/com/aoqat/calendar/LockScreenIqamaTest.kt').exists()
+          lc=(a/'LockScreenPrayer.kt').read_text()
+          manifest=Path('android-native/app/src/main/AndroidManifest.xml').read_text()
+          assert 'LockScreenIqamaBoundaryReceiver.schedule(c)' in lc
+          assert 'LockScreenIqamaBoundaryReceiver.cancel(c)' in lc
+          assert 'LockScreenIqamaBoundaryReceiver' in manifest
+          assert 'if(!IqamaNativeScheduler.enabled(context))return null' not in iqama
           assert 'lock_prayer_clock' in xml and '<Chronometer' in xml
           assert 'openPrayerEssentialPermissions' in m and 'showFirstInstallPermissionGuide' in m
           assert 'versionCode 134' in Path('android-native/app/build.gradle').read_text()

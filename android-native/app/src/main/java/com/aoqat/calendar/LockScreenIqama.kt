@@ -6,7 +6,7 @@ import java.time.LocalDate
 /**
  * Only reads the existing native iqama preferences and offline prayer events.
  * All boundaries are shared with IqamaNativeScheduler and the original service.
- * No new alarms, preference keys or adhan behaviors are introduced.
+ * Only silent lock-screen display boundaries are scheduled, not adhan alarms.
  */
 object LockScreenIqama {
     enum class Phase { REMAINING, ELAPSED }
@@ -24,7 +24,8 @@ object LockScreenIqama {
             prayerAt,zero,prayerAt+totalMs)
     }
     fun current(context:Context,now:Long=System.currentTimeMillis()):Display? {
-        if(!IqamaNativeScheduler.enabled(context))return null
+        // Lock-screen countdown uses saved durations even when the separate
+        // foreground iqama notification is turned off.
         return PrayerTimes.events(context,LocalDate.now().minusDays(1))
             .lastOrNull { prayer ->
                 val durations=IqamaNativeScheduler.durations(context,prayer.id)

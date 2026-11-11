@@ -1,6 +1,10 @@
 package com.aoqat.calendar
 
 import android.Manifest
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.os.SystemClock
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -48,6 +52,7 @@ object LockScreenPrayer {
         return try {
             val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.notify(LOCK_NOTIFICATION_ID,NextPrayerService.lockNotification(c))
+            LockScreenIqamaBoundaryReceiver.schedule(c)
             true
         }catch(e:Exception){
             android.util.Log.w("LockScreenPrayer","Unable to post lock-screen notification",e)
@@ -66,11 +71,49 @@ object LockScreenPrayer {
         }else{
             (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
                 .cancel(LOCK_NOTIFICATION_ID)
+            LockScreenIqamaBoundaryReceiver.cancel(c)
             if(AdhanSchedule.settings(c).optBoolean("persistent"))
                 NextPrayerService.start(c) // restore the user's former notification
             else c.stopService(Intent(c,NextPrayerService::class.java))
         }
         AdhanSchedule.schedule(c)
         return true
+    }
+}
+
+/** Refreshes only the existing lock notification at the saved iqama zero and end. */
+class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
+    companion object {
+        private const val ACTION="com.aoqat.calendar.LOCK_IQAMA_BOUNDARY"
+        private const val REQUEST=60533
+        private fun pending(c:Context,flags:Int):PendingIntent?=
+            PendingIntent.getBroadcast(c,REQUEST,
+                Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(ACTION),
+                flags or PendingIntent.FLAG_IMMUTABLE)
+        fun cancel(c:Context){
+            val pi=pending(c,PendingIntent.FLAG_NO_CREATE)?:return
+            (c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pi)
+            pi.cancel()
+        }
+        fun schedule(c:Context){
+            cancel(c)
+            if(!LockScreenPrayer.enabled(c))return
+            val now=System.currentTimeMillis()
+            val display=LockScreenIqama.current(c,now)?:return
+            val boundary=if(display.phase==LockScreenIqama.Phase.REMAINING)
+                display.threshold else display.endAt
+            val delay=boundary-now
+            if(delay<=0L)return
+            val pi=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
+            val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val at=SystemClock.elapsedRealtime()+delay
+            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||alarm.canScheduleExactAlarms())
+                alarm.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
+            else alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
+        }
+    }
+    override fun onReceive(c:Context,intent:Intent?){
+        if(intent?.action==ACTION && LockScreenPrayer.enabled(c))
+            LockScreenPrayer.showNow(c)
     }
 }

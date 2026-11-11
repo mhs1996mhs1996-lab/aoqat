@@ -49,8 +49,14 @@ class LockScreenIqamaTest {
         assertNull(n.fullScreenIntent)
         assertTrue(n.flags and Notification.FLAG_ONGOING_EVENT != 0)
     }
-    @Test fun disabledNativeIqamaNeverDisplaysRow() {
+    @Test fun phaseMathDoesNotDependOnSeparateNotificationToggle(){
         c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit().putBoolean("enabled",false).commit()
-        assertNull(LockScreenIqama.current(c,prayerAt+1000L))
+        assertEquals(LockScreenIqama.Phase.REMAINING,phase(prayerAt)!!.phase)
+        assertEquals(LockScreenIqama.Phase.ELAPSED,phase(prayerAt+before)!!.phase)
+    }
+    @Test fun lockScreenBoundaryReceiverIsPrivate(){
+        val info=c.packageManager.getReceiverInfo(
+            android.content.ComponentName(c,LockScreenIqamaBoundaryReceiver::class.java),0)
+        assertFalse(info.exported)
     }
 }
