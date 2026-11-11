@@ -10,15 +10,40 @@ const {chromium}=require('playwright');const {spawn}=require('node:child_process
  await page.evaluate(()=>document.getElementById('iqamaNotificationToggle').click());assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'1');
  assert.ok(await page.evaluate(()=>iqamaCalls.at(-1).enabled&&iqamaCalls.at(-1).before.fajr===25&&iqamaCalls.at(-1).after.fajr===20));
 
- // Native bridge must persist each integer rather than rounding back to 5-minute presets.
- assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'20');
- await page.evaluate(()=>document.querySelector('output[data-after-iqama="fajr"]').parentElement.querySelector('[data-minute-step="1"]').click());
- assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).after.fajr),21);
- await page.evaluate(()=>{const b=document.querySelector('output[data-after-iqama="fajr"]').parentElement.querySelector('[data-minute-step="-1"]');for(let n=0;n<8;n++)b.click();});
- assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).after.fajr),13);
- assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'13');
- await page.evaluate(()=>{const b=document.querySelector('output[data-iqama="dhuhr"]').parentElement.querySelector('[data-minute-step="-1"]');for(let n=0;n<3;n++)b.click();});
- assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).before.dhuhr),12);
- assert.equal(await page.locator('output[data-iqama="dhuhr"] strong').textContent(),'12');
- await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('#iqamaNotificationToggle',{state:'attached'});assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'13');assert.equal(await page.locator('output[data-iqama="dhuhr"] strong').textContent(),'12');assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'1');assert.equal(await page.locator('#iqamaNotificationToggle').getAttribute('aria-pressed'),'true');await page.close();}
+ // Every button in both panels must change the visible value BEFORE native scheduling.
+ const firstTap=await page.evaluate(()=>{
+  const out=document.querySelector('output[data-after-iqama="fajr"]');
+  const nativeBefore=iqamaCalls.length;
+  out.parentElement.querySelector('[data-minute-step="1"]').click();
+  return {display:out.querySelector('strong').textContent,nativeBefore,nativeAfter:iqamaCalls.length};
+ });
+ assert.equal(firstTap.display,'21');
+ assert.equal(firstTap.nativeBefore,firstTap.nativeAfter,'A single tap may not synchronously schedule Android services');
+ await page.waitForFunction(()=>iqamaCalls.at(-1)?.after.fajr===21);
+ const rapidAfter=await page.evaluate(()=>{
+  const out=document.querySelector('output[data-after-iqama="fajr"]');
+  const callsBefore=iqamaCalls.length;
+  const minus=out.parentElement.querySelector('[data-minute-step="-1"]');
+  for(let n=0;n<8;n++)minus.click();
+  return {display:out.querySelector('strong').textContent,callsBefore,callsAfter:iqamaCalls.length};
+ });
+ assert.equal(rapidAfter.display,'13');
+ assert.equal(rapidAfter.callsAfter,rapidAfter.callsBefore,'Rapid taps must not repeatedly enter the native bridge');
+ await page.waitForFunction(()=>iqamaCalls.at(-1)?.after.fajr===13);
+ const rapidBefore=await page.evaluate(()=>{
+  const out=document.querySelector('output[data-iqama="dhuhr"]');
+  const callsBefore=iqamaCalls.length;
+  const minus=out.parentElement.querySelector('[data-minute-step="-1"]');
+  for(let n=0;n<3;n++)minus.click();
+  return {display:out.querySelector('strong').textContent,callsBefore,callsAfter:iqamaCalls.length};
+ });
+ assert.equal(rapidBefore.display,'12');
+ assert.equal(rapidBefore.callsAfter,rapidBefore.callsBefore,'Before-iqama taps must remain independent from Android scheduling');
+ await page.waitForFunction(()=>iqamaCalls.at(-1)?.before.dhuhr===12);
+ // Any final pending edit must be flushed on WebView lifecycle transitions.
+ await page.evaluate(()=>document.querySelector('output[data-iqama="dhuhr"]').parentElement.querySelector('[data-minute-step="1"]').click());
+ assert.equal(await page.locator('output[data-iqama="dhuhr"] strong').textContent(),'13');
+ await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));
+ assert.equal(await page.evaluate(()=>iqamaCalls.at(-1)?.before.dhuhr),13);
+ await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('#iqamaNotificationToggle',{state:'attached'});assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'13');assert.equal(await page.locator('output[data-iqama="dhuhr"] strong').textContent(),'13');assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'1');assert.equal(await page.locator('#iqamaNotificationToggle').getAttribute('aria-pressed'),'true');await page.close();}
  console.log('Native iqama permissions, settings recovery, persistence and nested status regression passed');}finally{if(browser)await browser.close();server.kill();}})().catch(e=>{console.error(e);process.exit(1)});
