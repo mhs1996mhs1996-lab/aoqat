@@ -858,7 +858,7 @@ class MainActivity : Activity() {
             LockWallpaperOptions.read(this@MainActivity).toString()
         @JavascriptInterface fun configurePrayerLockWallpaperConfig(json:String):Boolean =
             LockWallpaperOptions.configure(this@MainActivity,json)
-        @JavascriptInterface fun openPrayerEssentialPermissions(){runOnUiThread{openPrayerEssentialPermissions()}}
+        @JavascriptInterface fun openPrayerEssentialPermissions(){runOnUiThread{this@MainActivity.openPrayerEssentialPermissions()}}
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
         @JavascriptInterface fun readLockScreenPrayerStatus():String =
