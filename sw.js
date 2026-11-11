@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v197-lockscreen-custom-20261110";
+const CACHE_NAME = "aoqat-pwa-v198-lockscreen-permissions-countdown-20261111";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -105,10 +105,10 @@ const APP_SHELL = [
   "/js/push-notifications.js?v=9",
   "/js/quran-reader.js?v=qcf-style8-surah-ayah-20261029",
   "/js/iqama-timing.js?v=1",
-  "/js/prayer-countdown.js?v=18-main-row-fit",
+  "/js/prayer-countdown.js?v=19-preserve-font-settings",
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
-  "/js/widget-appearance.js?v=11-lockscreen-custom",
+  "/js/widget-appearance.js?v=12-lockscreen-simple",
   "/js/web-menu-order.js?v=39-widget-style-20261107",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",

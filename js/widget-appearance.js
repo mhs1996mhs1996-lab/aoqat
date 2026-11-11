@@ -125,147 +125,50 @@ function createPanel(){
  const note=document.createElement("p");note.className="wa-note";
  note.textContent="مساحة البطاقات الست على الشاشة الرئيسية يتحكم بها مشغّل الهاتف. خيار شاشة القفل أدناه يعرض عدّاد الصلاة بإشعار أندرويد، وليس ويدجت قابلاً للسحب على كل أجهزة Honor.";
  const status=document.createElement("p");status.className="wa-note";status.setAttribute("role","status");
- const liveSection=document.createElement("section");liveSection.className="wa-style-group";
- const liveTitle=document.createElement("strong");
- liveTitle.textContent="بطاقات شاشة القفل — الخلفية الحية";
- const liveInfo=document.createElement("p");liveInfo.className="wa-note";
- liveInfo.textContent="خلفية حية تعرض عدّاد الصلاة القادمة ومواقيت الحويجة من قاعدة بيانات التطبيق. تُعاينها أولاً، ثم تختار من شاشة أندرويد تطبيقها على القفل إن كان جهازك يدعم ذلك. لا تتغير خلفية هاتفك تلقائياً.";
- const canPreview=!!window.AndroidNative?.previewPrayerLockWallpaper;
- const canCustomize=canPreview&&!!window.AndroidNative?.configurePrayerLockWallpaperConfig;
- const cfg=(()=>{
-  if(canCustomize)try{return JSON.parse(window.AndroidNative.readPrayerLockWallpaperConfig?.()||"{}");}catch(_){}
-  return {items:{next:true,iqama:false,date:false,fajr:true,sunrise:true,dhuhr:true,asr:true,maghrib:true,isha:true},
-   labelFont:"sans",numberFont:"sans",size:100,labelColor:"#FFF7DE",numberColor:"#F8D37E",background:"emerald"};
- })();
- const editorButton=document.createElement("button");editorButton.type="button";
- editorButton.className="wa-primary";editorButton.textContent="إضافة أو حذف عناصر بطاقة شاشة القفل";
- const editor=document.createElement("div");editor.className="wa-style-editor";editor.hidden=true;
- editorButton.onclick=()=>{editor.hidden=!editor.hidden;editorButton.setAttribute("aria-expanded",String(!editor.hidden));};
- const labels={next:"عدّاد الصلاة القادمة",iqama:"عداد باقي ومضى على الإقامة",date:"التاريخ الميلادي",fajr:"الفجر",sunrise:"الشروق",dhuhr:"الظهر",asr:"العصر",maghrib:"المغرب",isha:"العشاء"};
- const editorStatus=document.createElement("p");editorStatus.className="wa-note";editorStatus.setAttribute("role","status");
- function saveLock(){
-  const ok=window.AndroidNative?.configurePrayerLockWallpaperConfig?.(JSON.stringify(cfg))===true;
-  editorStatus.textContent=ok?"تم حفظ بطاقة القفل. افتح المعاينة لمشاهدة الترتيب.":"تعذّر حفظ محتويات بطاقة القفل.";
-  return ok;
- }
- const elements=document.createElement("div");elements.className="wa-fields";
- Object.entries(labels).forEach(([id,name])=>{
-  const row=document.createElement("label");row.className="wa-field";row.style.cssText="display:flex;align-items:center;gap:8px";
-  const toggle=document.createElement("input");toggle.type="checkbox";toggle.checked=cfg.items?.[id]===true;
-  const word=document.createElement("span");word.textContent=name;
-  toggle.onchange=()=>{
-   const previous=cfg.items[id];cfg.items[id]=toggle.checked;
-   if(!Object.values(cfg.items).some(Boolean)){
-    cfg.items[id]=previous;toggle.checked=previous;
-    editorStatus.textContent="يجب إبقاء عنصر واحد على الأقل في البطاقة.";return;
-   }
-   if(!saveLock()){cfg.items[id]=previous;toggle.checked=previous;}
-  };
-  row.append(toggle,word);elements.append(row);
- });
- function lockSelect(title,key,values){
-  const wrap=document.createElement("label");wrap.className="wa-field";wrap.textContent=title;
-  const select=document.createElement("select");
-  Object.entries(values).forEach(([value,name])=>{const option=document.createElement("option");option.value=value;option.textContent=name;select.append(option);});
-  select.value=cfg[key];select.onchange=()=>{
-   const prev=cfg[key];cfg[key]=select.value;
-   if(!saveLock()){cfg[key]=prev;select.value=prev;}
-  };wrap.append(select);return wrap;
- }
- const typefaces={sans:"واضح حديث",serif:"نسخي كلاسيكي",condensed:"مختصر",medium:"متوسط"};
- const fields=document.createElement("div");fields.className="wa-fields";
- fields.append(lockSelect("نوع خط العبارات","labelFont",typefaces),
-  lockSelect("نوع خط الأرقام","numberFont",typefaces),
-  lockSelect("خلفية الحاوية","background",{emerald:"زمردي",navy:"أزرق داكن",transparent:"شفاف"}));
- for(const [key,label] of [["labelColor","لون العبارات"],["numberColor","لون الأرقام"]]){
-  const wrap=document.createElement("label");wrap.className="wa-field";wrap.textContent=label;
-  const picker=document.createElement("input");picker.type="color";picker.value=cfg[key];
-  picker.onchange=()=>{
-   const prev=cfg[key];cfg[key]=picker.value;
-   if(!saveLock()){cfg[key]=prev;picker.value=prev;}
-  };wrap.append(picker);fields.append(wrap);
- }
- const sizeField=document.createElement("label");sizeField.className="wa-field";sizeField.textContent="حجم الخط";
- const fontSize=document.createElement("input");fontSize.type="range";fontSize.min="65";fontSize.max="160";fontSize.step="5";fontSize.value=String(cfg.size);
- const sizeText=document.createElement("span");sizeText.textContent=cfg.size+"٪";
- fontSize.oninput=()=>{sizeText.textContent=fontSize.value+"٪";};
- fontSize.onchange=()=>{
-  const old=cfg.size;cfg.size=Number(fontSize.value);
-  if(!saveLock()){cfg.size=old;fontSize.value=String(old);sizeText.textContent=old+"٪";}
- };sizeField.append(fontSize,sizeText);
- const wallpaperPreview=document.createElement("button");wallpaperPreview.type="button";
- wallpaperPreview.className="wa-primary";wallpaperPreview.textContent="معاينة بطاقة القفل الحية واختيار تطبيقها";
- wallpaperPreview.onclick=()=>window.AndroidNative?.previewPrayerLockWallpaper?.();
- const liveHelp=document.createElement("p");liveHelp.className="wa-note";
- liveHelp.textContent="الحاوية تكبر وتصغر حسب العناصر، وعند تكبير الخط تنتقل العدادات إلى سطرين. معاينة نظام أندرويد توضح النتيجة. تطبيق الخلفية على القفل فقط يعتمد على دعم هاتفك؛ ولا تتغير خلفية هاتفك تلقائياً.";
- liveSection.append(liveTitle,liveInfo);
- if(canCustomize){
-  editor.append(elements,fields,sizeField,editorStatus);
-  liveSection.append(editorButton,editor,wallpaperPreview,liveHelp);
- }else if(canPreview){
-  liveSection.append(wallpaperPreview,liveHelp);
- }else{
-  const onlyAndroid=document.createElement("p");onlyAndroid.className="wa-note";
-  onlyAndroid.textContent="معاينة بطاقة القفل وتخصيصها متاحان من تطبيق أندرويد فقط.";
-  liveSection.append(onlyAndroid);
- }
- const lockSection=document.createElement("section");lockSection.className="wa-style-group";
+ const lockSection=document.createElement("section");lockSection.className="wa-style-group";lockSection.id="aoqatLockScreenSection";
  const lockHeading=document.createElement("strong");lockHeading.textContent="الصلاة القادمة على شاشة القفل";
  const lockExplanation=document.createElement("p");lockExplanation.className="wa-note";
- lockExplanation.textContent="على هواتف Honor التي لا تعرض بطاقات التطبيقات في محرّر شاشة القفل، يمكن عرض الصلاة القادمة وعدّادها بإشعار ثابت وصامت على شاشة القفل. الظهور يعتمد على سماح الهاتف بإظهار الإشعارات على شاشة القفل.";
+ lockExplanation.textContent="إشعار صلاة واحد بصيغة واضحة وعدّاد تنازلي، دون تغيير خلفية الشاشة الرئيسية. عرض الأرقام على شاشة القفل يعتمد على إعدادات الهاتف ودعمه للإشعارات الحية.";
  const lockToggle=document.createElement("button");lockToggle.className="wa-primary";lockToggle.type="button";
- const lockSettings=document.createElement("button");lockSettings.className="wa-primary";lockSettings.type="button";
- lockSettings.textContent="إعدادات قناة الإشعار في الهاتف";
- const lockCheck=document.createElement("button");lockCheck.className="wa-primary";lockCheck.type="button";
- lockCheck.textContent="فحص سبب عدم ظهور العدّاد";
- const lockRetry=document.createElement("button");lockRetry.className="wa-primary";lockRetry.type="button";
- lockRetry.textContent="إظهار الإشعار الآن";
+ const lockAccess=document.createElement("button");lockAccess.className="wa-primary";lockAccess.type="button";
+ lockAccess.textContent="ضبط أذونات التنبيهات وشاشة القفل";
  const lockStatus=document.createElement("p");lockStatus.className="wa-note";lockStatus.setAttribute("role","status");
  const hasLock=!!window.AndroidNative?.configureLockScreenPrayer;
  let lockEnabled=hasLock&&window.AndroidNative.readLockScreenPrayerEnabled?.()===true;
  const syncLock=()=>{
-   lockToggle.textContent=lockEnabled?"إيقاف عرض الصلاة القادمة على شاشة القفل":"تشغيل عرض الصلاة القادمة على شاشة القفل";
-   lockToggle.setAttribute("aria-pressed",String(lockEnabled));
+  lockToggle.textContent=lockEnabled?"إيقاف إشعار شاشة القفل":"تشغيل إشعار شاشة القفل";
+  lockToggle.setAttribute("aria-pressed",String(lockEnabled));
  };
  function checkLock(){
   if(!hasLock)return;
   try{
    const state=JSON.parse(window.AndroidNative.readLockScreenPrayerStatus?.()||"{}");
-   if(!state.enabled)lockStatus.textContent="العرض متوقف. فعّل الخيار أولاً.";
-   else if(state.notificationsAllowed===false)
-    lockStatus.textContent="إذن إشعارات التطبيق غير مسموح. اسمح بالإشعارات من إعدادات الهاتف، ثم اضغط إظهار الإشعار الآن.";
-   else if(state.channelAllowed===false)
-    lockStatus.textContent="قناة عدّاد الصلاة محجوبة. افتح إعدادات قناة الإشعار وفعّل عرضها على شاشة القفل.";
-   else if(state.notificationActive===false)
-    lockStatus.textContent="الإشعارات مسموحة، لكن العدّاد غير منشور. اضغط إظهار الإشعار الآن.";
-   else lockStatus.textContent="العدّاد منشور في قائمة الإشعارات. إذا ما يظهر على القفل، فعّل عرض المحتوى والإشعارات الصامتة في إعدادات Honor.";
-  }catch(_){lockStatus.textContent="تعذر فحص الإشعار؛ تحقق من إعدادات الهاتف.";}
+   if(!state.enabled)lockStatus.textContent="متوقف. شغّل الإشعار حتى يظهر عدّاد الصلاة.";
+   else if(!state.notificationsAllowed||!state.channelAllowed)lockStatus.textContent="يلزم السماح بإشعارات التطبيق وإظهارها على شاشة القفل. استخدم زر ضبط الأذونات.";
+   else if(!state.notificationActive)lockStatus.textContent="الإشعار مفعل، وسينشر عند تحديث المواقيت. إذا لم يظهر افتح ضبط الأذونات.";
+   else lockStatus.textContent="الإشعار منشور. لإظهار الأرقام على القفل اسمح بعرض محتوى إشعارات الهاتف.";
+  }catch(_){lockStatus.textContent="تحقق من أذونات إشعارات الهاتف.";}
  }
  lockToggle.onclick=()=>{
   if(!hasLock)return;
   const next=!lockEnabled;
-  if(window.AndroidNative.configureLockScreenPrayer(next)!==true){
-   status.textContent="تعذر حفظ إعداد شاشة القفل.";return;
-  }
-  lockEnabled=next;syncLock();
-  status.textContent=next?"تم حفظ التفعيل. إذا ظهرت نافذة إذن الإشعارات، اختر سماح.":"تم إيقاف عرض الصلاة القادمة على شاشة القفل.";
-  checkLock();
+  if(window.AndroidNative.configureLockScreenPrayer(next)!==true){lockStatus.textContent="تعذر حفظ الخيار.";return;}
+  lockEnabled=next;syncLock();checkLock();
  };
- lockRetry.onclick=()=>{
-  const ok=window.AndroidNative?.refreshLockScreenPrayer?.()===true;
-  status.textContent=ok?"تم إرسال إشعار الصلاة القادمة إلى الهاتف.":"تعذر إظهار الإشعار. افحص إذن الإشعارات وقناتها.";
-  checkLock();
+ lockAccess.onclick=()=>{
+  if(window.AndroidNative?.openPrayerEssentialPermissions){
+   const state=JSON.parse(window.AndroidNative.readLockScreenPrayerStatus?.()||"{}");
+   if(!state.notificationsAllowed)window.AndroidNative.openPrayerEssentialPermissions();
+   else window.AndroidNative.openLockScreenNotificationSettings?.();
+  }else window.AndroidNative?.openLockScreenNotificationSettings?.();
  };
- lockCheck.onclick=checkLock;
- lockSettings.onclick=()=>window.AndroidNative?.openLockScreenNotificationSettings?.();
  lockSection.append(lockHeading,lockExplanation);
- if(hasLock){syncLock();lockSection.append(lockToggle,lockRetry,lockCheck,lockSettings,lockStatus);checkLock();}
- else{
-   const webNote=document.createElement("p");webNote.className="wa-note";
-   webNote.textContent="خيار شاشة القفل متاح في تطبيق أندرويد فقط.";
-   lockSection.append(webNote);
+ if(hasLock){syncLock();lockSection.append(lockToggle,lockAccess,lockStatus);checkLock();}
+ else {
+  const webNote=document.createElement("p");webNote.className="wa-note";
+  webNote.textContent="إشعار شاشة القفل وأذوناته متاحان في نسخة أندرويد فقط.";
+  lockSection.append(webNote);
  }
-
  const line=(parent,a,b)=>{
   const el=document.createElement("div");el.className="wa-line";
   const label=document.createElement("span");label.className="wa-label";label.textContent=a;
@@ -369,7 +272,7 @@ function createPanel(){
  pin.onclick=()=>{if(window.AndroidNative?.pinWidget)window.AndroidNative.pinWidget(active);
   else status.textContent="إضافة البطاقات تتم من تطبيق أندرويد؛ هذه معاينة الويب فقط.";};
  reset.onclick=()=>{data[active]=defaults(active);persist();render();};
- root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,liveSection,lockSection,note,status);
+ root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,lockSection,note,status);
  render();return root;
 }
 window.AoqatWidgetAppearance={createPanel,load};

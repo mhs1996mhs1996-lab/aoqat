@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:layoutDirection="rtl" android:paddingTop="4dp" android:paddingBottom="4dp">
+    <TextView android:id="@+id/lock_prayer_title" android:layout_width="0dp"
+        android:layout_weight="1" android:layout_height="wrap_content"
+        android:textSize="16sp" android:textStyle="bold" android:textColor="#FF173747"
+        android:singleLine="true" android:ellipsize="end" />
+    <Chronometer android:id="@+id/lock_prayer_clock" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_marginStart="9dp"
+        android:textSize="17sp" android:textStyle="bold" android:singleLine="true"
+        android:textColor="#FF173747" android:layoutDirection="ltr"/>
+    <TextView android:id="@+id/lock_prayer_fallback" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" android:layout_marginStart="9dp"
+        android:textSize="17sp" android:textStyle="bold" android:singleLine="true"
+        android:textColor="#FF173747" android:layoutDirection="ltr"/>
+</LinearLayout>

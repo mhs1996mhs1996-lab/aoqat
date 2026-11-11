@@ -358,8 +358,8 @@ class MainActivity : Activity() {
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
         protectDisplayColors()
-        requestNotificationPermissionIfNeeded()
-        requestExactAlarmAccessIfNeeded()
+        // First install shows one explanation and a single guided permission action.
+        // Do not launch several independent Android settings pages during startup.
         if (!AdhanPlaybackService.running) AdhanPlaybackService.restoreVolume(this)
         AdhanPlaybackService.restoreRingerIfExpired(this)
         if (LockScreenPrayer.enabled(this) && LockScreenPrayer.notificationsAllowed(this))
@@ -369,6 +369,7 @@ class MainActivity : Activity() {
         else if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
         webView.loadUrl("file:///android_asset/www/index.html")
+        webView.postDelayed({showFirstInstallPermissionGuide()},2200L)
         PrayerStartup.refresh(this)
         restoreIqamaServiceIfActive()
 
@@ -857,6 +858,7 @@ class MainActivity : Activity() {
             LockWallpaperOptions.read(this@MainActivity).toString()
         @JavascriptInterface fun configurePrayerLockWallpaperConfig(json:String):Boolean =
             LockWallpaperOptions.configure(this@MainActivity,json)
+        @JavascriptInterface fun openPrayerEssentialPermissions(){runOnUiThread{openPrayerEssentialPermissions()}}
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
         @JavascriptInterface fun readLockScreenPrayerStatus():String =
@@ -1153,6 +1155,43 @@ class MainActivity : Activity() {
             // The previous release started the service before consent, making
             // the silent foreground notification invisible on Android 13+.
             LockScreenPrayer.showNow(this)
+        }
+    }
+
+
+    /** A one-time, non-forcing guide for required prayer alert permissions. */
+    private fun showFirstInstallPermissionGuide() {
+        val preferences=getSharedPreferences("aoqat_permission_intro_v198",MODE_PRIVATE)
+        if(preferences.getBoolean("shown",false) || isFinishing || isDestroyed) return
+        preferences.edit().putBoolean("shown",true).apply()
+        val manager=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        val alarm=getSystemService(ALARM_SERVICE) as AlarmManager
+        val notificationMissing=(Build.VERSION.SDK_INT>=33 &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) ||
+            !manager.areNotificationsEnabled()
+        val alarmMissing=Build.VERSION.SDK_INT>=31 && !alarm.canScheduleExactAlarms()
+        if(!notificationMissing&&!alarmMissing)return
+        android.app.AlertDialog.Builder(this)
+            .setTitle("أذونات أوقات الصلاة")
+            .setMessage("حتى تصل التنبيهات بوقتها، اسمح بإشعارات التطبيق والمنبهات الدقيقة. تقدر تضبط الأذونات أيضاً من إعدادات التطبيق. ما راح نغيّر وضع الصامت أو خلفية الهاتف.")
+            .setPositiveButton("ضبط الأذونات"){_,_->openPrayerEssentialPermissions()}
+            .setNegativeButton("لاحقاً",null)
+            .show()
+    }
+
+    private fun openPrayerEssentialPermissions() {
+        val manager=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        when {
+            Build.VERSION.SDK_INT>=33 &&
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED ->
+                requestNotificationPermissionIfNeeded()
+            !manager.areNotificationsEnabled() ->
+                startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE,packageName))
+            Build.VERSION.SDK_INT>=31 &&
+                !(getSystemService(ALARM_SERVICE) as AlarmManager).canScheduleExactAlarms() ->
+                openExactAlarmSettingsIfNeeded()
+            else -> Toast.makeText(this,"الإشعارات والمنبهات الدقيقة مسموحة",Toast.LENGTH_LONG).show()
         }
     }
 

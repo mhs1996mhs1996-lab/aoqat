@@ -89,8 +89,21 @@
     if(!next||!iqama)return;
     const txt=['nextPrayerLabel','nextPrayerCountdown','iqamaLabel','iqamaCountdown']
       .map(id=>document.getElementById(id)).filter(Boolean);
-    txt.forEach(x=>x.style.removeProperty('font-size'));
-    const base=txt.map(x=>parseFloat(getComputedStyle(x).fontSize)||12);
+    // Preserve the saved adhan/iqama font settings while only scaling to fit.
+    // Never erase the font size selected in Settings > Font Formatting.
+    const base=txt.map(x=>{
+      const key=x.id.startsWith('iqama')?'aoqat-live-iqama-style-v1':'aoqat-live-adhan-style-v1';
+      let chosen=0;
+      try{
+        const fallback=JSON.parse(localStorage.getItem('aoqat-live-countdown-style-v2')||'{}');
+        const saved=JSON.parse(localStorage.getItem(key)||'{}');
+        chosen=Number(Object.assign({},fallback,saved).fontSize);
+      }catch(_){}
+      if(Number.isFinite(chosen)&&chosen>0)return chosen;
+      if(!x.dataset.countdownBaseSize)
+        x.dataset.countdownBaseSize=String(parseFloat(getComputedStyle(x).fontSize)||12);
+      return Number(x.dataset.countdownBaseSize);
+    });
     const container=row.parentElement?.clientWidth||window.innerWidth;
     const available=Math.max(200,Math.min(container,window.innerWidth||container)-12);
     row.style.setProperty('flex-wrap','nowrap','important');

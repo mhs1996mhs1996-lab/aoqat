@@ -278,22 +278,55 @@ class NextPrayerService:Service(){
                 enableVibration(false)
                 setShowBadge(false)
                 lockscreenVisibility=Notification.VISIBILITY_PUBLIC
-                description="عدّاد الصلاة القادمة على شاشة القفل مع إظهار المحتوى دون صوت"
+                description="إشعار ثابت وصامت بمواقيت الصلاة وعدّاد رقمي متجدد"
             })
             val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
-            val prayerName=next?.let{PrayerTimes.names[it.id]} ?: "الصلاة القادمة"
+            val prayerName=next?.let{PrayerTimes.names[it.id]}?:"الصلاة القادمة"
             val title=if(next!=null)"باقي على صلاة $prayerName" else "مواقيت الصلاة في الحويجة"
+            val remain=((next?.at?:now)-now).coerceAtLeast(0L)
+            val seconds=(remain+999L)/1000L
+            val fallback=if(next==null)"--:--:--" else String.format(java.util.Locale.US,
+                "%02d:%02d:%02d",seconds/3600L,seconds/60L%60L,seconds%60L)
+            val views=RemoteViews(c.packageName,R.layout.notification_lock_next)
+            views.setTextViewText(R.id.lock_prayer_title,title)
+            views.setTextViewText(R.id.lock_prayer_fallback,fallback)
+            if(next!=null){
+                views.setViewVisibility(R.id.lock_prayer_clock,android.view.View.VISIBLE)
+                views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.GONE)
+                views.setChronometer(R.id.lock_prayer_clock,
+                    SystemClock.elapsedRealtime()+remain,"%s",true)
+                views.setChronometerCountDown(R.id.lock_prayer_clock,true)
+            }else{
+                views.setViewVisibility(R.id.lock_prayer_clock,android.view.View.GONE)
+                views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
+            }
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val public=Notification.Builder(c,LOCK_CHANNEL)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle(title)
+                .setContentText(fallback+" — أوقات الصلاة في الحويجة")
+                .setShowWhen(next!=null)
+                .setWhen(next?.at?:now)
+                .setUsesChronometer(next!=null)
+                .setChronometerCountDown(true)
+                .setCustomContentView(views)
+                .setCustomBigContentView(views)
+                .setVisibility(Notification.VISIBILITY_PUBLIC)
+                .setOnlyAlertOnce(true)
+                .build()
             return Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
-                .setContentText(if(next!=null)"أوقات الصلاة في الحويجة — عدّاد تنازلي" else "افتح التطبيق لعرض المواقيت")
+                .setContentText(fallback+" — أوقات الصلاة في الحويجة")
                 .setShowWhen(next!=null)
-                .setWhen(next?.at ?: now)
+                .setWhen(next?.at?:now)
                 .setUsesChronometer(next!=null)
                 .setChronometerCountDown(true)
+                .setCustomContentView(views)
+                .setCustomBigContentView(views)
+                .setPublicVersion(public)
                 .setCategory(Notification.CATEGORY_STATUS)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setPriority(Notification.PRIORITY_DEFAULT)
