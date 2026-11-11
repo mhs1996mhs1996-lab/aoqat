@@ -17,13 +17,35 @@
   function afterSettings(){return readMinutes(AFTER_KEY,AFTER_DEFAULTS);}
   const nativeIqama=!!window.AndroidNative?.configureIqamaTiming;
   let lastNativeSettings="";
+  let minuteNativeSyncTimer=null,minutePreviewTimer=null;
+  // One native reschedule after the user's last tap. Each press still persists
+  // its latest value locally, so no changes are lost during a fast sequence.
   function syncNativeIqama(){
+    if(minuteNativeSyncTimer!==null){clearTimeout(minuteNativeSyncTimer);minuteNativeSyncTimer=null;}
     if(!nativeIqama)return;
-    const payload=JSON.stringify([iqamaNotifyEnabled(),settings(),afterSettings()]);
+    const before=settings(),after=afterSettings(),enabled=iqamaNotifyEnabled();
+    const payload=JSON.stringify([enabled,before,after]);
     if(payload===lastNativeSettings)return;
-    lastNativeSettings=payload;
-    AndroidNative.configureIqamaTiming(iqamaNotifyEnabled(),JSON.stringify(settings()),JSON.stringify(afterSettings()));
+    try{
+      AndroidNative.configureIqamaTiming(enabled,JSON.stringify(before),JSON.stringify(after));
+      lastNativeSettings=payload;
+    }catch(error){console.error("iqama native sync",error);}
   }
+  function queueNativeIqamaSync(){
+    if(!nativeIqama)return;
+    if(minuteNativeSyncTimer!==null)clearTimeout(minuteNativeSyncTimer);
+    minuteNativeSyncTimer=setTimeout(()=>{minuteNativeSyncTimer=null;syncNativeIqama();},360);
+  }
+  function queueMinutePreview(){
+    if(minutePreviewTimer!==null)clearTimeout(minutePreviewTimer);
+    // A full countdown update must never delay the visible press feedback.
+    minutePreviewTimer=setTimeout(()=>{minutePreviewTimer=null;tick();},110);
+  }
+  function flushPendingMinuteSync(){
+    if(minuteNativeSyncTimer!==null)syncNativeIqama();
+  }
+  window.addEventListener("pagehide",flushPendingMinuteSync);
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)flushPendingMinuteSync();});
   function hydrateNativeIqama(){
     if(!nativeIqama||!AndroidNative.readIqamaTiming)return;
     try{const saved=JSON.parse(AndroidNative.readIqamaTiming());
@@ -32,7 +54,7 @@
       if(localStorage.getItem(AFTER_KEY)===null)localStorage.setItem(AFTER_KEY,JSON.stringify(saved.afterMinutes||{}));
     }catch(e){console.error("iqama settings",e);}
   }
-  function save(s){localStorage.setItem(KEY,JSON.stringify(s));syncNativeIqama();}
+  function save(s){localStorage.setItem(KEY,JSON.stringify(s));queueNativeIqamaSync();}
   function iqamaNotifyEnabled(){return localStorage.getItem(IQAMA_NOTIFY_KEY)==="1";}
   async function setIqamaNotify(on){
     localStorage.setItem(IQAMA_NOTIFY_KEY,on?"1":"0");
@@ -89,14 +111,16 @@
         minus.disabled=value<=1;plus.disabled=value>=30;
       }
       function change(delta){
-        const current=read();
-        const before=current[id];
+        // Update the number BEFORE local storage, Android scheduling, or
+        // repainting other prayer timers. Rapid repeated taps stay responsive.
+        const before=Number(out.querySelector('strong').textContent)||read()[id];
         const next=Math.max(1,Math.min(30,before+delta));
         if(next===before)return;
-        current[id]=next;
-        persist(current);
         render(next);
-        tick();
+        const updated=read();
+        updated[id]=next;
+        persist(updated);
+        queueMinutePreview();
       }
       minus.addEventListener('click',()=>change(-1));
       plus.addEventListener('click',()=>change(1));
@@ -139,7 +163,7 @@
       IDS.map(id=>minuteStepperMarkup(id,NAMES[id],"data-after-iqama",values[id])).join("");
     bindMinuteSteppers(panel,"data-after-iqama",afterSettings,updated=>{
       localStorage.setItem(AFTER_KEY,JSON.stringify(updated));
-      syncNativeIqama();
+      queueNativeIqamaSync();
     });
     main.appendChild(panel);
   }
