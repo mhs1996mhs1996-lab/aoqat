@@ -58,8 +58,8 @@ jobs:
           apk=pathlib.Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
           with zipfile.ZipFile(apk) as z:
               prefix='assets/www/'
-              pages=[n for n in z.namelist() if n.startswith(prefix+'assets/mushaf-phone-hafs/') and n.endswith('.json.gz.bin')]
-              assert len(pages)==604, f'Missing full-page Mushaf: {len(pages)}'
+              qcf=[n for n in z.namelist() if n.startswith(prefix+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+              assert len(qcf)==604, f'Missing offline Quran page fonts: {len(qcf)}'
               assert not any(n.startswith(prefix+'assets/mushaf-hafs-') or n.startswith(prefix+'assets/mushaf-tajwid') for n in z.namelist()), 'Obsolete Quran edition packaged'
               hashes=json.loads(z.read(prefix+'assets/mushaf-apk-sha256.json'))
               for path,digest in hashes.items():
@@ -77,7 +77,7 @@ jobs:
               assert 'const webOnly=true' in bundle
               assert 'if(window.AndroidNative?.configureAdhan)return;' not in z.read(prefix+'js/azkar-web.js').decode()
               assert 'native)return;const now'  in z.read(prefix+'js/prayer-alert-methods.js').decode()
-          print('Verified: 604 unchanged Quran pages, annual offline database, native notification UI; APK bytes:',apk.stat().st_size)
+          print('Verified: 604 offline Quran page fonts, annual offline database, native notification UI; APK bytes:',apk.stat().st_size)
           PYCODE
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)
           "$signer" verify --print-certs android-native/app/build/outputs/apk/debug/app-debug.apk
