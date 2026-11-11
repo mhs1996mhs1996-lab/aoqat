@@ -9,6 +9,16 @@ const {chromium}=require('playwright');const {spawn}=require('node:child_process
  await page.evaluate(()=>document.getElementById('iqamaNotificationToggle').click());assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'0');
  await page.evaluate(()=>document.getElementById('iqamaNotificationToggle').click());assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'1');
  assert.ok(await page.evaluate(()=>iqamaCalls.at(-1).enabled&&iqamaCalls.at(-1).before.fajr===25&&iqamaCalls.at(-1).after.fajr===20));
- await page.evaluate(()=>{const select=document.querySelector('[data-after-iqama="fajr"]');select.value='30';select.dispatchEvent(new Event('change',{bubbles:true}));});assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).after.fajr),30);
- await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('#iqamaNotificationToggle',{state:'attached'});assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'1');assert.equal(await page.locator('#iqamaNotificationToggle').getAttribute('aria-pressed'),'true');await page.close();}
+
+ // Native bridge must persist each integer rather than rounding back to 5-minute presets.
+ assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'20');
+ await page.evaluate(()=>document.querySelector('output[data-after-iqama="fajr"]').parentElement.querySelector('[data-minute-step="1"]').click());
+ assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).after.fajr),21);
+ await page.evaluate(()=>{const b=document.querySelector('output[data-after-iqama="fajr"]').parentElement.querySelector('[data-minute-step="-1"]');for(let n=0;n<8;n++)b.click();});
+ assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).after.fajr),13);
+ assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'13');
+ await page.evaluate(()=>{const b=document.querySelector('output[data-iqama="dhuhr"]').parentElement.querySelector('[data-minute-step="-1"]');for(let n=0;n<3;n++)b.click();});
+ assert.equal(await page.evaluate(()=>iqamaCalls.at(-1).before.dhuhr),12);
+ assert.equal(await page.locator('output[data-iqama="dhuhr"] strong').textContent(),'12');
+ await page.reload({waitUntil:'domcontentloaded'});await page.waitForSelector('#iqamaNotificationToggle',{state:'attached'});assert.equal(await page.locator('output[data-after-iqama="fajr"] strong').textContent(),'13');assert.equal(await page.locator('output[data-iqama="dhuhr"] strong').textContent(),'12');assert.equal(await page.evaluate(()=>localStorage.aoqatIqamaNotificationEnabledV1),'1');assert.equal(await page.locator('#iqamaNotificationToggle').getAttribute('aria-pressed'),'true');await page.close();}
  console.log('Native iqama permissions, settings recovery, persistence and nested status regression passed');}finally{if(browser)await browser.close();server.kill();}})().catch(e=>{console.error(e);process.exit(1)});
