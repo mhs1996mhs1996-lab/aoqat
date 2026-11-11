@@ -22,6 +22,24 @@ class IqamaCycleTest {
             }
         }
     }
+    @Test fun eachWholeMinuteIsAcceptedIncludingTwelveAndThirteen(){
+        for(minute in 1..30){
+            assertEquals(minute,IqamaCycle.minutes(minute,10))
+            val d=IqamaCycle.Durations(minute,minute)
+            assertEquals(minute*60_000L,d.beforeMs)
+            assertEquals(minute*120_000L,d.totalMs)
+        }
+        assertEquals(10,IqamaCycle.minutes(0,10))
+        assertEquals(10,IqamaCycle.minutes(31,10))
+    }
+    @Test fun twelveMinuteIqamaAndThirteenMinuteElapsedWindow(){
+        val d=IqamaCycle.Durations(12,13)
+        assertEquals("12:00",IqamaCycle.frame(0L,d).clock())
+        assertEquals(IqamaCycle.Phase.ELAPSED,IqamaCycle.frame(720_000L,d).phase)
+        assertEquals("00:00",IqamaCycle.frame(720_000L,d).clock())
+        assertEquals("12:59",IqamaCycle.frame(1_499_999L,d).clock())
+        assertNull(IqamaCycle.display(0L,1_500_000L,d))
+    }
     @Test fun displayHasOneZeroPointAndAbsoluteBoundaries() {
         val anchor = 4_000_000L
         val remaining = IqamaCycle.display(anchor, anchor + 91_000L)!!
