@@ -147,7 +147,7 @@
       #webExactDrawer #webDrawerMain .web-drawer-row .txt{font-weight:750!important}
       #webExactDrawer #webDrawerMain .web-drawer-row .ico{filter:drop-shadow(0 1px 1px #0004)!important}
       body.design-menu-open #webDrawerSub #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;padding:8px!important}
-      .sidebar .main-panel>[data-open-panel="switchPanel"],.sidebar .main-panel>.switch-action{display:none!important}
+      .sidebar [data-open-panel="switchPanel"],.sidebar [data-panel="switchPanel"]{display:none!important}
       #saveToPhoneBtn{display:none!important}
       /* النص السفلي يُفتح فقط من الإعدادات؛ أخفِ الزر القديم المكرر من واجهة البرنامج. */
       .sidebar .main-panel>button.main-action[data-open-panel="footerPanel"]{display:none!important}
