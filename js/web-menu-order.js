@@ -237,6 +237,11 @@
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama","switch",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
+    // Never show a second automatic-switch entry under design settings.
+    // The original publish switches live exclusively in the alert settings page.
+    [...wrap.querySelectorAll('button')].forEach(button=>{
+      if(/التبديل التلقائي|تنبيه النشر|تنبيه اليوم التالي/.test(button.textContent||''))button.remove();
+    });
     openSub("إعدادات التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
