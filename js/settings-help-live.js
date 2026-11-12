@@ -90,6 +90,37 @@
     back.focus({preventScroll:true});
   }
   window.aoqatOpenSettingsHelp=(title,description)=>showHelp(title,description);
+  // Keep one identical outlined badge in all inner settings, including interface pages.
+  // Scope only to the help badge: do not restyle the underlying action.
+  function normalizeHelpBadge(badge){
+    badge.style.setProperty('width','43px','important');
+    badge.style.setProperty('height','43px','important');
+    badge.style.setProperty('min-height','43px','important');
+    badge.style.setProperty('max-height','43px','important');
+    badge.style.setProperty('min-width','43px','important');
+    badge.style.setProperty('max-width','43px','important');
+    badge.style.setProperty('background','transparent','important');
+    badge.style.setProperty('border','0','important');
+    badge.style.setProperty('box-shadow','none','important');
+    badge.style.setProperty('padding','0','important');
+    badge.style.setProperty('margin','0','important');
+    badge.style.setProperty('position','absolute','important');
+    badge.style.setProperty('left','3px','important');
+    badge.style.setProperty('right','auto','important');
+    badge.style.setProperty('top','50%','important');
+    badge.style.setProperty('transform','translateY(-50%)','important');
+    const circle=badge.querySelector('.aoqat-help-circle');
+    if(circle){
+      circle.style.setProperty('width','25px','important');
+      circle.style.setProperty('height','25px','important');
+      circle.style.setProperty('min-width','25px','important');
+      circle.style.setProperty('min-height','25px','important');
+      circle.style.setProperty('background','transparent','important');
+      circle.style.setProperty('border-radius','50%','important');
+      circle.style.setProperty('box-shadow','none','important');
+      circle.style.setProperty('font-size','16px','important');
+    }
+  }
   function decorate(button){
     if(button.classList.contains("aoqat-help-badge")||button.closest(".aoqat-help-holder"))return;
     if(button.closest("#aoqatHelpPage")||button.matches(".web-back,[data-minute-step],.design-popup-close,[aria-label='رجوع']"))return;
@@ -107,7 +138,7 @@
       const liveTitle=(button.innerText||button.textContent||title).trim().replace(/\s+/g," ");
       showHelp(liveTitle,helpText(button),help);
     });
-    holder.append(help);
+    holder.append(help);normalizeHelpBadge(help);
     // Match the *actual button text* in every theme: white on dark buttons,
     // dark on light buttons. The small badge remains outlined, never filled.
     holder.style.setProperty('--aoqat-help-ink',getComputedStyle(button).color);
@@ -123,6 +154,7 @@
       root.querySelectorAll(".aoqat-help-holder").forEach(holder=>{
         const original=[...holder.children].find(el=>el.tagName==="BUTTON"&&!el.classList.contains("aoqat-help-badge"));
         if(original)holder.style.setProperty("--aoqat-help-ink",getComputedStyle(original).color);
+        const badge=holder.querySelector(".aoqat-help-badge");if(badge)normalizeHelpBadge(badge);
       });
     }
   }
