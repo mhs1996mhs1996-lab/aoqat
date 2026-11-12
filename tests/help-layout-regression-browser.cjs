@@ -25,6 +25,7 @@ const {spawn}=require('node:child_process');
     await page.locator('#adhanServicesDialog').waitFor({state:'visible'});
     const ad=page.locator('#adhanServicesBody');
     await ad.locator('.ad-section-toggle').first().waitFor({state:'visible'});
+    await page.waitForFunction(()=>{const root=document.getElementById('adhanServicesBody');return root&&root.querySelectorAll('.ad-section-toggle.aoqat-help-eligible').length===root.querySelectorAll('.ad-section-toggle').length;},{timeout:10000});
     const initial=await ad.evaluate(el=>({
       wrappers:el.querySelectorAll('.aoqat-help-holder').length,
       orphans:el.querySelectorAll('.aoqat-help-badge').length,
