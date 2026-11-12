@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v192-inner-help-padding-20261112";
+const CACHE_NAME = "aoqat-pwa-v193-unified-circle-20261112";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -109,8 +109,8 @@ const APP_SHELL = [
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
   "/js/widget-appearance.js?v=2-compact-rows",
-  "/js/web-menu-order.js?v=40-alerts-only-switch-20261112",
-  "/js/settings-help-live.js?v=5-inner-padding-20261112",
+  "/js/web-menu-order.js?v=41-unified-settings-20261112",
+  "/js/settings-help-live.js?v=6-unified-circle-20261112",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
