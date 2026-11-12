@@ -45,6 +45,7 @@
   function helpText(button){
     const key=button.dataset.alertSection||button.dataset.panel||button.dataset.interfacePage||button.dataset.bagSection||button.id;
     if(DETAILS[key])return DETAILS[key];
+    if(button.matches(".interface-visibility-btn"))return "إظهار أو إخفاء هذا العنصر في واجهة البرنامج، مع الاحتفاظ باختيارك.";
     const title=(button.innerText||button.textContent||"").trim().replace(/\s+/g," ");
     const label=Object.keys(LABELS).find(x=>title.includes(x));
     return label?LABELS[label]:"هذا الزر مخصص لـ «"+title+"». اضغط عليه لتغيير إعداداته.";
@@ -103,7 +104,8 @@
     circle.setAttribute("aria-hidden","true");help.append(circle);
     help.addEventListener("click",e=>{
       e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();
-      showHelp(title,desc,help);
+      const liveTitle=(button.innerText||button.textContent||title).trim().replace(/\s+/g," ");
+      showHelp(liveTitle,helpText(button),help);
     });
     holder.append(help);
     // Match the *actual button text* in every theme: white on dark buttons,
@@ -117,7 +119,7 @@
     for(const id of ROOT_IDS){
       const root=document.getElementById(id);
       if(!root)continue;
-      root.querySelectorAll("button.main-action,button.wa-primary,button.ad-section-toggle,button.switch-control-btn").forEach(decorate);
+      root.querySelectorAll("button.main-action,button.wa-primary,button.ad-section-toggle,button.switch-control-btn,button.interface-visibility-btn").forEach(decorate);
       root.querySelectorAll(".aoqat-help-holder").forEach(holder=>{
         const original=[...holder.children].find(el=>el.tagName==="BUTTON"&&!el.classList.contains("aoqat-help-badge"));
         if(original)holder.style.setProperty("--aoqat-help-ink",getComputedStyle(original).color);
