@@ -12,7 +12,6 @@
   const SETTINGS=[
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
     ["footer","✍","النص السفلي","footerPanel"],
-    ["switch","⏰","التبديل التلقائي و التنبيه","switchPanel"],
     ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"],
     ["iqama","⏳","أوقات الإقامة","iqamaPanel"],
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
@@ -202,6 +201,11 @@
     for(const [key,icon,title] of [['elements','👁️','إظهار عناصر واجهة البرنامج'],['designs','🖼️','إظهار / إخفاء التصاميم'],['tools','🛠️','أدوات تعديل التصميم']]){
       const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.interfacePage=key;b.innerHTML=icon+' <span>'+title+'</span> <span aria-hidden="true">‹</span>';b.onclick=()=>openInterfacePart(key,title);list.appendChild(b);
     }
+    showShortButtonHelp(list,{
+      elements:'إظهار أو إخفاء الساعة والتاريخ وعدّادي الصلاة والإقامة.',
+      designs:'تحديد التصاميم الظاهرة في واجهة البرنامج.',
+      tools:'تعديل أماكن العناصر والتصميم.'
+    });
     panel.insertBefore(list,panel.querySelector('[data-web-footer]'));
     if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
   }
@@ -232,11 +236,58 @@
     if(webOnly&&id==='fontPanel'){window.PrayerFontCore?.restoreAll?.();window.PrayerFontCore?.load?.();}
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
+
+  // Help labels are separate accessible buttons, not nested inside actions.
+  // Reparenting does not replace click handlers or the original settings controls.
+  function showShortButtonHelp(host, descriptions){
+    if(!host)return;
+    if(!document.getElementById('aoqatShortHelpStyles')){
+      const style=document.createElement('style');
+      style.id='aoqatShortHelpStyles';
+      style.textContent='.aoqat-help-row{position:relative;width:100%;min-width:0}.aoqat-help-row>.main-action{width:100%!important;box-sizing:border-box!important;padding-left:46px!important}.aoqat-help-dot{position:absolute;left:9px;top:24px;transform:translateY(-50%);width:30px;height:30px;min-width:30px;min-height:30px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #80a99a;border-radius:50%;background:#eaf4ee;color:#1e6044;font-family:Arial,sans-serif;font-size:19px;font-weight:800;line-height:1;z-index:2;cursor:pointer}.aoqat-help-dot:focus-visible{outline:2px solid #256446;outline-offset:2px}.aoqat-help-info{font-size:13px;line-height:1.65;color:#244c3c;background:#f1f8f2;border:1px solid #c3dbcd;border-radius:9px;padding:8px 11px;margin:4px 0 6px;text-align:right}.aoqat-help-info[hidden]{display:none!important}';
+      document.head.appendChild(style);
+    }
+    host.querySelectorAll('button.main-action').forEach(button=>{
+      const key=button.dataset.alertSection||button.dataset.panel||button.dataset.interfacePage||button.dataset.bagSection;
+      const message=descriptions[key];
+      if(!message||button.parentElement?.classList.contains('aoqat-help-row'))return;
+      const row=document.createElement('div');row.className='aoqat-help-row';
+      button.before(row);row.append(button);
+      const help=document.createElement('button');help.type='button';help.className='aoqat-help-dot';
+      help.textContent='?';help.setAttribute('aria-label','شرح: '+button.textContent.trim().slice(0,65));
+      help.setAttribute('aria-expanded','false');help.title='شرح مختصر';
+      const hint=document.createElement('p');hint.className='aoqat-help-info';hint.hidden=true;hint.textContent=message;
+      help.addEventListener('click',()=>{
+        const open=hint.hidden;
+        host.querySelectorAll('.aoqat-help-info').forEach(x=>x.hidden=true);
+        host.querySelectorAll('.aoqat-help-dot').forEach(x=>x.setAttribute('aria-expanded','false'));
+        hint.hidden=!open;help.setAttribute('aria-expanded',String(open));
+      });
+      row.append(help,hint);
+    });
+  }
+  const DESIGN_HELP={
+    backgroundPanel:'إظهار عناصر الشاشة والتصاميم وتعديل الواجهة.',
+    fontPanel:'تغيير نوع الخط وحجمه ولونه.',
+    footerPanel:'تعديل النص السفلي للتصميم.'
+  };
+  const ALERT_HELP={
+    prayer:'ضبط الأذان والمنبه والصامت لكل صلاة.',
+    iqama:'إشعار الإقامة وخيارات الصامت.',
+    friday:'تذكير سنن الجمعة وسورة الكهف.',
+    fasting:'تذكير صيام التطوع قبل موعده.',
+    azkar:'أوقات تذكير الأذكار والصلاة على النبي ﷺ.',
+    publish:'التبديل إلى الغد وتنبيه النشر بعد العشاء.',
+    calendarNotice:'تنبيه مشاركة تقويم الشهر الجديد.',
+    screen:'إضاءة الهاتف عند وصول التنبيهات المفعّلة.'
+  };
+
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
+    showShortButtonHelp(wrap,DESIGN_HELP);
     openSub("إعدادات التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
@@ -262,16 +313,13 @@
   }
   function alertSettingsView(){
     const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
-    const intro=document.createElement("p");intro.className="ad-note";
-    intro.textContent="هنا تشغيل التنبيهات والصامت وعدم الإزعاج لكل صلاة، وكذلك تنبيهات الإقامة والجمعة والصيام والأذكار والنشر. نستخدم الأزرار الأصلية دون تكرار.";
-    wrap.append(intro);
     const options=[
-      ["prayer","🔔","تنبيهات الصلاة والأذان والصامت وعدم الإزعاج"],
+      ["prayer","🔔","تنبيهات أوقات الصلاة"],
       ["iqama","⏳","إشعار الإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
-      ["publish","⏰","تنبيه نشر مواقيت اليوم التالي"],
+      ["publish","⏰","التبديل التلقائي وتنبيه النشر"],
       ["calendarNotice","📅","تنبيه نشر تقويم الشهر"],
       ["screen","💡","إضاءة الشاشة لجميع التنبيهات"]
     ];
@@ -279,6 +327,7 @@
       const button=document.createElement("button");button.type="button";button.className="main-action";button.dataset.alertSection=kind;
       button.textContent=ico+" "+label+" ‹";button.onclick=()=>openAlertSection(kind);wrap.append(button);
     });
+    showShortButtonHelp(wrap,ALERT_HELP);
     openSub("ضبط التنبيهات",wrap,"main");
   }
   function openAlertSection(kind){
@@ -355,7 +404,9 @@
   window.addEventListener('aoqatInboxChanged',()=>{if(document.getElementById('reminderInbox')&&['main','reminderInbox'].includes(returnMode)&&document.getElementById('webDrawerSub')?.classList.contains('open'))inboxView(inboxId);});
   function adhanIqamaView(){
     const wrap=document.createElement("div");wrap.className="web-settings-list";
-    [["🔊","مواقيت الصلاة وصوت الأذان","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","أوقات بعد الإقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});openSub("بيانات الاذان والإقامة",wrap,"main");
+    [["🔊","مواقيت الصلاة وصوت الأذان","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","أوقات بعد الإقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=id;b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});
+    showShortButtonHelp(wrap,{adhanPanel:'مواقيت الصلاة وصوت المؤذن.',iqamaPanel:'المدة بين الأذان والإقامة.',afterIqamaPanel:'مدة ظهور مضى على الإقامة.'});
+    openSub("بيانات الاذان والإقامة",wrap,"main");
   }
   function widgetAppearanceView(){
     const panel=window.AoqatWidgetAppearance?.createPanel?.();

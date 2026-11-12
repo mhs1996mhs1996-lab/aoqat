@@ -2,15 +2,25 @@
   if(window.AndroidNative?.configureAdhan)return;
   const KEY='aoqatReminderInboxV1',TTL=86400000;
   const excluded=new Set(['prayer','adhan','iqama','prayer-alarm','prayer-notice','tomorrow-publish-alarm']);
+  // Daily adhkar still reach the phone normally; only the in-app 24-hour
+  // history omits their repetitive entries. Friday salawat remains visible.
+  const repetitiveAzkar=new Set(['prayer','morning','evening','sleep','waking','tasbih']);
+  function excludedEntry(e){
+    if(!e)return true;
+    if(excluded.has(e.kind))return true;
+    if(e.kind!=='azkar-reminder')return false;
+    if(repetitiveAzkar.has(e.topicId))return true;
+    return !e.topicId && /^تذكير[:：]\s*(?:أذكار (?:بعد الصلاة|الصباح|المساء|النوم|الاستيقاظ)|التسبيح)/.test(e.title||'');
+  }
   function read(now=Date.now()){
     let rows;try{rows=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(_){rows=[];}
     if(!Array.isArray(rows))rows=[];
-    rows=rows.filter(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.body==='string'&&Number.isFinite(x.createdAt)&&now-x.createdAt<TTL&&x.createdAt<=now&&!excluded.has(x.kind));
+    rows=rows.filter(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.body==='string'&&Number.isFinite(x.createdAt)&&now-x.createdAt<TTL&&x.createdAt<=now&&!excludedEntry(x));
     try{localStorage.setItem(KEY,JSON.stringify(rows));}catch(_){}
     return rows;
   }
   function add(event){
-    if(!event||excluded.has(event.kind)||event.kind==='preview')return null;
+    if(!event||excludedEntry(event)||event.kind==='preview')return null;
     const now=Date.now(),createdAt=Number.isFinite(event.createdAt)?event.createdAt:now;if(now-createdAt>=TTL||createdAt>now)return null;const entry={id:String(event.id||event.key||('reminder-'+now)),kind:String(event.kind||'reminder'),title:String(event.title||'تذكير'),body:String(event.body||''),createdAt,section:event.section==='calendar'?'calendar':event.section==='azkar'?'azkar':event.section==='fasting'?'fasting':'friday',topicId:String(event.topicId||''),action:event.action==='post'?'post':'detail',targetDate:/^\d{4}-\d{2}-\d{2}$/.test(event.targetDate||'')?event.targetDate:''};
     const rows=read(now);if(rows.some(x=>x.id===entry.id))return rows.find(x=>x.id===entry.id);
     rows.unshift(entry);try{localStorage.setItem(KEY,JSON.stringify(rows));}catch(_){}

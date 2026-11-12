@@ -3,7 +3,7 @@
   const parked=document.createElement('div');
   parked.id='aoqatAlertSettingsParking';parked.hidden=true;
   (document.body||document.documentElement).appendChild(parked);
-  const publishIds=['tomorrowAlarmEnable','tomorrowNotifyToggle','publishSnoozeMinutes'];
+  const publishIds=['autoTomorrowToggle','tomorrowAlarmEnable','tomorrowNotifyToggle','publishSnoozeMinutes'];
   function original(id){
     const node=document.getElementById(id);
     if(!node)return null;
@@ -24,7 +24,7 @@
   function park(){
     const body=document.getElementById('webSubBody');
     if(!body)return;
-    for(const selector of ['#iqamaNotificationSettings','#iqamaNotificationToggle','#tomorrowAlarmEnable','#tomorrowNotifyToggle','#publishSnoozeMinutes','.tomorrow-alarm-note']){
+    for(const selector of ['#iqamaNotificationSettings','#iqamaNotificationToggle','#autoTomorrowToggle','#tomorrowAlarmEnable','#tomorrowNotifyToggle','#publishSnoozeMinutes','.tomorrow-alarm-note']){
       const node=body.querySelector(selector);if(!node)continue;
       const element=node.id==='publishSnoozeMinutes'?(node.closest('label')||node):node;
       if(body.contains(element))parked.appendChild(element);
@@ -38,15 +38,15 @@
   }
   function publishView(){
     adopt();
-    const root=page('تنبيه نشر مواقيت اليوم التالي','هذه أزرار النشر والغفوة الأصلية؛ توقيت التبديل إلى اليوم التالي لم يتغير.');
+    const root=page('التبديل التلقائي وتنبيه النشر');
     for(const id of publishIds){const node=original(id);if(node)root.append(node);}
-    const note=parked.querySelector('.tomorrow-alarm-note');if(note)root.append(note);
+    // Keep explanatory prose out of the controls; original timer and snooze handlers are retained.
     if(!root.querySelector('button'))root.append('خيارات تنبيه النشر غير متاحة على هذا الجهاز.');
     return root;
   }
   function iqamaView(){
     adopt();
-    const root=page('إشعار الإقامة','إعدادات إشعار الإقامة الحالية، بدون تغيير عدّاد باقي على الإقامة أو مضى على الإقامة.');
+    const root=page('إشعار الإقامة');
     const web=document.getElementById('iqamaNotificationSettings');
     if(web){root.append(web);return root;}
     const button=document.getElementById('iqamaNotificationToggle');
