@@ -105,7 +105,7 @@
     if(button.classList.contains('aoqat-help-eligible'))return;
     if(button.matches('.web-back,[data-minute-step],.design-popup-close,[aria-label="رجوع"]'))return;
     if(button.closest('#aoqatHelpPage'))return;
-    const title=(button.innerText||button.textContent||'').trim().replace(/\\s+/g,' ');
+    const title=(button.innerText||button.textContent||'').trim().replace(/\s+/g,' ');
     if(!title)return;
     button.classList.add('aoqat-help-eligible');
     // The left 43px are a comfortable invisible touch target around a 17px
@@ -119,13 +119,13 @@
       event.preventDefault();
       event.stopImmediatePropagation();
       event.stopPropagation();
-      const current=(button.innerText||button.textContent||title).trim().replace(/\\s+/g,' ');
+      const current=(button.innerText||button.textContent||title).trim().replace(/\s+/g,' ');
       showHelp(current,helpText(button),button);
     },true);
     button.addEventListener('keydown',event=>{
       if(event.key!=='F1')return;
       event.preventDefault();event.stopPropagation();
-      const current=(button.innerText||button.textContent||title).trim().replace(/\\s+/g,' ');
+      const current=(button.innerText||button.textContent||title).trim().replace(/\s+/g,' ');
       showHelp(current,helpText(button),button);
     },true);
   }
