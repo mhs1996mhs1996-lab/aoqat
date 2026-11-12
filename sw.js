@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v203-visibility-inbox-alerts-20261112";
+const CACHE_NAME = "aoqat-pwa-web-help-theme-preview-20261112";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -108,8 +108,8 @@ const APP_SHELL = [
   "/js/prayer-countdown.js?v=22-instant-minute-controls",
   "/js/compact-design-menu.js?v=203-visible-by-default",
   "/js/web-theme-settings.js?v=5",
-  "/js/widget-appearance.js?v=203-help-dot",
-  "/js/web-menu-order.js?v=203-setting-help",
+  "/js/widget-appearance.js?v=web-help-theme-preview-20261112",
+  "/js/web-menu-order.js?v=web-help-theme-preview-20261112",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
