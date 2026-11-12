@@ -25,7 +25,17 @@ const {spawn}=require('node:child_process');
     await page.locator('#adhanServicesDialog').waitFor({state:'visible'});
     const ad=page.locator('#adhanServicesBody');
     await ad.locator('.ad-section-toggle').first().waitFor({state:'visible'});
-    await page.waitForFunction(()=>{const root=document.getElementById('adhanServicesBody');return root&&root.querySelectorAll('.ad-section-toggle.aoqat-help-eligible').length===root.querySelectorAll('.ad-section-toggle').length;},{timeout:10000});
+    await page.waitForTimeout(1400);
+    console.log('HELP_DIAGNOSTIC',JSON.stringify(await page.evaluate(()=>({
+      helpApi:typeof window.aoqatOpenSettingsHelp,
+      script:!!document.querySelector('script[src*="settings-help-live.js"]'),
+      style:!!document.getElementById('aoqatWebHelpLiveStyle'),
+      root:!!document.getElementById('adhanServicesBody'),
+      toggles:document.querySelectorAll('#adhanServicesBody .ad-section-toggle').length,
+      decorated:document.querySelectorAll('#adhanServicesBody .ad-section-toggle.aoqat-help-eligible').length,
+      wrappers:document.querySelectorAll('#adhanServicesBody .aoqat-help-holder').length
+    }))));
+    await page.waitForFunction(()=>{const root=document.getElementById('adhanServicesBody');return root&&root.querySelectorAll('.ad-section-toggle.aoqat-help-eligible').length===root.querySelectorAll('.ad-section-toggle').length;},null,{timeout:2500});
     const initial=await ad.evaluate(el=>({
       wrappers:el.querySelectorAll('.aoqat-help-holder').length,
       orphans:el.querySelectorAll('.aoqat-help-badge').length,
