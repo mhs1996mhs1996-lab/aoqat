@@ -41,22 +41,24 @@ const {spawn}=require('node:child_process');
     assert.equal(initial.originalButtons,true,'Original buttons stay in their original parents');
     assert.ok(initial.contentHeight<2600,'No oversized empty column in the collapsed prayer options');
 
-    const toggle=ad.locator('.ad-section-toggle').first();
+    // The first button opens a full-screen leaf; its own back button
+    // closes the leaf. It is not designed as a second-click toggle.
+    const toggle=ad.locator('#paMethodOpen');
     await toggle.click({position:{x:140,y:25}});
     assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-    await toggle.click({position:{x:140,y:25}});
+    await page.locator('#paMethodPanel > header button').click();
     assert.equal(await toggle.getAttribute('aria-expanded'),'false');
 
-    // The left side of the button again performs its ORIGINAL action.
+    // The original left side is still an action area, not a stray icon.
     const box=await toggle.boundingBox();
     assert.ok(box&&box.width>180);
     await page.mouse.click(box.x+20,box.y+box.height/2);
     assert.equal(await toggle.getAttribute('aria-expanded'),'true');
     assert.equal(await page.locator('#aoqatHelpPage').count(),0);
-    await toggle.click({position:{x:140,y:25}});
-    for(let n=0;n<5;n++){
+    await page.locator('#paMethodPanel > header button').click();
+    for(let n=0;n<4;n++){
       await toggle.click({position:{x:140,y:25}});
-      await toggle.click({position:{x:140,y:25}});
+      await page.locator('#paMethodPanel > header button').click();
     }
     const final=await ad.evaluate(el=>({
       wrappers:el.querySelectorAll('.aoqat-help-holder').length,
