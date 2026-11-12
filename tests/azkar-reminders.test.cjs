@@ -6,3 +6,20 @@ test('respects transformed prayer row, iqama and duration independently',()=>{co
 test('clock overrides, relative overrides, disabling and default restoration',()=>{const s=C.normalize({morning:{mode:'custom',offset:15},sleep:{mode:'custom',times:['23:00']},prayer:{mode:'custom',type:'clock',times:['05:15','12:10','15:10','18:10','20:10']},tasbih:{enabled:false}});let es=C.events(date,s,row);assert.equal(at(es.find(e=>e.topicId==='morning')),'02:35');assert.equal(at(es.find(e=>e.topicId==='sleep')),'20:00');assert.equal(es.filter(e=>e.topicId==='tasbih').length,0);assert.deepEqual(es.filter(e=>e.topicId==='prayer').map(at),['02:15','09:10','12:10','15:10','17:10']);s.sleep.mode='default';assert.equal(at(C.events(date,s,row).find(e=>e.topicId==='sleep')),'19:00');});
 test('no guessed prayer times for missing/wrong-date rows and safe malformed settings',()=>{assert.deepEqual(C.normalize(null),C.normalize());assert.deepEqual(C.normalize({sleep:{times:['25:00'],offset:999}}),C.normalize());for(const r of [null,{...row,gregorian_day:14},{...row,fajr:'oops'}]){const es=C.events(date,{},r);assert.ok(es.some(e=>e.topicId==='sleep'));assert.ok(!es.some(e=>e.topicId==='morning'));}assert.equal(C.clock('24:00'),null);});
 test('cross-midnight events retain source day key and actual epoch',()=>{const s=C.normalize({sleep:{mode:'custom',times:['00:01']}});assert.equal(at(C.events(new Date('2026-12-31T23:00:00+03:00'),s,null).find(e=>e.topicId==='sleep')),'21:01');assert.equal(C.day(new Date('2026-12-31T22:30:00Z')).key,'2027-01-01');});
+
+test('Friday-only salawat has its own switch, stays distinct from daily tasbih and is absent other days',()=>{
+ const thursday=new Date('2026-10-15T09:00:00+03:00');
+ const friday=new Date('2026-10-16T09:00:00+03:00');
+ const on=C.normalize();
+ assert.equal(on.salawat.enabled,true);
+ assert.equal(on.tasbih.enabled,true);
+ assert.ok(!C.events(thursday,on,row).some(e=>e.topicId==='salawat'));
+ const fridayEvents=C.events(friday,on,{...row,gregorian_day:16});
+ const salawat=fridayEvents.filter(e=>e.topicId==='salawat');
+ assert.equal(salawat.length,1);
+ assert.equal(salawat[0].title,'تذكير: الصلاة على النبي ﷺ يوم الجمعة');
+ assert.equal(at(salawat[0]),'06:00');
+ assert.equal(fridayEvents.filter(e=>e.topicId==='tasbih').length,2);
+ const off=C.normalize({salawat:{enabled:false}});
+ assert.equal(C.events(friday,off,{...row,gregorian_day:16}).filter(e=>e.topicId==='salawat').length,0);
+});

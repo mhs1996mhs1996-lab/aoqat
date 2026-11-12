@@ -33,6 +33,22 @@ class AdhanQuietModeTest {
         assertFalse(context.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE).getBoolean("changed",false))
     }
 
+    @Test fun savedDeadlineRestoresPriorVibrateWithoutOpeningTheActivity() {
+        val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        val am=context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        am.ringerMode=AudioManager.RINGER_MODE_VIBRATE
+        val now=System.currentTimeMillis()
+        assertTrue(AdhanPlaybackService.activateQuiet(context,now+3*60000L,now))
+        val prefs=context.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        assertTrue(prefs.getBoolean("changed",false))
+        assertEquals(AudioManager.RINGER_MODE_SILENT,am.ringerMode)
+        // Emulate receiver delivery at the exact stored end, without UI startup.
+        prefs.edit().putLong("end",now-1L).commit()
+        AdhanPlaybackService.restoreRingerIfExpired(context)
+        assertEquals(AudioManager.RINGER_MODE_VIBRATE,am.ringerMode)
+        assertFalse(prefs.getBoolean("changed",false))
+    }
     @Test fun deniedPolicyPermissionCannotSilentlySaveAFalseSuccess() {
         val nm=context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         shadowOf(nm).setNotificationPolicyAccessGranted(false)

@@ -36,6 +36,16 @@ class AfterIqamaQuietTest {
         s.getJSONObject("afterIqamaSilent").put("enabled",false)
         assertNull(AfterIqamaQuiet.window(s,"asr",1000000L,25))
     }
+    @Test fun enabledToggleUsesSavedDurationsAndStopsExactlyAtElapsedCounter() {
+        val saved=JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":13}}}""")
+        val at=2_000_000L
+        val win=AfterIqamaQuiet.window(saved,"maghrib",at,5,12)!!
+        assertEquals(at+5*60_000L,win.first)
+        assertEquals(at+17*60_000L,win.second)
+        // A longer silent duration can never outlive the displayed 'مضى'.
+        saved.getJSONObject("afterIqamaSilent").put("enabled",false)
+        assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5,12))
+    }
     @Test fun zeroMinuteDurationAndUnknownPrayerNeverMutePhone() {
         val s=settings()
         assertNull(AfterIqamaQuiet.window(s,"maghrib",1000000L,5))
