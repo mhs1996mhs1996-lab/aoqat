@@ -65,7 +65,6 @@ const {spawn}=require('node:child_process');
     assert.ok((await page.locator('#aoqatHelpPage .aoqat-help-description').textContent()).length>5);
     await page.locator('#aoqatHelpPage .aoqat-help-back').click();
     assert.equal(await page.locator('#aoqatHelpPage').count(),0);
-    await page.locator('#paMethodPanel > header button').click();
     for(let n=0;n<4;n++){
       await toggle.click({position:{x:140,y:25}});
       await page.locator('#paMethodPanel > header button').click();
