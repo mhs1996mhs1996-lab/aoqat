@@ -39,7 +39,9 @@ test('tomorrow day-switch originals exist only in alert settings and retain nati
  assert.ok(menu.includes("data.alertSection")||menu.includes("dataset.alertSection"));
  assert.ok(hub.includes("'autoTomorrowToggle'")&&hub.includes("'tomorrowNotifyToggle'"));
  assert.ok(hub.includes("root.append(node)")&&hub.includes("parked.appendChild(node)"));
- assert.ok(menu.includes('aoqat-help-dot'));
+ assert.ok(menu.includes('doNotWrapHelpButtons'));
+ assert.ok(read('js/settings-help-live.js').includes('aoqat-help-eligible'));
+ assert.ok(!menu.includes("row.append(help,hint)"),'Help must never wrap original controls');
 });
 
 test('daily repeated adhkar never enter 24h inbox, Friday salawat and other reminders do',()=>{

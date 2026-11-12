@@ -162,21 +162,10 @@ function createPanel(){
    else window.AndroidNative.openLockScreenNotificationSettings?.();
   }else window.AndroidNative?.openLockScreenNotificationSettings?.();
  };
- // Short help beside the existing Android controls, without changing callbacks.
+ // The universal CSS-only help indicator keeps native permission buttons intact.
  function lockButtonWithHelp(action,description){
-  const row=document.createElement('div');row.className='wa-help-row';
-  const help=document.createElement('button');help.type='button';help.className='wa-help-dot';
-  help.textContent='?';help.setAttribute('aria-label','شرح '+action.textContent.trim());
-  help.setAttribute('aria-expanded','false');
-  const detail=document.createElement('p');detail.className='wa-help-detail';detail.hidden=true;
-  detail.textContent=description;
-  help.onclick=()=>{detail.hidden=!detail.hidden;help.setAttribute('aria-expanded',String(!detail.hidden));};
-  row.append(action,help,detail);return row;
- }
- if(!document.getElementById('aoqatWidgetHelpCss')){
-  const style=document.createElement('style');style.id='aoqatWidgetHelpCss';
-  style.textContent='#aoqatLockScreenSection .wa-help-row{position:relative;display:block;width:100%}#aoqatLockScreenSection .wa-help-row>.wa-primary{width:100%;padding-left:46px!important;box-sizing:border-box}#aoqatLockScreenSection .wa-help-dot{position:absolute;left:9px;top:9px;width:30px;height:30px;min-height:30px;border-radius:50%;border:1px solid #9dc6ad;background:#eff8f2;color:#1b5c3a;font-size:18px;font-weight:800;z-index:2}#aoqatLockScreenSection .wa-help-detail{font-size:13px;line-height:1.6;margin:4px 0 7px;background:#f3faf5;padding:8px;border:1px solid #cae3d1;border-radius:7px}#aoqatLockScreenSection .wa-help-detail[hidden]{display:none!important}';
-  document.head.append(style);
+   action.dataset.helpDescription=description;
+   return action;
  }
  lockSection.append(lockHeading);
  if(hasLock){syncLock();

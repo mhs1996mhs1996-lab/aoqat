@@ -207,7 +207,7 @@
       tools:'تعديل أماكن العناصر والتصميم.'
     });
     panel.insertBefore(list,panel.querySelector('[data-web-footer]'));
-    if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
+    if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action{background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#233c32)!important;border:1px solid var(--wt-border,#c5d5c8)!important;box-shadow:none!important;text-shadow:none!important}body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action:nth-of-type(odd){background:linear-gradient(90deg,var(--wt-surface2,#f8efd9),var(--wt-surface,#fffaf0))!important}body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action span{color:inherit!important;text-shadow:none!important}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
   }
 
   function restoreMoved(){
@@ -237,34 +237,11 @@
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
 
-  // Help labels are separate accessible buttons, not nested inside actions.
-  // Reparenting does not replace click handlers or the original settings controls.
-  function showShortButtonHelp(host, descriptions){
-    if(!host)return;
-    if(!document.getElementById('aoqatShortHelpStyles')){
-      const style=document.createElement('style');
-      style.id='aoqatShortHelpStyles';
-      style.textContent='.aoqat-help-row{position:relative;width:100%;min-width:0}.aoqat-help-row>.main-action{width:100%!important;box-sizing:border-box!important;padding-left:46px!important}.aoqat-help-dot{position:absolute;left:9px;top:24px;transform:translateY(-50%);width:30px;height:30px;min-width:30px;min-height:30px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #80a99a;border-radius:50%;background:#eaf4ee;color:#1e6044;font-family:Arial,sans-serif;font-size:19px;font-weight:800;line-height:1;z-index:2;cursor:pointer}.aoqat-help-dot:focus-visible{outline:2px solid #256446;outline-offset:2px}.aoqat-help-info{font-size:13px;line-height:1.65;color:#244c3c;background:#f1f8f2;border:1px solid #c3dbcd;border-radius:9px;padding:8px 11px;margin:4px 0 6px;text-align:right}.aoqat-help-info[hidden]{display:none!important}';
-      document.head.appendChild(style);
-    }
-    host.querySelectorAll('button.main-action').forEach(button=>{
-      const key=button.dataset.alertSection||button.dataset.panel||button.dataset.interfacePage||button.dataset.bagSection;
-      const message=descriptions[key];
-      if(!message||button.parentElement?.classList.contains('aoqat-help-row'))return;
-      const row=document.createElement('div');row.className='aoqat-help-row';
-      button.before(row);row.append(button);
-      const help=document.createElement('button');help.type='button';help.className='aoqat-help-dot';
-      help.textContent='?';help.setAttribute('aria-label','شرح: '+button.textContent.trim().slice(0,65));
-      help.setAttribute('aria-expanded','false');help.title='شرح مختصر';
-      const hint=document.createElement('p');hint.className='aoqat-help-info';hint.hidden=true;hint.textContent=message;
-      help.addEventListener('click',()=>{
-        const open=hint.hidden;
-        host.querySelectorAll('.aoqat-help-info').forEach(x=>x.hidden=true);
-        host.querySelectorAll('.aoqat-help-dot').forEach(x=>x.setAttribute('aria-expanded','false'));
-        hint.hidden=!open;help.setAttribute('aria-expanded',String(open));
-      });
-      row.append(help,hint);
-    });
+  // Help bubbles are rendered by the separate CSS-only helper.
+  // Do not wrap/reparent inner settings actions: doing so broke the adhan menus.
+  function showShortButtonHelp(host,descriptions){
+    // doNotWrapHelpButtons — original button nodes, IDs and handlers remain intact.
+    return host;
   }
   const DESIGN_HELP={
     backgroundPanel:'إظهار عناصر الشاشة والتصاميم وتعديل الواجهة.',
