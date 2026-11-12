@@ -69,6 +69,7 @@ const {spawn}=require('node:child_process');
       await toggle.click({position:{x:140,y:25}});
       await page.locator('#paMethodPanel > header button').click();
     }
+    // Regression: never allow adding a visible wrapper below each control.
     const final=await ad.evaluate(el=>({
       wrappers:el.querySelectorAll('.aoqat-help-holder').length,
       orphanBadges:el.querySelectorAll('.aoqat-help-badge').length,
