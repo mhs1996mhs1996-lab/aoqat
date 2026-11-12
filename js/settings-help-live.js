@@ -54,7 +54,7 @@
     if(document.getElementById(STYLE_ID))return;
     const style=document.createElement("style");
     style.id=STYLE_ID;
-    style.textContent="#aoqatHelpPage{position:fixed!important;inset:0!important;z-index:2147483000!important;box-sizing:border-box!important;overflow-y:auto!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#253f35)!important;padding:calc(6px + env(safe-area-inset-top,0px)) 14px 22px!important;direction:rtl!important}#aoqatHelpPage .aoqat-help-card{max-width:680px;width:100%;margin:0 auto;min-height:100%;box-sizing:border-box;padding:6px 2px}#aoqatHelpPage .aoqat-help-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:57px;border-bottom:1px solid var(--wt-border,#b4c7b8)}#aoqatHelpPage .aoqat-help-heading{font-weight:750;font-size:20px;line-height:1.5}#aoqatHelpPage button.aoqat-help-back{width:auto!important;height:37px!important;min-height:37px!important;padding:6px 10px!important;border-radius:9px!important;border:1px solid var(--wt-border,#b4c7b8)!important;background:var(--wt-surface2,#e9f0e9)!important;color:var(--wt-text,#253f35)!important;font:600 14px/1.4 Tahoma,Arial,sans-serif!important;box-shadow:none!important}#aoqatHelpPage .aoqat-help-subheading{font-size:19px;font-weight:750;line-height:1.65;margin:23px 0 10px;color:var(--wt-text,#253f35)}#aoqatHelpPage .aoqat-help-description{font-size:16px;line-height:1.8;color:var(--wt-text,#253f35);margin:0;white-space:normal}.aoqat-help-holder{position:relative;min-width:0;width:100%;display:block;box-sizing:border-box}.aoqat-help-holder>button.main-action,.aoqat-help-holder>button.wa-primary,.aoqat-help-holder>button.ad-section-toggle,.aoqat-help-holder>button.switch-control-btn,.aoqat-help-holder>button.interface-visibility-btn{box-sizing:border-box!important;width:100%!important;padding-left:43px!important}.aoqat-help-holder>button.aoqat-help-badge,#webInterfacePage button.aoqat-help-badge,#webInterfaceMenu button.aoqat-help-badge{position:absolute!important;top:50%!important;left:3px!important;right:auto!important;transform:translateY(-50%)!important;width:43px!important;height:43px!important;min-width:43px!important;min-height:43px!important;max-width:43px!important;max-height:43px!important;box-sizing:border-box!important;padding:0!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:center!important;border:0!important;border-radius:50%!important;background:transparent!important;box-shadow:none!important;cursor:pointer!important;z-index:4!important;direction:rtl!important}.aoqat-help-badge>.aoqat-help-circle{width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important;max-width:17px!important;max-height:17px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;margin:0!important;padding:0!important;border-radius:50%!important;border:1px solid var(--aoqat-help-ink,var(--wt-button-accent,var(--wt-accent,#3a7658)))!important;background:transparent!important;color:var(--aoqat-help-ink,var(--wt-button-accent,var(--wt-accent,#3a7658)))!important;box-shadow:none!important;font:700 11px/1 Tahoma,Arial,sans-serif!important;text-shadow:none!important}.aoqat-help-badge:focus-visible{outline:2px solid var(--wt-button-accent,var(--wt-accent,#3a7658))!important;outline-offset:-2px!important}.aoqat-help-badge:active>.aoqat-help-circle{transform:scale(.94)}#webInterfaceMenu button.aoqat-help-badge span{margin:0!important}#webInterfaceMenu .aoqat-help-holder>button.aoqat-help-badge,#webInterfacePage .aoqat-help-holder>button.aoqat-help-badge{width:43px!important;min-width:43px!important;height:43px!important;min-height:43px!important;max-width:43px!important;max-height:43px!important;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}#webInterfaceMenu .aoqat-help-badge>.aoqat-help-circle,#webInterfacePage .aoqat-help-badge>.aoqat-help-circle{margin:0!important;margin-inline-start:0!important;background:transparent!important}.wa-actions>.aoqat-help-holder{flex:1 1 0;width:auto}@media(max-width:360px){.aoqat-help-badge>.aoqat-help-circle{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;font-size:10px!important}}";
+    style.textContent="#aoqatHelpPage{position:fixed!important;inset:0!important;z-index:2147483000!important;box-sizing:border-box!important;overflow-y:auto!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#253f35)!important;padding:calc(6px + env(safe-area-inset-top,0px)) 14px 22px!important;direction:rtl!important}#aoqatHelpPage .aoqat-help-card{max-width:680px;width:100%;margin:0 auto;min-height:100%;box-sizing:border-box;padding:6px 2px}#aoqatHelpPage .aoqat-help-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:57px;border-bottom:1px solid var(--wt-border,#b4c7b8)}#aoqatHelpPage .aoqat-help-heading{font-weight:750;font-size:20px;line-height:1.5}#aoqatHelpPage button.aoqat-help-back{width:auto!important;height:37px!important;min-height:37px!important;padding:6px 10px!important;border-radius:9px!important;border:1px solid var(--wt-border,#b4c7b8)!important;background:var(--wt-surface2,#e9f0e9)!important;color:var(--wt-text,#253f35)!important;font:600 14px/1.4 Tahoma,Arial,sans-serif!important;box-shadow:none!important}#aoqatHelpPage .aoqat-help-subheading{font-size:19px;font-weight:750;line-height:1.65;margin:23px 0 10px;color:var(--wt-text,#253f35)}#aoqatHelpPage .aoqat-help-description{font-size:16px;line-height:1.8;color:var(--wt-text,#253f35);margin:0;white-space:normal}button.aoqat-help-eligible{position:relative!important;box-sizing:border-box!important;padding-left:43px!important}button.aoqat-help-eligible::before{content:'؟';position:absolute!important;left:13px!important;right:auto!important;top:50%!important;transform:translateY(-50%)!important;width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid currentColor!important;border-radius:50%!important;background:transparent!important;color:inherit!important;box-shadow:none!important;text-shadow:none!important;font:700 11px/1 Tahoma,Arial,sans-serif!important;pointer-events:none!important;opacity:.88!important}#adhanPanel button.aoqat-help-eligible .ad-section-chevron{margin-left:43px!important}@media(max-width:360px){button.aoqat-help-eligible::before{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;font-size:10px!important}}";
     document.head.appendChild(style);
   }
   let lastFocus=null;
@@ -90,63 +90,44 @@
     back.focus({preventScroll:true});
   }
   window.aoqatOpenSettingsHelp=(title,description)=>showHelp(title,description);
-  // Keep one identical outlined badge in all inner settings, including interface pages.
-  // Scope only to the help badge: do not restyle the underlying action.
-  function normalizeHelpBadge(badge){
-    badge.style.setProperty('width','43px','important');
-    badge.style.setProperty('height','43px','important');
-    badge.style.setProperty('min-height','43px','important');
-    badge.style.setProperty('max-height','43px','important');
-    badge.style.setProperty('min-width','43px','important');
-    badge.style.setProperty('max-width','43px','important');
-    badge.style.setProperty('background','transparent','important');
-    badge.style.setProperty('border','0','important');
-    badge.style.setProperty('box-shadow','none','important');
-    badge.style.setProperty('padding','0','important');
-    badge.style.setProperty('margin','0','important');
-    badge.style.setProperty('position','absolute','important');
-    badge.style.setProperty('left','3px','important');
-    badge.style.setProperty('right','auto','important');
-    badge.style.setProperty('top','50%','important');
-    badge.style.setProperty('transform','translateY(-50%)','important');
-    const circle=badge.querySelector('.aoqat-help-circle');
-    if(circle){
-      const size=window.matchMedia('(max-width:360px)').matches?'16px':'17px';
-      circle.style.setProperty('width',size,'important');
-      circle.style.setProperty('height',size,'important');
-      circle.style.setProperty('min-width',size,'important');
-      circle.style.setProperty('min-height',size,'important');
-      circle.style.setProperty('max-width',size,'important');
-      circle.style.setProperty('max-height',size,'important');
-      circle.style.setProperty('box-sizing','border-box','important');
-      circle.style.setProperty('border-width','1px','important');
-      circle.style.setProperty('background','transparent','important');
-      circle.style.setProperty('border-radius','50%','important');
-      circle.style.setProperty('box-shadow','none','important');
-      circle.style.setProperty('font-size',size==='16px'?'10px':'11px','important');
-    }
+  // Keep all original buttons in their exact DOM position. In particular,
+  // the adhan view reconstructs its buttons often; wrapping them generated
+  // abandoned empty holders and made its page thousands of pixels tall.
+  // A CSS pseudo-element supplies the small help circle without extra nodes.
+  function cleanLegacyHelp(root){
+    root.querySelectorAll('.aoqat-help-holder').forEach(holder=>{
+      const original=[...holder.children].find(el=>el.tagName==='BUTTON'&&!el.classList.contains('aoqat-help-badge'));
+      if(original)holder.replaceWith(original);else holder.remove();
+    });
+    root.querySelectorAll('button.aoqat-help-badge').forEach(badge=>badge.remove());
   }
   function decorate(button){
-    if(button.classList.contains("aoqat-help-badge")||button.closest(".aoqat-help-holder"))return;
-    if(button.closest("#aoqatHelpPage")||button.matches(".web-back,[data-minute-step],.design-popup-close,[aria-label='رجوع']"))return;
-    const title=(button.innerText||button.textContent||"").trim().replace(/\s+/g," ");
+    if(button.classList.contains('aoqat-help-eligible'))return;
+    if(button.matches('.web-back,[data-minute-step],.design-popup-close,[aria-label="رجوع"]'))return;
+    if(button.closest('#aoqatHelpPage'))return;
+    const title=(button.innerText||button.textContent||'').trim().replace(/\\s+/g,' ');
     if(!title)return;
-    const desc=helpText(button);
-    const holder=document.createElement("div");holder.className="aoqat-help-holder";
-    button.before(holder);holder.append(button);
-    const help=document.createElement("button");help.type="button";help.className="aoqat-help-badge";
-    help.setAttribute("aria-label","شرح "+title);help.title="شرح مختصر";
-    const circle=document.createElement("span");circle.className="aoqat-help-circle";circle.textContent="؟";
-    circle.setAttribute("aria-hidden","true");help.append(circle);
-    help.addEventListener("click",e=>{
-      e.preventDefault();e.stopImmediatePropagation();e.stopPropagation();
-      const liveTitle=(button.innerText||button.textContent||title).trim().replace(/\s+/g," ");
-      showHelp(liveTitle,helpText(button),help);
-    });
-    holder.append(help);normalizeHelpBadge(help);
-    // Match the *actual button text* in every theme: white on dark buttons,
-    // dark on light buttons. The small badge remains outlined, never filled.
-    holder.style.setProperty('--aoqat-help-ink',getComputedStyle(button).color);
+    button.classList.add('aoqat-help-eligible');
+    // The left 43px are a comfortable invisible touch target around a 17px
+    // circle. All other parts of the button keep their existing functionality.
+    button.addEventListener('click',event=>{
+      if(event.detail===0)return; // keyboard Enter/Space remains the normal action
+      const bounds=button.getBoundingClientRect();
+      const inHelp=event.clientX>=bounds.left&&event.clientX<=bounds.left+43&&
+        Math.abs(event.clientY-(bounds.top+bounds.height/2))<=23;
+      if(!inHelp)return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      const current=(button.innerText||button.textContent||title).trim().replace(/\\s+/g,' ');
+      showHelp(current,helpText(button),button);
+    },true);
+    button.addEventListener('keydown',event=>{
+      if(event.key!=='F1')return;
+      event.preventDefault();event.stopPropagation();
+      const current=(button.innerText||button.textContent||title).trim().replace(/\\s+/g,' ');
+      showHelp(current,helpText(button),button);
+    },true);
   }
   let queued=false;
   function apply(){
@@ -155,12 +136,8 @@
     for(const id of ROOT_IDS){
       const root=document.getElementById(id);
       if(!root)continue;
-      root.querySelectorAll("button.main-action,button.wa-primary,button.ad-section-toggle,button.switch-control-btn,button.interface-visibility-btn").forEach(decorate);
-      root.querySelectorAll(".aoqat-help-holder").forEach(holder=>{
-        const original=[...holder.children].find(el=>el.tagName==="BUTTON"&&!el.classList.contains("aoqat-help-badge"));
-        if(original)holder.style.setProperty("--aoqat-help-ink",getComputedStyle(original).color);
-        const badge=holder.querySelector(".aoqat-help-badge");if(badge)normalizeHelpBadge(badge);
-      });
+      cleanLegacyHelp(root);
+      root.querySelectorAll('button.main-action,button.wa-primary,button.ad-section-toggle,button.switch-control-btn,button.interface-visibility-btn').forEach(decorate);
     }
   }
   function schedule(){
