@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v189-public-help-refresh-20261112";
+const CACHE_NAME = "aoqat-pwa-v190-unified-help-alerts-20261112";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -109,8 +109,8 @@ const APP_SHELL = [
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
   "/js/widget-appearance.js?v=2-compact-rows",
-  "/js/web-menu-order.js?v=39-widget-style-20261107",
-  "/js/settings-help-live.js?v=2-public-help-20261112",
+  "/js/web-menu-order.js?v=40-alerts-only-switch-20261112",
+  "/js/settings-help-live.js?v=3-unified-theme-help-20261112",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"

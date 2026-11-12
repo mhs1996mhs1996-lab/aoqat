@@ -3,7 +3,7 @@
   const parked=document.createElement('div');
   parked.id='aoqatAlertSettingsParking';parked.hidden=true;
   (document.body||document.documentElement).appendChild(parked);
-  const publishIds=['tomorrowAlarmEnable','tomorrowNotifyToggle','publishSnoozeMinutes'];
+  const publishIds=['autoTomorrowToggle','previewDayToggle','tomorrowAlarmEnable','tomorrowNotifyToggle','publishSnoozeMinutes','tomorrowSwitchStatus'];
   function original(id){
     const node=document.getElementById(id);
     if(!node)return null;
@@ -24,7 +24,7 @@
   function park(){
     const body=document.getElementById('webSubBody');
     if(!body)return;
-    for(const selector of ['#iqamaNotificationSettings','#iqamaNotificationToggle','#tomorrowAlarmEnable','#tomorrowNotifyToggle','#publishSnoozeMinutes','.tomorrow-alarm-note']){
+    for(const selector of ['#iqamaNotificationSettings','#iqamaNotificationToggle','#autoTomorrowToggle','#previewDayToggle','#tomorrowAlarmEnable','#tomorrowNotifyToggle','#publishSnoozeMinutes','#tomorrowSwitchStatus','.tomorrow-alarm-note']){
       const node=body.querySelector(selector);if(!node)continue;
       const element=node.id==='publishSnoozeMinutes'?(node.closest('label')||node):node;
       if(body.contains(element))parked.appendChild(element);
@@ -38,9 +38,9 @@
   }
   function publishView(){
     adopt();
-    const root=page('تنبيه نشر مواقيت اليوم التالي','هذه أزرار النشر والغفوة الأصلية؛ توقيت التبديل إلى اليوم التالي لم يتغير.');
+    const root=page('التبديل التلقائي وتنبيه النشر');
     for(const id of publishIds){const node=original(id);if(node)root.append(node);}
-    const note=parked.querySelector('.tomorrow-alarm-note');if(note)root.append(note);
+    // The original status field stays in the page; redundant prose stays parked.
     if(!root.querySelector('button'))root.append('خيارات تنبيه النشر غير متاحة على هذا الجهاز.');
     return root;
   }

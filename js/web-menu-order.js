@@ -12,7 +12,6 @@
   const SETTINGS=[
     ["background","🎨","واجهة البرنامج","backgroundPanel"],["font","🔤","تنسيق الخط","fontPanel"],
     ["footer","✍","النص السفلي","footerPanel"],
-    ["switch","⏰","التبديل التلقائي و التنبيه","switchPanel"],
     ["date","📅","بيانات التاريخ","datePanel"],["prayer","🕌","أوقات الصلاة","prayerPanel"],
     ["iqama","⏳","أوقات الإقامة","iqamaPanel"],
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
@@ -148,6 +147,7 @@
       #webExactDrawer #webDrawerMain .web-drawer-row .txt{font-weight:750!important}
       #webExactDrawer #webDrawerMain .web-drawer-row .ico{filter:drop-shadow(0 1px 1px #0004)!important}
       body.design-menu-open #webDrawerSub #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;padding:8px!important}
+      .sidebar .main-panel>[data-open-panel="switchPanel"],.sidebar .main-panel>.switch-action{display:none!important}
       #saveToPhoneBtn{display:none!important}
       /* النص السفلي يُفتح فقط من الإعدادات؛ أخفِ الزر القديم المكرر من واجهة البرنامج. */
       .sidebar .main-panel>button.main-action[data-open-panel="footerPanel"]{display:none!important}
@@ -200,7 +200,7 @@
     if(panel.querySelector('#webInterfaceMenu'))return;
     const list=document.createElement('div');list.id='webInterfaceMenu';list.className='web-settings-list';
     for(const [key,icon,title] of [['elements','👁️','إظهار عناصر واجهة البرنامج'],['designs','🖼️','إظهار / إخفاء التصاميم'],['tools','🛠️','أدوات تعديل التصميم']]){
-      const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.interfacePage=key;b.innerHTML=icon+' <span>'+title+'</span> <span aria-hidden="true">‹</span>';b.onclick=()=>openInterfacePart(key,title);list.appendChild(b);
+      const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.interfacePage=key;b.innerHTML=icon+' <span>'+title+'</span>';b.onclick=()=>openInterfacePart(key,title);list.appendChild(b);
     }
     panel.insertBefore(list,panel.querySelector('[data-web-footer]'));
     if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
@@ -234,7 +234,7 @@
   }
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
-    SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
+    SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama","switch",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
     openSub("إعدادات التصميم",wrap,"main");
@@ -271,7 +271,7 @@
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
-      ["publish","⏰","تنبيه نشر مواقيت اليوم التالي"],
+      ["publish","⏰","التبديل التلقائي وتنبيه النشر"],
       ["calendarNotice","📅","تنبيه نشر تقويم الشهر"],
       ["screen","💡","إضاءة الشاشة لجميع التنبيهات"]
     ];
@@ -308,7 +308,7 @@
         };wrap.append(button);});
       wrap.append(controls);openSub("تنبيهات الأذكار",wrap,"alertSettings");return;
     }
-    if(kind==="publish"){openSub("تنبيه نشر مواقيت اليوم التالي",api?.publishView?.(),"alertSettings");return;}
+    if(kind==="publish"){openSub("التبديل التلقائي وتنبيه النشر",api?.publishView?.(),"alertSettings");return;}
   }
   function datePrayerView(){
     const wrap=document.createElement("div");wrap.id="webDatePrayerTemp";wrap.className="web-settings-list";
