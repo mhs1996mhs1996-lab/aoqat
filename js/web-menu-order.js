@@ -237,34 +237,58 @@
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
 
-  // Help labels are separate accessible buttons, not nested inside actions.
-  // Reparenting does not replace click handlers or the original settings controls.
-  function showShortButtonHelp(host, descriptions){
-    if(!host)return;
-    if(!document.getElementById('aoqatShortHelpStyles')){
-      const style=document.createElement('style');
-      style.id='aoqatShortHelpStyles';
-      style.textContent='.aoqat-help-row{position:relative;width:100%;min-width:0}.aoqat-help-row>.main-action{width:100%!important;box-sizing:border-box!important;padding-left:46px!important}.aoqat-help-dot{position:absolute;left:9px;top:24px;transform:translateY(-50%);width:30px;height:30px;min-width:30px;min-height:30px;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid #80a99a;border-radius:50%;background:#eaf4ee;color:#1e6044;font-family:Arial,sans-serif;font-size:19px;font-weight:800;line-height:1;z-index:2;cursor:pointer}.aoqat-help-dot:focus-visible{outline:2px solid #256446;outline-offset:2px}.aoqat-help-info{font-size:13px;line-height:1.65;color:#244c3c;background:#f1f8f2;border:1px solid #c3dbcd;border-radius:9px;padding:8px 11px;margin:4px 0 6px;text-align:right}.aoqat-help-info[hidden]{display:none!important}';
-      document.head.appendChild(style);
-    }
+
+  const HELP_FALLBACK={'مواقيت الصلاة':'عرض مواقيت الصلاة وضبط صوت الأذان.','أوقات الإقامة':'تحديد المدة بين الأذان والإقامة.','أوقات بعد الإقامة':'تحديد مدة ظهور مضى على الإقامة.','تنسيق الخط':'اختيار نوع الخط وحجمه وألوانه.','التبديل التلقائي':'التبديل إلى بيانات الغد عند الوقت المحدد.','الإشعارات':'عرض التذكيرات المحفوظة لمدة 24 ساعة.','الصامت':'تحديد موعد الصامت ومدته.','التنبيهات':'ضبط تنبيهات الصلاة والإقامة والأذكار.','القرآن الكريم':'فتح المصحف وأدوات القراءة.','التقاويم':'عرض تقاويم الصلاة ومشاركتها.'};
+  function explainAction(button,explicit){
+    if(explicit)return explicit;
+    const label=(button.textContent||'').trim();
+    const key=Object.keys(HELP_FALLBACK).find(k=>label.includes(k));
+    return key?HELP_FALLBACK[key]:'هذا الزر يفتح إعدادات '+label+' لتعديلها حسب اختيارك.';
+  }
+  function openShortHelp(title,description){
+    document.getElementById('aoqatHelpPage')?.remove();
+    const overlay=document.createElement('section');overlay.id='aoqatHelpPage';overlay.dir='rtl';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','شرح '+title);
+    const page=document.createElement('div');page.className='aoqat-help-page';
+    const head=document.createElement('div');head.className='aoqat-help-head';
+    const heading=document.createElement('strong');heading.textContent='شرح الزر';
+    const back=document.createElement('button');back.type='button';back.className='aoqat-help-back';back.textContent='‹ رجوع';
+    const close=()=>{overlay.remove();document.removeEventListener('keydown',onKey);};
+    const onKey=e=>{if(e.key==='Escape'){e.preventDefault();close();}};
+    back.onclick=close;document.addEventListener('keydown',onKey);
+    head.append(heading,back);
+    const name=document.createElement('h3');name.textContent=title;
+    const body=document.createElement('p');body.textContent=description;
+    page.append(head,name,body);overlay.append(page);document.body.append(overlay);back.focus({preventScroll:true});
+  }
+  window.aoqatOpenSettingsHelp=openShortHelp;
+  function ensureHelpStyles(){
+    if(document.getElementById('aoqatShortHelpStyles'))return;
+    const style=document.createElement('style');style.id='aoqatShortHelpStyles';
+    style.textContent=".aoqat-help-row{position:relative;width:100%;min-width:0}.aoqat-help-row>.main-action{width:100%!important;box-sizing:border-box!important;padding-inline-end:45px!important}.aoqat-help-dot,.wa-help-dot{position:absolute!important;left:9px!important;right:auto!important;top:50%!important;transform:translateY(-50%)!important;width:25px!important;height:25px!important;min-width:25px!important;min-height:25px!important;max-height:25px!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:0!important;border:1px solid var(--wt-button-accent,var(--wt-accent,#38735a))!important;border-radius:50%!important;background:color-mix(in srgb,var(--wt-button-accent,var(--wt-accent,#38735a)) 12%,var(--wt-surface,#fff))!important;color:var(--wt-button-accent,var(--wt-accent,#38735a))!important;font:700 16px/1 Tahoma,Arial,sans-serif!important;box-shadow:none!important;z-index:3;cursor:pointer}.aoqat-help-dot:focus-visible,.wa-help-dot:focus-visible{outline:2px solid var(--wt-button-accent,var(--wt-accent,#38735a));outline-offset:2px}#aoqatHelpPage{position:fixed!important;inset:0!important;z-index:2147482000!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#263c32)!important;overflow-y:auto!important;box-sizing:border-box!important;padding:env(safe-area-inset-top,12px) 12px 24px!important}#aoqatHelpPage .aoqat-help-page{width:100%;max-width:680px;margin:0 auto;padding:6px 8px}#aoqatHelpPage .aoqat-help-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;border-bottom:1px solid var(--wt-border,#ddd)}#aoqatHelpPage .aoqat-help-head strong{font-size:20px}#aoqatHelpPage .aoqat-help-back{min-height:38px!important;border:1px solid var(--wt-border,#ddd)!important;border-radius:9px!important;padding:5px 12px!important;background:var(--wt-surface2,#eee)!important;color:var(--wt-text,#333)!important;font:600 14px Tahoma,Arial,sans-serif!important}#aoqatHelpPage h3{font-size:19px;line-height:1.5;margin:22px 0 12px}#aoqatHelpPage p{font-size:16px;line-height:1.85;margin:0}#aoqatLockScreenSection .wa-help-row{position:relative!important;width:100%!important}#aoqatLockScreenSection .wa-help-row>.wa-primary{width:100%!important;box-sizing:border-box!important;padding-inline-end:44px!important}#aoqatLockScreenSection .wa-help-detail{display:none!important}";
+    document.head.appendChild(style);
+  }
+  function showShortButtonHelp(host,descriptions={}){
+    if(!host)return;ensureHelpStyles();
     host.querySelectorAll('button.main-action').forEach(button=>{
+      if(button.closest('.aoqat-help-row'))return;
       const key=button.dataset.alertSection||button.dataset.panel||button.dataset.interfacePage||button.dataset.bagSection;
-      const message=descriptions[key];
-      if(!message||button.parentElement?.classList.contains('aoqat-help-row'))return;
-      const row=document.createElement('div');row.className='aoqat-help-row';
-      button.before(row);row.append(button);
-      const help=document.createElement('button');help.type='button';help.className='aoqat-help-dot';
-      help.textContent='?';help.setAttribute('aria-label','شرح: '+button.textContent.trim().slice(0,65));
-      help.setAttribute('aria-expanded','false');help.title='شرح مختصر';
-      const hint=document.createElement('p');hint.className='aoqat-help-info';hint.hidden=true;hint.textContent=message;
-      help.addEventListener('click',()=>{
-        const open=hint.hidden;
-        host.querySelectorAll('.aoqat-help-info').forEach(x=>x.hidden=true);
-        host.querySelectorAll('.aoqat-help-dot').forEach(x=>x.setAttribute('aria-expanded','false'));
-        hint.hidden=!open;help.setAttribute('aria-expanded',String(open));
-      });
-      row.append(help,hint);
+      const description=explainAction(button,descriptions[key]);
+      const row=document.createElement('div');row.className='aoqat-help-row';button.before(row);row.append(button);
+      const help=document.createElement('button');help.type='button';help.className='aoqat-help-dot';help.textContent='؟';
+      help.setAttribute('aria-label','شرح '+button.textContent.trim());help.title='شرح الزر';
+      help.addEventListener('click',e=>{e.stopPropagation();openShortHelp(button.textContent.trim(),description);});row.append(help);
     });
+  }
+  let helpObserverPending=false;
+  function scheduleInternalHelp(){
+    if(helpObserverPending)return;helpObserverPending=true;
+    requestAnimationFrame(()=>{helpObserverPending=false;const body=document.getElementById('webSubBody');if(body&&document.getElementById('webDrawerSub')?.classList.contains('open'))showShortButtonHelp(body);});
+  }
+  function watchInternalHelp(){
+    const sub=document.getElementById('webDrawerSub');if(!sub||sub.dataset.aoqatHelpWatched)return;
+    sub.dataset.aoqatHelpWatched='true';
+    new MutationObserver(records=>{if(records.some(r=>r.type==='childList'&&[...r.addedNodes].some(n=>n.nodeType===1&&!n.classList?.contains('aoqat-help-dot'))))scheduleInternalHelp();}).observe(sub,{childList:true,subtree:true});
+    scheduleInternalHelp();
   }
   const DESIGN_HELP={
     backgroundPanel:'إظهار عناصر الشاشة والتصاميم وتعديل الواجهة.',
@@ -431,6 +455,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
+    watchInternalHelp();
     sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
