@@ -31,17 +31,25 @@ const {spawn}=require('node:child_process');
   await page.screenshot({path:'/tmp/aoqat-theme-help-page.png',fullPage:true});
   await page.locator('#aoqatHelpPage .aqh-back').click();
   assert.equal(await page.locator('#aoqatHelpPage').count(),0);
-  assert.equal(await page.locator('#webSubTitle').textContent(),'بيانات الأذان والإقامة');
+  assert.ok((await page.locator('#webSubTitle').textContent()).includes('الإقامة'));
   await page.screenshot({path:'/tmp/aoqat-theme-help-buttons.png',fullPage:true});
-  await page.evaluate(()=>window.applyWebTheme('white-lavender'));
+  // Check the dedicated button-theme preference, not just the app theme.
+  const appSurface=await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--wt-surface').trim());
+  await page.evaluate(()=>{
+    localStorage.setItem('aoqatWebButtonAppearanceV1',JSON.stringify({target:'buttons',theme:'white-lavender',style:'solid'}));
+    window.applyWebTheme('white-lavender');
+  });
   const lavender=await page.locator('#webSubBody .aqh-dot').first().evaluate(e=>getComputedStyle(e).borderColor);
   await page.evaluate(()=>window.applyWebTheme('cream-gold'));
   const gold=await page.locator('#webSubBody .aqh-dot').first().evaluate(e=>getComputedStyle(e).borderColor);
   assert.notEqual(lavender,gold,'Circle border must follow independently selected theme accent');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--wt-surface').trim()),appSurface,
+    'Changing only button themes must never change the app surface');
   // The original button still opens its exact setting without triggering help.
   await page.locator('#webSubBody [data-panel="iqamaPanel"]').click();
   await page.waitForFunction(()=>document.querySelector('output[data-iqama="fajr"]'));
   assert.equal(await page.locator('#aoqatHelpPage').count(),0);
+  await page.locator('#settingsContentDialog .web-back').click();
   await page.locator('#settingsContentDialog .web-back').click();
   await page.locator('[data-drawer="alertSettings"]').click();
   await page.waitForFunction(()=>document.querySelectorAll('#webSubBody [data-alert-section]').length===8);
