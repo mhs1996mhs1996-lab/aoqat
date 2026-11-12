@@ -160,7 +160,7 @@ jobs:
           assert 'previewPrayerLockWallpaper' in native
           assert 'ACTION_CHANGE_LIVE_WALLPAPER' in native
           assert 'configurePrayerLockWallpaperShowTimes' in native
-          assert 'إشعار صلاة واحد بصيغة واضحة' in panel
+          assert 'lockButtonWithHelp(lockToggle' in panel and 'lockButtonWithHelp(lockAccess' in panel
           assert 'window.AndroidNative.openLockScreenNotificationSettings' in panel
           assert 'function fitLiveCountdownRow()' in countdown
           assert 'getBoolean("enabled",false)' in lock
