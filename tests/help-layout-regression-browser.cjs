@@ -76,7 +76,7 @@ const {spawn}=require('node:child_process');
       return {size:pseudo.width,content:pseudo.content,position:pseudo.position,
         height:button.getBoundingClientRect().height};
     });
-    assert.equal(style.size,'17px','Help circle is subtle and consistent with design settings');
+    assert.equal(style.size,'20px','Help circle is legible without shifting the original controls');
     assert.equal(style.position,'absolute');
     assert.ok(style.content.includes('؟'));
     await heading.click({position:{x:20,y:25}});
