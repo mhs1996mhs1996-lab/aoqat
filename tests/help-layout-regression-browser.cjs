@@ -40,6 +40,25 @@ const {spawn}=require('node:child_process');
     assert.ok(initial.sectionCount>=3,'Prayer options remain intact');
     assert.equal(initial.originalButtons,true,'Original buttons stay in their original parents');
     assert.ok(initial.contentHeight<2600,'No oversized empty column in the collapsed prayer options');
+    // Compare real pixel rectangles: original navigation arrows and the
+    // Arabic help circles must never occupy the same screen space.
+    const chevrons=await ad.evaluate(root=>[...root.querySelectorAll('#paAlertMenu > button.ad-section-toggle.aoqat-help-with-chevron')].map(button=>{
+      const arrow=button.lastElementChild;
+      const box=button.getBoundingClientRect(),arrowBox=arrow.getBoundingClientRect();
+      const pseudo=getComputedStyle(button,'::before');
+      return {text:button.textContent.trim().slice(0,50),
+        circleRight:box.left+parseFloat(pseudo.left)+parseFloat(pseudo.width),
+        arrowLeft:arrowBox.left,
+        circleSize:parseFloat(pseudo.width),
+        paddingLeft:parseFloat(getComputedStyle(button).paddingLeft)};
+    }));
+    assert.ok(chevrons.length>=2,'Method and Friday arrows must be recognized');
+    for(const entry of chevrons){
+      assert.ok(entry.arrowLeft>=entry.circleRight+7,
+        'Help circle collided with navigation chevron: '+JSON.stringify(entry));
+      assert.equal(entry.circleSize,20);
+    }
+
 
     // The first button opens a full-screen leaf; its own back button
     // closes the leaf. It is not designed as a second-click toggle.
@@ -80,6 +99,36 @@ const {spawn}=require('node:child_process');
     assert.equal(await ad.locator('.aoqat-help-eligible').count(),initial.injectedIcons);
     assert.ok(final.contentHeight<2600);
     await page.screenshot({path:'/tmp/aoqat-help-adhan-safe.png',fullPage:false});
-    console.log('PASS: original prayer alert layout, subtle CSS-only help circles, independent help page, no abandoned holders or giant empty column');
+    // Inspect the compact interface menu from the same mobile viewport.
+    // Earlier the title was auto-pushed left underneath the help circle.
+    await page.evaluate(()=>{
+      document.getElementById('adhanServicesBack')?.click();
+      window.AoqatWebSettingsNavigation.drawer('settings');
+      window.AoqatWebSettingsNavigation.panel('backgroundPanel','واجهة البرنامج');
+    });
+    await page.locator('#webInterfaceMenu [data-interface-page="elements"].aoqat-help-eligible')
+      .waitFor({state:'visible'});
+    const interfaceGeometry=await page.locator('#webInterfaceMenu [data-interface-page="elements"]').evaluate(button=>{
+      const title=button.querySelector('span:last-child').getBoundingClientRect();
+      const box=button.getBoundingClientRect();
+      const style=getComputedStyle(button,'::before');
+      return {textLeft:title.left,textRight:title.right,
+        circleRight:box.left+parseFloat(style.left)+parseFloat(style.width),
+        width:box.width,fontSize:getComputedStyle(button).fontSize,
+        circleSize:parseFloat(style.width)};
+    });
+    assert.ok(interfaceGeometry.textLeft>=interfaceGeometry.circleRight+8,
+      'Interface title overlaps its help circle: '+JSON.stringify(interfaceGeometry));
+    assert.equal(interfaceGeometry.circleSize,20);
+    const interfaceTitle=page.locator('#webInterfaceMenu [data-interface-page="elements"]');
+    await interfaceTitle.click({position:{x:23,y:24}});
+    await page.locator('#aoqatHelpPage').waitFor({state:'visible'});
+    await page.locator('#aoqatHelpPage .aoqat-help-back').click();
+    assert.equal(await page.locator('#aoqatHelpPage').count(),0);
+    // The original button still opens its existing settings without reparenting.
+    await interfaceTitle.click({position:{x:180,y:24}});
+    await page.locator('#webInterfacePage').waitFor({state:'visible'});
+
+    console.log('PASS: mobile prayer arrows and interface titles clear the themed help circle; original menus and page layout remain intact');
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1});
