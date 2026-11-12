@@ -123,12 +123,12 @@ function createPanel(){
  const reset=document.createElement("button");reset.type="button";reset.className="wa-primary";reset.textContent="إرجاع البطاقة للأصل";
  actions.append(pin,reset);
  const note=document.createElement("p");note.className="wa-note";
- note.textContent="مساحة البطاقات الست على الشاشة الرئيسية يتحكم بها مشغّل الهاتف. خيار شاشة القفل أدناه يعرض عدّاد الصلاة بإشعار أندرويد، وليس ويدجت قابلاً للسحب على كل أجهزة Honor.";
+ note.textContent="حجم البطاقات تحدده شاشة الهاتف الرئيسية.";
  const status=document.createElement("p");status.className="wa-note";status.setAttribute("role","status");
  const lockSection=document.createElement("section");lockSection.className="wa-style-group";lockSection.id="aoqatLockScreenSection";
  const lockHeading=document.createElement("strong");lockHeading.textContent="الصلاة القادمة على شاشة القفل";
  const lockExplanation=document.createElement("p");lockExplanation.className="wa-note";
- lockExplanation.textContent="إشعار صلاة واحد بصيغة واضحة وعدّاد تنازلي، دون تغيير خلفية الشاشة الرئيسية. عرض الأرقام على شاشة القفل يعتمد على إعدادات الهاتف ودعمه للإشعارات الحية.";
+ lockExplanation.textContent="";
  const lockToggle=document.createElement("button");lockToggle.className="wa-primary";lockToggle.type="button";
  const lockAccess=document.createElement("button");lockAccess.className="wa-primary";lockAccess.type="button";
  lockAccess.textContent="ضبط أذونات التنبيهات وشاشة القفل";
@@ -162,8 +162,29 @@ function createPanel(){
    else window.AndroidNative.openLockScreenNotificationSettings?.();
   }else window.AndroidNative?.openLockScreenNotificationSettings?.();
  };
- lockSection.append(lockHeading,lockExplanation);
- if(hasLock){syncLock();lockSection.append(lockToggle,lockAccess,lockStatus);checkLock();}
+ // Short help beside the existing Android controls, without changing callbacks.
+ function lockButtonWithHelp(action,description){
+  const row=document.createElement('div');row.className='wa-help-row';
+  const help=document.createElement('button');help.type='button';help.className='wa-help-dot';
+  help.textContent='?';help.setAttribute('aria-label','شرح '+action.textContent.trim());
+  help.setAttribute('aria-expanded','false');
+  const detail=document.createElement('p');detail.className='wa-help-detail';detail.hidden=true;
+  detail.textContent=description;
+  help.onclick=()=>{detail.hidden=!detail.hidden;help.setAttribute('aria-expanded',String(!detail.hidden));};
+  row.append(action,help,detail);return row;
+ }
+ if(!document.getElementById('aoqatWidgetHelpCss')){
+  const style=document.createElement('style');style.id='aoqatWidgetHelpCss';
+  style.textContent='#aoqatLockScreenSection .wa-help-row{position:relative;display:block;width:100%}#aoqatLockScreenSection .wa-help-row>.wa-primary{width:100%;padding-left:46px!important;box-sizing:border-box}#aoqatLockScreenSection .wa-help-dot{position:absolute;left:9px;top:9px;width:30px;height:30px;min-height:30px;border-radius:50%;border:1px solid #9dc6ad;background:#eff8f2;color:#1b5c3a;font-size:18px;font-weight:800;z-index:2}#aoqatLockScreenSection .wa-help-detail{font-size:13px;line-height:1.6;margin:4px 0 7px;background:#f3faf5;padding:8px;border:1px solid #cae3d1;border-radius:7px}#aoqatLockScreenSection .wa-help-detail[hidden]{display:none!important}';
+  document.head.append(style);
+ }
+ lockSection.append(lockHeading);
+ if(hasLock){syncLock();
+  lockSection.append(
+   lockButtonWithHelp(lockToggle,'عرض عدّاد الصلاة والإقامة في إشعار شاشة القفل.'),
+   lockButtonWithHelp(lockAccess,'السماح بعرض الإشعارات على شاشة القفل.')
+  );
+  lockSection.append(lockStatus);checkLock();}
  else {
   const webNote=document.createElement("p");webNote.className="wa-note";
   webNote.textContent="إشعار شاشة القفل وأذوناته متاحان في نسخة أندرويد فقط.";
