@@ -36,7 +36,7 @@ const {spawn}=require('node:child_process');
     }));
     assert.equal(initial.wrappers,0,'Broken help wrappers must no longer be rendered');
     assert.equal(initial.orphanBadges,0,'No detached help icons may remain in the prayer screen');
-    assert.equal(initial.injectedIcons,0,'The faulty dynamic help layer is disabled during restoration');
+    assert.ok(initial.injectedIcons>=3,'Help icons use non-reparenting CSS on the original prayer buttons');
     assert.ok(initial.sectionCount>=3,'Prayer options remain intact');
     assert.equal(initial.originalButtons,true,'Original buttons stay in their original parents');
     assert.ok(initial.contentHeight<2600,'No oversized empty column in the collapsed prayer options');
@@ -49,11 +49,21 @@ const {spawn}=require('node:child_process');
     await page.locator('#paMethodPanel > header button').click();
     assert.equal(await toggle.getAttribute('aria-expanded'),'false');
 
-    // The original left side is still an action area, not a stray icon.
-    const box=await toggle.boundingBox();
-    assert.ok(box&&box.width>180);
-    await page.mouse.click(box.x+20,box.y+box.height/2);
-    assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+    // The genuine prayer method still opens normally; help belongs to
+    // eligible section headings, and must NOT wrap or relocate any buttons.
+    const heading=ad.locator('.ad-section-toggle.aoqat-help-eligible').first();
+    const style=await heading.evaluate(button=>{
+      const pseudo=getComputedStyle(button,'::before');
+      return {size:pseudo.width,content:pseudo.content,position:pseudo.position,
+        height:button.getBoundingClientRect().height};
+    });
+    assert.equal(style.size,'17px','Help circle is subtle and consistent with design settings');
+    assert.equal(style.position,'absolute');
+    assert.ok(style.content.includes('؟'));
+    await heading.click({position:{x:20,y:25}});
+    await page.locator('#aoqatHelpPage').waitFor({state:'visible'});
+    assert.ok((await page.locator('#aoqatHelpPage .aoqat-help-description').textContent()).length>5);
+    await page.locator('#aoqatHelpPage .aoqat-help-back').click();
     assert.equal(await page.locator('#aoqatHelpPage').count(),0);
     await page.locator('#paMethodPanel > header button').click();
     for(let n=0;n<4;n++){
@@ -67,8 +77,9 @@ const {spawn}=require('node:child_process');
     }));
     assert.equal(final.wrappers,0);
     assert.equal(final.orphanBadges,0);
+    assert.equal(await ad.locator('.aoqat-help-eligible').count(),initial.injectedIcons);
     assert.ok(final.contentHeight<2600);
     await page.screenshot({path:'/tmp/aoqat-help-adhan-safe.png',fullPage:false});
-    console.log('PASS: restored prayer alerts, original buttons, no orphan help circles and no tall blank column');
+    console.log('PASS: original prayer alert layout, subtle CSS-only help circles, independent help page, no abandoned holders or giant empty column');
   }finally{await browser?.close();server.kill();}
 })().catch(error=>{console.error(error);process.exitCode=1});
