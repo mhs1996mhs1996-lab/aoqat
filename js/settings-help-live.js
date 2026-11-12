@@ -65,6 +65,9 @@
       "#webInterfaceMenu button.main-action.aoqat-help-eligible>span:last-child{margin-inline-start:0!important}",
       "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-eligible{padding-left:58px!important}",
       "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-eligible.aoqat-help-with-chevron{padding-left:82px!important}",
+      // Specificity must beat the original ordered alert-menu padding rule.
+      "#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu > button.ad-section-toggle.aoqat-help-eligible{padding-left:60px!important}",
+      "#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu > button.ad-section-toggle.aoqat-help-eligible.aoqat-help-with-chevron{padding-left:82px!important}",
       "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-with-chevron>.ad-section-chevron{margin-left:0!important}",
       "@media(max-width:360px){button.aoqat-help-eligible::before{width:19px!important;height:19px!important;min-width:19px!important;min-height:19px!important;font-size:12px!important}}"
     ].join("");
