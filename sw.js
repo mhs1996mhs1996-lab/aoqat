@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v202-iqama-instant-press-20261111";
+const CACHE_NAME = "aoqat-pwa-v203-visibility-inbox-alerts-20261112";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -34,7 +34,7 @@ const APP_SHELL = [
   "/js/design-history.js?v=2",
   "/js/universal-preview-editor.js?v=2",
   "/js/export-toolbar.js?v=4",
-  "/js/compact-design-menu.js?v=1",
+  "/js/compact-design-menu.js?v=203-visible-by-default",
   "/js/exact-export.js?v=19",
   "/js/prayer-countdown.js?v=22-instant-minute-controls",
   "/js/prayer-countdown-mobile-fix.js?v=2",
@@ -48,13 +48,13 @@ const APP_SHELL = [
   "/assets/fonts/amiri-quran.ttf",
   "/js/fasting-reminders-core.js",
   "/js/fasting-reminders.js",
-  "/js/reminder-inbox.js?v=2",
+  "/js/reminder-inbox.js?v=203-inbox-filter",
   "/js/muslim-bag.js",
   "/js/notification-settings-layout.js",
   "/js/web-menu-button-theme.js?v=5-nested-nav-theme-20261106",
   "/js/azkar-web.js?v=6",
-  "/js/azkar-reminders-core.js",
-  "/js/azkar-reminders.js",
+  "/js/azkar-reminders-core.js?v=203-friday-salawat",
+  "/js/azkar-reminders.js?v=203-friday-salawat",
   "/js/friday-sunnah-data.js",
   "/js/friday-reminders-core.js",
   "/js/friday-reminders.js",
@@ -106,10 +106,10 @@ const APP_SHELL = [
   "/js/quran-reader.js?v=qcf-style8-surah-ayah-20261029",
   "/js/iqama-timing.js?v=2-minute-range",
   "/js/prayer-countdown.js?v=22-instant-minute-controls",
-  "/js/compact-design-menu.js?v=13",
+  "/js/compact-design-menu.js?v=203-visible-by-default",
   "/js/web-theme-settings.js?v=5",
-  "/js/widget-appearance.js?v=12-lockscreen-simple",
-  "/js/web-menu-order.js?v=39-widget-style-20261107",
+  "/js/widget-appearance.js?v=203-help-dot",
+  "/js/web-menu-order.js?v=203-setting-help",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
   "/assets/fonts/uthmanic-hafs.woff2"
