@@ -1,9 +1,9 @@
 (function(root){'use strict';
-  const ids=['morning','evening','prayer','sleep','waking','tasbih'];
+  const ids=['morning','evening','prayer','sleep','waking','tasbih','salawat'];
   const prayers=['fajr','dhuhr','asr','maghrib','isha'];
-  const titles={morning:'أذكار الصباح',evening:'أذكار المساء',prayer:'أذكار بعد الصلاة',sleep:'أذكار النوم',waking:'أذكار الاستيقاظ',tasbih:'التسبيح والاستغفار والصلاة على النبي ﷺ'};
+  const titles={morning:'أذكار الصباح',evening:'أذكار المساء',prayer:'أذكار بعد الصلاة',sleep:'أذكار النوم',waking:'أذكار الاستيقاظ',tasbih:'الذكر والتسبيح والاستغفار',salawat:'الصلاة على النبي ﷺ يوم الجمعة'};
   const iqamaDefaults={fajr:20,dhuhr:10,asr:10,maghrib:10,isha:10};
-  const clocks={morning:['06:00'],evening:['17:00'],prayer:['05:30','12:30','15:30','18:30','20:00'],sleep:['22:00'],waking:['07:00'],tasbih:['09:00','16:00']};
+  const clocks={morning:['06:00'],evening:['17:00'],prayer:['05:30','12:30','15:30','18:30','20:00'],sleep:['22:00'],waking:['07:00'],tasbih:['09:00','16:00'],salawat:['09:00']};
   function clock(v){const m=/^(\d{2}):(\d{2})$/.exec(String(v));return m&&+m[1]<24&&+m[2]<60?+m[1]*60+(+m[2]):null;}
   function minutes(v,id){const m=/^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/.exec(String(v));if(!m||+m[1]>23)return null;let h=+m[1];if(['asr','maghrib','isha'].includes(id)&&h<12)h+=12;if(id==='fajr'&&h===12)h=0;return h*60+(+m[2]);}
   function normalize(raw={}){return Object.fromEntries(ids.map(id=>{const r=raw?.[id],n=Number(r?.offset);return [id,{enabled:r?.enabled!==false,mode:r?.mode==='custom'?'custom':'default',type:r?.type==='clock'?'clock':'relative',offset:Number.isInteger(n)&&n>=-120&&n<=120?n:0,times:clocks[id].map((v,i)=>clock(r?.times?.[i])!==null?r.times[i]:v)}];}));}
@@ -15,7 +15,9 @@
     const prayer=id=>valid?minutes(row[id],id):null;
     const finish=id=>{const t=prayer(id);return t===null?null:t+duration(iqama,id,iqamaDefaults[id])+duration(after,id,10);};
     const add=(id,slot,t)=>{if(t===null||!Number.isFinite(t))return;out.push({kind:'azkar-reminder',section:'azkar',topicId:id,key:'azkar:'+id+':'+d.key+':'+slot,at:d.start+t*60000,title:'تذكير: '+titles[id],body:'حان وقت '+titles[id]+'. اضغط لفتح الأذكار.'});};
+    const isFriday=new Date(d.key+'T00:00:00Z').getUTCDay()===5;
     for(const id of ids){const v=s[id];if(!v.enabled)continue;
+      if(id==='salawat'&&!isFriday)continue;
       if(id==='sleep'||id==='waking'||v.mode==='custom'&&v.type==='clock'){(v.mode==='default'?clocks[id]:v.times).forEach((t,i)=>add(id,i,clock(t)));continue;}
       const offset=v.mode==='custom'?v.offset:0;
       const shift=t=>t===null?null:t+offset;
@@ -23,6 +25,7 @@
       if(id==='evening'){const t=prayer('maghrib');add(id,0,t===null?null:t-20+offset);}
       if(id==='prayer')prayers.forEach(p=>add(id,p,shift(finish(p))));
       if(id==='tasbih'){const t=prayer('sunrise');add(id,0,t===null?null:t+120+offset);add(id,1,shift(finish('asr')));}
+      if(id==='salawat')add(id,0,clock(clocks.salawat[0])+offset);
     }return out.sort((a,b)=>a.at-b.at);
   }
   const api={ids,prayers,titles,clocks,clock,minutes,day,normalize,events};root.AoqatAzkarRemindersCore=api;if(typeof module!=='undefined')module.exports=api;

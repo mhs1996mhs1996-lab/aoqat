@@ -19,6 +19,18 @@ class AzkarReminderPlanTest {
  private val row=JSONObject("""{"fajr":"4:56","sunrise":"6:14","dhuhr":"11:55","asr":"3:08","maghrib":"5:34","isha":"6:54"}""")
  private fun events(s:JSONObject=JSONObject(),r:JSONObject?=row)=AzkarReminderPlan.events(day,s,r){IqamaCycle.Durations(if(it=="fajr")20 else 10,10)}
  private fun time(e:JSONObject)=Instant.ofEpochMilli(e.getLong("at")).atZone(CommunityReminderPlan.zone).toLocalTime()
+ @Test fun fridaySalawatIsSeparateFromDailyTasbihAndAbsentOtherDays(){
+    val thursday=events()
+    assertFalse(thursday.any{it.optString("topicId")=="salawat"})
+    val friday=AzkarReminderPlan.events(LocalDate.of(2026,10,23),JSONObject(),row){IqamaCycle.Durations(10,10)}
+    val salawat=friday.filter{it.optString("topicId")=="salawat"}
+    assertEquals(1,salawat.size)
+    assertEquals("تذكير: الصلاة على النبي ﷺ يوم الجمعة",salawat[0].optString("title"))
+    assertEquals(LocalTime.of(9,0),time(salawat[0]))
+    assertEquals(2,friday.count{it.optString("topicId")=="tasbih"})
+    val disabled=JSONObject().put("salawat",JSONObject().put("enabled",false))
+    assertFalse(AzkarReminderPlan.events(LocalDate.of(2026,10,23),disabled,row){IqamaCycle.Durations(10,10)}.any{it.optString("topicId")=="salawat"})
+ }
  @Test fun allSixCategoriesIncludeBothTasbihSlotsAndAllFivePrayers(){val e=events();assertEquals(11,e.size);assertEquals(LocalTime.of(5,26),time(e.first{it.optString("topicId")=="morning"}));assertEquals(LocalTime.of(17,14),time(e.first{it.optString("topicId")=="evening"}));assertEquals(listOf(LocalTime.of(8,14),LocalTime.of(15,28)),e.filter{it.optString("topicId")=="tasbih"}.map(::time));assertEquals(5,e.count{it.optString("topicId")=="prayer"});assertEquals(11,e.map{it.getString("id")}.toSet().size)}
  @Test fun customClocksWorkWithoutPrayerRowsAndDisabledCategoryHasNoEvents(){val s=JSONObject().put("tasbih",JSONObject().put("mode","custom").put("type","clock").put("times",JSONArray().put("09:10").put("16:20"))).put("sleep",JSONObject().put("enabled",false));val e=events(s,null);assertEquals(listOf(LocalTime.of(9,10),LocalTime.of(16,20)),e.filter{it.optString("topicId")=="tasbih"}.map(::time));assertFalse(e.any{it.optString("topicId")=="sleep"});assertFalse(e.any{it.optString("topicId")=="morning"})}
  @Test fun adjustedRowsAndIqamaDurationsAreAppliedExactlyOnce(){val r=JSONObject(row.toString()).put("asr","3:18");val s=JSONObject().put("tasbih",JSONObject().put("mode","custom").put("offset",5));val e=AzkarReminderPlan.events(day,s,r){IqamaCycle.Durations(15,20)};assertEquals(LocalTime.of(15,58),time(e.last{it.optString("topicId")=="tasbih"}))}

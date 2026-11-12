@@ -5,8 +5,8 @@ import java.time.LocalDate
 
 /** Same default/custom rules as the reviewed web controls; rows already include user offsets. */
 object AzkarReminderPlan {
-    val titles = linkedMapOf("morning" to "أذكار الصباح", "evening" to "أذكار المساء", "prayer" to "أذكار بعد الصلاة", "sleep" to "أذكار النوم", "waking" to "أذكار الاستيقاظ", "tasbih" to "التسبيح والاستغفار والصلاة على النبي ﷺ")
-    private val clocks = mapOf("morning" to listOf("06:00"), "evening" to listOf("17:00"), "prayer" to listOf("05:30","12:30","15:30","18:30","20:00"), "sleep" to listOf("22:00"), "waking" to listOf("07:00"), "tasbih" to listOf("09:00","16:00"))
+    val titles = linkedMapOf("morning" to "أذكار الصباح", "evening" to "أذكار المساء", "prayer" to "أذكار بعد الصلاة", "sleep" to "أذكار النوم", "waking" to "أذكار الاستيقاظ", "tasbih" to "الذكر والتسبيح والاستغفار", "salawat" to "الصلاة على النبي ﷺ يوم الجمعة")
+    private val clocks = mapOf("morning" to listOf("06:00"), "evening" to listOf("17:00"), "prayer" to listOf("05:30","12:30","15:30","18:30","20:00"), "sleep" to listOf("22:00"), "waking" to listOf("07:00"), "tasbih" to listOf("09:00","16:00"), "salawat" to listOf("09:00"))
     fun events(date: LocalDate, settings: JSONObject, row: JSONObject?, durations: (String) -> IqamaCycle.Durations): List<JSONObject> {
         val out = mutableListOf<JSONObject>()
         fun prayer(id: String) = PrayerTimes.minutes(row?.optString(id) ?: "", id)
@@ -19,6 +19,7 @@ object AzkarReminderPlan {
         for(kind in titles.keys) {
             val s=settings.optJSONObject(kind) ?: JSONObject()
             if(!s.optBoolean("enabled",true))continue
+            if(kind=="salawat" && date.dayOfWeek!=java.time.DayOfWeek.FRIDAY)continue
             val custom=s.optString("mode")=="custom"
             if(kind in listOf("sleep","waking") || custom && s.optString("type")=="clock") {
                 for((i,default) in clocks.getValue(kind).withIndex()) {
@@ -34,6 +35,7 @@ object AzkarReminderPlan {
                 "evening" -> add(kind,"0",prayer("maghrib")?.let{it-20+offset})
                 "prayer" -> PrayerTimes.ids.forEach{add(kind,it,shift(finish(it)))}
                 "tasbih" -> {add(kind,"0",prayer("sunrise")?.let{it+120+offset});add(kind,"1",shift(finish("asr")))}
+                "salawat" -> add(kind,"0",CommunityReminderPlan.clock("09:00")?.plus(offset))
             }
         }
         return out.sortedBy{it.getLong("at")}

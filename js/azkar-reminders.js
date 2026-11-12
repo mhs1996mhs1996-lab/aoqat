@@ -2,7 +2,7 @@
   if(window.AndroidNative?.configureAdhan)return;
   const C=window.AoqatAzkarRemindersCore,KEY='aoqatAzkarRemindersV1',SENT='aoqatAzkarRemindersSentV1';
   const names=['الفجر','الظهر','العصر','المغرب','العشاء'];
-  const descriptions={morning:'بعد صلاة الفجر: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',evening:'قبل أذان المغرب بـ20 دقيقة.',prayer:'بعد كل صلاة: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',sleep:'الساعة 10 مساءً.',waking:'الساعة 7 صباحاً.',tasbih:'بعد الشروق بساعتين، وبعد صلاة العصر حسب أوقات الإقامة ومدة الصلاة.'};
+  const descriptions={morning:'بعد صلاة الفجر: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',evening:'قبل أذان المغرب بـ20 دقيقة.',prayer:'بعد كل صلاة: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',sleep:'الساعة 10 مساءً.',waking:'الساعة 7 صباحاً.',tasbih:'بعد الشروق بساعتين، وبعد صلاة العصر.',salawat:'يوم الجمعة الساعة 9 صباحاً، ويمكن تعديل الوقت.'};
   function json(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch(_){return fallback;}}
   function read(){return C.normalize(json(KEY,{}));}
   let settings=read(),audio;
@@ -13,7 +13,7 @@
     const out=[];for(const date of [new Date(+now-86400000),now]){const d=C.day(date);let row=typeof cachedAnnualPrayer==='function'?cachedAnnualPrayer(d.month,d.day):null;if(row)row=window.AoqatPrayerTimeChoice?.applyRow(row)||row;out.push(...C.events(date,settings,row,json('aoqatIqamaMinutesV1',{}),json('aoqatAfterIqamaMinutesV1',{})));}return out;
   }
   let pendingKind='';
-  function flushOpen(){if(!pendingKind||!window.aoqatUIReady||!window.aoqatOpenMuslimBagSection )return;const kind=pendingKind;pendingKind='';document.body.classList.add('design-menu-open');window.aoqatOpenMuslimBagSection('azkar');window.aoqatOpenAzkarCategory?.(kind);}
+  function flushOpen(){if(!pendingKind||!window.aoqatUIReady||!window.aoqatOpenMuslimBagSection )return;const kind=pendingKind;pendingKind='';document.body.classList.add('design-menu-open');window.aoqatOpenMuslimBagSection('azkar');window.aoqatOpenAzkarCategory?.(kind==='salawat'?'friday':kind);}
   function open(kind){if(!C.ids.includes(kind))return;pendingKind=kind;flushOpen();}
   async function notify(events){if(!events.length)return;const first=events[0];for(const event of events)window.AoqatReminderInbox?.add(event);
     document.getElementById('azkarReminderBanner')?.remove();const banner=document.createElement('aside');banner.id='azkarReminderBanner';banner.setAttribute('role','alert');
