@@ -7,6 +7,7 @@ on:
       - 'js/web-menu-order.js'
       - 'css/adhan.css'
       - 'tests/help-layout-regression-browser.cjs'
+      - 'tests/web-interface-theme-match-browser.cjs'
       - '.github/workflows/check-help-layout-web.yml'
 permissions:
   contents: read
@@ -21,14 +22,18 @@ jobs:
           node --check js/settings-help-live.js
           node --check js/web-menu-order.js
           node --check tests/help-layout-regression-browser.cjs
+          node --check tests/web-interface-theme-match-browser.cjs
       - name: Verify the real prayer settings layout in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
           node tests/help-layout-regression-browser.cjs
+          node tests/web-interface-theme-match-browser.cjs
       - name: Attach a safe layout screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: adhan-settings-help-safe
-          path: /tmp/aoqat-help-adhan-safe.png
+          path: |
+            /tmp/aoqat-help-adhan-safe.png
+            /tmp/aoqat-interface-buttons-theme-gold.png
           if-no-files-found: ignore
