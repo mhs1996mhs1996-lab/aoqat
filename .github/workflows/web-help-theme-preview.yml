@@ -1,0 +1,59 @@
+name: Web help theme preview - no APK
+on:
+  push:
+    branches:
+      - feature/web-help-theme-page-preview-20261112
+    paths:
+      - 'js/settings-help.js'
+      - 'js/web-menu-order.js'
+      - 'js/widget-appearance.js'
+      - 'js/web-menu-button-theme.js'
+      - 'index.html'
+      - 'sw.js'
+      - 'web-preview-tests/**'
+      - '.github/workflows/web-help-theme-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  web-preview:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate web-only JavaScript syntax
+        run: |
+          node --check js/settings-help.js
+          node --check js/web-menu-order.js
+          node --check js/widget-appearance.js
+          node --check js/web-menu-button-theme.js
+          node --check web-preview-tests/help-preview.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          code=Path('js/settings-help.js').read_text()
+          assert 'if(window.AndroidNative?.configureAdhan)return' in code
+          assert 'var(--wt-button-accent' in code
+          assert "textContent='؟'" in code
+          assert "textContent='‹ رجوع'" in code
+          assert '20px!important' in code
+          assert not Path('android-native/app/build.gradle').read_text().find("versionName '2.03'") < 0
+          print('PASS: web-only UI; no Android release/version changes')
+          PY
+      - name: Install browser test dependency
+        run: npm install --no-save --package-lock=false playwright
+      - name: Validate help navigation and theme behavior in Chromium
+        env:
+          CHROME_PATH: /usr/bin/google-chrome
+        run: node web-preview-tests/help-preview.cjs
+      - name: Upload real web preview screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-web-help-preview-screenshots
+          path: |
+            /tmp/aoqat-theme-help-buttons.png
+            /tmp/aoqat-theme-help-page.png
+          if-no-files-found: ignore
