@@ -13,7 +13,7 @@
     if(selector){
      const id=selector.match(/data-web-quiet-minutes="([^"]+)"/)?.[1];
      if(id)reveal('[data-quiet-key="'+key+'"][data-quiet-prayer="'+id+'"]');
-    } else reveal('[data-quiet-enabled="'+key+'"]');
+    } else reveal('[data-quiet-section="'+key+'"]');
     return;
    }
   }
@@ -26,6 +26,8 @@
   const panels={backgroundPanel:'واجهة البرنامج',fontPanel:'تنسيق الخط',footerPanel:'النص السفلي',datePanel:'التاريخ الهجري والميلادي',prayerPanel:'أوقات الصلاة',iqamaPanel:'أوقات الإقامة',afterIqamaPanel:'أوقات بعد الإقامة',switchPanel:'التبديل التلقائي وتنبيه النشر'};
   for(const [id,title] of Object.entries(panels)){add('panel:'+id,title,'إعدادات التطبيق','',()=>nav().panel(id,title));const root=$(id);if(!root)continue;for(const e of root.querySelectorAll('label,button')){const clone=e.cloneNode(true);clone.querySelectorAll('input,select,textarea').forEach(n=>n.remove());const text=clone.textContent.trim().replace(/\s+/g,' '),control=e.matches('button')?e:e.querySelector('input,select,textarea'),target=control?.id||e.id;if(!text||text.length>150||!target)continue;add('control:'+target,text,title,'',()=>{nav().panel(id,title);reveal('#'+CSS.escape(target));});}}
   add('quiet:home','تفعيل وضع الصامت','ضبط التنبيهات','الصامت تفعيل إيقاف وقت بدء الأذان بعد الإقامة استعادة الرنين',()=>nav().alert('quiet'));
+  add('quiet:mode','خيارات بدء الصامت','ضبط التنبيهات › الصامت','عند الأذان بعد الإقامة كلاهما إيقاف الصامت',()=>{nav().alert('quiet');reveal('.aq-quiet-modes');});
+  add('quiet:sound','حالة الرنين واستعادته','ضبط التنبيهات › الصامت','الرنين الهاتف الصوت بقاء صامت عدم الإزعاج',()=>{nav().alert('quiet');reveal('.aq-quiet-status');});
   for(const [id,title,words] of [['quiet-adhan','الصامت عند الأذان','صمت صامت الهاتف مدة تفعيل'],['quiet-iqama','الصامت عند الإقامة','صامت بعد الاقامة مدة'],['modes','وضع الأذان لكل صلاة','عام صوت هزاز صامت'],['sound','صوت الأذان','المؤذن قباء السريحي مكة المدينة القطامي مستوى الصوت كامل جزئي تكبيرات ملف الهاتف'],['alarm','منبه أوقات الصلاة','منبه رنين غفوة تكرار ايام نغمة'],['notice','إشعار أوقات الصلاة','اشعار صوت قصير'],['notifications','التنبيهات','سحور تذكير قبل الصلاة اهتزاز']])add('adhan:'+id,title,'الأذان والتنبيه',words,()=>openAdhan(id));
   for(const [kind,title] of [['quiet-adhan','الصامت عند الأذان'],['quiet-iqama','الصامت عند الإقامة']])for(const [id,name] of Object.entries({fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'}))add(kind+':'+id,'مدة الصامت لصلاة '+name,title,'دقائق وقت',()=>openAdhan(kind,'[data-quiet-kind="'+(kind==='quiet-adhan'?'adhan':'iqama')+'"][data-web-quiet-minutes="'+id+'"]'));
   for(const [id,title] of [['morning','أذكار الصباح'],['evening','أذكار المساء'],['prayer','أذكار بعد الصلاة'],['sleep','أذكار النوم'],['waking','أذكار الاستيقاظ'],['adhan','أذكار الأذان'],['wudu','أذكار الوضوء'],['mosque','أذكار المسجد'],['home','أذكار المنزل'],['food','أذكار الطعام'],['bathroom','أذكار الخلاء'],['travel','أذكار السفر'],['distress','أدعية الهم والكرب'],['illness','الرقية وأدعية المريض'],['weather','أذكار المطر والريح'],['tasbih','التسبيح والاستغفار والصلاة على النبي']])add('azkar:'+id,title,'حقيبة المسلم › الأذكار','تنبيه تذكير الوقت تخصيص المستخدم افتراضي تشغيل ايقاف',()=>{nav().bag('azkar');window.aoqatOpenAzkarCategory?.(id);});
