@@ -35,7 +35,7 @@ jobs:
           assert 'data-quiet-prayer' in q and 'aq-quiet-stepper' in q
           menu=Path('js/web-menu-order.js').read_text()
           methods=Path('js/prayer-alert-methods.js').read_text()
-          assert "westernDigits" in q and 'inputmode=\\"numeric\\" lang=\\"en-US\\"' in q
+          assert "westernDigits" in q and 'inputmode="numeric"' in q and 'lang="en-US"' in q
           assert "toLocaleTimeString('en-GB'" in q
           assert "function openPrayerIqama()" in menu and '"prayerAlerts"' in menu
           assert '["iqama","⏳","إشعار الإقامة"]' not in menu
