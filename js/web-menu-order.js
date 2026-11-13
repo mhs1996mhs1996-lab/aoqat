@@ -330,7 +330,6 @@
     wrap.append(intro);
     const options=[
       ["prayer","🔔","تنبيهات الصلاة والأذان والصامت وعدم الإزعاج"],
-      ["iqama","⏳","إشعار الإقامة"],
       ["quiet","🔕","وضع الصامت عند الأذان والإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
@@ -357,14 +356,15 @@
       }else webQuietView();
       return;
     }
-    if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
-      openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
-    }
     if(kind==="iqama"){
-      const wrap=document.createElement("div");wrap.className="web-settings-list";
-      const notification=document.createElement("button");notification.type="button";notification.className="main-action";notification.textContent="🔔 إشعار الإقامة";notification.onclick=()=>openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");wrap.append(notification);
-      const quiet=document.createElement("button");quiet.type="button";quiet.className="main-action";quiet.textContent="🔕 تفعيل وضع الصامت";quiet.onclick=()=>{if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");else openAdhanServices();};wrap.append(quiet);
-      openSub("إشعار الإقامة والصامت",wrap,"alertSettings");return;
+      // Backwards compatibility for old navigation/search shortcuts.
+      // The ONE original notification UI now belongs to prayer alerts.
+      openAdhanServices("alerts");
+      requestAnimationFrame(()=>{
+        const opener=document.getElementById('adIqamaNoticeOpen');
+        if(opener&&opener.getAttribute('aria-expanded')!=='true')opener.click();
+      });
+      return;
     }
     if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");window.AoqatFridayReminders?.mount?.(wrap);return;}
     if(kind==="fasting"){const wrap=document.createElement("div");wrap.className="web-settings-list";const controls=window.AoqatFastingReminders?.createControls?.();if(controls)wrap.append(controls);openSub("تنبيهات صيام التطوع",wrap,"alertSettings");return;}
