@@ -44,6 +44,8 @@
     locationBearing,
     openSection = "",
     silentSettingsOpen = false,
+    audibilityOpen = false,
+    audibilityHelpOpen = false,
     quietWindow = null,
     selectedSurah = "1",
     azkarKind = "",
@@ -317,11 +319,19 @@
      : ""
  }
 </div></div></div></section></fieldset>
- <div class="ad-card" id="adAudibility"><h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
+ <div class="ad-card" id="adAudibility" style="padding:8px!important">
+  <div class="ad-audibility-menu" style="display:flex;align-items:center;gap:8px;direction:rtl">
+    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid #b4ccb9;border-radius:12px;background:linear-gradient(110deg,#e0eee2,#f8fcf7);color:#214832;font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
+    <button type="button" id="adAudibilityHelp" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="width:39px;height:39px;min-width:39px;border:2px solid #244d36;border-radius:50%;background:transparent;color:#244d36;font-size:20px;cursor:pointer">؟</button>
+  </div>
+  <p id="adAudibilityHelpText" class="ad-note" ${audibilityHelpOpen?'':'hidden'}>التحكم بسماع الأذان ومنبّه الصلاة عند وضع الهاتف على الصامت أو عدم الإزعاج. لكل صلاة زران مستقلان. لا يغيّر هذا الخيار مواعيد الصلاة أو وضع رنين الهاتف. إذا اجتمع الصامت وعدم الإزعاج يلزم تفعيل الخيارين معاً.</p>
+  <div id="adAudibilityDetails" ${audibilityOpen?'':'hidden'}>
+    <button type="button" id="adAudibilityBack" class="ad-inner-back" style="display:block;min-height:44px;margin:10px 0">‹ رجوع إلى تنبيهات الصلاة</button>
+    <h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
  <p class="ad-note">زرّان لكل صلاة من الصلوات الخمس، ينطبقان على الأذان ومنبّه الصلاة إذا كانا مفعّلين. إشعار الصلاة العادي مستقل.</p>
  <div class="ad-audibility-list">${C.ids.map(id => '<div class="ad-audibility-row"><strong>'+names[id]+'</strong><div><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 بالصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 بعدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div></div>').join('')}</div>
  <p class="ad-note">إذا اجتمع الصامت وعدم الإزعاج، يجب تشغيل الزرين للصلاة. تشغيل الصوت أثناء عدم الإزعاج على أندرويد قد يحتاج منح إذن «التحكم بعدم الإزعاج»، ويستعاد وضعه السابق بعد انتهاء الصوت. المتصفح لا يستطيع تغيير أو قراءة وضع صوت الهاتف.</p>
- </div><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+ </div></div><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     if (!native && servicePanel) {
       const services = panel.querySelector("#adSection-services"); services.hidden = false;
       services.querySelector("h3")?.remove();
@@ -338,6 +348,10 @@
       };
     });
     $('adFridayBack').onclick=()=>{openSection='';syncSections();};
+    $('adAudibilityOpen').onclick=()=>{audibilityOpen=!audibilityOpen;const details=$('adAudibilityDetails');details.hidden=!audibilityOpen;$('adAudibilityOpen').setAttribute('aria-expanded',String(audibilityOpen));if(audibilityOpen)requestAnimationFrame(()=>details.scrollIntoView({block:'nearest'}));};
+    $('adAudibilityBack').onclick=()=>{audibilityOpen=false;$('adAudibilityDetails').hidden=true;$('adAudibilityOpen').setAttribute('aria-expanded','false');$('adAudibilityOpen').focus({preventScroll:true});};
+    $('adAudibilityHelp').onclick=()=>{audibilityHelpOpen=!audibilityHelpOpen;$('adAudibilityHelpText').hidden=!audibilityHelpOpen;$('adAudibilityHelp').setAttribute('aria-expanded',String(audibilityHelpOpen));};
+
     panel.querySelectorAll('[data-friday]').forEach(input=>input.onchange=async()=>{state.friday[input.dataset.friday]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;state.friday=C.normalizeFriday(state.friday);persist();render();if(state.friday.enabled&&!native&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();});
     $('adFridayPermissions')?.addEventListener('click',()=>window.AndroidNative?.adhanPermissions());
     $("adSilentSettingsToggle").onclick=()=>{silentSettingsOpen=!silentSettingsOpen;syncSections();};
