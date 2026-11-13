@@ -246,6 +246,10 @@
     if(!document.getElementById("adAudibilityStyles")){
       const st=document.createElement("style");st.id="adAudibilityStyles";
       st.textContent=".ad-audibility-list{display:grid;gap:8px}.ad-audibility-row{display:grid;gap:7px;padding:11px;border-radius:12px;border:1px solid #c9b88f;background:linear-gradient(110deg,#fffdf7,#f5edda);color:#285342}.ad-audibility-row>strong{font-size:16px}.ad-audibility-row>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ad-audibility-row button{min-height:44px;padding:8px 5px;border-radius:10px;font:inherit;font-size:13px;background:#ece7dc;color:#514b42;border:1px solid #c9bb9c}.ad-audibility-row button.selected{background:#176e58;color:white;border-color:#176e58}.ad-audibility-row button:focus-visible{outline:3px solid #b99442;outline-offset:2px}@media(max-width:340px){.ad-audibility-row>div{grid-template-columns:1fr}}";
+
+      // The same 20px outlined Arabic help circle used by the other setting buttons.
+      // Keep a separate 44px invisible touch surface for accessibility.
+      st.textContent += '#adhanServicesDialog #adhanPanel #adAudibilityHelp,#adhanPanel #adAudibilityHelp{display:flex!important;align-items:center!important;justify-content:center!important;flex:none!important;width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;max-width:44px!important;max-height:44px!important;margin:0!important;padding:0!important;border:0!important;border-radius:50%!important;background:transparent!important;color:var(--wt-text,#244d36)!important;box-shadow:none!important;cursor:pointer!important}#adhanServicesDialog #adhanPanel #adAudibilityHelp .ad-audibility-help-circle,#adAudibilityHelp .ad-audibility-help-circle{display:flex!important;align-items:center!important;justify-content:center!important;width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;border:1.5px solid currentColor!important;border-radius:50%!important;background:color-mix(in srgb,currentColor 12%,transparent)!important;color:inherit!important;font:800 13px/1 Tahoma,Arial,sans-serif!important;box-shadow:none!important}#adAudibilityHelp:focus-visible{outline:2px solid currentColor!important;outline-offset:2px!important}';
       document.head.append(st);
     }
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
@@ -322,7 +326,7 @@
  <div class="ad-card" id="adAudibility" style="padding:8px!important">
   <div class="ad-audibility-menu" style="display:flex;align-items:center;gap:8px;direction:rtl">
     <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid #b4ccb9;border-radius:12px;background:linear-gradient(110deg,#e0eee2,#f8fcf7);color:#214832;font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
-    <button type="button" id="adAudibilityHelp" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="width:39px;height:39px;min-width:39px;border:2px solid #244d36;border-radius:50%;background:transparent;color:#244d36;font-size:20px;cursor:pointer">؟</button>
+    <button type="button" id="adAudibilityHelp" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="false"><span class="ad-audibility-help-circle" aria-hidden="true">؟</span></button>
   </div>
   <p id="adAudibilityHelpText" class="ad-note" ${audibilityHelpOpen?'':'hidden'}>التحكم بسماع الأذان ومنبّه الصلاة عند وضع الهاتف على الصامت أو عدم الإزعاج. لكل صلاة زران مستقلان. لا يغيّر هذا الخيار مواعيد الصلاة أو وضع رنين الهاتف. إذا اجتمع الصامت وعدم الإزعاج يلزم تفعيل الخيارين معاً.</p>
   <div id="adAudibilityDetails" ${audibilityOpen?'':'hidden'}>
@@ -350,7 +354,16 @@
     $('adFridayBack').onclick=()=>{openSection='';syncSections();};
     $('adAudibilityOpen').onclick=()=>{audibilityOpen=!audibilityOpen;const details=$('adAudibilityDetails');details.hidden=!audibilityOpen;$('adAudibilityOpen').setAttribute('aria-expanded',String(audibilityOpen));if(audibilityOpen)requestAnimationFrame(()=>details.scrollIntoView({block:'nearest'}));};
     $('adAudibilityBack').onclick=()=>{audibilityOpen=false;$('adAudibilityDetails').hidden=true;$('adAudibilityOpen').setAttribute('aria-expanded','false');$('adAudibilityOpen').focus({preventScroll:true});};
-    $('adAudibilityHelp').onclick=()=>{audibilityHelpOpen=!audibilityHelpOpen;$('adAudibilityHelpText').hidden=!audibilityHelpOpen;$('adAudibilityHelp').setAttribute('aria-expanded',String(audibilityHelpOpen));};
+    $('adAudibilityHelp').onclick=()=>{
+      const description=$('adAudibilityHelpText').textContent;
+      if(typeof window.aoqatOpenSettingsHelp==='function'){
+        window.aoqatOpenSettingsHelp('صوت الصلاة أثناء الصامت وعدم الإزعاج',description);
+        return;
+      }
+      audibilityHelpOpen=!audibilityHelpOpen;
+      $('adAudibilityHelpText').hidden=!audibilityHelpOpen;
+      $('adAudibilityHelp').setAttribute('aria-expanded',String(audibilityHelpOpen));
+    };
 
     panel.querySelectorAll('[data-friday]').forEach(input=>input.onchange=async()=>{state.friday[input.dataset.friday]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;state.friday=C.normalizeFriday(state.friday);persist();render();if(state.friday.enabled&&!native&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();});
     $('adFridayPermissions')?.addEventListener('click',()=>window.AndroidNative?.adhanPermissions());
