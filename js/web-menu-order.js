@@ -265,6 +265,63 @@
     note.textContent="التحكم بإضاءة شاشة الهاتف وهي مقفلة يحتاج خدمات أندرويد وصلاحيات الهاتف؛ هذا الخيار يُحفظ هنا لتجهيزه لنسخة APK بعد اعتمادك. عرض الأذان بملء الشاشة خيار مستقل داخل «تنبيهات أوقات الصلاة»؛ أما الإشعارات العادية فيتحكم نظام أندرويد بكيفية إضاءتها.";
     wrap.append(heading,button,note);refresh();openSub("إضاءة الشاشة عند التنبيهات",wrap,"alertSettings");
   }
+
+  function webQuietView(){
+    const api=window.AoqatWebQuietSettings;
+    if(!api){openAdhanServices("alerts");return;}
+    const wrap=document.createElement('div');wrap.id='aoqatQuietWebPanel';wrap.dir='rtl';
+    const modes=[
+      ['off','إيقاف الصامت'],
+      ['adhan','عند الأذان فقط'],
+      ['iqama','بعد الإقامة فقط'],
+      ['both','الأذان والإقامة']
+    ];
+    const prayerNames={fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
+    if(!document.getElementById('aoqatQuietWebStyles')){
+      const style=document.createElement('style');style.id='aoqatQuietWebStyles';
+      style.textContent='#aoqatQuietWebPanel{display:grid;gap:12px}#aoqatQuietWebPanel .aqw-card{border:1px solid var(--wt-border,#cbd9ca);border-radius:12px;padding:12px;background:var(--wt-surface,#fff);color:var(--wt-text,#253b31)}#aoqatQuietWebPanel h3{font-size:18px;margin:0 0 10px}#aoqatQuietWebPanel .aqw-modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}#aoqatQuietWebPanel .aqw-choice{display:flex;gap:8px;align-items:center;min-height:50px;background:var(--wt-surface2,#f2f7ef);border:1px solid var(--wt-border,#ccd9cc);border-radius:10px;padding:8px;font-size:14px}#aoqatQuietWebPanel .aqw-choice:has(input:checked){border:2px solid var(--wt-accent,#368460)}#aoqatQuietWebPanel input[type=radio]{accent-color:var(--wt-accent,#368460);width:19px;height:19px}#aoqatQuietWebPanel .aqw-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--wt-border,#dee6db)}#aoqatQuietWebPanel .aqw-row input{min-height:38px;width:100px;box-sizing:border-box;border:1px solid var(--wt-border,#ccd9cc);border-radius:8px;background:var(--wt-surface2,#fff);color:var(--wt-text,#253b31);font:inherit;text-align:center}#aoqatQuietWebPanel .aqw-note{font-size:13px;line-height:1.7;opacity:.8}@media(max-width:350px){#aoqatQuietWebPanel .aqw-modes{grid-template-columns:1fr}}';
+      document.head.append(style);
+    }
+    function draw(){
+      const s=api.read();
+      const selected=s.afterAdhanSilent?.enabled?(s.afterIqamaSilent?.enabled?'both':'adhan'):(s.afterIqamaSilent?.enabled?'iqama':'off');
+      wrap.replaceChildren();
+      const card=document.createElement('section');card.className='aqw-card';
+      const h=document.createElement('h3');h.textContent='متى يبدأ وضع الصامت؟';card.append(h);
+      const opts=document.createElement('div');opts.className='aqw-modes';opts.setAttribute('role','radiogroup');opts.setAttribute('aria-label','وقت الصامت');
+      modes.forEach(([value,label])=>{
+        const row=document.createElement('label');row.className='aqw-choice';
+        const input=document.createElement('input');input.type='radio';input.name='aoqatQuietMode';input.value=value;input.checked=selected===value;
+        input.onchange=()=>{if(input.checked){api.save({
+          afterAdhanSilent:{...s.afterAdhanSilent,enabled:value==='adhan'||value==='both'},
+          afterIqamaSilent:{...s.afterIqamaSilent,enabled:value==='iqama'||value==='both'}
+        });draw();}};
+        row.append(input,document.createTextNode(label));opts.append(row);
+      });
+      card.append(opts);wrap.append(card);
+      for(const [key,title] of [['afterAdhanSilent','المدة عند الأذان'],['afterIqamaSilent','المدة بعد الإقامة']]){
+        if(!s[key]?.enabled)continue;
+        const sec=document.createElement('section');sec.className='aqw-card';
+        const h=document.createElement('h3');h.textContent=title+' — بالدقائق';sec.append(h);
+        for(const [id,name] of Object.entries(prayerNames)){
+          const row=document.createElement('label');row.className='aqw-row';
+          const input=document.createElement('input');input.type='number';input.min='0';input.max='120';input.step='1';input.value=String(s[key].minutes[id]||0);
+          input.dataset.webQuietMinutes=id;input.dataset.quietKind=key==='afterAdhanSilent'?'adhan':'iqama';
+          input.setAttribute('aria-label','مدة الصامت لصلاة '+name);
+          input.onchange=()=>{
+            if(input.value===''||!input.checkValidity()){input.reportValidity();return;}
+            api.save({[key]:{...api.read()[key],minutes:{...api.read()[key].minutes,[id]:Number(input.value)}}});
+          };
+          row.append(document.createTextNode(name),input);sec.append(row);
+        }
+        wrap.append(sec);
+      }
+      const note=document.createElement('p');note.className='aqw-note';
+      note.textContent='صفر يلغي الصامت لتلك الصلاة. على الويب هذه معاينة للأوقات فقط؛ تغيير رنين الهاتف واستعادته يعملان من نسخة أندرويد بعد منح الأذونات.';
+      wrap.append(note);
+    }
+    draw();openSub('وضع الصامت عند الأذان والإقامة',wrap,'alertSettings');
+  }
   function alertSettingsView(){
     const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
     const intro=document.createElement("p");intro.className="ad-note";
@@ -273,6 +330,7 @@
     const options=[
       ["prayer","🔔","تنبيهات الصلاة والأذان والصامت وعدم الإزعاج"],
       ["iqama","⏳","إشعار الإقامة"],
+      ["quiet","🔕","وضع الصامت عند الأذان والإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
@@ -291,7 +349,13 @@
     if(kind==="prayer"){openAdhanServices("alerts");return;}
     if(kind==="screen"){screenWakeView();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
-    if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");return;}
+    if(kind==="quiet"){
+      if(window.AndroidNative?.configureAdhan){
+        window.AoqatApkQuietSettings?.render?.();
+        openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");
+      }else webQuietView();
+      return;
+    }
     if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
       openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
     }
@@ -420,7 +484,7 @@
   }
   if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={
     main:mainView,sub:openSub,panel:(id,title)=>openPanel(title,id,'settings'),interface:openInterfacePart,
-    adhan:()=>{adhanIqamaView();openAdhanServices();},alerts:alertSettingsView,bag:openMuslimBagSection,
+    adhan:()=>{adhanIqamaView();openAdhanServices();},alerts:alertSettingsView,alert:openAlertSection,bag:openMuslimBagSection,
     drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
   };
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
