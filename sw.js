@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v206-quiet-layout-20261113";
+const CACHE_NAME = "aoqat-pwa-v207-iqama-merge-20261113";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -71,7 +71,7 @@ const APP_SHELL = [
   "/css/adhan.css?v=qibla-no-inner-back-20261026",
   "/css/adhan-modal.css?v=6-alert-navigation-labels",
   "/js/adhan-core.js?v=3",
-  "/js/adhan-settings.js?v=206-audibility-submenu",
+  "/js/adhan-settings.js?v=207-help-circle",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
   "/assets/audio/adhan-v124-1.mp3",
@@ -109,7 +109,7 @@ const APP_SHELL = [
   "/js/compact-design-menu.js?v=203-visible-by-default",
   "/js/web-theme-settings.js?v=5",
   "/js/widget-appearance.js?v=204-unified-help",
-  "/js/web-menu-order.js?v=205-quiet-search",
+  "/js/web-menu-order.js?v=207-iqama-merge",
   "/js/settings-help-live.js?v=204-nonwrapping",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
