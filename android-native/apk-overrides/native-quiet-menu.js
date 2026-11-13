@@ -20,22 +20,24 @@
     window.AndroidNative.configureAdhan(JSON.stringify(state));
     try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
   }
+  // Keep stored durations numeric but show ASCII 0-9, regardless of Android locale.
+  const westernDigits=value=>String(value).replace(/[\u0660-\u0669]/g,d=>String(d.charCodeAt(0)-0x0660)).replace(/[\u06f0-\u06f9]/g,d=>String(d.charCodeAt(0)-0x06f0));
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
-  function section(key,title,help,fallback){
+  function section(key,title,fallback){
     const s=state[key];
     const body=ids.map(id=>{
       const current=num(s.minutes[id],fallback);
       return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
         '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت لصلاة '+names[id]+'">'+
         '<button type="button" data-quiet-adjust="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل مدة الصامت لصلاة '+names[id]+'">−</button>'+
-        '<input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
+        '<input type="text" inputmode="numeric" lang="en-US" dir="ltr" pattern="[0-9]{1,3}" maxlength="3" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
         '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
         '<small>دقيقة</small></div></div>';
     }).join('');
 
     return '<section class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
-      '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+
-      '<p class="aq-quiet-caption">المدة لكل صلاة بالدقائق؛ استخدم + و− كما في أوقات الإقامة (0 = إيقاف).</p>'+body+
+      '<div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+
+      body+
 
       '</div></section>';
   }
@@ -48,7 +50,7 @@
     try{data=JSON.parse(window.AndroidNative.readQuietModeStatus?.()||'{}');}
     catch(_){root.textContent='تعذر قراءة حالة وضع الصامت من الهاتف.';return root;}
     const line=text=>{const p=document.createElement('p');p.textContent=text;root.appendChild(p);};
-    const showTime=ms=>ms>0?new Date(ms).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
+    const showTime=ms=>ms>0?new Date(ms).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'—';
     const name={0:'الوضع الصامت',1:'الاهتزاز',2:'الرنين الطبيعي'}[data.ringer]||'غير معروف';
     line('حالة رنين الهاتف الآن: '+name);
     line('عدم الإزعاج: '+(data.dnd===3?'مفعّل من إعدادات الهاتف؛ يبقى مستقلاً عن الصامت':data.dnd===1?'غير مفعّل':'مفعّل حسب إعدادات الهاتف'));
@@ -78,10 +80,8 @@
     if(!panel)return;
     if(refresh || !state)state=read();
     panel.innerHTML='<h3 class="aq-quiet-title">🔕 تفعيل وضع الصامت</h3>'+
-      section('atAdhanSilent','تفعيل وضع صامت عند الأذان',
-        'يبدأ الصامت حسب وقت الأذان المسجّل بقاعدة البيانات، ويستمر للمدة المحددة. إذا كان صوت الأذان مفعّلاً يستمر صوت الأذان نفسه.',10)+
-      section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
-        'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
+      section('atAdhanSilent','تفعيل وضع صامت عند الأذان',10)+
+      section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',0)+
       (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
     const status=statusPanel();panel.appendChild(status);
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
@@ -90,8 +90,9 @@
     }));
     panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
       const group=state[input.dataset.quietKey];
-      if(input.value.trim()===''||!input.checkValidity()){input.value=num(group.minutes[input.dataset.quietPrayer]);return;}
-      group.minutes[input.dataset.quietPrayer]=num(input.value);
+      const value=westernDigits(input.value.trim());
+      if(!/^[0-9]{1,3}$/.test(value)){input.value=String(num(group.minutes[input.dataset.quietPrayer]));return;}
+      group.minutes[input.dataset.quietPrayer]=num(Number(value));
       store();render(false);
     }));
     panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>button.addEventListener('click',()=>{
@@ -126,7 +127,7 @@
       #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
       #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:8px!important;direction:ltr!important;flex:0 0 auto!important;padding:5px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:13px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 4px #1d533b22!important}
       #quietPanel .aq-quiet-stepper button{width:43px!important;height:45px!important;min-height:45px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:27px!important}
-      #quietPanel .aq-quiet-stepper input{width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
+      #quietPanel .aq-quiet-stepper input{font-family:Arial,sans-serif!important;direction:ltr!important;unicode-bidi:isolate!important;width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
       #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
       #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
       #quietPanel .aq-quiet-presets{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
