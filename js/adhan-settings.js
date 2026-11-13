@@ -45,7 +45,7 @@
     openSection = "",
     silentSettingsOpen = false,
     audibilityOpen = false,
-    audibilityHelpOpen = false,
+    iqamaNoticeOpen = false,
     quietWindow = null,
     selectedSurah = "1",
     azkarKind = "",
@@ -243,6 +243,8 @@
   }
   function render() {
     if (!panel) return;
+    // Preserve original native notification controls before recreating the prayer settings HTML.
+    window.AoqatAlertsHub?.parkIqama?.();
     if(!document.getElementById("adAudibilityStyles")){
       const st=document.createElement("style");st.id="adAudibilityStyles";
       st.textContent=".ad-audibility-list{display:grid;gap:8px}.ad-audibility-row{display:grid;gap:7px;padding:11px;border-radius:12px;border:1px solid #c9b88f;background:linear-gradient(110deg,#fffdf7,#f5edda);color:#285342}.ad-audibility-row>strong{font-size:16px}.ad-audibility-row>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ad-audibility-row button{min-height:44px;padding:8px 5px;border-radius:10px;font:inherit;font-size:13px;background:#ece7dc;color:#514b42;border:1px solid #c9bb9c}.ad-audibility-row button.selected{background:#176e58;color:white;border-color:#176e58}.ad-audibility-row button:focus-visible{outline:3px solid #b99442;outline-offset:2px}@media(max-width:340px){.ad-audibility-row>div{grid-template-columns:1fr}}";
@@ -319,12 +321,19 @@
      : ""
  }
 </div></div></div></section></fieldset>
+ <div class="ad-card" id="adIqamaNotice" style="padding:8px!important">
+    <button type="button" id="adIqamaNoticeOpen" aria-expanded="${iqamaNoticeOpen}" aria-controls="adIqamaNoticeDetails" class="ad-iqama-notice-entry">⏳ إشعار الإقامة ‹</button>
+    <div id="adIqamaNoticeDetails" ${iqamaNoticeOpen?'':'hidden'}>
+      <button type="button" id="adIqamaNoticeBack" class="ad-inner-back">‹ رجوع إلى تنبيهات الصلاة</button>
+      <div id="adIqamaNoticeContent"></div>
+      ${native?'<button type="button" id="adIqamaQuietOpen" class="ad-iqama-quiet-entry">🔕 تفعيل وضع الصامت</button>':''}
+    </div>
+  </div>
  <div class="ad-card" id="adAudibility" style="padding:8px!important">
   <div class="ad-audibility-menu" style="display:flex;align-items:center;gap:8px;direction:rtl">
-    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid #b4ccb9;border-radius:12px;background:linear-gradient(110deg,#e0eee2,#f8fcf7);color:#214832;font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
-    <button type="button" id="adAudibilityHelp" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="width:39px;height:39px;min-width:39px;border:2px solid #244d36;border-radius:50%;background:transparent;color:#244d36;font-size:20px;cursor:pointer">؟</button>
+    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid var(--wt-border,#b4ccb9);border-radius:12px;background:linear-gradient(110deg,var(--wt-surface2,#e0eee2),var(--wt-surface,#f8fcf7));color:var(--wt-text,#214832);font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
+    <button type="button" id="adAudibilityHelp" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" title="شرح الزر"><span class="ad-audibility-help-circle" aria-hidden="true">؟</span></button>
   </div>
-  <p id="adAudibilityHelpText" class="ad-note" ${audibilityHelpOpen?'':'hidden'}>التحكم بسماع الأذان ومنبّه الصلاة عند وضع الهاتف على الصامت أو عدم الإزعاج. لكل صلاة زران مستقلان. لا يغيّر هذا الخيار مواعيد الصلاة أو وضع رنين الهاتف. إذا اجتمع الصامت وعدم الإزعاج يلزم تفعيل الخيارين معاً.</p>
   <div id="adAudibilityDetails" ${audibilityOpen?'':'hidden'}>
     <button type="button" id="adAudibilityBack" class="ad-inner-back" style="display:block;min-height:44px;margin:10px 0">‹ رجوع إلى تنبيهات الصلاة</button>
     <h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
@@ -348,9 +357,27 @@
       };
     });
     $('adFridayBack').onclick=()=>{openSection='';syncSections();};
+    const iqamaDetails=$('adIqamaNoticeDetails');
+    const showIqamaNotice=()=>{
+      iqamaDetails.hidden=!iqamaNoticeOpen;
+      $('adIqamaNoticeOpen').setAttribute('aria-expanded',String(iqamaNoticeOpen));
+      if(iqamaNoticeOpen) {
+        const host=$('adIqamaNoticeContent');
+        const original=window.AoqatAlertsHub?.iqamaView?.();
+        if(original)host.replaceChildren(original);
+      }else window.AoqatAlertsHub?.parkIqama?.();
+    };
+    $('adIqamaNoticeOpen').onclick=()=>{iqamaNoticeOpen=!iqamaNoticeOpen;showIqamaNotice();};
+    $('adIqamaNoticeBack').onclick=()=>{iqamaNoticeOpen=false;showIqamaNotice();$('adIqamaNoticeOpen').focus({preventScroll:true});};
+    $('adIqamaQuietOpen')?.addEventListener('click',()=>{
+      window.AoqatAlertsHub?.parkIqama?.();
+      window.aoqatCloseAdhanServices?.();
+      window.AoqatWebSettingsNavigation?.quiet?.();
+    });
+    if(iqamaNoticeOpen)showIqamaNotice();
     $('adAudibilityOpen').onclick=()=>{audibilityOpen=!audibilityOpen;const details=$('adAudibilityDetails');details.hidden=!audibilityOpen;$('adAudibilityOpen').setAttribute('aria-expanded',String(audibilityOpen));if(audibilityOpen)requestAnimationFrame(()=>details.scrollIntoView({block:'nearest'}));};
     $('adAudibilityBack').onclick=()=>{audibilityOpen=false;$('adAudibilityDetails').hidden=true;$('adAudibilityOpen').setAttribute('aria-expanded','false');$('adAudibilityOpen').focus({preventScroll:true});};
-    $('adAudibilityHelp').onclick=()=>{audibilityHelpOpen=!audibilityHelpOpen;$('adAudibilityHelpText').hidden=!audibilityHelpOpen;$('adAudibilityHelp').setAttribute('aria-expanded',String(audibilityHelpOpen));};
+    $('adAudibilityHelp').onclick=()=>window.aoqatOpenSettingsHelp?.('صوت الصلاة أثناء الصامت وعدم الإزعاج','لكل صلاة زران للتحكم بسماع الأذان والمنبّه إذا كانا مفعّلين: أثناء الصامت وأثناء عدم الإزعاج. عند اجتماع الوضعين فعّل الخيارين. هذه الأزرار لا تغيّر وضع رنين الهاتف.');
 
     panel.querySelectorAll('[data-friday]').forEach(input=>input.onchange=async()=>{state.friday[input.dataset.friday]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;state.friday=C.normalizeFriday(state.friday);persist();render();if(state.friday.enabled&&!native&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();});
     $('adFridayPermissions')?.addEventListener('click',()=>window.AndroidNative?.adhanPermissions());
