@@ -60,7 +60,7 @@
     // Spacing corrections only: no wrapping/reparenting/replacement of buttons.
     // The actual circle stays small; the surrounding native button remains its tap target.
     style.textContent += [
-      "button.aoqat-help-eligible::before{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;border:1.5px solid currentColor!important;font:800 13px/1 Tahoma,Arial,sans-serif!important;opacity:1!important;background:color-mix(in srgb,currentColor 12%,transparent)!important}",
+      "button.aoqat-help-eligible::before{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;border:1px solid var(--wt-button-accent,var(--wt-accent,#277c54))!important;border-radius:50%!important;color:#fff!important;font:700 11px/1 Tahoma,Arial,sans-serif!important;opacity:1!important;background:var(--wt-button-accent,var(--wt-accent,#277c54))!important;box-shadow:none!important}",
       "#webSubBody button.main-action.aoqat-help-eligible,#webSubBody button.wa-primary.aoqat-help-eligible,#webSubBody button.interface-visibility-btn.aoqat-help-eligible{padding-left:57px!important}",
       "#webInterfaceMenu button.main-action.aoqat-help-eligible{justify-content:flex-start!important;text-align:right!important}",
       "#webInterfaceMenu button.main-action.aoqat-help-eligible>span:last-child{margin-inline-start:0!important}",
@@ -70,7 +70,7 @@
       "#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu > button.ad-section-toggle.aoqat-help-eligible{padding-left:60px!important}",
       "#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu > button.ad-section-toggle.aoqat-help-eligible.aoqat-help-with-chevron{padding-left:82px!important}",
       "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-with-chevron>.ad-section-chevron{margin-left:0!important}",
-      "@media(max-width:360px){button.aoqat-help-eligible::before{width:19px!important;height:19px!important;min-width:19px!important;min-height:19px!important;font-size:12px!important}}"
+      "@media(max-width:360px){button.aoqat-help-eligible::before{width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important;font-size:10px!important}}"
     ].join("");
     document.head.appendChild(style);
   }
