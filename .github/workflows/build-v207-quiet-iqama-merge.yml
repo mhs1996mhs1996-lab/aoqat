@@ -1,7 +1,7 @@
 name: Build v2.07 merged iqama and compact quiet signed APK
 on:
   push:
-    branches: ['fix/v207-quiet-minute-layout-audibility-submenu-20261113']
+    branches: ['fix/v207-quiet-ui-merge-iqama-20261113']
   workflow_dispatch:
 permissions:
   contents: write
