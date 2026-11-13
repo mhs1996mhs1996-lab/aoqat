@@ -441,9 +441,9 @@
     }
     return true;
   }
-  if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={
+  window.AoqatWebSettingsNavigation={
     main:mainView,sub:openSub,panel:(id,title)=>openPanel(title,id,'settings'),interface:openInterfacePart,
-    adhan:()=>{adhanIqamaView();openAdhanServices();},alerts:alertSettingsView,bag:openMuslimBagSection,
+    adhan:()=>{adhanIqamaView();openAdhanServices();},quiet:()=>{if(window.AndroidNative?.configureAdhan)openAlertSection('quiet');else openAdhanServices('alerts');},alerts:alertSettingsView,bag:openMuslimBagSection,
     drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
   };
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
