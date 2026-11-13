@@ -5,7 +5,17 @@
   const ids=['fajr','dhuhr','asr','maghrib','isha'];
   const names={fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
   const core=window.AoqatAdhanCore;
-  let panel, state;
+  let panel, state, pendingSave=null;
+  const minuteLimit=120;
+  function persistSoon(){
+    if(pendingSave!==null)clearTimeout(pendingSave);
+    pendingSave=setTimeout(()=>{pendingSave=null;store();},450);
+  }
+  function flushSave(){
+    if(pendingSave!==null){clearTimeout(pendingSave);pendingSave=null;store();}
+  }
+  window.addEventListener('pagehide',flushSave);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave();});
   const defaultAt=()=>({enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))});
   function read(){
     let settings={};
@@ -21,13 +31,46 @@
     try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
   }
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
+  const modes={
+    off:{label:'إيقاف الصامت',desc:'ما يتغيّر وضع صوت الهاتف تلقائياً.'},
+    adhan:{label:'عند الأذان فقط',desc:'يبدأ حسب وقت الأذان من قاعدة المواقيت.'},
+    iqama:{label:'بعد الإقامة فقط',desc:'يبدأ عندما يصل عدّاد الإقامة إلى الصفر.'},
+    both:{label:'الأذان والإقامة',desc:'كل وقت له مدة مستقلة حسب اختياراتك.'}
+  };
+  const mode=()=>state.atAdhanSilent.enabled
+    ?(state.afterIqamaSilent.enabled?'both':'adhan')
+    :(state.afterIqamaSilent.enabled?'iqama':'off');
+  function setMode(next){
+    state.atAdhanSilent.enabled=next==='adhan'||next==='both';
+    state.afterIqamaSilent.enabled=next==='iqama'||next==='both';
+    flushSave();store();render(false);
+  }
   function section(key,title,help,fallback){
     const s=state[key];
-    const body=ids.map(id=>'<label class="aq-quiet-minute"><span>'+names[id]+'</span><select data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="مدة الصامت '+names[id]+'">'+
-      Array.from({length:121},(_,i)=>i).map(value=>'<option value="'+value+'"'+(num(s.minutes[id],fallback)===value?' selected':'')+'>'+(value?value+' دقيقة':'متوقف')+'</option>').join('')+
-      '</select></label>').join('');
-    return '<div class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
-      '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+body+'</div></div>';
+    if(!s.enabled)return '';
+    const body=ids.map(id=>{
+      const minutes=num(s.minutes[id],fallback);
+      return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
+        '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت '+names[id]+'">'+
+        '<button type="button" data-quiet-step="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل صامت '+names[id]+'">−</button>'+
+        '<output data-quiet-key="'+key+'" data-quiet-prayer="'+id+'">'+(minutes?minutes+' دقيقة':'متوقف')+'</output>'+
+        '<button type="button" data-quiet-step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة صامت '+names[id]+'">+</button>'+
+        '</div></div>';
+    }).join('');
+    return '<section class="aq-quiet-card" data-quiet-section="'+key+'">'+
+      '<h4>🔕 '+title+'</h4><p class="aq-quiet-help">'+help+'</p>'+
+      '<div class="aq-quiet-times">'+body+'</div>'+
+      '<div class="aq-quiet-bulk"><label>تطبيق مدة موحدة لكل الصلوات'+
+      '<input type="number" min="0" max="120" step="1" data-quiet-bulk="'+key+'" value="10" aria-label="مدة موحدة للصامت"></label>'+
+      '<button type="button" data-quiet-apply="'+key+'">تطبيق</button></div></section>';
+  }
+  function updateStepper(key,id){
+    const out=panel.querySelector('output[data-quiet-key="'+key+'"][data-quiet-prayer="'+id+'"]');
+    if(!out)return;
+    const val=num(state[key].minutes[id]);
+    out.textContent=val?val+' دقيقة':'متوقف';
+    out.parentElement.querySelector('[data-quiet-step="-1"]').disabled=val<=0;
+    out.parentElement.querySelector('[data-quiet-step="1"]').disabled=val>=minuteLimit;
   }
   function permission(){
     try{return window.AndroidNative.hasQuietPolicyAccess?.()===true;}catch(_){return false;}
@@ -67,22 +110,56 @@
   function render(refresh=true){
     if(!panel)return;
     if(refresh || !state)state=read();
-    panel.innerHTML='<h3 class="aq-quiet-title">🔕 تفعيل وضع الصامت</h3>'+
-      section('atAdhanSilent','تفعيل وضع صامت عند الأذان',
-        'يبدأ الصامت حسب وقت الأذان المسجّل بقاعدة البيانات، ويستمر للمدة المحددة. إذا كان صوت الأذان مفعّلاً يستمر صوت الأذان نفسه.',10)+
-      section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
-        'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
-      (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
-    panel.appendChild(statusPanel());
-    panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
-      state[input.dataset.quietEnabled].enabled=input.checked;
-      store();render(false);
-    }));
-    panel.querySelectorAll('[data-quiet-prayer]').forEach(select=>select.addEventListener('change',()=>{
-      const group=state[select.dataset.quietKey];
-      group.minutes[select.dataset.quietPrayer]=num(select.value);
-      store();render(false);
-    }));
+    const choice=mode();
+    const radios=Object.entries(modes).map(([value,meta])=>
+      '<label class="aq-quiet-mode-option"><input type="radio" name="aqQuietMode" value="'+value+'"'+
+      (value===choice?' checked':'')+'><span><strong>'+meta.label+'</strong><small>'+meta.desc+'</small></span></label>').join('');
+    panel.innerHTML='<h3 class="aq-quiet-title">🔕 وضع الصامت التلقائي</h3>'+
+      '<div class="aq-quiet-card"><h4>متى يشتغل الصامت؟</h4>'+
+      '<div class="aq-quiet-modes" role="radiogroup" aria-label="وقت تشغيل وضع الصامت">'+radios+'</div></div>'+
+      section('atAdhanSilent','الصامت عند الأذان','تحدد مدة الصامت لكل صلاة. صفر يلغي الصامت لهذه الصلاة.',10)+
+      section('afterIqamaSilent','الصامت بعد الإقامة','يبدأ عند تصفير عدّاد الإقامة وينتهي بآخر مدة تختارها أو بانتهاء عدّاد «مضى على الإقامة»، أيهما أسبق.',0)+
+      (permission()?'<p class="aq-quiet-ok">✓ إذن التحكم بالصامت متاح</p>':
+        '<button type="button" class="aq-quiet-permission">منح إذن التحكم بصوت الهاتف</button>')+
+      '<details class="aq-quiet-status"><summary>حالة الرنين والتشخيص</summary></details>';
+    const details=panel.querySelector('.aq-quiet-status');
+    const status=statusPanel();
+    details.append(status);
+    let current={};
+    try{current=JSON.parse(window.AndroidNative.readQuietModeStatus?.()||'{}');}catch(_){}
+    const control=document.createElement('button');
+    control.type='button';control.className='aq-quiet-recovery';
+    if(current.appOwnsQuiet){
+      control.textContent='إيقاف الصامت التلقائي واستعادة الرنين السابق';
+      control.onclick=()=>{flushSave();window.AndroidNative?.stopAutomaticQuietNow?.();
+        setTimeout(()=>render(true),350);};
+    }else{
+      control.textContent='فتح إعدادات صوت الهاتف';
+      control.onclick=()=>window.AndroidNative?.openDeviceSoundSettings?.();
+    }
+    details.append(control);
+    panel.querySelectorAll('input[name="aqQuietMode"]').forEach(input=>
+      input.addEventListener('change',()=>{if(input.checked)setMode(input.value);}));
+    panel.querySelectorAll('[data-quiet-step]').forEach(button=>
+      button.addEventListener('click',()=>{
+        const key=button.dataset.quietKey,id=button.dataset.quietPrayer;
+        const prior=num(state[key].minutes[id]);
+        const next=Math.max(0,Math.min(minuteLimit,prior+Number(button.dataset.quietStep)));
+        if(next===prior)return;
+        state[key].minutes[id]=next;
+        updateStepper(key,id);
+        persistSoon();
+      }));
+    panel.querySelectorAll('[data-quiet-apply]').forEach(button=>
+      button.addEventListener('click',()=>{
+        const key=button.dataset.quietApply;
+        const input=panel.querySelector('[data-quiet-bulk="'+key+'"]');
+        if(!input||input.value===''||!input.checkValidity()){input?.reportValidity();return;}
+        const value=num(input.value);ids.forEach(id=>{state[key].minutes[id]=value;updateStepper(key,id);});
+        persistSoon();
+      }));
+    for(const key of ['atAdhanSilent','afterIqamaSilent'])
+      ids.forEach(id=>updateStepper(key,id));
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
   }
   function create(){
@@ -119,6 +196,36 @@
       #webSubBody #iqamaPanel hr{margin:10px 0!important}
       #webSubBody #iqamaPanel .switch-control-btn,#webSubBody #iqamaPanel button{min-height:43px!important;padding:6px 10px!important;margin:5px 0!important}
       
+    `;
+
+    // All quiet controls use the app's active palette and never change prayer widgets.
+    style.textContent += `
+      #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#243c32)!important;border-color:var(--wt-border,#c4d5c7)!important}
+      #quietPanel .aq-quiet-card{background:var(--wt-panel,#f9fcf8)!important;border-color:var(--wt-border,#c4d5c7)!important}
+      #quietPanel .aq-quiet-title,#quietPanel .aq-quiet-card h4{color:var(--wt-text,#243c32)!important;font-size:18px!important;margin:3px 0 12px!important}
+      #quietPanel .aq-quiet-modes{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+      #quietPanel .aq-quiet-mode-option{display:flex!important;align-items:center!important;gap:7px!important;min-height:70px!important;padding:8px!important;margin:0!important;border:1px solid var(--wt-border,#c4d5c7)!important;border-radius:10px!important;background:var(--wt-surface2,#eff7ef)!important}
+      #quietPanel .aq-quiet-mode-option:has(input:checked){border:2px solid var(--wt-accent,#287f53)!important;background:color-mix(in srgb,var(--wt-accent,#287f53) 12%,var(--wt-surface,#fff))!important}
+      #quietPanel .aq-quiet-mode-option input{width:20px!important;min-width:20px!important;height:20px!important;accent-color:var(--wt-accent,#287f53)!important}
+      #quietPanel .aq-quiet-mode-option span{display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.4}
+      #quietPanel .aq-quiet-mode-option strong{font-size:15px}
+      #quietPanel .aq-quiet-mode-option small{font-size:12px;color:var(--wt-text,#243c32);opacity:.78}
+      #quietPanel .aq-quiet-times{gap:4px!important}
+      #quietPanel .aq-quiet-minute{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:6px!important;min-height:44px!important;border-bottom:1px solid var(--wt-border,#d8e1d7)!important}
+      #quietPanel .aq-quiet-stepper{display:flex!important;direction:ltr!important;align-items:center!important;gap:4px!important;flex:0 0 auto!important;border:1px solid var(--wt-border,#c4d5c7)!important;border-radius:10px!important;padding:3px!important}
+      #quietPanel .aq-quiet-stepper button{min-width:30px!important;width:30px!important;height:34px!important;min-height:34px!important;padding:0!important;font-size:22px!important;border:1px solid var(--wt-border,#c4d5c7)!important;border-radius:7px!important;background:var(--wt-surface2,#eff7ef)!important;color:var(--wt-text,#243c32)!important}
+      #quietPanel .aq-quiet-stepper button:disabled{opacity:.3!important}
+      #quietPanel .aq-quiet-stepper output{direction:rtl;min-width:75px;text-align:center;font-size:14px;font-variant-numeric:tabular-nums}
+      #quietPanel .aq-quiet-bulk{display:flex!important;align-items:end!important;gap:8px!important;justify-content:space-between!important;margin-top:12px!important}
+      #quietPanel .aq-quiet-bulk label{font-size:13px!important;display:flex;flex:1;flex-direction:column;gap:5px}
+      #quietPanel .aq-quiet-bulk input{width:100%!important;min-height:38px!important;box-sizing:border-box;padding:5px;font:inherit;border:1px solid var(--wt-border,#c4d5c7);border-radius:8px;background:var(--wt-surface,#fff);color:var(--wt-text,#243c32)}
+      #quietPanel .aq-quiet-bulk button,#quietPanel .aq-quiet-recovery{min-height:40px!important;border:1px solid var(--wt-border,#c4d5c7)!important;border-radius:9px!important;background:var(--wt-surface2,#e7f3eb)!important;color:var(--wt-text,#243c32)!important;font:inherit;padding:6px 12px!important}
+      #quietPanel .aq-quiet-status{margin:12px 0 0!important;padding:10px!important;border:1px solid var(--wt-border,#c4d5c7)!important;border-radius:10px!important}
+      #quietPanel .aq-quiet-status summary{font-weight:700!important;cursor:pointer}
+      #quietPanel .aq-quiet-diagnostics{font-size:13px!important;line-height:1.55!important}
+      #quietPanel .aq-quiet-recovery{display:block!important;width:100%!important;margin-top:8px!important}
+      #quietPanel .aq-quiet-ok{font-size:13px!important}
+      @media(max-width:350px){#quietPanel .aq-quiet-modes{grid-template-columns:1fr!important}#quietPanel .aq-quiet-stepper output{min-width:63px}}
     `;
     document.head.append(style);
     render();
