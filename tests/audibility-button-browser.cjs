@@ -39,6 +39,16 @@ const {spawn}=require('node:child_process');
   assert.equal(await leaf.isHidden(),true);
   assert.equal(await trigger.getAttribute('aria-expanded'),'false');
   assert.equal(await page.locator('#paAlertMenu .ad-section-toggle').count()>=2,true);
+  await page.locator('#adSilentSettingsToggle').click({position:{x:200,y:23}});
+  await page.locator('#adSilentSettings').waitFor({state:'visible'});
+  assert.equal(await page.locator('#adSilentSettings .web-quiet-stepper').count(),5,'All five prayers get plus/minus controls');
+  const minute=page.locator('#adSilentSettings input[data-web-quiet-minutes="fajr"]');
+  const before=Number(await minute.inputValue());
+  await page.locator('#adSilentSettings .web-quiet-stepper button').nth(1).click();
+  assert.equal(Number(await minute.inputValue()),Math.min(120,before+1),'Plus changes quiet duration exactly one minute');
+  await page.locator('#adSilentSettings .web-quiet-stepper button').first().click();
+  assert.equal(Number(await minute.inputValue()),before,'Minus restores original value');
+  assert.equal(await page.locator('#adSilentSettings [data-quiet-preset]').count(),0);
   assert.deepEqual(errors,[]);
   console.log('PASS: silent/DND sound options are behind one themed help button; back and all ten controls work without extra page height');
  } finally{await browser?.close();server.kill();}
