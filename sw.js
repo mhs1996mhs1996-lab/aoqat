@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v198-interface-theme-consistent-20261112";
+const CACHE_NAME = "aoqat-pwa-v205-web-quiet-search-20261113";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -8,7 +8,7 @@ const APP_SHELL = [
   "/js/prayer-alert-methods.js?v=2",
   "/js/web-quiet-core.js?v=1",
   "/js/web-quiet-settings.js?v=1",
-  "/js/web-settings-search-calendar.js?v=6",
+  "/js/web-settings-search-calendar.js?v=205-web-quiet-search",
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
   "/js/modal-panels.js?v=4",
@@ -109,7 +109,7 @@ const APP_SHELL = [
   "/js/compact-design-menu.js?v=13",
   "/js/web-theme-settings.js?v=5",
   "/js/widget-appearance.js?v=2-compact-rows",
-  "/js/web-menu-order.js?v=42-interface-theme-match-20261112",
+  "/js/web-menu-order.js?v=205-web-quiet-panel",
   "/js/settings-help-live.js?v=9-clear-help-spacing-20261112",
   "/css/quran-reader.css",
   "/assets/quran-pages.json",
