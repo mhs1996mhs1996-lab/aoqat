@@ -920,7 +920,33 @@ class MainActivity : Activity() {
         }}
         @JavascriptInterface fun pinPrayerWidget(){runOnUiThread{val manager=android.appwidget.AppWidgetManager.getInstance(this@MainActivity);if(manager.isRequestPinAppWidgetSupported)manager.requestPinAppWidget(ComponentName(this@MainActivity,PrayerWidget::class.java),null,null)else Toast.makeText(this@MainActivity,"أضف ودجت أوقات الصلاة من قائمة الودجات في الشاشة الرئيسية",Toast.LENGTH_LONG).show()}}
         @JavascriptInterface fun openQibla(){runOnUiThread{startActivity(Intent(this@MainActivity,QiblaActivity::class.java))}}
-        @JavascriptInterface fun readQuietModeStatus():String = AdhanPlaybackService.quietStatus(this@MainActivity).toString()
+        @JavascriptInterface fun readQuietModeStatus():String {
+            AdhanPlaybackService.restoreRingerIfExpired(this@MainActivity)
+            return AdhanPlaybackService.quietStatus(this@MainActivity).toString()
+        }
+        @JavascriptInterface fun stopAutomaticQuietNow(){runOnUiThread {
+            val saved=AdhanSchedule.settings(this@MainActivity)
+            // Explicitly chosen stop: disable ONLY automatic quiet sources; do not
+            // change adhan volume, prayer alarm, widgets or the user's DND rule.
+            saved.optJSONObject("atAdhanSilent")?.put("enabled",false)
+            saved.optJSONObject("afterIqamaSilent")?.put("enabled",false)
+            saved.put("afterSilent",0)
+            AdhanSchedule.configure(this@MainActivity,saved.toString())
+            AdhanPlaybackService.restoreRinger(this@MainActivity)
+            val active=getSharedPreferences("adhan_ringer",MODE_PRIVATE).getBoolean("changed",false)
+            Toast.makeText(this@MainActivity,
+                if(active)"أوقفنا الصامت التلقائي؛ اضبط صوت الهاتف إذا بقي صامتاً"
+                else "توقف الصامت التلقائي. إذا كان الهاتف صامتاً سابقاً فلن نغيّر اختيارك",
+                Toast.LENGTH_LONG).show()
+            if(::webView.isInitialized)webView.evaluateJavascript(
+                "window.AoqatApkQuietSettings?.render?.()",null)
+        }}
+        @JavascriptInterface fun openDeviceSoundSettings(){runOnUiThread{
+            // This is always user initiated. Do not force NORMAL over a manually
+            // chosen ringer/DND state or a scheduled system Do Not Disturb rule.
+            startActivity(Intent(Settings.ACTION_SOUND_SETTINGS))
+        }}
+
         @JavascriptInterface fun hasQuietPolicyAccess():Boolean =
             (getSystemService(NOTIFICATION_SERVICE) as NotificationManager).isNotificationPolicyAccessGranted
         @JavascriptInterface fun requestQuietPolicyAccess(){runOnUiThread{
