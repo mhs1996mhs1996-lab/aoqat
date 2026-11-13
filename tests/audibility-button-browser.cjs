@@ -11,7 +11,7 @@ const {spawn}=require('node:child_process');
   const page=await browser.newPage({viewport:{width:390,height:780},serviceWorkers:'block'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('http://127.0.0.1:8874/',{waitUntil:'domcontentloaded'});
-  await page.waitForSelector('[data-drawer="alertSettings"]');
+  await page.waitForSelector('[data-drawer="alertSettings"]',{state:'attached'});
   await page.evaluate(()=>document.body.classList.add('design-menu-open'));
   await page.locator('[data-drawer="alertSettings"]').click();
   await page.locator('[data-alert-section="prayer"]').click();
