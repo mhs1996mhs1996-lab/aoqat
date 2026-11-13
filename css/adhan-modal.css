@@ -149,3 +149,46 @@ body.adhan-services-open{overflow:hidden!important}
 #adhanServicesDialog[data-aoqat-view="alerts"] #adhanPanel #adSection-sound{
   display:none!important;
 }
+
+/* v2.07: compact independent help control, same 20px theme-aware outlined circle
+   as the settings drawer. The existing sound and iqama toggles keep their handlers. */
+#adhanServicesDialog #adhanPanel #adAudibility .ad-audibility-menu{align-items:center!important;gap:8px!important}
+#adhanServicesDialog #adhanPanel #adAudibilityHelp{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 44px!important;width:44px!important;height:44px!important;min-width:44px!important;
+  min-height:44px!important;padding:0!important;margin:0!important;border:0!important;
+  border-radius:12px!important;background:transparent!important;box-shadow:none!important;
+  color:var(--wt-text,#244d36)!important;cursor:pointer!important
+}
+#adhanServicesDialog #adhanPanel #adAudibilityHelp .ad-audibility-help-circle{
+  display:flex!important;align-items:center!important;justify-content:center!important;
+  flex:0 0 20px!important;width:20px!important;height:20px!important;
+  border:1.5px solid currentColor!important;border-radius:50%!important;
+  background:color-mix(in srgb,currentColor 12%,transparent)!important;color:inherit!important;
+  font:800 13px/1 Tahoma,Arial,sans-serif!important;box-shadow:none!important
+}
+#adhanServicesDialog #adhanPanel #adAudibilityHelp:focus-visible{
+  outline:2px solid var(--wt-text,#244d36)!important;outline-offset:1px!important
+}
+#adhanServicesDialog #adhanPanel #adIqamaNoticeDetails[hidden],
+#adhanServicesDialog #adhanPanel #adAudibilityDetails[hidden]{display:none!important}
+#adhanServicesDialog #adhanPanel #adIqamaNoticeOpen{
+  display:block!important;width:100%!important;min-height:52px!important;
+  background:linear-gradient(90deg,var(--wt-surface2,#e0eee2),var(--wt-surface,#fff))!important;
+  color:var(--wt-text,#214832)!important;border:1px solid var(--wt-border,#b4ccb9)!important;
+  border-radius:11px!important;font-size:17px!important;font-weight:700!important;text-align:center!important
+}
+#adhanServicesDialog #adhanPanel #adIqamaNoticeBack,
+#adhanServicesDialog #adhanPanel #adAudibilityBack{
+  display:block!important;min-height:40px!important;width:auto!important;
+  background:var(--wt-surface2,#e3efe6)!important;color:var(--wt-text,#214832)!important;
+  border:1px solid var(--wt-border,#b4ccb9)!important;border-radius:9px!important;
+  margin:10px 0!important;padding:7px 12px!important
+}
+#adhanServicesDialog #adhanPanel #adIqamaQuietOpen{
+  display:block!important;width:100%!important;min-height:46px!important;
+  margin:12px 0 2px!important;background:linear-gradient(90deg,var(--wt-surface2,#e0eee2),var(--wt-surface,#fff))!important;
+  color:var(--wt-text,#214832)!important;border:1px solid var(--wt-border,#b4ccb9)!important;
+  border-radius:10px!important;font-size:16px!important
+}
+#adhanServicesDialog #adhanPanel #adIqamaNoticeContent{padding:6px 0!important}
