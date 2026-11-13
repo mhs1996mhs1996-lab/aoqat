@@ -23,11 +23,22 @@
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
   function section(key,title,help,fallback){
     const s=state[key];
-    const body=ids.map(id=>'<label class="aq-quiet-minute"><span>'+names[id]+'</span><select data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="مدة الصامت '+names[id]+'">'+
-      Array.from({length:121},(_,i)=>i).map(value=>'<option value="'+value+'"'+(num(s.minutes[id],fallback)===value?' selected':'')+'>'+(value?value+' دقيقة':'متوقف')+'</option>').join('')+
-      '</select></label>').join('');
-    return '<div class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
-      '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+body+'</div></div>';
+    const body=ids.map(id=>{
+      const current=num(s.minutes[id],fallback);
+      return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
+        '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت لصلاة '+names[id]+'">'+
+        '<button type="button" data-quiet-adjust="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل مدة الصامت لصلاة '+names[id]+'">−</button>'+
+        '<input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
+        '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
+        '<small>دقيقة</small></div></div>';
+    }).join('');
+    const presets=[5,10,15,20,30].map(value=>'<button type="button" data-quiet-preset="'+value+'" data-quiet-group="'+key+'">'+value+' د</button>').join('');
+    return '<section class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
+      '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+
+      '<p class="aq-quiet-caption">حدد المدة لكل صلاة (0 = إيقاف لهذه الصلاة)</p>'+body+
+      '<p class="aq-quiet-caption">مدة موحدة لجميع الصلوات</p><div class="aq-quiet-presets" role="group" aria-label="مدد الصامت السريعة">'+presets+
+      '<button type="button" data-quiet-preset="0" data-quiet-group="'+key+'">إيقاف الكل</button></div>'+
+      '</div></section>';
   }
   function permission(){
     try{return window.AndroidNative.hasQuietPolicyAccess?.()===true;}catch(_){return false;}
@@ -73,14 +84,26 @@
       section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
         'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
       (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
-    panel.appendChild(statusPanel());
+    const status=statusPanel();panel.appendChild(status);
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
       store();render(false);
     }));
-    panel.querySelectorAll('[data-quiet-prayer]').forEach(select=>select.addEventListener('change',()=>{
-      const group=state[select.dataset.quietKey];
-      group.minutes[select.dataset.quietPrayer]=num(select.value);
+    panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
+      const group=state[input.dataset.quietKey];
+      if(input.value.trim()===''||!input.checkValidity()){input.value=num(group.minutes[input.dataset.quietPrayer]);return;}
+      group.minutes[input.dataset.quietPrayer]=num(input.value);
+      store();render(false);
+    }));
+    panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>button.addEventListener('click',()=>{
+      const group=state[button.dataset.quietKey],id=button.dataset.quietPrayer;
+      group.minutes[id]=num(num(group.minutes[id])+Number(button.dataset.quietAdjust));
+      store();render(false);
+      panel.querySelector('input[data-quiet-key="'+button.dataset.quietKey+'"][data-quiet-prayer="'+id+'"]')?.focus({preventScroll:true});
+    }));
+    panel.querySelectorAll('[data-quiet-preset]').forEach(button=>button.addEventListener('click',()=>{
+      const group=state[button.dataset.quietGroup],value=num(button.dataset.quietPreset);
+      for(const id of ids)group.minutes[id]=value;
       store();render(false);
     }));
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
@@ -106,6 +129,18 @@
       #quietPanel .aq-quiet-help{font-size:13px!important;line-height:1.7!important;color:#51665a!important;margin:9px 0!important}
       #quietPanel .aq-quiet-times{display:grid!important;grid-template-columns:1fr!important;gap:5px!important}
       #quietPanel .aq-quiet-times[hidden]{display:none!important}
+      #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
+      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:4px!important;direction:ltr!important;flex:0 0 auto!important}
+      #quietPanel .aq-quiet-stepper button{width:34px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;padding:0!important;font-size:19px!important}
+      #quietPanel .aq-quiet-stepper input{width:46px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:7px!important;text-align:center!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#234037)!important;font-size:16px!important;padding:0!important;appearance:textfield!important}
+      #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
+      #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
+      #quietPanel .aq-quiet-presets{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+      #quietPanel .aq-quiet-presets button{min-height:36px!important;padding:5px 9px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;font-size:13px!important}
+      #quietPanel .aq-quiet-minute{border-bottom:1px solid var(--wt-border,#d9e1d8)!important}
+      #quietPanel .aq-quiet-card{background:var(--wt-surface,#fbfdf9)!important;border-color:var(--wt-border,#c4d5c7)!important}
+      #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#234037)!important;border-color:var(--wt-border,#cad7c8)!important}
+
       #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:40px!important;margin:0!important;color:#234037!important}
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
