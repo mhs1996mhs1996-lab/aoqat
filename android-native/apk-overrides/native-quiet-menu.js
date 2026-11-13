@@ -28,7 +28,7 @@
       return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
         '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت لصلاة '+names[id]+'">'+
         '<button type="button" data-quiet-adjust="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل مدة الصامت لصلاة '+names[id]+'">−</button>'+
-        '<input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
+        '<input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" lang="en" dir="ltr" style="font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
         '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
         '<small>دقيقة</small></div></div>';
     }).join('');
@@ -83,7 +83,7 @@
       section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
         'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
       (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
-    const status=statusPanel();panel.appendChild(status);
+    // Detailed diagnostics remain available through native status APIs, but are not displayed in this simple settings page.
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
       store();render(false);
@@ -128,6 +128,7 @@
       #quietPanel .aq-quiet-stepper button{width:43px!important;height:45px!important;min-height:45px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:27px!important}
       #quietPanel .aq-quiet-stepper input{width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
       #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
+      #quietPanel .aq-quiet-stepper input{font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important;unicode-bidi:isolate!important}
       #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
       #quietPanel .aq-quiet-presets{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
       #quietPanel .aq-quiet-presets button{min-height:36px!important;padding:5px 9px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;font-size:13px!important}
