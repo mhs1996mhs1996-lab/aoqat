@@ -8,6 +8,7 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright'),{spa
   browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
   const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.context().grantPermissions(['notifications'],{origin:'http://127.0.0.1:8991'});
   await page.route('**/rest/**',route=>route.abort());
   await page.goto('http://127.0.0.1:8991/',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.aoqatUIReady&&window.AoqatAlertsHub&&window.AoqatWebSettingsNavigation&&document.querySelector('#iqamaNotificationToggle'),{timeout:45000});
