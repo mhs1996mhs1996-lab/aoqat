@@ -1,0 +1,29 @@
+name: Verify dedicated web quiet settings and search
+on:
+  push:
+    branches:
+      - fix/web-quiet-search-settings-20261113
+      - main
+    paths:
+      - 'js/web-menu-order.js'
+      - 'js/web-settings-search-calendar.js'
+      - 'tests/web-quiet-mode-search-browser.cjs'
+      - '.github/workflows/check-web-quiet-mode-search.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quiet-web:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify no unexpected JavaScript errors
+        run: |
+          node --check js/web-menu-order.js
+          node --check js/web-settings-search-calendar.js
+          node --check tests/web-quiet-mode-search-browser.cjs
+      - name: Test real silent-mode navigation and persistent minutes
+        run: |
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/web-quiet-mode-search-browser.cjs
