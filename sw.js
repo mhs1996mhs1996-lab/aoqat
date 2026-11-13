@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v206-quiet-audibility-20261113";
+const CACHE_NAME = "aoqat-pwa-v207-quiet-panel-mount-20261113";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -7,7 +7,7 @@ const APP_SHELL = [
   "/css/monthly-calendars.css?v=annual-gallery-explicit-card-v16-20261026",
   "/js/prayer-alert-methods.js?v=2",
   "/js/web-quiet-core.js?v=1",
-  "/js/web-quiet-settings.js?v=206-minute-steppers-20261113",
+  "/js/web-quiet-settings.js?v=207-quiet-panel-mount-20261113",
   "/js/web-settings-search-calendar.js?v=205-web-quiet-search",
   "/js/design-side-menu.js?v=2",
   "/js/startup-stabilizer.js?v=1",
