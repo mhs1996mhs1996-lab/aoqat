@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 141 // Restore per-prayer minute stepper and compact audibility submenu
-        versionName '2.06'
+        versionCode 142 // Iqama nested under prayer alerts; ASCII quiet durations and unified help circle
+        versionName '2.07'
     }
 
     compileOptions {
