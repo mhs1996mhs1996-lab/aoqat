@@ -1,0 +1,31 @@
+name: Verify public web Iqama nested under prayer alerts
+on:
+  push:
+    branches: ['fix/web-iqama-inside-prayer-20261113']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check preserved controls and syntax
+        run: |
+          node --check js/adhan-settings.js
+          node --check js/web-menu-order.js
+          node --check js/alerts-hub.js
+          node --check tests/v207-web-iqama-inside-prayer-browser.cjs
+          node --test tests/adhan-core.test.cjs tests/prayer-alarm-core.test.cjs
+      - name: Test original Iqama notification control in mobile Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/v207-web-iqama-inside-prayer-browser.cjs
+      - name: Upload preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v207-public-web-iqama-preview
+          path: /tmp/aoqat-v207-web-iqama.png
+          if-no-files-found: ignore
