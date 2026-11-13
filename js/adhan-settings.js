@@ -319,10 +319,10 @@
      : ""
  }
 </div></div></div></section></fieldset>
- <div class="ad-card" id="adAudibility" style="padding:8px!important">
+ <div class="ad-card" id="adAudibility" style="padding:8px!important;border:1px solid var(--wt-border,#b4ccb9)!important;background:var(--wt-surface,#fbfdf9)!important">
   <div class="ad-audibility-menu" style="display:flex;align-items:center;gap:8px;direction:rtl">
-    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid #b4ccb9;border-radius:12px;background:linear-gradient(110deg,#e0eee2,#f8fcf7);color:#214832;font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
-    <button type="button" id="adAudibilityHelp" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="width:39px;height:39px;min-width:39px;border:2px solid #244d36;border-radius:50%;background:transparent;color:#244d36;font-size:20px;cursor:pointer">؟</button>
+    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid var(--wt-border,#b4ccb9);border-radius:12px;background:linear-gradient(110deg,var(--wt-surface2,#e0eee2),var(--wt-surface,#f8fcf7));color:var(--wt-text,#214832);font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
+    <button type="button" id="adAudibilityHelp" class="aoqat-help-circle" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="flex:none!important;align-self:center!important;width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;border:2px solid var(--wt-text,#244d36)!important;border-radius:50%!important;background:transparent!important;color:var(--wt-text,#244d36)!important;font-size:20px!important;font-weight:700!important;line-height:1!important;padding:0!important;box-shadow:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer">؟</button>
   </div>
   <p id="adAudibilityHelpText" class="ad-note" ${audibilityHelpOpen?'':'hidden'}>التحكم بسماع الأذان ومنبّه الصلاة عند وضع الهاتف على الصامت أو عدم الإزعاج. لكل صلاة زران مستقلان. لا يغيّر هذا الخيار مواعيد الصلاة أو وضع رنين الهاتف. إذا اجتمع الصامت وعدم الإزعاج يلزم تفعيل الخيارين معاً.</p>
   <div id="adAudibilityDetails" ${audibilityOpen?'':'hidden'}>
