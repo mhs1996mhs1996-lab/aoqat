@@ -73,6 +73,7 @@
     if(dialog.dataset.aoqatView==="voice"){
       dialog.dataset.aoqatView="alerts";arrangeAdhanView();
     }
+    window.aoqatCloseAudibility?.();
     dialog.hidden=true;document.body.classList.remove("adhan-services-open");
     const p=document.getElementById("adhanPanel");
     if(p&&adhanHome){p.classList.remove("inline-open","active-panel");adhanHome.appendChild(p);}
