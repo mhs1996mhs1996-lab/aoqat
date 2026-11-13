@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 140 // Restore quiet search routing and safe manual-stop behavior
-        versionName '2.05'
+        versionCode 141 // Restore per-prayer minute stepper and compact audibility submenu
+        versionName '2.06'
     }
 
     compileOptions {
