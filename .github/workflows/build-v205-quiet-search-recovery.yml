@@ -1,0 +1,420 @@
+name: Build v2.05 silent recovery and search routing signed APK
+on:
+  push:
+    branches:
+      - 'feature/v205-quiet-search-recovery-20261113'
+  workflow_dispatch:
+  pull_request:
+    branches: [main, fix/v195-home-countdowns-and-lock-visibility-20261113]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore stable original APK signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Verify isolated layout variants and critical services
+        run: |
+          set -euo pipefail
+          node --check js/widget-appearance.js
+          node --check js/prayer-countdown.js
+          node --check js/compact-design-menu.js
+          node --check js/web-menu-order.js
+          node --check js/web-settings-search-calendar.js
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          node --check tests/quiet-settings-native-search-browser.cjs
+          node --check js/settings-help-live.js
+          node --check tests/web-interface-theme-match-browser.cjs
+          node --check tests/help-layout-regression-browser.cjs
+          node --check js/alerts-hub.js
+          node --check js/reminder-inbox.js
+          node --check js/azkar-reminders-core.js
+          node --check js/azkar-reminders.js
+          node --test tests/v203-settings-inbox.test.cjs tests/azkar-reminders.test.cjs tests/web-quiet-core.test.cjs
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/help-layout-regression-browser.cjs
+          CHROME_PATH=/usr/bin/google-chrome node tests/web-interface-theme-match-browser.cjs
+          CHROME_PATH=/usr/bin/google-chrome node tests/quiet-settings-native-search-browser.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('js/widget-appearance.js').read_text()
+          d=Path('js/prayer-countdown.js').read_text()
+          b=Path('js/prayer-countdown-edit-bridge.js').read_text()
+          a=Path('android-native/app/src/main/java/com/aoqat/calendar')
+          n=(a/'PrayerWidget.kt').read_text()
+          m=(a/'MainActivity.kt').read_text()
+          xml=Path('android-native/app/src/main/res/layout/notification_lock_next.xml').read_text()
+          assert 'liveSection' not in p and 'wallpaperPreview' not in p
+          assert 'lockRetry' not in p and 'lockCheck' not in p
+          assert 'ضبط أذونات التنبيهات وشاشة القفل' in p
+          assert 'style.removeProperty(\'font-size\')' not in d
+          assert 'aoqat-live-iqama-style-v1' in d and 'aoqat-live-iqama-style-v1' in b
+          assert 'R.layout.notification_lock_next' in n and 'setChronometerCountDown' in n
+          iqama=(a/'LockScreenIqama.kt').read_text()
+          main=(a/'MainActivity.kt').read_text()
+          layout=Path('android-native/app/src/main/res/layout/notification_lock_next.xml').read_text()
+          assert 'fun current(context:Context' in iqama and 'now>=prayerAt+totalMs' in iqama
+          assert 'LockScreenIqama.current(c,now)' in n and 'lock_iqama_clock' in n
+          assert 'R.id.lock_iqama_row' in n and 'R.id.lock_iqama_title' in n
+          assert 'lock_iqama_row' in layout and 'lock_iqama_clock' in layout
+          assert 'if(LockScreenPrayer.enabled(this))LockScreenPrayer.showNow(this)' in main
+          assert 'if(LockScreenPrayer.enabled(context))LockScreenPrayer.showNow(context)' in main
+          assert Path('android-native/app/src/test/java/com/aoqat/calendar/LockScreenIqamaTest.kt').exists()
+          lc=(a/'LockScreenPrayer.kt').read_text()
+          manifest=Path('android-native/app/src/main/AndroidManifest.xml').read_text()
+          assert 'LockScreenIqamaBoundaryReceiver.schedule(c)' in lc
+          assert 'LockScreenIqama.nextRefreshAt(c,now)' in lc
+          assert 'fun nextWakeAt(now:Long' in iqama
+          boot=(a/'AlarmCore.kt').read_text()
+          assert 'if (LockScreenPrayer.enabled(context)) LockScreenPrayer.showNow(context)' in boot
+          assert 'item.custom?item.size' in d
+          menu=Path('js/web-menu-order.js').read_text()
+          hub=Path('js/alerts-hub.js').read_text()
+          vis=Path('js/compact-design-menu.js').read_text()
+          inbox=Path('js/reminder-inbox.js').read_text()
+          azkar=Path('js/azkar-reminders-core.js').read_text()
+          native_azkar=(a/'AzkarReminderPlan.kt').read_text()
+          assert 'showShortButtonHelp(wrap,ALERT_HELP)' in menu
+          assert 'doNotWrapHelpButtons' in menu
+          assert '"quiet","🔕","وضع الصامت عند الأذان والإقامة"' in menu
+          assert 'alert:openAlertSection' in menu
+          search=Path('js/web-settings-search-calendar.js').read_text()
+          quiet=Path('android-native/apk-overrides/native-quiet-menu.js').read_text()
+          native=Path('android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt').read_text()
+          assert "nav().alert('quiet')" in search and "data-quiet-prayer" in search
+          assert "input type=\"radio\"" in quiet and "aq-quiet-stepper" in quiet and "stopAutomaticQuietNow" in quiet
+          assert 'fun stopAutomaticQuietNow()' in native and 'fun openDeviceSoundSettings()' in native
+          assert 'aoqat-help-dot' not in menu
+          assert 'body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action' in menu
+          help=Path('js/settings-help-live.js').read_text()
+          assert 'aoqat-help-eligible' in help and 'aoqat-help-with-chevron' in help
+          assert '20px!important' in help and 'aoqatOpenSettingsHelp' in help
+          assert 'row.append(help,hint)' not in menu
+          widget=Path('js/widget-appearance.js').read_text()
+          assert 'action.dataset.helpDescription=description' in widget
+          assert 'wa-help-row' not in widget
+          assert '["switch","⏰","التبديل التلقائي و التنبيه","switchPanel"]' not in menu
+          assert "'autoTomorrowToggle'" in hub
+          assert 'clock:true,date:true,adhan:true,iqama:true' in vis and 'state[k]!==false' in vis
+          assert 'repetitiveAzkar' in inbox and 'excludedEntry(event)' in inbox
+          assert "'salawat'" in azkar and 'isFriday' in azkar and '"salawat"' in native_azkar
+          assert 'lockButtonWithHelp(lockToggle' in p
+          assert 'aoqatLiveCountdownStyleChanged' in d and 'aoqatLiveCountdownStyleChanged' in b
+          assert 'LockScreenIqamaBoundaryReceiver.cancel(c)' in lc
+          assert 'LockScreenIqamaBoundaryReceiver' in manifest
+          assert 'if(!IqamaNativeScheduler.enabled(context))return null' not in iqama
+          assert 'lock_prayer_clock' in xml and '<Chronometer' in xml
+          assert 'openPrayerEssentialPermissions' in m and 'showFirstInstallPermissionGuide' in m
+          assert 'versionCode 140' in Path('android-native/app/build.gradle').read_text()
+          print('PASS: lock notification clock, permission guide, simplified UI and saved font')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          a=Path('android-native/app/src/main/java/com/aoqat/calendar')
+          w=(a/'PrayerLockWallpaperService.kt').read_text()
+          s=(a/'LockWallpaperOptions.kt').read_text()
+          j=Path('js/widget-appearance.js').read_text()
+          n=(a/'MainActivity.kt').read_text()
+          assert 'LockWallpaperOptions.read' in w and 'selectedRows' in w
+          assert 'IqamaNativeScheduler.durations' in w and 'FridaySchedule.suppress' in w
+          assert 'fun cardHeight' in s and 'fun configure' in s
+          assert all(x in s for x in ['next','iqama','date','fajr','sunrise','dhuhr','asr','maghrib','isha'])
+          assert 'configurePrayerLockWallpaperConfig' in n and 'readPrayerLockWallpaperConfig' in n
+          assert 'ضبط أذونات التنبيهات وشاشة القفل' in j
+          assert Path('android-native/app/src/test/java/com/aoqat/calendar/LockWallpaperOptionsTest.kt').is_file()
+          print('PASS: isolated adaptive lock-wallpaper controls and tests')
+          PY
+          node --check js/prayer-countdown.js
+          python3 -m py_compile android-native/prepare-web-assets.py
+          node tests/adhan-core.test.cjs
+          node tests/prayer-alarm-core.test.cjs
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          from pathlib import Path
+          p=Path('android-native/app/src/main')
+          k=(p/'java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          w=(p/'java/com/aoqat/calendar/WidgetAppearance.kt').read_text()
+          j=Path('js/widget-appearance.js').read_text()
+          for item in ['classic','grid','featured']:
+              assert item in k and item in w and item in j,item
+          for name in ['prayer_times_widget_grid','prayer_times_widget_featured']:
+              xml=ET.parse(p/f'res/layout/{name}.xml')
+              ids=[n.attrib.get('{http://schemas.android.com/apk/res/android}id','') for n in xml.iter()]
+              for prayer in ['fajr','sunrise','dhuhr','asr','maghrib','isha']:
+                  assert '@+id/widget_times_'+prayer in ids, (name,prayer)
+          for f in ['PrayerWidget.kt','WidgetAppearance.kt']:
+              assert (p/'java/com/aoqat/calendar'/f).exists()
+          lock=(p/'java/com/aoqat/calendar/LockScreenPrayer.kt').read_text()
+          notification=(p/'java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          native=(p/'java/com/aoqat/calendar/MainActivity.kt').read_text()
+          schedule=(p/'java/com/aoqat/calendar/AdhanSchedule.kt').read_text()
+          panel=Path('js/widget-appearance.js').read_text()
+          countdown=Path('js/prayer-countdown.js').read_text()
+          prepare=Path('android-native/prepare-web-assets.py').read_text()
+          assert 'function fitLiveCountdownRow()' in countdown
+          assert "setInterval(fitLiveCountdownRow,1000)" in countdown
+          assert "flex-wrap:nowrap!important" in countdown
+          assert "'flex-wrap:wrap!important')" not in prepare
+          assert 'LOCK_NOTIFICATION_ID=60503' in lock
+          assert 'manager.notify(LOCK_NOTIFICATION_ID,NextPrayerService.lockNotification(c))' in lock
+          assert 'NextPrayerService.start(c)' not in lock.split('fun showNow(')[1].split('fun configure(')[0]
+          assert '&& !LockScreenPrayer.enabled(c)' in notification
+          wallpaper=p/'java/com/aoqat/calendar/PrayerLockWallpaperService.kt'
+          live=wallpaper.read_text()
+          assert wallpaper.is_file()
+          assert 'WallpaperService()' in live and 'onVisibilityChanged' in live
+          assert 'PrayerTimes.events(' in live and 'PrayerTimes.rows(' in live
+          assert 'handler.removeCallbacks(refresh)' in live
+          assert 'LockWallpaperOptions.read' in live and 'sunrise' in live
+          manifest=(p/'AndroidManifest.xml').read_text()
+          assert 'android:name=".PrayerLockWallpaperService"' in manifest
+          assert 'android.permission.BIND_WALLPAPER' in manifest
+          xml=ET.parse(p/'res/xml/prayer_lock_wallpaper.xml').getroot()
+          assert xml.tag=='wallpaper'
+          assert (p/'res/values/strings.xml').exists()
+          assert 'previewPrayerLockWallpaper' in native
+          assert 'ACTION_CHANGE_LIVE_WALLPAPER' in native
+          assert 'configurePrayerLockWallpaperShowTimes' in native
+          assert 'lockButtonWithHelp(lockToggle' in panel and 'lockButtonWithHelp(lockAccess' in panel
+          assert 'window.AndroidNative.openLockScreenNotificationSettings' in panel
+          assert 'function fitLiveCountdownRow()' in countdown
+          assert 'getBoolean("enabled",false)' in lock
+          assert 'versionCode 140' in Path('android-native/app/build.gradle').read_text()
+          assert 'next_prayer_lockscreen_v2' in notification
+          assert 'NotificationManager.IMPORTANCE_DEFAULT' in notification and 'notification_lock_next' in notification
+          assert 'fun notificationsAllowed(c:Context)' in lock
+          assert 'fun showNow(c:Context)' in lock
+          assert 'fun status(c:Context)' in lock
+          assert 'readLockScreenPrayerStatus' in native and 'refreshLockScreenPrayer' in native
+          assert 'إيقاف إشعار شاشة القفل' in panel and 'lockRetry' not in panel
+          assert 'LockScreenPrayer.showNow(c)' in schedule
+          for filename in ['prayer_widget_info.xml','prayer_combined_widget_info.xml']:
+              xml=ET.parse('android-native/app/src/main/res/xml/'+filename)
+              ns='{http://schemas.android.com/apk/res/android}'
+              assert xml.getroot().attrib[ns+'widgetCategory']=='home_screen|keyguard'
+          for kind in ['widget_next_card','widget_iqama_card','widget_times_card']:
+              assert kind in k or any(kind in f.read_text() for f in (p/'res/layout').glob('prayer*widget*.xml')),kind
+          assert 'R.id.widget_times_card' in k and 'R.id.widget_iqama_card' in k
+          assert 'heightDp in 1..164' in k
+          assert 'prayer_times_widget_classic_compact' in k
+          assert 'compressedClassic' in k
+          assert 'R.color.transparent' in k
+          assert 'if(prayer==next?.id)' in k
+          assert 'مواقيت الصلاة مع الصلاة القادمة' in (p/'AndroidManifest.xml').read_text()
+          assert "versionName '2.05'" in Path('android-native/app/build.gradle').read_text()
+          for provider in ['FivePrayerCompactWidget','FivePrayerFeaturedWidget','PrayerCombinedWidget']:
+              assert 'class '+provider+':' in (k+(p/'java/com/aoqat/calendar/PrayerCombinedWidget.kt').read_text())
+              assert provider in (p/'AndroidManifest.xml').read_text()
+          for name in ['prayer_five_widget_grid','prayer_five_widget_featured']:
+              xml=ET.parse(p/f'res/layout/{name}.xml')
+              ids=[n.attrib.get('{http://schemas.android.com/apk/res/android}id','') for n in xml.iter()]
+              assert {x.rsplit('/',1)[-1] for x in ids if x.rsplit('/',1)[-1] in ['widget_times_fajr','widget_times_sunrise','widget_times_dhuhr','widget_times_asr','widget_times_maghrib','widget_times_isha']} == {'widget_times_fajr','widget_times_sunrise','widget_times_dhuhr','widget_times_asr','widget_times_maghrib','widget_times_isha'},name
+              assert any(x.endswith('_sunrise') for x in ids),name
+          for name in ['prayer_times_widget_classic_next','prayer_times_widget_classic_compact','prayer_combined_widget']:
+              root=ET.parse(p/f'res/layout/{name}.xml').getroot()
+              ids=[n.attrib.get('{http://schemas.android.com/apk/res/android}id','') for n in root.iter()]
+              assert len(ids)>7,name
+          for prayer in ['fajr','sunrise','dhuhr','asr','maghrib','isha']:
+              ids=[n.attrib.get('{http://schemas.android.com/apk/res/android}id','') for n in ET.parse(p/'res/layout/prayer_times_widget_classic_next.xml').getroot().iter()]
+              assert '@+id/widget_time_clock_'+prayer in ids
+          assert 'layoutOverride="classic"' in k
+          assert 'R.id.widget_times_next_counter' in k
+          assert 'PrayerCombinedWidget::class.java' in k
+          print('PASS: six-time cards and single upcoming prayer highlight reset')
+          PY
+      - name: Verify XML layouts and resize targets
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          r=Path('android-native/app/src/main/res/layout')
+          for filename in ['prayer_widget_compact.xml','prayer_iqama_widget_compact.xml','prayer_times_widget.xml','prayer_times_widget_grid.xml','prayer_times_widget_featured.xml','prayer_times_widget_classic_next.xml','prayer_times_widget_classic_compact.xml','prayer_combined_widget.xml']:
+              root=ET.parse(r/filename).getroot()
+              ns='{http://schemas.android.com/apk/res/android}'
+              assert root.attrib[ns+'layout_height']==('wrap_content' if filename in {
+                  'prayer_widget_compact.xml','prayer_times_widget_grid.xml',
+                  'prayer_iqama_widget_compact.xml','prayer_combined_widget.xml',
+                  'prayer_times_widget_featured.xml','prayer_times_widget_classic_next.xml',
+                  'prayer_times_widget_classic_compact.xml'} else 'match_parent')
+              card=next((x for x in root if x.attrib.get(ns+'id','').endswith('_card')),None)
+              assert card is not None and card.attrib[ns+'layout_height']=='wrap_content', filename
+          for filename in ['prayer_five_widget_grid.xml','prayer_five_widget_featured.xml']:
+              root=ET.parse(r/filename).getroot()
+              assert root.attrib[ns+'layout_height']=='wrap_content'
+          for filename in ['prayer_times_widget_classic_next.xml','prayer_times_widget_classic_compact.xml']:
+              root=ET.parse(r/filename).getroot()
+              assert len([e for e in root.iter() if e.attrib.get(ns+'id','').startswith('@+id/widget_times_row_')])==6
+          for filename in ['prayer_times_widget_classic_compact.xml','prayer_times_widget_classic_next.xml']:
+              doc=ET.parse(r/filename)
+              for prayer in ['fajr','sunrise','dhuhr','asr','maghrib','isha']:
+                  row=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_row_'+prayer)
+                  label=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_'+prayer)
+                  clock=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_time_clock_'+prayer)
+                  assert row.attrib[ns+'layout_width']=='wrap_content'
+                  assert label.attrib[ns+'layout_width']=='wrap_content'
+                  assert ns+'layout_weight' not in label.attrib
+                  assert clock.attrib.get(ns+'layout_marginStart') in ['9dp','14dp']
+          alarm=(Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerAlarm.kt')).read_text()
+          adhan=(Path('android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt')).read_text()
+          for src in [alarm,adhan]:
+              assert '.setCustomContentView(' not in src
+              assert '.setCustomBigContentView(' not in src
+              assert 'setFullScreenIntent(' in src
+          assert 'action("SNOOZE")' in alarm and 'action("STOP")' in alarm
+          assert 'addAction(Notification.Action.Builder(null,"إيقاف",stop)' in adhan
+          for filename in ['prayer_times_widget_classic_compact.xml','prayer_times_widget_classic_next.xml']:
+              doc=ET.parse(r/filename)
+              header=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_next_label')
+              counter=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_next_counter')
+              assert header.attrib[ns+'layout_width']=='wrap_content'
+              assert ns+'layout_weight' not in header.attrib
+              assert counter.attrib[ns+'layout_marginStart']=='8dp'
+              top=next(x for x in doc.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_next_label')
+              assert top.attrib[ns+'layout_width']=='wrap_content'
+          next_root=ET.parse(r/'prayer_widget_compact.xml').getroot()
+          next_card=next(x for x in next_root.iter() if x.attrib.get(ns+'id')=='@+id/widget_next_card')
+          label=next(x for x in next_root.iter() if x.attrib.get(ns+'id')=='@+id/widget_prayer')
+          assert next_card.attrib[ns+'layout_width']=='wrap_content'
+          assert label.attrib[ns+'layout_width']=='wrap_content'
+          for filename in ['prayer_times_widget_grid.xml','prayer_five_widget_grid.xml']:
+              xml=ET.parse(r/filename)
+              for prayer in ['fajr','sunrise','dhuhr','asr','maghrib','isha']:
+                  tv=next(x for x in xml.iter() if x.attrib.get(ns+'id')=='@+id/widget_times_'+prayer)
+                  assert tv.attrib[ns+'lineSpacingExtra']=='-3dp'
+          # Both 3+3 variants keep all six prayers and add discreet dividers.
+          for filename in ['prayer_times_widget_grid.xml','prayer_five_widget_grid.xml']:
+              xml=ET.parse(r/filename)
+              dividers=[x for x in xml.iter() if x.attrib.get(ns+'background') in ('#66FFFFFF','#55FFFFFF')]
+              assert len(dividers)==5, (filename,len(dividers))
+          combined_style=ET.parse(Path('android-native/app/src/main/res/drawable/aoqat_combined_pill.xml'))
+          assert next(x for x in combined_style.iter() if x.tag=='solid').attrib[ns+'color']=='#00000000'
+          publish=Path('android-native/app/src/main/java/com/aoqat/calendar/AlarmCore.kt').read_text()
+          assert 'SNOOZED_NOTIFICATION_ID = 45102' in publish
+          assert 'notify(SNOOZED_NOTIFICATION_ID,buildAlarmNotification(context,true))' in publish
+          assert 'PhoneScreenAlerts.pulse(context)' in publish
+          assert '.setCustomContentView(' not in publish
+          assert 'if(!snoozed && PhoneScreenAlerts.enabled(context))' in publish
+          assert 'lock.acquire(8000L)' in Path('android-native/app/src/main/java/com/aoqat/calendar/PhoneScreenAlerts.kt').read_text()
+          print('PASS: screenshot card outlines, clear iqama backgrounds, persistent cancelable publish snooze and fullscreen wake path')
+          meta=ET.parse(Path('android-native/app/src/main/res/xml/prayer_widget_info.xml')).getroot()
+          assert meta.attrib[ns+'targetCellHeight']=='1'
+          combined=ET.parse(r/'prayer_combined_widget.xml').getroot()
+          ns='{http://schemas.android.com/apk/res/android}'
+          pair=next(x for x in combined.iter() if x.attrib.get(ns+'id')=='@+id/widget_combined_card')
+          assert pair.attrib[ns+'orientation']=='horizontal'
+          required={'widget_combined_next_pill','widget_combined_iqama_pill',
+                    'widget_combined_next_counter','widget_combined_iqama_counter'}
+          found={e.attrib.get(ns+'id','').split('/')[-1] for e in combined.iter()}
+          assert required.issubset(found)
+          assert 'widget_combined_before_counter' not in found
+          print('PASS: single-row two-capsule combined widget, no stacked duplicate countdowns')
+          bases=['prayer_widget','prayer_widget_compact',
+                 'prayer_times_widget_classic_next','prayer_times_widget_classic_compact',
+                 'prayer_iqama_widget','prayer_iqama_widget_compact','prayer_combined_widget']
+          for base in bases:
+              for face in ['sans','serif','condensed','medium']:
+                  for weight in ['normal','bold']:
+                      layout=r/f'{base}_num_{face}_{weight}.xml'
+                      assert layout.is_file(),layout
+                      clocks=[n for n in ET.parse(layout).iter() if n.tag=='Chronometer']
+                      assert clocks and all(n.attrib.get(ns+'fontFamily') and n.attrib.get(ns+'textStyle')==weight for n in clocks),layout
+          appearance=Path('android-native/app/src/main/java/com/aoqat/calendar/WidgetAppearance.kt').read_text()
+          for id in ['next','times','five_grid','five_featured','iqama','combined']:
+              assert '"'+id+'"' in appearance and '"'+id+'"' in Path('js/widget-appearance.js').read_text()
+          assert 'decorateCell' in appearance and 'counterLayout' in appearance
+          assert 'labels' in appearance and 'numbers' in appearance
+          assert 'تعديل بطاقات الشاشة الرئيسية' in Path('js/web-menu-order.js').read_text()
+          lock=(Path('android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt')).read_text()
+          notification=(Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt')).read_text()
+          native=(Path('android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt')).read_text()
+          schedule=(Path('android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt')).read_text()
+          panel=Path('js/widget-appearance.js').read_text()
+          assert 'fun enabled(c:Context)' in lock
+          assert 'fun configure(c:Context,on:Boolean)' in lock
+          assert 'LockScreenPrayer.enabled(c)' in schedule
+          assert 'fun lockNotification(c:Context)' in notification
+          assert 'setChronometerCountDown(true)' in notification
+          assert 'Notification.VISIBILITY_PUBLIC' in notification
+          assert 'configureLockScreenPrayer' in native and 'readLockScreenPrayerEnabled' in native
+          assert 'الصلاة القادمة على شاشة القفل' in panel
+          assert 'إيقاف إشعار شاشة القفل' in panel
+          assert 'versionCode 140' in Path('android-native/app/build.gradle').read_text()
+          print('PASS: supported keyguard widget category, public notification v2, permission diagnostics and boundary refresh')
+          PY
+      - name: Run Android unit tests and compile installable APK
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify signature, version and offline data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-v205
+          cp android-native/app/build/outputs/apk/debug/app-debug.apk /tmp/aoqat-v205/aoqat-v2.05-quiet-search-recovery.apk
+          apk=/tmp/aoqat-v205/aoqat-v2.05-quiet-search-recovery.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --print-certs "$apk" | tee /tmp/aoqat-v205/signature.txt
+          grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' /tmp/aoqat-v205/signature.txt
+          "$aapt" dump badging "$apk" | grep -F "versionCode='140' versionName='2.05'"
+          python3 - <<'PY'
+          import zipfile
+          p='/tmp/aoqat-v205/aoqat-v2.05-quiet-search-recovery.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert len(z.read('assets/www/data/prayer-times-offline.json'))>5000
+              bundle=z.read('assets/www/js/apk-startup-bundle.js').decode()
+              assert '/* js/settings-help-live.js */' in bundle
+              assert 'aoqat-help-eligible' in bundle
+              assert 'doNotWrapHelpButtons' in bundle
+              assert 'web-interface-menu #webInterfaceMenu>button.main-action' in bundle
+              html=z.read('assets/www/index.html').decode()
+              assert 'apk-startup-bundle.js' in html
+              assert 'js/native-quiet-menu.js' in z.namelist() or 'assets/www/js/native-quiet-menu.js' in z.namelist()
+              quiet_js=z.read('assets/www/js/native-quiet-menu.js').decode()
+              assert 'aq-quiet-stepper' in quiet_js and 'stopAutomaticQuietNow' in quiet_js
+              assert 'nav().alert(\'quiet\')' in bundle
+              script=z.read('assets/www/js/azkar-reminders-core.js').decode()
+              assert "'salawat'" in script and 'isFriday' in script
+              inbox_js=z.read('assets/www/js/reminder-inbox.js').decode()
+              assert 'repetitiveAzkar' in inbox_js and 'excludedEntry(event)' in inbox_js
+              vis_js=z.read('assets/www/js/compact-design-menu.js').decode()
+              assert 'clock:true,date:true,adhan:true,iqama:true' in vis_js
+              alerts_js=z.read('assets/www/js/alerts-hub.js').decode()
+              assert "'autoTomorrowToggle'" in alerts_js
+              assert len([n for n in z.namelist() if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+          print('PASS: verified signed APK + complete offline prayer database and Quran')
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v205/checksum.sha256
+      - name: Upload tested APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v2.05-quiet-search-recovery
+          path: |
+            /tmp/aoqat-v205/aoqat-v2.05-quiet-search-recovery.apk
+            /tmp/aoqat-v205/checksum.sha256
+      - name: Publish installable APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v2.05-quiet-search-recovery
+          if ! gh release view "$tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GH_REPO" --target "$GITHUB_SHA" --title "أوقات الصلاة في الحويجة v2.05 — تنظيم الصامت والبحث" --notes "إصلاح نتائج البحث عن الصامت لتفتح إعداداته الفعلية، وتنظيم أربعة أوضاع بدء ومدد منفصلة بدقة دقيقة، وخيارات استعادة الرنين دون تغيير عدم الإزعاج اليدوي. بقية وظائف المصحف والبطاقات الست والأذان محفوظة." --prerelease
+          fi
+          for attempt in 1 2 3; do
+            if gh release upload "$tag" /tmp/aoqat-v205/aoqat-v2.05-quiet-search-recovery.apk /tmp/aoqat-v205/checksum.sha256 --repo "$GH_REPO" --clobber; then exit 0; fi
+            sleep 4
+          done
+          exit 1
