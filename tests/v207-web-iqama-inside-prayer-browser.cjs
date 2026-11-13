@@ -27,7 +27,7 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright'),{spa
   await control.click();
   assert.notEqual(await page.evaluate(()=>localStorage.getItem('aoqatIqamaNotificationEnabledV1')),before);
   await control.click();
-  assert.equal(await page.evaluate(()=>localStorage.getItem('aoqatIqamaNotificationEnabledV1')),before);
+  assert.equal(await page.evaluate(()=>localStorage.getItem('aoqatIqamaNotificationEnabledV1')),before===null?'1':before,'Default-on must be preserved when the old preference was unset');
   await page.locator('#adIqamaNoticeBack').click();
   assert.equal(await page.locator('#adIqamaNoticeDetails').isVisible(),false);
   await button.click({position:{x:145,y:24}});
