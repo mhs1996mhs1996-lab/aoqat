@@ -1,0 +1,32 @@
+name: Verify v2.07 prayer / iqama menu in Chrome
+on:
+  push:
+    branches: ['fix/v207-quiet-iqama-menu-20261113']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-prayer-menu:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check changed scripts without changing their source
+        run: |
+          set -euo pipefail
+          node --check js/web-menu-order.js
+          node --check js/adhan-settings.js
+          node --check js/prayer-alert-methods.js
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          node --test tests/adhan-core.test.cjs tests/prayer-alarm-core.test.cjs tests/web-quiet-core.test.cjs
+      - name: Verify original iqama controls, nested navigation and 20px question mark in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/v207-prayer-iqama-browser.cjs
+      - name: Store browser screenshot if needed
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v207-iqama-web-check
+          path: /tmp/aoqat-v207-iqama*.png
+          if-no-files-found: ignore
