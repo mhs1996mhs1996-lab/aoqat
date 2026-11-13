@@ -249,7 +249,7 @@
     footerPanel:'تعديل النص السفلي للتصميم.'
   };
   const ALERT_HELP={
-    prayer:'ضبط الأذان والمنبه والصامت لكل صلاة.',
+    prayer:'ضبط الأذان والمنبّه وإشعار الإقامة والصامت لكل صلاة.',
     iqama:'إشعار الإقامة وخيارات الصامت.',
     friday:'تذكير سنن الجمعة وسورة الكهف.',
     fasting:'تذكير صيام التطوع قبل موعده.',
@@ -292,7 +292,6 @@
     const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
     const options=[
       ["prayer","🔔","تنبيهات أوقات الصلاة"],
-      ["iqama","⏳","إشعار الإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
@@ -313,14 +312,15 @@
     if(kind==="screen"){screenWakeView();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
     if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");return;}
-    if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
-      openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
-    }
     if(kind==="iqama"){
-      const wrap=document.createElement("div");wrap.className="web-settings-list";
-      const notification=document.createElement("button");notification.type="button";notification.className="main-action";notification.textContent="🔔 إشعار الإقامة";notification.onclick=()=>openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");wrap.append(notification);
-      const quiet=document.createElement("button");quiet.type="button";quiet.className="main-action";quiet.textContent="🔕 تفعيل وضع الصامت";quiet.onclick=()=>{if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");else openAdhanServices();};wrap.append(quiet);
-      openSub("إشعار الإقامة والصامت",wrap,"alertSettings");return;
+      // Existing searches/deep links land on the original notification control
+      // now nested under "تنبيهات أوقات الصلاة"; never create a second toggle.
+      openAdhanServices("alerts");
+      requestAnimationFrame(()=>{
+        const opener=document.getElementById("adIqamaNoticeOpen");
+        if(opener&&opener.getAttribute("aria-expanded")!=="true")opener.click();
+      });
+      return;
     }
     if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");window.AoqatFridayReminders?.mount?.(wrap);return;}
     if(kind==="fasting"){const wrap=document.createElement("div");wrap.className="web-settings-list";const controls=window.AoqatFastingReminders?.createControls?.();if(controls)wrap.append(controls);openSub("تنبيهات صيام التطوع",wrap,"alertSettings");return;}
