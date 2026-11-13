@@ -41,6 +41,8 @@ const {spawn}=require('node:child_process');
   assert.equal(await page.locator('#paAlertMenu .ad-section-toggle').count()>=2,true);
   await page.locator('#adSilentSettingsToggle').click({position:{x:200,y:23}});
   await page.locator('#adSilentSettings').waitFor({state:'visible'});
+  const master=page.locator('#adSilentSettings [data-web-quiet-toggle="iqama"]');
+  if(await master.getAttribute('aria-pressed')==='false')await master.click();
   assert.equal(await page.locator('#adSilentSettings .web-quiet-stepper').count(),5,'All five prayers get plus/minus controls');
   const minute=page.locator('#adSilentSettings input[data-web-quiet-minutes="fajr"]');
   const before=Number(await minute.inputValue());
