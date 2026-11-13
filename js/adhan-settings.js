@@ -45,6 +45,7 @@
     openSection = "",
     silentSettingsOpen = false,
     audibilityOpen = false,
+    iqamaNoticeOpen = false,
     quietWindow = null,
     selectedSurah = "1",
     azkarKind = "",
@@ -242,6 +243,7 @@
   }
   function render() {
     if (!panel) return;
+    window.AoqatAlertsHub?.parkIqama?.();
     if(!document.getElementById("adAudibilityStyles")){
       const st=document.createElement("style");st.id="adAudibilityStyles";
       st.textContent=".ad-audibility-list{display:grid;gap:8px}.ad-audibility-row{display:grid;gap:7px;padding:11px;border-radius:12px;border:1px solid #c9b88f;background:linear-gradient(110deg,#fffdf7,#f5edda);color:#285342}.ad-audibility-row>strong{font-size:16px}.ad-audibility-row>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ad-audibility-row button{min-height:44px;padding:8px 5px;border-radius:10px;font:inherit;font-size:13px;background:#ece7dc;color:#514b42;border:1px solid #c9bb9c}.ad-audibility-row button.selected{background:#176e58;color:white;border-color:#176e58}.ad-audibility-row button:focus-visible{outline:3px solid #b99442;outline-offset:2px}@media(max-width:340px){.ad-audibility-row>div{grid-template-columns:1fr}}";
@@ -318,6 +320,11 @@
      : ""
  }
 </div></div></div></section></fieldset>
+ <button type="button" id="adIqamaNoticeOpen" class="ad-section-toggle" data-help-description="عرض إشعار الإقامة والتحكم بخلفيته وأذوناته." aria-expanded="${iqamaNoticeOpen}" aria-controls="adIqamaNoticeDetails"><span aria-hidden="true">⏳</span><span>إشعار الإقامة</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>
+ <section id="adIqamaNoticeDetails" class="ad-leaf-window" style="--leaf-level:1" ${iqamaNoticeOpen?'':'hidden'}>
+ <header class="ad-leaf-head"><button type="button" class="ad-leaf-back" id="adIqamaNoticeBack">‹ رجوع</button><h3>إشعار الإقامة</h3></header>
+ <div class="ad-leaf-body"><div class="ad-card" id="adIqamaNoticeContent"></div></div>
+ </section>
  <button type="button" id="adAudibilityToggle" class="ad-section-toggle" data-help-description="التحكم بصوت الأذان ومنبّه الصلاة أثناء الصامت وعدم الإزعاج، لكل صلاة على حدة. لا يغيّر هذا الزر وضع الهاتف." aria-expanded="${audibilityOpen}" aria-controls="adAudibility"><span aria-hidden="true">🔔</span><span>صوت الصلاة أثناء الصامت وعدم الإزعاج</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>
  <section id="adAudibility" class="ad-leaf-window" style="--leaf-level:1" ${audibilityOpen?'':'hidden'}>
  <header class="ad-leaf-head"><button type="button" class="ad-leaf-back" id="adAudibilityBack">‹ رجوع</button><h3>صوت الصلاة أثناء الصامت وعدم الإزعاج</h3></header>
@@ -429,6 +436,27 @@
         }),
     );
 
+    const closeIqamaNotice=()=>{
+      iqamaNoticeOpen=false;
+      $('adIqamaNoticeDetails').hidden=true;
+      $('adIqamaNoticeOpen').setAttribute('aria-expanded','false');
+      window.AoqatAlertsHub?.parkIqama?.();
+      $('adIqamaNoticeOpen').focus({preventScroll:true});
+    };
+    const openIqamaNotice=()=>{
+      iqamaNoticeOpen=true;
+      $('adIqamaNoticeDetails').hidden=false;
+      $('adIqamaNoticeOpen').setAttribute('aria-expanded','true');
+      const original=window.AoqatAlertsHub?.iqamaView?.();
+      if(original)$('adIqamaNoticeContent').replaceChildren(original);
+      $('adIqamaNoticeBack').focus({preventScroll:true});
+    };
+    $('adIqamaNoticeOpen').onclick=openIqamaNotice;
+    $('adIqamaNoticeBack').onclick=closeIqamaNotice;
+    $('adIqamaNoticeDetails').onkeydown=e=>{
+      if(e.key==='Escape'||e.key==='Backspace'){e.preventDefault();e.stopPropagation();closeIqamaNotice();}
+    };
+    if(iqamaNoticeOpen)openIqamaNotice();
     const closeAudibility=()=>{
       audibilityOpen=false;
       $("adAudibility").hidden=true;
