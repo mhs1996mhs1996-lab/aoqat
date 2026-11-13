@@ -1,4 +1,4 @@
-const CACHE_NAME = "aoqat-pwa-v205-quiet-search-20261113";
+const CACHE_NAME = "aoqat-pwa-v206-quiet-layout-20261113";
 const QCF_FONT_CACHE = "aoqat-qcf-v2-fonts";
 const APP_SHELL = [
   "/js/monthly-calendars-core.js?v=11",
@@ -71,7 +71,7 @@ const APP_SHELL = [
   "/css/adhan.css?v=qibla-no-inner-back-20261026",
   "/css/adhan-modal.css?v=6-alert-navigation-labels",
   "/js/adhan-core.js?v=3",
-  "/js/adhan-settings.js?v=all-alert-screen-wake-20261106",
+  "/js/adhan-settings.js?v=206-audibility-submenu",
   "/js/azkar.js?v=1",
   "/assets/quran.json",
   "/assets/audio/adhan-v124-1.mp3",
