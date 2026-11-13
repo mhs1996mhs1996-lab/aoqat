@@ -1,0 +1,45 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {chromium}=require('playwright');
+const {spawn}=require('node:child_process');
+(async()=>{
+ const server=spawn('python3',['-m','http.server','8874'],{stdio:'ignore'});
+ let browser;
+ try{
+  await new Promise(resolve=>setTimeout(resolve,850));
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+  const page=await browser.newPage({viewport:{width:390,height:780},serviceWorkers:'block'});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('http://127.0.0.1:8874/',{waitUntil:'domcontentloaded'});
+  await page.waitForSelector('[data-drawer="alertSettings"]');
+  await page.evaluate(()=>document.body.classList.add('design-menu-open'));
+  await page.locator('[data-drawer="alertSettings"]').click();
+  await page.locator('[data-alert-section="prayer"]').click();
+  await page.locator('#adhanServicesDialog').waitFor({state:'visible'});
+  const trigger=page.locator('#adAudibilityToggle'),leaf=page.locator('#adAudibility');
+  await trigger.waitFor({state:'visible'});
+  assert.equal(await trigger.getAttribute('aria-expanded'),'false');
+  assert.equal(await leaf.isHidden(),true,'Expanded settings must not occupy the main page');
+  assert.equal(await page.locator('#adAudibilityToggle.aoqat-help-eligible').count(),1,'Question mark is on original button');
+  assert.equal(await page.locator('#adhanServicesBody .aoqat-help-holder').count(),0,'No extra help wrappers');
+  const initial=await page.locator('#adhanServicesBody').evaluate(e=>e.scrollHeight);
+  assert.ok(initial<2600,'Compact prayer alert menu must not show giant audio options');
+  await trigger.click({position:{x:200,y:23}});
+  await leaf.waitFor({state:'visible'});
+  assert.equal(await trigger.getAttribute('aria-expanded'),'true');
+  assert.equal(await leaf.locator('[data-ad-audibility]').count(),10,'Keep two sound choices for all five prayers');
+  const button=leaf.locator('[data-ad-audibility="fajr"][data-sound-condition="silent"]');
+  const prior=await button.getAttribute('aria-pressed');
+  await button.click();
+  assert.notEqual(await button.getAttribute('aria-pressed'),prior);
+  assert.equal(await leaf.isVisible(),true,'Toggling a saved setting must not close its page');
+  await button.click();
+  assert.equal(await button.getAttribute('aria-pressed'),prior);
+  await page.locator('#adAudibilityBack').click();
+  assert.equal(await leaf.isHidden(),true);
+  assert.equal(await trigger.getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('#paAlertMenu .ad-section-toggle').count()>=2,true);
+  assert.deepEqual(errors,[]);
+  console.log('PASS: silent/DND sound options are behind one themed help button; back and all ten controls work without extra page height');
+ } finally{await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
