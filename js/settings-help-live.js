@@ -43,6 +43,7 @@
     "إرجاع":"استعادة الإعداد السابق للعنصر."
   };
   function helpText(button){
+    if(button.dataset.helpDescription)return button.dataset.helpDescription;
     const key=button.dataset.alertSection||button.dataset.panel||button.dataset.interfacePage||button.dataset.bagSection||button.id;
     if(DETAILS[key])return DETAILS[key];
     if(button.matches(".interface-visibility-btn"))return "إظهار أو إخفاء هذا العنصر في واجهة البرنامج، مع الاحتفاظ باختيارك.";
