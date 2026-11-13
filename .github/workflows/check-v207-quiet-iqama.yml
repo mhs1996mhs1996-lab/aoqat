@@ -1,0 +1,33 @@
+name: Check v2.07 quiet and iqama interface
+on:
+  push:
+    branches: ['fix/v207-quiet-ui-english-digits-iqama-inside-prayer-20261113']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax and persistent prayer settings
+        run: |
+          set -e
+          node --check js/adhan-settings.js
+          node --check js/alerts-hub.js
+          node --check js/web-menu-order.js
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          node --check tests/v207-quiet-iqama-consolidation-browser.cjs
+          node --test tests/adhan-core.test.cjs tests/prayer-alarm-core.test.cjs tests/web-quiet-core.test.cjs
+      - name: Verify full native-style navigation in mobile Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          CHROME_PATH=/usr/bin/google-chrome node tests/v207-quiet-iqama-consolidation-browser.cjs
+      - name: Retain screenshot if tests fail
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quiet-iqama-v207-preview
+          path: /tmp/aoqat-v207-quiet-layout.png
+          if-no-files-found: ignore
