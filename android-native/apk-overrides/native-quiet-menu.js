@@ -21,6 +21,9 @@
     try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
   }
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
+  // WebView localizes number controls in Arabic. Text with a numeric keyboard
+  // keeps ASCII digits on screen, without changing stored integer minutes.
+  const latinDigits=value=>String(value).replace(/[٠-٩]/g,ch=>String(ch.charCodeAt(0)-0x0660)).replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-0x06f0));
   function section(key,title,help,fallback){
     const s=state[key];
     const body=ids.map(id=>{
@@ -28,7 +31,7 @@
       return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
         '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت لصلاة '+names[id]+'">'+
         '<button type="button" data-quiet-adjust="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل مدة الصامت لصلاة '+names[id]+'">−</button>'+
-        '<input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" lang="en" dir="ltr" style="font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
+        '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" spellcheck="false" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" lang="en" dir="ltr" style="font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
         '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
         '<small>دقيقة</small></div></div>';
     }).join('');
@@ -90,8 +93,11 @@
     }));
     panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
       const group=state[input.dataset.quietKey];
-      if(input.value.trim()===''||!input.checkValidity()){input.value=num(group.minutes[input.dataset.quietPrayer]);return;}
-      group.minutes[input.dataset.quietPrayer]=num(input.value);
+      const entered=latinDigits(input.value.trim());
+      if(!/^\d{1,3}$/.test(entered)||Number(entered)>120){
+        input.value=String(num(group.minutes[input.dataset.quietPrayer]));return;
+      }
+      group.minutes[input.dataset.quietPrayer]=num(entered);
       store();render(false);
     }));
     panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>button.addEventListener('click',()=>{

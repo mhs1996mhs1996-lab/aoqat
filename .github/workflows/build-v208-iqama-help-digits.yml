@@ -1,0 +1,98 @@
+name: Build v2.08 fixed Iqama controls, adaptive help, Latin digits APK
+on:
+  push:
+    branches: ['fix/v208-iqama-help-digits-20261113']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Check UI and original settings are preserved
+        run: |
+          set -euo pipefail
+          node --check js/adhan-settings.js
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          node --check js/alerts-hub.js
+          node --check android-native/apk-overrides/android-ui-fixes.js
+          node --check js/settings-help-live.js
+          node --check js/web-settings-search-calendar.js
+          node --test tests/v208-iqama-help-digits.test.cjs tests/v203-settings-inbox.test.cjs tests/azkar-reminders.test.cjs tests/web-quiet-core.test.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          q=Path('android-native/apk-overrides/native-quiet-menu.js').read_text()
+          a=Path('js/adhan-settings.js').read_text()
+          assert 'data-quiet-adjust' in q and 'data-quiet-preset' not in q
+          assert 'panel.appendChild(status)' not in q
+          assert 'lang="en" dir="ltr"' in q
+          assert 'data-quiet-prayer' in q and 'aq-quiet-stepper' in q
+          for k in ['adAudibilityOpen','adAudibilityBack','adAudibilityHelp','adAudibilityDetails','adAudibilityHelpText']:
+              assert k in a,k
+          assert 'data-ad-audibility' in a and 'data-sound-condition' in a
+          assert 'aoqat-help-circle' in a
+          menu=Path('js/web-menu-order.js').read_text()
+          assert 'aoqatPrayerIqamaEntry' in menu and 'aoqatPrayerQuietEntry' in menu
+          assert '["iqama","⏳","إشعار الإقامة"]' not in menu
+          assert "versionName '2.08'" in Path('android-native/app/build.gradle').read_text()
+          assert 'versionCode 143' in Path('android-native/app/build.gradle').read_text()
+          print('PASS: original Iqama controls, Latin minutes and compact theme help')
+          PY
+      - name: Restore original signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Android tests and build
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify APK signature and offline assets
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-v208
+          cp android-native/app/build/outputs/apk/debug/app-debug.apk /tmp/aoqat-v208/aoqat-v2.08-iqama-help-digits.apk
+          apk=/tmp/aoqat-v208/aoqat-v2.08-iqama-help-digits.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --print-certs "$apk" | tee /tmp/aoqat-v208/signature.txt
+          grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' /tmp/aoqat-v208/signature.txt
+          "$aapt" dump badging "$apk" | grep -F "versionCode='143' versionName='2.08'"
+          python3 - <<'PY'
+          import zipfile
+          p='/tmp/aoqat-v208/aoqat-v2.08-iqama-help-digits.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert len(z.read('assets/www/data/prayer-times-offline.json'))>5000
+              bundle=z.read('assets/www/js/apk-startup-bundle.js').decode()
+              assert 'adAudibilityBack' in bundle and 'adAudibilityHelp' in bundle
+              assert 'aoqatPrayerIqamaEntry' in bundle
+              assert 'panel.appendChild(status)' not in bundle
+              assert 'data-quiet-adjust' in bundle and 'data-quiet-preset' not in bundle
+              assert len([n for n in z.namelist() if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+          print('PASS: APK signed, original offline prayer DB and 604 Quran pages')
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v208/checksum.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v2.08-iqama-help-digits
+          path: |
+            /tmp/aoqat-v208/aoqat-v2.08-iqama-help-digits.apk
+            /tmp/aoqat-v208/checksum.sha256
+      - name: Publish signed installable APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v2.08-iqama-help-digits
+          if ! gh release view "$tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GH_REPO" --target "$GITHUB_SHA" --title "أوقات الصلاة في الحويجة v2.08 — إصلاح إشعار الإقامة والدائرة والأرقام" --notes "إرجاع زر إشعار الإقامة الأصلي وأذوناته وخيارات خلفيته إلى صفحته، تصغير دائرة المساعدة، وإظهار أرقام دقائق الصامت الإنجليزية مع الحفاظ على الإعدادات. دون تغيير المواقيت أو المصحف أو خدمات التنبيه." --prerelease
+          fi
+          gh release upload "$tag" /tmp/aoqat-v208/aoqat-v2.08-iqama-help-digits.apk /tmp/aoqat-v208/checksum.sha256 --repo "$GH_REPO" --clobber

@@ -221,7 +221,8 @@
   }
 
   function addIqamaAppearance(){
-    const host=document.getElementById('iqamaPanel');
+    // Keep the original notification group inside its dedicated submenu.
+    const host=document.getElementById('aoqatAlertSettingsParking')||document.getElementById('iqamaPanel');
     if(!host)return false;
     let group=document.getElementById('iqamaNotificationSettings');
     if(!group){group=document.createElement('section');group.id='iqamaNotificationSettings';group.style.cssText='margin-top:16px;padding:12px 0;border-top:1px solid #bbc9b7';const title=document.createElement('h3');title.textContent='ظهور إشعار الإقامة';group.appendChild(title);host.appendChild(group);}

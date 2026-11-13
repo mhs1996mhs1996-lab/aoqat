@@ -60,7 +60,7 @@
     // Spacing corrections only: no wrapping/reparenting/replacement of buttons.
     // The actual circle stays small; the surrounding native button remains its tap target.
     style.textContent += [
-      "button.aoqat-help-eligible::before{width:20px!important;height:20px!important;min-width:20px!important;min-height:20px!important;border:1.5px solid currentColor!important;font:800 13px/1 Tahoma,Arial,sans-serif!important;opacity:1!important;background:color-mix(in srgb,currentColor 12%,transparent)!important}",
+      "button.aoqat-help-eligible::before{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;border:1.4px solid currentColor!important;font:800 11px/1 Tahoma,Arial,sans-serif!important;opacity:1!important;background:color-mix(in srgb,currentColor 7%,transparent)!important}",
       "#webSubBody button.main-action.aoqat-help-eligible,#webSubBody button.wa-primary.aoqat-help-eligible,#webSubBody button.interface-visibility-btn.aoqat-help-eligible{padding-left:57px!important}",
       "#webInterfaceMenu button.main-action.aoqat-help-eligible{justify-content:flex-start!important;text-align:right!important}",
       "#webInterfaceMenu button.main-action.aoqat-help-eligible>span:last-child{margin-inline-start:0!important}",

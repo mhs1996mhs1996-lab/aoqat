@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 142 // Simplify quiet settings and merge iqama under prayer alerts
-        versionName '2.07'
+        versionCode 143 // Fix Iqama controls, help theme and Latin quiet minutes
+        versionName '2.08'
     }
 
     compileOptions {
