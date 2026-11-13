@@ -43,7 +43,7 @@ const {spawn}=require('node:child_process');
   await page.locator('#adSilentSettings').waitFor({state:'visible'});
   const master=page.locator('#adSilentSettings [data-web-quiet-toggle="iqama"]');
   if(await master.getAttribute('aria-pressed')==='false')await master.click();
-  console.log('DEBUG QUIET PANEL',JSON.stringify(await page.evaluate(()=>({panel:document.getElementById('adSilentSettings')?.outerHTML.slice(0,1700),hasApi:!!window.AoqatWebQuietSettings,quietJs:[...document.scripts].filter(s=>/web-quiet-settings/.test(s.src)).map(s=>s.src),adPanel:!!document.getElementById('paAlertMenu'),master:document.querySelector('[data-web-quiet-toggle]')?.outerHTML,errors:window.AoqatWebQuietSettings?null:'missing api'}))));
+  await page.locator('#adSilentSettings .web-quiet-stepper').first().waitFor({state:'attached'});
   assert.equal(await page.locator('#adSilentSettings .web-quiet-stepper').count(),5,'All five prayers get plus/minus controls');
   const minute=page.locator('#adSilentSettings input[data-web-quiet-minutes="fajr"]');
   const before=Number(await minute.inputValue());
