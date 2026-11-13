@@ -251,6 +251,7 @@
   const ALERT_HELP={
     prayer:'ضبط الأذان والمنبه والصامت لكل صلاة.',
     iqama:'إشعار الإقامة وخيارات الصامت.',
+    quiet:'اختيار متى يبدأ صامت الهاتف، وتحديد مدته وإرجاع الرنين.',
     friday:'تذكير سنن الجمعة وسورة الكهف.',
     fasting:'تذكير صيام التطوع قبل موعده.',
     azkar:'أوقات تذكير الأذكار والصلاة على النبي ﷺ.',
@@ -293,6 +294,7 @@
     const options=[
       ["prayer","🔔","تنبيهات أوقات الصلاة"],
       ["iqama","⏳","إشعار الإقامة"],
+      ["quiet","🔕","وضع الصامت عند الأذان والإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
@@ -312,15 +314,23 @@
     if(kind==="prayer"){openAdhanServices("alerts");return;}
     if(kind==="screen"){screenWakeView();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
-    if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");return;}
+    if(kind==="quiet"){
+      if(window.AndroidNative?.configureAdhan){
+        window.AoqatApkQuietSettings?.render?.();
+        openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");
+      }else{
+        // Web browsers cannot change Android's ringer; show its separate
+        // quiet-time preview without moving the original adhan controls.
+        openAdhanServices("alerts");
+        document.getElementById("adSilentSettingsToggle")?.click();
+      }
+      return;
+    }
     if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
       openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
     }
     if(kind==="iqama"){
-      const wrap=document.createElement("div");wrap.className="web-settings-list";
-      const notification=document.createElement("button");notification.type="button";notification.className="main-action";notification.textContent="🔔 إشعار الإقامة";notification.onclick=()=>openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");wrap.append(notification);
-      const quiet=document.createElement("button");quiet.type="button";quiet.className="main-action";quiet.textContent="🔕 تفعيل وضع الصامت";quiet.onclick=()=>{if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");else openAdhanServices();};wrap.append(quiet);
-      openSub("إشعار الإقامة والصامت",wrap,"alertSettings");return;
+      openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
     }
     if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");window.AoqatFridayReminders?.mount?.(wrap);return;}
     if(kind==="fasting"){const wrap=document.createElement("div");wrap.className="web-settings-list";const controls=window.AoqatFastingReminders?.createControls?.();if(controls)wrap.append(controls);openSub("تنبيهات صيام التطوع",wrap,"alertSettings");return;}
@@ -443,7 +453,7 @@
   }
   if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={
     main:mainView,sub:openSub,panel:(id,title)=>openPanel(title,id,'settings'),interface:openInterfacePart,
-    adhan:()=>{adhanIqamaView();openAdhanServices();},alerts:alertSettingsView,bag:openMuslimBagSection,
+    adhan:()=>{adhanIqamaView();openAdhanServices();},alerts:alertSettingsView,alert:openAlertSection,bag:openMuslimBagSection,
     drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
   };
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",()=>setTimeout(install,100));}
