@@ -44,6 +44,7 @@
     locationBearing,
     openSection = "",
     silentSettingsOpen = false,
+    audibilityOpen = false,
     quietWindow = null,
     selectedSurah = "1",
     azkarKind = "",
@@ -317,11 +318,14 @@
      : ""
  }
 </div></div></div></section></fieldset>
- <div class="ad-card" id="adAudibility"><h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
+ <button type="button" id="adAudibilityToggle" class="ad-section-toggle" data-help-description="التحكم بصوت الأذان ومنبّه الصلاة أثناء الصامت وعدم الإزعاج، لكل صلاة على حدة. لا يغيّر هذا الزر وضع الهاتف." aria-expanded="${audibilityOpen}" aria-controls="adAudibility"><span aria-hidden="true">🔔</span><span>صوت الصلاة أثناء الصامت وعدم الإزعاج</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>
+ <section id="adAudibility" class="ad-leaf-window" style="--leaf-level:1" ${audibilityOpen?'':'hidden'}>
+ <header class="ad-leaf-head"><button type="button" class="ad-leaf-back" id="adAudibilityBack">‹ رجوع</button><h3>صوت الصلاة أثناء الصامت وعدم الإزعاج</h3></header>
+ <div class="ad-leaf-body"><div class="ad-card">
  <p class="ad-note">زرّان لكل صلاة من الصلوات الخمس، ينطبقان على الأذان ومنبّه الصلاة إذا كانا مفعّلين. إشعار الصلاة العادي مستقل.</p>
  <div class="ad-audibility-list">${C.ids.map(id => '<div class="ad-audibility-row"><strong>'+names[id]+'</strong><div><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 بالصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 بعدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div></div>').join('')}</div>
  <p class="ad-note">إذا اجتمع الصامت وعدم الإزعاج، يجب تشغيل الزرين للصلاة. تشغيل الصوت أثناء عدم الإزعاج على أندرويد قد يحتاج منح إذن «التحكم بعدم الإزعاج»، ويستعاد وضعه السابق بعد انتهاء الصوت. المتصفح لا يستطيع تغيير أو قراءة وضع صوت الهاتف.</p>
- </div><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+ </div></div></section><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     if (!native && servicePanel) {
       const services = panel.querySelector("#adSection-services"); services.hidden = false;
       services.querySelector("h3")?.remove();
@@ -424,6 +428,29 @@
           render();
         }),
     );
+
+    const closeAudibility=()=>{
+      audibilityOpen=false;
+      $("adAudibility").hidden=true;
+      $("adAudibilityToggle").setAttribute("aria-expanded","false");
+      $("adAudibilityToggle").focus({preventScroll:true});
+    };
+    window.aoqatCloseAudibility=()=>{
+      audibilityOpen=false;
+      const page=$("adAudibility"),toggle=$("adAudibilityToggle");
+      if(page)page.hidden=true;
+      if(toggle)toggle.setAttribute("aria-expanded","false");
+    };
+    $("adAudibilityToggle").onclick=()=>{
+      audibilityOpen=true;
+      $("adAudibility").hidden=false;
+      $("adAudibilityToggle").setAttribute("aria-expanded","true");
+      $("adAudibilityBack").focus({preventScroll:true});
+    };
+    $("adAudibilityBack").onclick=closeAudibility;
+    $("adAudibility").onkeydown=e=>{
+      if(e.key==="Escape"||e.key==="Backspace"){e.preventDefault();e.stopPropagation();closeAudibility();}
+    };
     panel.querySelectorAll("[data-ad-audibility]").forEach(button => button.onclick=()=>{
       const id=button.dataset.adAudibility,condition=button.dataset.soundCondition;
       if(!C.ids.includes(id)||!["silent","dnd"].includes(condition))return;
@@ -432,7 +459,9 @@
       persist();
       if(native&&condition==="dnd"&&state.audibility[id].dnd)
         window.AndroidNative.requestPrayerAudioDndPermission?.();
-      render();
+      button.setAttribute("aria-pressed",String(!!state.audibility[id][condition]));
+      button.classList.toggle("selected",!!state.audibility[id][condition]);
+      button.textContent=(condition==="silent"?"🔕 بالصامت: ":"🌙 بعدم الإزعاج: ")+(state.audibility[id][condition]?"تشغيل":"إيقاف");
     });
     if (native) {
       $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
