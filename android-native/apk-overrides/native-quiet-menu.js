@@ -28,16 +28,12 @@
       return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
         '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت لصلاة '+names[id]+'">'+
         '<button type="button" data-quiet-adjust="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل مدة الصامت لصلاة '+names[id]+'">−</button>'+
-        '<input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
-        '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
-        '<small>دقيقة</small></div></div>';
+        '<small>دقيقة</small><input type="number" inputmode="numeric" min="0" max="120" step="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
+        '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button></div></div>';
     }).join('');
-    const presets=[5,10,15,20,30].map(value=>'<button type="button" data-quiet-preset="'+value+'" data-quiet-group="'+key+'">'+value+' د</button>').join('');
     return '<section class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
       '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+
-      '<p class="aq-quiet-caption">حدد المدة لكل صلاة (0 = إيقاف لهذه الصلاة)</p>'+body+
-      '<p class="aq-quiet-caption">مدة موحدة لجميع الصلوات</p><div class="aq-quiet-presets" role="group" aria-label="مدد الصامت السريعة">'+presets+
-      '<button type="button" data-quiet-preset="0" data-quiet-group="'+key+'">إيقاف الكل</button></div>'+
+      '<p class="aq-quiet-caption">اضبط كل صلاة بدقيقة واحدة عبر + و−. الصفر يوقف الصامت لهذه الصلاة فقط.</p>'+body+
       '</div></section>';
   }
   function permission(){
@@ -101,11 +97,6 @@
       store();render(false);
       panel.querySelector('input[data-quiet-key="'+button.dataset.quietKey+'"][data-quiet-prayer="'+id+'"]')?.focus({preventScroll:true});
     }));
-    panel.querySelectorAll('[data-quiet-preset]').forEach(button=>button.addEventListener('click',()=>{
-      const group=state[button.dataset.quietGroup],value=num(button.dataset.quietPreset);
-      for(const id of ids)group.minutes[id]=value;
-      store();render(false);
-    }));
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
   }
   function create(){
@@ -131,12 +122,14 @@
       #quietPanel .aq-quiet-times[hidden]{display:none!important}
       #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
       #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:4px!important;direction:ltr!important;flex:0 0 auto!important}
-      #quietPanel .aq-quiet-stepper button{width:34px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;padding:0!important;font-size:19px!important}
+      #quietPanel .aq-quiet-stepper button{width:43px!important;height:46px!important;min-height:46px!important;border:1px solid var(--wt-border,#85a595)!important;border-radius:11px!important;background:linear-gradient(125deg,var(--wt-button-accent,#215638),var(--wt-accent,#438b6b))!important;color:#fff!important;padding:0!important;font-size:23px!important;font-weight:700!important}
+      #quietPanel .aq-quiet-stepper button:active{filter:brightness(1.12)!important}
+      #quietPanel .aq-quiet-minute{min-height:58px!important;padding:4px 0!important}
+      #quietPanel .aq-quiet-stepper{border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:13px!important;padding:5px!important;background:var(--wt-surface2,#eef3f0)!important}
+      #quietPanel .aq-quiet-stepper input{width:46px!important;height:46px!important;min-height:46px!important;font-size:20px!important;font-weight:750!important}
       #quietPanel .aq-quiet-stepper input{width:46px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:7px!important;text-align:center!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#234037)!important;font-size:16px!important;padding:0!important;appearance:textfield!important}
       #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
       #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
-      #quietPanel .aq-quiet-presets{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
-      #quietPanel .aq-quiet-presets button{min-height:36px!important;padding:5px 9px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;font-size:13px!important}
       #quietPanel .aq-quiet-minute{border-bottom:1px solid var(--wt-border,#d9e1d8)!important}
       #quietPanel .aq-quiet-card{background:var(--wt-surface,#fbfdf9)!important;border-color:var(--wt-border,#c4d5c7)!important}
       #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#234037)!important;border-color:var(--wt-border,#cad7c8)!important}
