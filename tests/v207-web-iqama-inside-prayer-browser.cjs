@@ -1,0 +1,42 @@
+'use strict';
+const assert=require('node:assert/strict'),{chromium}=require('playwright'),{spawn}=require('node:child_process');
+(async()=>{
+ const server=spawn('python3',['-m','http.server','8991'],{stdio:'ignore'});
+ let browser;
+ try{
+  await new Promise(r=>setTimeout(r,850));
+  browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox','--disable-dev-shm-usage']});
+  const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',timezoneId:'Asia/Baghdad'});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/rest/**',route=>route.abort());
+  await page.goto('http://127.0.0.1:8991/',{waitUntil:'domcontentloaded'});
+  await page.waitForFunction(()=>window.aoqatUIReady&&window.AoqatAlertsHub&&window.AoqatWebSettingsNavigation&&document.querySelector('#iqamaNotificationToggle'),{timeout:45000});
+  await page.evaluate(()=>document.body.classList.add('design-menu-open'));
+  await page.locator('[data-drawer="alertSettings"]').click();
+  assert.equal(await page.locator('[data-alert-section="iqama"]').count(),0,'Iqama is not duplicated at the root');
+  await page.locator('[data-alert-section="prayer"]').click();
+  await page.locator('#adhanServicesDialog').waitFor({state:'visible'});
+  const button=page.locator('#adIqamaNoticeOpen');
+  await button.waitFor({state:'visible'});
+  assert.equal(await button.getAttribute('aria-expanded'),'false');
+  await button.click({position:{x:145,y:24}});
+  await page.locator('#adIqamaNoticeContent #iqamaNotificationToggle').waitFor({state:'visible'});
+  assert.equal(await page.locator('#iqamaNotificationToggle').count(),1,'The existing toggle is reused, not recreated');
+  const control=page.locator('#adIqamaNoticeContent #iqamaNotificationToggle');
+  const before=await page.evaluate(()=>localStorage.getItem('aoqatIqamaNotificationEnabledV1'));
+  await control.click();
+  assert.notEqual(await page.evaluate(()=>localStorage.getItem('aoqatIqamaNotificationEnabledV1')),before);
+  await control.click();
+  assert.equal(await page.evaluate(()=>localStorage.getItem('aoqatIqamaNotificationEnabledV1')),before);
+  await page.locator('#adIqamaNoticeBack').click();
+  assert.equal(await page.locator('#adIqamaNoticeDetails').isVisible(),false);
+  await button.click({position:{x:145,y:24}});
+  await page.locator('#adIqamaNoticeContent #iqamaNotificationToggle').waitFor({state:'visible'});
+  await page.evaluate(()=>document.getElementById('adEnable').click());
+  await page.locator('#adIqamaNoticeContent #iqamaNotificationToggle').waitFor({state:'visible'});
+  assert.equal(await page.locator('#iqamaNotificationToggle').count(),1,'Native control survives a prayer-setting rerender');
+  await page.screenshot({path:'/tmp/aoqat-v207-web-iqama.png'});
+  assert.deepEqual(errors,[],'No browser runtime errors');
+  console.log('PASS: hosted web has one live Iqama toggle inside prayer alerts, no duplicate list entry, keeps notifications saved through navigation and rerender.');
+ }finally{await browser?.close();server.kill();}
+})().catch(e=>{console.error(e);process.exitCode=1;});
