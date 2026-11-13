@@ -28,6 +28,16 @@
     panel.classList.add('pa-ordered-layout');
     let menu=$('paAlertMenu');
     if(!menu){menu=document.createElement('div');menu.id='paAlertMenu';menu.setAttribute('aria-label','إعدادات الأذان والتنبيه');panel.insertBefore(menu,$('adEnable').nextSibling);}
+    // One entry in the prayer-alerts menu; the existing iqama settings and
+    // notification toggle are reused, never copied or given a second handler.
+    let iqamaOpen=$('paIqamaNotificationOpen');
+    if(!iqamaOpen){
+      iqamaOpen=document.createElement('button');iqamaOpen.type='button';
+      iqamaOpen.id='paIqamaNotificationOpen';iqamaOpen.className='ad-section-toggle';
+      iqamaOpen.innerHTML='<span aria-hidden="true">⏳</span><span>إشعار الإقامة</span><span class="ad-section-chevron" aria-hidden="true">‹</span>';
+      iqamaOpen.setAttribute('aria-label','فتح إعدادات إشعار الإقامة');
+      iqamaOpen.onclick=()=>window.aoqatOpenPrayerIqama?.();
+    }
     const enabled=$('adEnable')?.getAttribute('aria-pressed')==='true';
     const sound=panel.querySelector('[data-ad-section="sound"]'),notifications=panel.querySelector('[data-ad-section="notifications"]'),friday=panel.querySelector('[data-ad-section="friday"]');
     const choices=root.querySelector('.ad-leaf-body');if(notifications&&notifications.parentElement!==choices)choices.appendChild(notifications);
@@ -48,7 +58,7 @@
       const backButton=soundPanel.querySelector(':scope > header button');if(backButton)backButton.onclick=back;
       if(!soundPanel.dataset.methodSoundBack){soundPanel.dataset.methodSoundBack='true';soundPanel.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();back();}},true);}
     }
-    [$('paMethodOpen'),...(webQuiet?[quietButton]:[]),friday].forEach((button,index)=>{if(button&&menu.children[index]!==button)menu.insertBefore(button,menu.children[index]||null);});
+    [$('paMethodOpen'),iqamaOpen,...(webQuiet?[quietButton]:[]),friday].forEach((button,index)=>{if(button&&menu.children[index]!==button)menu.insertBefore(button,menu.children[index]||null);});
     for(const button of [sound,notifications])if(button)button.disabled=!enabled;
     mode.disabled=$('adEnable')?.getAttribute('aria-pressed')!=='true';
     for(const id of ['prayerAlarmPanel','adSection-modes','adSection-sound','adSection-notifications'])$(id)?.style.setProperty('--leaf-level',2);
