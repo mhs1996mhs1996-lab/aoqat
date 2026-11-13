@@ -86,9 +86,18 @@
     if(!dialog){
       dialog=document.createElement("section");dialog.id="adhanServicesDialog";dialog.hidden=true;
       dialog.dir="rtl";dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","adhanServicesTitle");
-      dialog.innerHTML='<header class="ad-modal-head"><button type="button" id="adhanServicesBack" aria-label="رجوع إلى بيانات الأذان والإقامة">‹ رجوع</button><h2 id="adhanServicesTitle">الأذان والتنبيه</h2></header><div id="adhanServicesBody"></div>';
+      dialog.innerHTML='<header class="ad-modal-head"><button type="button" id="adhanServicesBack" aria-label="رجوع إلى بيانات الأذان والإقامة">‹ رجوع</button><h2 id="adhanServicesTitle">الأذان والتنبيه</h2></header><div id="adhanServicesBody"><div id="aoqatPrayerAlertExtra" class="web-settings-list" hidden><button type="button" class="main-action" id="aoqatPrayerIqamaEntry">⏳ إشعار الإقامة ‹</button><button type="button" class="main-action" id="aoqatPrayerQuietEntry">🔕 تفعيل وضع الصامت ‹</button></div></div>';
       document.body.appendChild(dialog);
       dialog.querySelector("#adhanServicesBack").onclick=closeAdhanServices;
+      dialog.querySelector("#aoqatPrayerIqamaEntry").onclick=()=>{
+        closeAdhanServices();
+        openSub("إشعار الإقامة",window.AoqatAlertsHub?.iqamaView?.(),"prayerAlerts");
+      };
+      dialog.querySelector("#aoqatPrayerQuietEntry").onclick=()=>{
+        closeAdhanServices();
+        if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");
+        else openSub("تفعيل وضع الصامت",window.AoqatAlertsHub?.iqamaView?.(),"prayerAlerts");
+      };
       dialog.addEventListener("keydown",e=>{
         if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAdhanServices();}
         if(e.key!=="Tab")return;
@@ -101,12 +110,14 @@
     const mode=view==="alerts"?"alerts":"voice";
     if(!dialog.hidden&&dialog.contains(p)){
       dialog.dataset.aoqatView=mode;
+      dialog.querySelector("#aoqatPrayerAlertExtra").hidden=mode!=="alerts";
       dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"مواقيت الصلاة وصوت الأذان";
       queueAdhanView();return;
     }
     adhanReturnFocus=document.activeElement;adhanHome=p.parentElement;
     const sidebar=document.querySelector(".sidebar");sidebarWasInert=sidebar?.inert||false;if(sidebar)sidebar.inert=true;
     dialog.dataset.aoqatView=mode;
+    dialog.querySelector("#aoqatPrayerAlertExtra").hidden=mode!=="alerts";
     dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"مواقيت الصلاة وصوت الأذان";
     dialog.querySelector("#adhanServicesBack").setAttribute("aria-label",mode==="alerts"?"رجوع إلى ضبط التنبيهات":"رجوع إلى بيانات الأذان والإقامة");
     dialog.querySelector("#adhanServicesBody").appendChild(p);dialog.hidden=false;
@@ -292,7 +303,6 @@
     const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
     const options=[
       ["prayer","🔔","تنبيهات أوقات الصلاة"],
-      ["iqama","⏳","إشعار الإقامة"],
       ["friday","🌿","تنبيهات سنن يوم الجمعة"],
       ["fasting","🌙","تنبيهات صيام التطوع"],
       ["azkar","📿","تنبيهات الأذكار"],
@@ -312,16 +322,7 @@
     if(kind==="prayer"){openAdhanServices("alerts");return;}
     if(kind==="screen"){screenWakeView();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
-    if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","alertSettings");return;}
-    if(kind==="iqama"&&!window.AndroidNative?.configureAdhan){
-      openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");return;
-    }
-    if(kind==="iqama"){
-      const wrap=document.createElement("div");wrap.className="web-settings-list";
-      const notification=document.createElement("button");notification.type="button";notification.className="main-action";notification.textContent="🔔 إشعار الإقامة";notification.onclick=()=>openSub("إشعار الإقامة",api?.iqamaView?.(),"alertSettings");wrap.append(notification);
-      const quiet=document.createElement("button");quiet.type="button";quiet.className="main-action";quiet.textContent="🔕 تفعيل وضع الصامت";quiet.onclick=()=>{if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");else openAdhanServices();};wrap.append(quiet);
-      openSub("إشعار الإقامة والصامت",wrap,"alertSettings");return;
-    }
+    if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","prayerAlerts");return;}
     if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");window.AoqatFridayReminders?.mount?.(wrap);return;}
     if(kind==="fasting"){const wrap=document.createElement("div");wrap.className="web-settings-list";const controls=window.AoqatFastingReminders?.createControls?.();if(controls)wrap.append(controls);openSub("تنبيهات صيام التطوع",wrap,"alertSettings");return;}
     if(kind==="azkar"){
@@ -408,7 +409,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts")openAdhanServices("alerts");else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(["quran","qibla","azkar"].includes(id)){
