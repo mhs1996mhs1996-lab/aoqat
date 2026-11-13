@@ -1,0 +1,90 @@
+name: Build v2.05 quiet settings signed APK
+on:
+  push:
+    branches: ['fix/v205-quiet-search-and-safe-restore-20261113']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Verify changed quiet and search code
+        run: |
+          set -euo pipefail
+          node --check js/web-settings-search-calendar.js
+          node --check js/web-menu-order.js
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          node --test tests/v203-settings-inbox.test.cjs tests/azkar-reminders.test.cjs tests/web-quiet-core.test.cjs
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('js/web-settings-search-calendar.js').read_text()
+          n=Path('js/web-menu-order.js').read_text()
+          q=Path('android-native/apk-overrides/native-quiet-menu.js').read_text()
+          p=Path('android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt').read_text()
+          assert 'nav().quiet();if(selector)reveal(selector)' in s
+          assert "quiet:()=>{if(window.AndroidNative?.configureAdhan)openAlertSection('quiet')" in n
+          assert 'data-quiet-adjust' in q and 'data-quiet-preset' in q
+          assert 'if(successful&&!preview&&!manuallyStopped&&!stopRequested)' in p
+          assert "versionName '2.05'" in Path('android-native/app/build.gradle').read_text()
+          assert 'versionCode 140' in Path('android-native/app/build.gradle').read_text()
+          assert Path('android-native/app/src/main/res/layout/notification_lock_next.xml').exists()
+          assert Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt').exists()
+          print('PASS: quiet search, controls, restoration guard and original widget files')
+          PY
+      - name: Restore stable APK signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Run Android tests and build
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify signed installable APK and offline data
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aoqat-v205
+          cp android-native/app/build/outputs/apk/debug/app-debug.apk /tmp/aoqat-v205/aoqat-v2.05-quiet-search-safe-restore.apk
+          apk=/tmp/aoqat-v205/aoqat-v2.05-quiet-search-safe-restore.apk
+          signer="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -1)"
+          aapt="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -1)"
+          "$signer" verify --print-certs "$apk" | tee /tmp/aoqat-v205/signature.txt
+          grep -F 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' /tmp/aoqat-v205/signature.txt
+          "$aapt" dump badging "$apk" | grep -F "versionCode='140' versionName='2.05'"
+          python3 - <<'PY'
+          import zipfile
+          p='/tmp/aoqat-v205/aoqat-v2.05-quiet-search-safe-restore.apk'
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert len(z.read('assets/www/data/prayer-times-offline.json'))>5000
+              js=z.read('assets/www/js/apk-startup-bundle.js').decode()
+              assert 'data-quiet-adjust' in js and 'data-quiet-preset' in js
+              assert 'nav().quiet();if(selector)reveal(selector)' in js
+              assert len([n for n in z.namelist() if n.startswith('assets/www/assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')])==604
+          print('PASS: signed APK, quiet controls, offline prayer data, 604 Quran pages')
+          PY
+          sha256sum "$apk" > /tmp/aoqat-v205/checksum.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v2.05-quiet-search-safe-restore
+          path: |
+            /tmp/aoqat-v205/aoqat-v2.05-quiet-search-safe-restore.apk
+            /tmp/aoqat-v205/checksum.sha256
+      - name: Publish signed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v2.05-quiet-search-safe-restore
+          if ! gh release view "$tag" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release create "$tag" --repo "$GH_REPO" --target "$GITHUB_SHA" --title "أوقات الصلاة في الحويجة v2.05 — ضبط الصامت" --notes "إصلاح نتائج بحث الصامت، وتحسين أزرار المدد لكل صلاة، وعدم تفعيل الصامت القديم عند إيقاف الأذان يدوياً. بقية المحتويات محفوظة." --prerelease
+          fi
+          gh release upload "$tag" /tmp/aoqat-v205/aoqat-v2.05-quiet-search-safe-restore.apk /tmp/aoqat-v205/checksum.sha256 --repo "$GH_REPO" --clobber
