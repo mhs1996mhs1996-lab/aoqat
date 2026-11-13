@@ -5,6 +5,7 @@ on:
     paths:
       - 'js/settings-help-live.js'
       - 'js/adhan-settings.js'
+      - 'js/web-quiet-settings.js'
       - 'js/web-menu-order.js'
       - 'css/adhan.css'
       - 'tests/help-layout-regression-browser.cjs'
@@ -23,6 +24,7 @@ jobs:
         run: |
           node --check js/settings-help-live.js
           node --check js/adhan-settings.js
+          node --check js/web-quiet-settings.js
           node --check js/web-menu-order.js
           node --check tests/help-layout-regression-browser.cjs
           node --check tests/audibility-button-browser.cjs
