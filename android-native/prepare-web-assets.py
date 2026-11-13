@@ -239,7 +239,7 @@ transform('prayer-countdown.js', [
 # regression was introduced during launcher-widget adaptations.
 
 # Include current calendar/search services in Android and use its image sharing bridge.
-transform('web-menu-order.js', [('if(!window.AndroidNative?.configureAdhan)window.AoqatWebSettingsNavigation={', 'window.AoqatWebSettingsNavigation={')])
+# Navigation is already exported for web and Android in web-menu-order.js; do not replace it again.
 transform('web-settings-search-calendar.js', [('if(window.AndroidNative?.configureAdhan)return;', '')])
 transform('monthly-calendars-renderer.js', [('if(window.AndroidNative?.configureAdhan)return;', ''), ('url("/assets/fonts/amiri-quran.ttf")','url("assets/fonts/amiri-quran.ttf")')])
 # Do not block calendar rendering on unrelated Quran/WebView font loading.
