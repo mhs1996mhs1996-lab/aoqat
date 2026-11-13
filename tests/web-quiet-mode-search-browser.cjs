@@ -12,6 +12,7 @@ const {chromium}=require('playwright'),{spawn}=require('node:child_process');
   await page.route('**/rest/**',r=>r.abort());
   await page.goto('http://127.0.0.1:8893/',{waitUntil:'domcontentloaded'});
   await page.waitForFunction(()=>window.aoqatUIReady && !!window.AoqatWebQuietSettings && !!window.AoqatWebSettingsNavigation);
+  await page.locator('#designSideMenuBtn').click();
   await page.evaluate(()=>AoqatWebSettingsNavigation.alert('quiet'));
   await page.locator('#aoqatQuietWebPanel input[name="aoqatQuietMode"]').first().waitFor();
   assert.equal(await page.locator('#aoqatQuietWebPanel input[name="aoqatQuietMode"]').count(),4);
