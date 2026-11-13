@@ -32,12 +32,11 @@
         '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
         '<small>دقيقة</small></div></div>';
     }).join('');
-    const presets=[5,10,15,20,30].map(value=>'<button type="button" data-quiet-preset="'+value+'" data-quiet-group="'+key+'">'+value+' د</button>').join('');
+
     return '<section class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
       '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+
-      '<p class="aq-quiet-caption">حدد المدة لكل صلاة (0 = إيقاف لهذه الصلاة)</p>'+body+
-      '<p class="aq-quiet-caption">مدة موحدة لجميع الصلوات</p><div class="aq-quiet-presets" role="group" aria-label="مدد الصامت السريعة">'+presets+
-      '<button type="button" data-quiet-preset="0" data-quiet-group="'+key+'">إيقاف الكل</button></div>'+
+      '<p class="aq-quiet-caption">المدة لكل صلاة بالدقائق؛ استخدم + و− كما في أوقات الإقامة (0 = إيقاف).</p>'+body+
+
       '</div></section>';
   }
   function permission(){
@@ -101,11 +100,6 @@
       store();render(false);
       panel.querySelector('input[data-quiet-key="'+button.dataset.quietKey+'"][data-quiet-prayer="'+id+'"]')?.focus({preventScroll:true});
     }));
-    panel.querySelectorAll('[data-quiet-preset]').forEach(button=>button.addEventListener('click',()=>{
-      const group=state[button.dataset.quietGroup],value=num(button.dataset.quietPreset);
-      for(const id of ids)group.minutes[id]=value;
-      store();render(false);
-    }));
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
   }
   function create(){
@@ -130,18 +124,18 @@
       #quietPanel .aq-quiet-times{display:grid!important;grid-template-columns:1fr!important;gap:5px!important}
       #quietPanel .aq-quiet-times[hidden]{display:none!important}
       #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
-      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:4px!important;direction:ltr!important;flex:0 0 auto!important}
-      #quietPanel .aq-quiet-stepper button{width:34px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;padding:0!important;font-size:19px!important}
-      #quietPanel .aq-quiet-stepper input{width:46px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:7px!important;text-align:center!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#234037)!important;font-size:16px!important;padding:0!important;appearance:textfield!important}
+      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:8px!important;direction:ltr!important;flex:0 0 auto!important;padding:5px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:13px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 4px #1d533b22!important}
+      #quietPanel .aq-quiet-stepper button{width:43px!important;height:45px!important;min-height:45px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:27px!important}
+      #quietPanel .aq-quiet-stepper input{width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
       #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
       #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
       #quietPanel .aq-quiet-presets{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
       #quietPanel .aq-quiet-presets button{min-height:36px!important;padding:5px 9px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;font-size:13px!important}
-      #quietPanel .aq-quiet-minute{border-bottom:1px solid var(--wt-border,#d9e1d8)!important}
+      #quietPanel .aq-quiet-minute{border-bottom:0!important}
       #quietPanel .aq-quiet-card{background:var(--wt-surface,#fbfdf9)!important;border-color:var(--wt-border,#c4d5c7)!important}
       #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#234037)!important;border-color:var(--wt-border,#cad7c8)!important}
 
-      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:40px!important;margin:0!important;color:#234037!important}
+      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:63px!important;margin:4px 0!important;color:#234037!important}
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
       #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}
