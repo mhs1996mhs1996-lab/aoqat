@@ -32,10 +32,19 @@ Keep independently verified offline backups, and keep passphrases separate.
 The previous APK debug signing keystore was exposed in public repository history.
 Deleting it from this branch cannot erase historical copies or make it trustworthy again.
 
-The owner's new Android APK signer (V2) is different from the OTA key. It must
-**not** silently replace the signer for already installed versions.
-Test Android signing-lineage migration on Android 9+, and design a safe migration
-for Android 8/8.1, which cannot rely on APK Signature Scheme v3 lineage.
-Preserve user data. Do not instruct an uninstall as a shortcut.
-Branch protections, required reviewers and an owner-approved production release
+The owner's new Android APK signer (V2) is different from the OTA key.
+A different APK signing certificate cannot be silently substituted for an
+installed app's prior certificate. The owner clarified that old APK recipients
+are only a **small informed beta test group**. The newly chosen path for
+**those consenting beta testers only** is a clean V2 APK installation after
+removal of their old test APK, clearly warning that removal deletes app-private
+trial data and requires reconfiguring settings. See
+`security/BETA-CLEAN-INSTALL-V2.md`.
+
+For general users who require in-place upgrades and data preservation, Android
+9+ signing-lineage migration and Android 8/8.1 data migration remain optional
+research, not prerequisites for the consenting beta clean-install route.
+
+Private keys remain owner-only. Exact-V2 APK signature verification, offline
+function tests, branch protection where possible, and owner-approved release
 remain mandatory.
