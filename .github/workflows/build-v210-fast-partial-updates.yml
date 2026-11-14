@@ -38,6 +38,7 @@ jobs:
           node --check js/reminder-inbox.js
           node --test tests/v203-settings-inbox.test.cjs
       # Unit tests also verify versioned /android-updates/build-145/ and v2.09 legacy URL.
+      # Release tag is unique to the final endpoint-isolated source commit.
       - name: Verify native update handling and build installable APK
         run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
       - name: Verify exact version, offline assets, signature and SHA-256
@@ -88,7 +89,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          tag=v2.10-fast-partial-update-foundation-test
+          tag=v2.10-fast-partial-updates-base
           cat > release/notes.txt <<'NOTES'
           إصدار تأسيسي تجريبي 2.10 لترقية نسخة 2.09: فحص التحديث الجزئي عند فتح التطبيق أو العودة إليه كل خمس دقائق بحد أدنى، وتصحيح دوائر الاستفهام غير المفيدة بقائمة الإشعارات. المصحف والمواقيت محفوظان دون تغيير.
           اختبارات Android الآلية واختبارات التوقيع والملفات دون إنترنت نجحت. يلزم اختبار ظهور علامة التحديث الجزئي على هاتف حقيقي قبل اعتماد النظام للإنتاج.
