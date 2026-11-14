@@ -37,6 +37,7 @@ jobs:
           node --check js/settings-help-live.js
           node --check js/reminder-inbox.js
           node --test tests/v203-settings-inbox.test.cjs
+      # Unit tests also verify versioned /android-updates/build-145/ and v2.09 legacy URL.
       - name: Verify native update handling and build installable APK
         run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
       - name: Verify exact version, offline assets, signature and SHA-256
@@ -91,7 +92,7 @@ jobs:
           cat > release/notes.txt <<'NOTES'
           إصدار تأسيسي تجريبي 2.10 لترقية نسخة 2.09: فحص التحديث الجزئي عند فتح التطبيق أو العودة إليه كل خمس دقائق بحد أدنى، وتصحيح دوائر الاستفهام غير المفيدة بقائمة الإشعارات. المصحف والمواقيت محفوظان دون تغيير.
           اختبارات Android الآلية واختبارات التوقيع والملفات دون إنترنت نجحت. يلزم اختبار ظهور علامة التحديث الجزئي على هاتف حقيقي قبل اعتماد النظام للإنتاج.
-          ملاحظة: نسخة 2.10 / البناء 145 تحتاج حزمة ويب مخصصة للبناء 145؛ لا يمكن استلام حزمة النسخ القديمة.
+          لكل إصدار مسار تحديث مستقل. البناء 145 يستخدم android-updates/build-145/ ولا يعطل مسار البناء 144 القديم. هذا ملف تأسيسي، وتجربة وصول التحديث على هاتف فعلي لازمة للاعتماد النهائي.
           NOTES
           if ! gh release view "$tag" >/dev/null 2>&1; then
             gh release create "$tag" --target "$GITHUB_SHA" --title 'أوقات الصلاة في الحويجة v2.10 — أساس التحديث الجزئي (تجريبي)' --notes-file release/notes.txt --prerelease
