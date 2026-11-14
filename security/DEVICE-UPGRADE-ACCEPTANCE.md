@@ -56,9 +56,13 @@ Both `android-native/app/src/main/res/xml/backup_rules.xml` and
 Therefore **Android Auto Backup is NOT a complete user-data migration path**.
 An install-over update normally retains app-private data, but reinstalling with
 a different signer can lose settings. The Android 8/8.1 migration plan MUST
-include explicit backup/export/restore support and verification for these
-excluded adhan settings and custom audio, in addition to WebView localStorage,
-Quran position/bookmarks and other private preferences.
+include explicit, consent-based export/restore of persistent user-selected
+adhan settings and the single `filesDir/custom-adhan` audio file, plus WebView
+localStorage, Quran position/bookmarks and other user preferences. It must
+**NOT** copy `adhan_ringer`, `adhan_audio_volume`, `adhan_resume` or the
+`adhan_settings` delivery/retry markers as if they were user choices: these
+contain transient sound-restoration or scheduler state. Details are in
+`security/ANDROID8-TRANSITION-OPTIONS.md`.
 
 **Do not remove these exclusions blindly**: notifications, ringtone/DND
 permissions and file locations may differ by device. Review and test a
