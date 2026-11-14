@@ -12,6 +12,7 @@ on:
       - 'android-native/prepare-web-assets.py'
       - 'android-native/app/build.gradle'
       - 'scripts/prepare-android-update.py'
+      - 'scripts/partial-update-proof.js'
       - '.github/workflows/preview-partial-web-update.yml'
   workflow_dispatch:
 
@@ -34,6 +35,10 @@ jobs:
           manifest=json.loads((root/'manifest.json').read_text())
           assert manifest['nativeBuild']==143, 'Only v2.08 (versionCode 143) is the target'
           files=manifest['files']
+          assert 'js/partial-update-proof.js' in files
+          assert 'js/partial-update-proof.js' in (root/'files/index.html').read_text()
+          assert 'js/partial-update-proof.js' not in pathlib.Path('index.html').read_text()
+          assert 'تجربة التحديث الجزئي 01' in (root/'files/js/partial-update-proof.js').read_text()
           assert 1 <= len(files) <= 250 and 'index.html' in files
           total=0
           for path,digest in files.items():
