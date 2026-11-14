@@ -119,6 +119,9 @@
     root.querySelectorAll('button.aoqat-help-badge').forEach(badge=>badge.remove());
   }
   function decorate(button){
+    // Inbox items show delivered reminders, not configurable settings.
+    // No generic question marks in the notification history or its details.
+    if(button.closest('#reminderInbox'))return;
     if(button.classList.contains('aoqat-help-eligible'))return;
     if(button.matches('.web-back,[data-minute-step],.design-popup-close,[aria-label="رجوع"]'))return;
     if(button.closest('#aoqatHelpPage'))return;
