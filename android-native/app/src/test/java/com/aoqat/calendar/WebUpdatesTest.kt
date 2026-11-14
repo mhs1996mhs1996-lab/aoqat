@@ -50,5 +50,15 @@ class WebUpdatesTest {
   assertNull(update.response(uri))
   assertEquals(String(body),WebUpdates(c).response(uri)!!.data.bufferedReader().use{it.readText()})
  }
+ @Test fun checkEveryForegroundAfterFiveMinutesAndHandleClockChanges(){
+  assertEquals(300000L,WebUpdates.MIN_CHECK_INTERVAL_MS)
+  val now=1_800_000L
+  assertTrue(WebUpdates.due(now,0))
+  assertFalse(WebUpdates.due(now,now))
+  assertFalse(WebUpdates.due(now,now-299999L))
+  assertTrue(WebUpdates.due(now,now-300000L))
+  assertTrue(WebUpdates.due(now,now-600000L))
+  assertTrue(WebUpdates.due(now,now+5000L))
+ }
  @Test fun checksumsAreStable(){assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",WebUpdates.digest(byteArrayOf()))}
 }
