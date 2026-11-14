@@ -1,0 +1,57 @@
+name: Preview partial web update for installed v2.08
+
+on:
+  push:
+    branches:
+      - feature/partial-web-updates-v208-20261114
+    paths:
+      - 'index.html'
+      - 'js/**'
+      - 'css/**'
+      - 'android-native/apk-overrides/**'
+      - 'android-native/prepare-web-assets.py'
+      - 'android-native/app/build.gradle'
+      - 'scripts/prepare-android-update.py'
+      - '.github/workflows/preview-partial-web-update.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-and-verify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble preview files for the existing Android installation
+        run: python3 scripts/prepare-android-update.py
+      - name: Verify version, file hashes and update size
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, re
+          root=pathlib.Path('android-updates')
+          manifest=json.loads((root/'manifest.json').read_text())
+          assert manifest['nativeBuild']==143, 'Only v2.08 (versionCode 143) is the target'
+          files=manifest['files']
+          assert 1 <= len(files) <= 250 and 'index.html' in files
+          total=0
+          for path,digest in files.items():
+              assert re.fullmatch(r'(?:index\.html|(?:js|css)/[a-zA-Z0-9_./-]+\.(?:js|css))',path)
+              assert '..' not in path and '%' not in path and '\\' not in path
+              data=(root/'files'/path).read_bytes()
+              assert len(data)<=6*1024*1024, path
+              assert hashlib.sha256(data).hexdigest()==digest, path
+              total+=len(data)
+          assert total<=24*1024*1024, f'Update exceeds client safety limit: {total}'
+          canonical='\n'.join(f'{path}:{files[path]}' for path in sorted(files))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==manifest['revision']
+          print(f'Compatible v2.08 preview: {len(files)} files, {total:,} uncompressed bytes')
+          PY
+      - name: Upload review-only update package (not published)
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v208-partial-update-preview
+          path: android-updates/
+          retention-days: 14
+          if-no-files-found: error
