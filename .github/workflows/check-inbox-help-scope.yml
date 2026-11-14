@@ -1,0 +1,27 @@
+name: Check notification inbox help scope (v2.09)
+on:
+  push:
+    branches: [fix/v209-inbox-no-useless-help-20261114]
+    paths:
+      - 'js/settings-help-live.js'
+      - 'tests/inbox-help-scope-browser.cjs'
+      - '.github/workflows/check-inbox-help-scope.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inbox-help-regression:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        run: |
+          node --check js/settings-help-live.js
+          node --check tests/inbox-help-scope-browser.cjs
+      - name: Test history and settings in mobile Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/inbox-help-scope-browser.cjs
