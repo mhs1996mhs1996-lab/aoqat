@@ -2,7 +2,6 @@ package com.aoqat.calendar
 
 import org.json.JSONObject
 import java.security.KeyFactory
-import java.security.MessageDigest
 import java.security.Signature
 import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
@@ -41,10 +40,19 @@ internal object SignedWebUpdateManifest {
             revision, canonical).joinToString("\n").toByteArray(Charsets.UTF_8)
     }
 
-    fun verify(manifest: JSONObject, encodedPublicKey: String, nowMillis: Long): Boolean {
+    fun verify(
+        manifest: JSONObject,
+        encodedPublicKey: String,
+        nowMillis: Long,
+        expectedNativeBuild: Int,
+        lastAcceptedSequence: Long
+    ): Boolean {
         return try {
-            // Never accept a manifest after expiry; a revoked/replayed revision
-            // must additionally be rejected by the caller's monotonic sequence.
+            // Caller pins the public key in the APK; reject other builds,
+            // replayed or stale sequence numbers and expired manifests.
+            if (expectedNativeBuild <= 0 || lastAcceptedSequence < 0) return false
+            if (manifest.getInt("nativeBuild") != expectedNativeBuild) return false
+            if (manifest.getLong("sequence") <= lastAcceptedSequence) return false
             if (nowMillis <= 0 || nowMillis >= manifest.getLong("expiresAt")) return false
             val encodedKey = Base64.getDecoder().decode(encodedPublicKey)
             val key = KeyFactory.getInstance("EC").generatePublic(X509EncodedKeySpec(encodedKey))
