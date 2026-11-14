@@ -37,7 +37,25 @@ alias `aoqat-release-2026` and fingerprint
 Those values are **NOT** the owner's final V2 certificate. Never use them to
 identify or verify a V2-signed APK.
 
-## Do NOT switch the installed APK signer yet
+## Beta testers: clean-install V2 is the selected option
+
+The owner clarified that the old APK was distributed to only a few **informed
+testers**, who know the app is unfinished. For this explicitly limited cohort,
+there is **no requirement to preserve in-place compatibility with the old
+signing certificate**. The new APK can be signed with the owner's V2
+RSA-3072 key and installed **after the old beta APK is removed**, provided
+the testers are warned and consent to loss of the old app's internal data,
+and the new candidate has passed owner-approved checks.
+
+**Do not uninstall yet:** a finished, verified, V2-signed candidate and
+installation instructions must be available first. This choice does not
+automatically preserve theme, adhan sounds, notification settings or Quran
+reading position. See `security/BETA-CLEAN-INSTALL-V2.md`.
+
+Subsequent APK releases should retain the V2 signing identity so ordinary
+in-place upgrades do not require repeated deletion.
+
+## Legacy signer rotation (optional research; not needed for informed beta clean install)
 
 Simply signing an APK with the owner's new certificate will normally cause
 Android to reject an in-place upgrade of existing v2.10 installs.
@@ -51,7 +69,9 @@ Android to reject an in-place upgrade of existing v2.10 installs.
   data export/import migration or other tested user-data-preserving transition.
 - Existing v2.10 settings, prayer notifications, exact-alarm permissions,
   storage and offline Mushaf must be preserved or separately recoverable.
-- Never instruct users to uninstall as a shortcut.
+- For general users who require their data retained, never suggest uninstalling
+  as a shortcut. The separately approved informed-beta clean-install route
+  intentionally resets local trial data after explicit notice.
 
 ## Read-only migration certificate audit for a FUTURE signed APK
 
@@ -80,7 +100,7 @@ versions cannot use v3 lineage to migrate from the old certificate to V2.
 
 Source: https://developer.android.com/tools/apksigner
 
-## Required pre-release checks (no private secrets in CI)
+## Optional old-install migration research (not required for beta clean install)
 
 1. Owner confirms the V2 keystore fingerprint again with local `keytool`, and compares each signed APK certificate to `security/aoqat-apk-public-v2.crt`.
 2. Evaluate any migration lineage in an isolated, trusted offline environment.
@@ -100,4 +120,6 @@ Official platform documentation:
 - https://source.android.com/docs/security/features/apksigning/v3
 - https://source.android.com/docs/security/features/apksigning/v3-1
 
-No V2 APK has been published from this security branch.
+No V2 APK has been published from this security branch. An owner-approved,
+clean-install beta still requires verified V2 signing, functional checks and
+explicit instruction to testers about loss of the old app's internal data.
