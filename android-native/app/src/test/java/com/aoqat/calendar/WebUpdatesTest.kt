@@ -60,5 +60,10 @@ class WebUpdatesTest {
   assertTrue(WebUpdates.due(now,now-600000L))
   assertTrue(WebUpdates.due(now,now+5000L))
  }
+ @Test fun newBuildHasIndependentUpdateChannelWhileOldBuildKeepsItsEndpoint(){
+  assertEquals("https://aoqat.vercel.app/android-updates/",WebUpdates.baseUrl(144))
+  assertEquals("https://aoqat.vercel.app/android-updates/build-145/",WebUpdates.baseUrl(145))
+  assertEquals("https://aoqat.vercel.app/android-updates/build-146/",WebUpdates.baseUrl(146))
+ }
  @Test fun checksumsAreStable(){assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",WebUpdates.digest(byteArrayOf()))}
 }
