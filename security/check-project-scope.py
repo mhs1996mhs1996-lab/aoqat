@@ -33,6 +33,7 @@ MAY_ADD = frozenset({
     ".github/workflows/publish-signed-build146.yml",
     ".github/workflows/security-emulator-apk-rotation.yml",
     ".github/workflows/security-native-ci.yml",
+    ".github/workflows/prepare-unsigned-v2-beta.yml",
     "android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt",
     "android-native/app/src/test/java/com/aoqat/calendar/SignedWebUpdateManifestTest.kt",
     "android-native/app/src/test/java/com/aoqat/calendar/WebLocalContentMigrationTest.kt",
