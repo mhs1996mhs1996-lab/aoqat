@@ -11,10 +11,11 @@ The **partial-update signing key** is separate from Android's APK signing certif
 - `security/check-signed-updater-trust.py` fails if the PEM, embedded Kotlin key or reviewed SHA-256 fingerprint differ.
 - The owner generated `aoqat-update-private-v2.pem` locally using OpenSSL, encrypted at rest with `-aes-256-cbc`. **Do not assume or advertise a specific PBKDF iteration count** without inspecting the owner's actual encrypted key.
 - Owner also generated a separate RSA-3072 Android signer `aoqat-apk-production-v2.p12` with a distinct passphrase. It is **not** part of the signed partial-update verification key.
+- The owner exported and shared **only the public X.509 APK certificate** `security/aoqat-apk-public-v2.crt` (SHA-256 `9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765`); it matches the local keytool fingerprint. The APK private keystore is not in GitHub.
 - The owner maintains the encrypted archive `AOQAT_FINAL_KEYS_V2.7z` separately. That archive and both private keys are **not stored in this repository**.
 
 **Never commit or send to GitHub, Vercel, CI logs, or chat:** either private-key file, the PKCS#12 keystore, their passwords, or the backup archive.
-Only the public PEM may be uploaded to this repository.
+Only the public update PEM and public APK signing certificate may be uploaded to this repository.
 Keep independently verified offline backups, and keep passphrases separate.
 
 ## Signed partial-update release gate
