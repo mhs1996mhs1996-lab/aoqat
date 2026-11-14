@@ -1,102 +1,17 @@
-name: Build verified v2.10 fast partial update foundation APK
+name: Legacy v2.10 signing path disabled in hardened security branch
 
 on:
-  push:
-    branches:
-      - release/v210-fast-partial-updates-20261114
-    paths:
-      - '.github/workflows/build-v210-fast-partial-updates.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: aoqat-v210-foundation-apk
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  build-and-publish-beta:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 65
+  refuse-compromised-legacy-release:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-      - name: Restore existing APK signing key
+      - name: Fail closed instead of republishing with the exposed old APK key
         run: |
-          mkdir -p android-native/signing
-          base64 -d android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
-      - name: Validate inbox help regression syntax and behavior tests
-        run: |
-          node --check js/settings-help-live.js
-          node --check js/reminder-inbox.js
-          node --test tests/v203-settings-inbox.test.cjs
-      # Unit tests also verify versioned /android-updates/build-145/ and v2.09 legacy URL.
-      # Release tag is unique to the final endpoint-isolated source commit.
-      - name: Verify native update handling and build installable APK
-        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
-      - name: Verify exact version, offline assets, signature and SHA-256
-        run: |
-          set -euo pipefail
-          apk=android-native/app/build/outputs/apk/debug/app-debug.apk
-          test -s "$apk"
-          python3 - <<'PY'
-          from pathlib import Path
-          import zipfile,json,hashlib
-          apk=Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
-          with zipfile.ZipFile(apk) as z:
-              p='assets/www/'
-              qcf=[name for name in z.namelist() if name.startswith(p+'assets/qcf-v2-page-fonts/p') and name.endswith('.woff2')]
-              assert len(qcf)==604, len(qcf)
-              hashes=json.loads(z.read(p+'assets/mushaf-apk-sha256.json'))
-              for path,digest in hashes.items():
-                  archived=p+path+('.bin' if path.endswith('.gz') else '')
-                  assert hashlib.sha256(z.read(archived)).hexdigest()==digest,path
-              assert len(json.loads(z.read(p+'data/prayer-times-offline.json')))==366
-              inbox=z.read(p+'js/reminder-inbox.js').decode('utf-8')
-              startup=z.read(p+'js/apk-startup-bundle.js').decode('utf-8')
-              assert "#reminderInbox button.main-action::before" in inbox
-              assert "if(button.closest('#reminderInbox'))return;" in startup
-          print('Offline Quran/prayer data retained, size:',apk.stat().st_size)
-          PY
-          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
-          "$aapt" dump badging "$apk" | head -1 | tee version.txt
-          grep -F "versionCode='145'" version.txt
-          grep -F "versionName='2.10'" version.txt
-          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          "$signer" verify --print-certs "$apk" | tee signature.txt
-          grep -Fi 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' signature.txt
-          mkdir -p release
-          cp "$apk" release/aoqat-v2.10-partial-update-foundation.apk
-          (cd release && sha256sum aoqat-v2.10-partial-update-foundation.apk > checksum.sha256)
-      - name: Upload verified installable APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: aoqat-v2.10-partial-update-foundation
-          path: release/
-          compression-level: 0
-          retention-days: 30
-          if-no-files-found: error
-      - name: Publish pre-release to download for physical-device test
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          tag=v2.10-fast-partial-updates-base
-          cat > release/notes.txt <<'NOTES'
-          إصدار تأسيسي تجريبي 2.10 لترقية نسخة 2.09: فحص التحديث الجزئي عند فتح التطبيق أو العودة إليه كل خمس دقائق بحد أدنى، وتصحيح دوائر الاستفهام غير المفيدة بقائمة الإشعارات. المصحف والمواقيت محفوظان دون تغيير.
-          اختبارات Android الآلية واختبارات التوقيع والملفات دون إنترنت نجحت. يلزم اختبار ظهور علامة التحديث الجزئي على هاتف حقيقي قبل اعتماد النظام للإنتاج.
-          لكل إصدار مسار تحديث مستقل. البناء 145 يستخدم android-updates/build-145/ ولا يعطل مسار البناء 144 القديم. هذا ملف تأسيسي، وتجربة وصول التحديث على هاتف فعلي لازمة للاعتماد النهائي.
-          NOTES
-          if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --target "$GITHUB_SHA" --title 'أوقات الصلاة في الحويجة v2.10 — أساس التحديث الجزئي (تجريبي)' --notes-file release/notes.txt --prerelease
-          fi
-          gh release upload "$tag" release/aoqat-v2.10-partial-update-foundation.apk release/checksum.sha256 --clobber
-          gh release view "$tag" --json url,assets
+          echo "SECURITY HOLD: Legacy v2.10 publishing process used a publicly accessible signing keystore."
+          echo "No new APK will be published until signature migration has been reviewed."
+          exit 1
