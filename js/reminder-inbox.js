@@ -46,7 +46,7 @@
     // History rows and detail actions are not settings: suppress inherited
     // question-mark pseudo-icons even if another help script already ran.
     '#reminderInbox button.main-action::before{content:none!important;display:none!important}' +
-    '#reminderInbox button.main-action.aoqat-help-eligible{padding-left:12px!important}';document.head.append(style);
+    '#reminderInbox button.main-action.aoqat-help-eligible[class]{padding-left:12px!important}';document.head.append(style);
   setInterval(()=>{read();window.dispatchEvent(new Event('aoqatInboxChanged'));},60000);
   navigator.serviceWorker?.addEventListener('message',e=>{if(e.data?.type==='AOQAT_OPEN_REMINDER'){if(e.data.entry)add(e.data.entry);window.aoqatOpenNotification?.(e.data.id);}});
 })();
