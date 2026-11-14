@@ -16,26 +16,56 @@ fingerprint (DER SPKI SHA-256) is:
 8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d
 ```
 
-## Self-test on Termux: prove the owner's PRIVATE and PUBLIC V2 keys match
+## One-command-path V2 signature preflight on the owner's Termux
 
-Run these commands **locally in Termux**. Do NOT paste any password or signed
-key into the conversation, GitHub, logs or a cloud terminal.
+**Only the owner runs the real-key check locally.** GitHub/CI runs
+`--self-test` with throwaway keys and is explicitly prevented from running
+`--owner-test`. This validates the **V2 OTA key** (P-256), not the PKCS12
+Android APK signing key. The script signs an in-memory *synthetic* web manifest
+and never publishes or generates an installable APK.
+
+Install missing Termux prerequisites if needed:
 
 ```sh
-cd "$HOME/aoqat-keys" || exit 1
-umask 077
-printf 'AOQAT-V2-OFFLINE-KEY-PAIR-TEST\n' > .v2-test-message.txt
-openssl dgst -sha256 -sign aoqat-update-private-v2.pem -out .v2-test-signature.bin .v2-test-message.txt
-openssl dgst -sha256 -verify aoqat-update-public-v2.pem -signature .v2-test-signature.bin .v2-test-message.txt
-rm -f .v2-test-signature.bin .v2-test-message.txt
+pkg install python curl coreutils openssl-tool
 ```
 
-OpenSSL asks for the owner's V2 **update private-key** passphrase when signing.
-The expected verification result is exactly `Verified OK`. This is a local
-challenge test; it does **not** publish or sign a real application update.
+Download an **immutable reviewed commit**, verify the public script's exact
+SHA-256 **before execution**, then run the disposable tests and owner keypair
+test. Paste the following into Termux; `getpass` prompts for the V2 update
+private-key passphrase locally without echoing it:
 
-If any command fails, stop; preserve the originals. No password recovery should
-ever involve uploading the encrypted private PEM or the backup archive.
+```sh
+cd "$HOME" || exit 1
+curl -fLsS --proto '=https' --tlsv1.2 \
+  'https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/79929c6d9bf86b66786d8c8f5477e88eabee82d9/security/owner-v2-key-preflight.py' \
+  -o aoqat-owner-v2-preflight.py &&
+printf '%s\n' '8acafe564a61300b528509ea97907ef90929f665e325edb88fcb29f73df12576  aoqat-owner-v2-preflight.py' | sha256sum -c - &&
+python3 aoqat-owner-v2-preflight.py --self-test &&
+python3 aoqat-owner-v2-preflight.py --owner-test
+```
+
+If the public script's hash mismatches, **stop**. Do not execute a different
+unreviewed script. If prompted, enter the **update private V2** passphrase,
+not the APK signer or archive passphrase. The expected final lines include:
+
+```
+PASS: public key format and approved fingerprint
+PASS: private/public ECDSA P-256 signing match
+PASS: forged payload/build/sequence/expiry signatures rejected
+PASS: replay/expiry policy checked
+NO UPDATE PUBLISHED; NO APK SIGNED; NO PRIVATE KEY EXPORTED
+```
+
+The script does not copy, upload, read over the network, or print the actual
+private key or passphrase. Internet is only used once to **download the public
+script**. It can subsequently be run without a connection. It uses the local
+encrypted private PEM under `~/aoqat-keys/`; signed test content remains
+in memory, and verification temporary files are automatically erased.
+
+**This check is NOT equivalent to releasing a signed update or proving that the
+existing 2.10 APK has V2 public-key verification.** Existing user installations
+must not receive a V2 update until a reviewed compatible APK is installed.
 
 ## Production update preparation (only after signed APK upgrade is approved)
 
