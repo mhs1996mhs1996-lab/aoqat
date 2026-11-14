@@ -39,6 +39,8 @@ jobs:
         run: python3 security/test-signed-update-manifest.py
       - name: Test read-only APK certificate migration audit parser
         run: python3 security/test-audit-apk-signatures.py
+      - name: Test local-only V2 signing preflight with disposable encrypted key
+        run: python3 security/owner-v2-key-preflight.py --self-test
       - name: Test that unauthorised Quran change fails closed
         run: |
           set -euo pipefail
