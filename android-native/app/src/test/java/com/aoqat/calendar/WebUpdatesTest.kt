@@ -29,13 +29,14 @@ class WebUpdatesTest {
         keys = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
         pub = Base64.getEncoder().encodeToString(keys.public.encoded)
     }
-    private fun manifest(files:Map<String,ByteArray>,seq:Long=1,wrongBuild:Boolean=false,forged:Boolean=false):ByteArray {
+    private fun manifest(files:Map<String,ByteArray>,seq:Long=1,wrongBuild:Boolean=false,forged:Boolean=false,
+        expiresAt:Long=System.currentTimeMillis()+86400000L):ByteArray {
         val fileMap=JSONObject()
         files.forEach { (p,bytes) -> fileMap.put(p,WebUpdates.digest(bytes)) }
         val canonical=files.keys.sorted().joinToString("\n") { p -> p+":"+fileMap.getString(p) }
         val build=c.packageManager.getPackageInfo(c.packageName,0).versionCode
         val m=JSONObject().put("nativeBuild",if(wrongBuild) -1 else build)
-            .put("sequence",seq).put("expiresAt",System.currentTimeMillis()+86400000L)
+            .put("sequence",seq).put("expiresAt",expiresAt)
             .put("revision",WebUpdates.digest(canonical.toByteArray())).put("files",fileMap)
         if(!wrongBuild){
             val sig=Signature.getInstance("SHA256withECDSA")
@@ -47,8 +48,9 @@ class WebUpdatesTest {
         return m.toString().toByteArray()
     }
     private fun updater(files:Map<String,ByteArray>,seq:Long=1,calls:MutableList<String> = mutableListOf(),
-        wrongBuild:Boolean=false,forged:Boolean=false,corrupt:Boolean=false):WebUpdates {
-        val signed=manifest(files,seq,wrongBuild,forged)
+        wrongBuild:Boolean=false,forged:Boolean=false,corrupt:Boolean=false,
+        expiresAt:Long=System.currentTimeMillis()+86400000L):WebUpdates {
+        val signed=manifest(files,seq,wrongBuild,forged,expiresAt)
         return WebUpdates(c,pub) { path,_ ->
             calls.add(path)
             if(path=="manifest.json") signed
@@ -130,6 +132,46 @@ class WebUpdatesTest {
         updater(first,1,calls).checkNow()
         assertEquals(listOf("manifest.json"),calls)
         assertEquals("v2",page(WebUpdates(c,pub)))
+    }
+
+    @Test fun expiredSignedManifestIsRejectedBeforePayloadDownload() {
+        val calls=mutableListOf<String>()
+        val files=mapOf("index.html" to "<p>expired</p>".toByteArray())
+        updater(files,calls=calls,expiresAt=System.currentTimeMillis()-60_000L).checkNow()
+        assertEquals(listOf("manifest.json"),calls)
+        assertNull(page(WebUpdates(c,pub)))
+    }
+
+    @Test fun alteredStoredSnapshotIsRejectedOnRestartWithoutLoadingTamperedBytes() {
+        val files=mapOf("index.html" to "<p>trusted</p>".toByteArray())
+        updater(files).checkNow()
+        val trial=WebUpdates(c,pub)
+        assertEquals("<p>trusted</p>",page(trial))
+        assertTrue(trial.confirmStartup())
+
+        // Deliberately corrupt an already-accepted snapshot, then relaunch.
+        // Validity must be rechecked from the signed hash list on launch.
+        val revision=c.getSharedPreferences("web_updates_v2_signed",0)
+            .getString("active",null)!!
+        val saved=File(c.filesDir,"web-updates-v2-signed/$revision/index.html")
+        assertTrue(saved.isFile)
+        saved.writeText("<p>tampered</p>")
+        val reopened=WebUpdates(c,pub)
+        assertNull(page(reopened))
+        assertFalse(reopened.isTrialActive())
+    }
+
+    @Test fun corruptedPendingSnapshotNeverActivates() {
+        val files=mapOf("index.html" to "<p>pending</p>".toByteArray())
+        updater(files).checkNow()
+        val revision=c.getSharedPreferences("web_updates_v2_signed",0)
+            .getString("pending",null)!!
+        val saved=File(c.filesDir,"web-updates-v2-signed/$revision/index.html")
+        assertTrue(saved.isFile)
+        saved.writeText("<p>corrupted pending</p>")
+        assertNull(page(WebUpdates(c,pub)))
+        assertNull(c.getSharedPreferences("web_updates_v2_signed",0)
+            .getString("pending",null))
     }
 
     @Test fun unsignedExtraFileInSnapshotMustNeverBeServed() {
