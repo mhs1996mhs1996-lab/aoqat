@@ -36,6 +36,17 @@ const {spawn} = require('node:child_process');
       'History entries must not have generic help circles');
     assert.equal(await item.getAttribute('class'),'main-action','Do not change original reminder button styling');
     assert.match(await item.textContent(),/تذكير بقراءة سورة الكهف/);
+    // The reminder module must independently hide inherited generic help icons,
+    // even if an old help decorator adds the class before the new one runs.
+    const inherited = await item.evaluate(el=>{
+      el.classList.add('aoqat-help-eligible');
+      const pseudo = getComputedStyle(el,'::before');
+      const result = {display:pseudo.display, content:pseudo.content,paddingLeft:getComputedStyle(el).paddingLeft};
+      el.classList.remove('aoqat-help-eligible');
+      return result;
+    });
+    assert.equal(inherited.display,'none','No question icon, even with legacy help class');
+    assert.equal(inherited.paddingLeft,'12px','Do not reserve blank help-button spacing');
     await item.click({position:{x:175,y:23}});
     await page.locator('#reminderInbox p').filter({hasText:'التذكير الأصلي مع تفاصيله'}).waitFor();
     assert.equal(await page.locator('#reminderInbox button.aoqat-help-eligible').count(),0,
