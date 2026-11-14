@@ -106,6 +106,20 @@ must be warned and agree **before** uninstalling. The clean-install beta
 policy is `security/BETA-CLEAN-INSTALL-V2.md`.
 
 Subsequent APK upgrades must retain the exact V2 APK signing identity.
+
+After owner-local signing, run the read-only clean-install audit on the **real APK**:
+
+```sh
+python3 security/audit-apk-signatures.py --clean-install-beta \
+  --apksigner apksigner /safe/path/to/owner-v2-signed.apk
+```
+
+This requires only the signed APK and the public certificate fingerprint pinned
+in the audit code; it never reads the owner's P12/private PEM or passphrases.
+PASS means signer verified across the tested Android APIs, **not** app installation,
+offline features, device acceptance or permission to publish. Never use the
+legacy in-place migration audit result as a rejection of an approved fresh beta
+installation: Android 8/8.1 cannot install a differently signed APK over the old package.
 Legacy-signature migration for a future, wider user population is separate
 optional research; see `security/APK-SIGNING-ROTATION.md`.
 
