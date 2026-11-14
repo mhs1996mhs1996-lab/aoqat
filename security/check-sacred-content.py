@@ -21,6 +21,13 @@ CRITICAL_FILES = frozenset((
     "js/quran-reader.js",
     "js/prayer-countdown.js",
     "js/prayer-time-choice.js",
+    "js/prayer-countdown-mobile-fix.js",
+    "js/prayer-countdown-edit-bridge.js",
+    "js/adhan-core.js",
+    "js/iqama-timing.js",
+    "js/prayer-alarm-core.js",
+    "js/prayer-alarm.js",
+    "js/prayer-alert-methods.js",
 ))
 CRITICAL_PREFIXES = (
     "assets/mushaf-phone-hafs/",
