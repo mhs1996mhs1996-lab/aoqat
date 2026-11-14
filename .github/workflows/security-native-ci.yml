@@ -80,6 +80,8 @@ jobs:
                   assert hashlib.sha256(z.read(archived)).hexdigest()==digest, name
           print('CI_ONLY_VERIFIED: 604 offline mushaf page fonts and 366 days of prayer data unchanged')
           PY
+      - name: Exercise ephemeral Android certificate rotation across API levels
+        run: bash security/test-synthetic-apk-rotation.sh
       - name: Final release prohibition
         run: |
           echo "No release step, no artifact upload, no signing key in repository."
