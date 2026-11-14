@@ -114,6 +114,9 @@ jobs:
 # Redeploy Friday web baseline 2026-09-19
 
   web-check:
+    # Isolated security trials have their own Android/sacred-content CI.
+    # Never start legacy browser/upload workflows on the security branch.
+    if: ${{ !startsWith(github.ref, 'refs/heads/security/') }}
     runs-on: ubuntu-22.04
     timeout-minutes: 8
     steps:
@@ -152,6 +155,9 @@ jobs:
 # Allow 60 minutes for 604-page offline packaging and APK artifact upload
 
   release-checks:
+    # Isolated security trials have their own Android/sacred-content CI.
+    # Never start legacy browser/upload workflows on the security branch.
+    if: ${{ !startsWith(github.ref, 'refs/heads/security/') }}
     runs-on: ubuntu-22.04
     timeout-minutes: 12
     steps:
