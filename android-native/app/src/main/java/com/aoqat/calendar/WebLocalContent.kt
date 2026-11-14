@@ -104,10 +104,22 @@ class WebLocalContent(
             WebResourceResponse("text/html", "UTF-8",
                 ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) {
-            // Keep the installed offline baseline if migrations or CSP fail.
-            android.util.Log.w("WebUpdates", "Local page protection failed; use packaged fallback", e)
+            // A corrupt update must not remove CSP or reach a remote origin.
+            android.util.Log.w("WebUpdates", "Local page protection failed; use safe packaged fallback", e)
+            val fallback = try {
+                context.assets.open("www/index.html").bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+            } catch (_: Exception) {
+                "<!doctype html><html><head></head><body>المحتوى المحلي غير متاح</body></html>"
+            }
+            val csp = "<meta http-equiv=\"Content-Security-Policy\" " +
+                "content=\"frame-src 'none'; object-src 'none'; base-uri 'self'\">"
+            val secure = if (fallback.contains("<head>"))
+                fallback.replaceFirst("<head>", "<head>" + csp)
+            else "<!doctype html><html><head>" + csp +
+                "</head><body>المحتوى المحلي غير متاح</body></html>"
             WebResourceResponse("text/html", "UTF-8",
-                context.assets.open("www/index.html"))
+                ByteArrayInputStream(secure.toByteArray(Charsets.UTF_8)))
         }
     }
 }
