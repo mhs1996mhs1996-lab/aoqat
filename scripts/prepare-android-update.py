@@ -14,8 +14,10 @@ with tempfile.TemporaryDirectory() as temp:
     subprocess.run(['python3',str(root/'android-native/prepare-web-assets.py'),str(stage)],check=True)
     for name in ('android-ui-fixes.js','android-back-navigation.js'):
         shutil.copy2(root/'android-native/apk-overrides'/name,stage/'js'/name)
+    # Proof is update-only: never add its script to the hosted web or the APK image.
+    shutil.copy2(root/'scripts/partial-update-proof.js',stage/'js/partial-update-proof.js')
     index=stage/'index.html'
-    index.write_text(index.read_text().replace('</body>','<script src="js/android-ui-fixes.js"></script><script src="js/android-back-navigation.js"></script></body>'))
+    index.write_text(index.read_text().replace('</body>','<script src="js/android-ui-fixes.js"></script><script src="js/android-back-navigation.js"></script><script src="js/partial-update-proof.js"></script></body>'))
     if out.exists():shutil.rmtree(out)
     files={}
     for path in [stage/'index.html',*sorted((stage/'js').glob('*.js')),*sorted((stage/'css').rglob('*.css'))]:
