@@ -1,51 +1,70 @@
-# Android APK signing certificate migration — not deployed
+# Android APK signing certificate migration — SECURITY HOLD, NOT deployed
 
-Existing installed v2.10 signed certificate SHA-256:
+## Previously distributed v2.10 signer
+
+The previously distributed APK certificate SHA-256 recorded in this repository is:
 `aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496`.
 
-A NEW private APK signing key, stored OFF GITHUB as password-protected PKCS#12,
-has been prepared for the owner:
-- Alias: `aoqat-release-2026`
-- Key algorithm: RSA 3072
-- New certificate SHA-256:
-  `8BD2356AD3599E1C0443C0E43E9B7E2FECACE86B4E98CAFEF336962BC3DBC54B`
-- Its private key and passphrase are supplied in **separate protected files**.
-- The new APK signing private key is **NOT** the update-OTA ECDSA key.
+The corresponding old signing keystore was exposed in public repository history.
+Deleting the tracked key cannot reverse that exposure. Treat this certificate as
+potentially compromised and **do not sign any new general release with it**.
 
-## Do NOT replace the existing v2.10 APK signer in production yet
+## Owner-generated final V2 APK signing key (14 November 2026)
 
-The old APK signer was in public Git history; treat as compromised. A new
-certificate alone will not be accepted as an in-place update by all devices.
+The owner created a **new** RSA-3072 key locally in Termux, independently from
+the ECDSA/P-256 key for partial web updates.
 
-On Android 9+ (API 28+) Android supports certificate lineage / APK Signature
-Scheme v3 key rotation. Default v3.1 behavior targets Android 13+ unless
-rotation minSdk is explicitly set. Validate `apksigner rotate` lineage, its
-capability grants, and real install-over with an actual phone for each relevant
-Android API tier.
+- Private PKCS#12 filename (owner device only): `aoqat-apk-production-v2.p12`
+- Key alias: `aoqat-production-v2`
+- Distinguished name: `CN=Aoqat Prayer Times, OU=Application, O=Aoqat, L=Hawija, ST=Kirkuk, C=IQ`
+- SHA-256 certificate fingerprint reported by the owner's local `keytool -list`:
+  `9F:98:1C:7E:29:48:85:99:AA:B1:46:DE:4A:AF:6C:F3:05:FE:30:B0:6F:CE:C3:1A:7A:63:45:78:3C:3A:E7:65`
+- This fingerprint was transcribed from the owner's displayed keytool output.
+  Independently compare it with a freshly exported public certificate before
+  trusting any production build.
+- Private key, keystore and password stay with the owner, **not in GitHub or CI**.
+- Owner archive: `AOQAT_FINAL_KEYS_V2.7z` (encrypted; stored separately).
 
-**Android 8 / 8.1 (API 26–27)** lack native v3 signing rotation. A changed
-signer normally cannot update the existing installed package directly.
-Do NOT tell these users to uninstall without backing up and verifying their
-settings and prayer data export/import. Alternatively maintain a legacy signer
-for existing versions during an explicit transition; because that signer is
-publicly exposed this remains a SECURITY EXCEPTION, not a fix.
+**Superseded trial key records:** Earlier security prototypes mentioned the
+alias `aoqat-release-2026` and fingerprint
+`8BD2356AD3599E1C0443C0E43E9B7E2FECACE86B4E98CAFEF336962BC3DBC54B`.
+Those values are **NOT** the owner's final V2 certificate. Never use them to
+identify or verify a V2-signed APK.
 
-## Required staged tests
+## Do NOT switch the installed APK signer yet
 
-1. Produce new encrypted key and store it only with the app owner.
-2. Produce test signing lineage using the old and new signers **in temporary
-   isolated signing environment**, never adding private keys to Git.
-3. Sign a test APK with appropriate v2/v3/v3.1 blocks.
-4. `apksigner verify --verbose --print-certs --min-sdk-version 26` and
-   targeted checks against API 26, 28, 31, 33, 35.
-5. On real devices, test installation OVER signed 2.10 with localStorage,
-   notifications, exact alarms, countdowns and Mushaf intact; never first
-   uninstall during the upgrade test.
-6. Approve production signing migration only after release review and backups.
+Simply signing an APK with the owner's new certificate will normally cause
+Android to reject an in-place upgrade of existing v2.10 installs.
 
-Official Android references:
+- Android 9+ (API 28+) supports APK Signature Scheme v3 signing certificate
+  rotation with a valid lineage, but lineage creation needs verification of
+  the old and new signing material and careful capability choices.
+- Android 13+ v3.1 behavior differs from older v3; explicitly test rotation
+  min SDK and install-over results rather than assuming it supports Android 9+.
+- Android 8/8.1 (API 26–27) cannot depend on v3 lineage. Plan a consent-based
+  data export/import migration or other tested user-data-preserving transition.
+- Existing v2.10 settings, prayer notifications, exact-alarm permissions,
+  storage and offline Mushaf must be preserved or separately recoverable.
+- Never instruct users to uninstall as a shortcut.
+
+## Required pre-release checks (no private secrets in CI)
+
+1. Owner confirms the V2 keystore fingerprint again with local `keytool`.
+2. Evaluate any migration lineage in an isolated, trusted offline environment.
+   The formerly exposed legacy signer remains a security risk even if used
+   solely to build a lineage.
+3. Sign a controlled test APK, inspect the v2/v3/v3.1 signature blocks and
+   confirm APK certificate fingerprints using `apksigner`.
+4. Test real upgrades on Android API 26, 27, 28, 31, 33 and 35, preserving
+   user data; specifically ensure the fallback plan works on Android 8/8.1.
+5. Test startup, offline Quran, offline prayer timetable, local settings,
+   reminders, notifications and rollback.
+6. Obtain owner approval, review and branch-protection verification before any
+   production APK release.
+
+Official platform documentation:
 - https://developer.android.com/tools/apksigner
 - https://source.android.com/docs/security/features/apksigning/v3
 - https://source.android.com/docs/security/features/apksigning/v3-1
 
-No final APK has been released by this security branch.
+No V2 APK has been published from this security branch.
