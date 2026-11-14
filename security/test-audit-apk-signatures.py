@@ -67,6 +67,46 @@ class ApkAuditTests(TestCase):
                  patch.object(audit, "inspect", return_value=("OWNER_V2", audit.OWNER_V2)):
                 self.assertEqual(audit.main(), 1)
 
+    def test_beta_clean_install_accepts_only_owner_v2_at_every_api(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "owner-v2.apk"
+            candidate.write_bytes(b"disposable-cert-test-only")
+            with patch.object(audit.sys, "argv",
+                              ["audit-apk-signatures.py", "--clean-install-beta", str(candidate)]), \
+                 patch.object(audit.shutil, "which", return_value="/sdk/apksigner"), \
+                 patch.object(audit, "inspect", return_value=("OWNER_V2", audit.OWNER_V2)) as inspector:
+                self.assertEqual(audit.main(), 0)
+                self.assertEqual(inspector.call_count, len(audit.APIS))
+                self.assertIn(26, audit.APIS)
+                self.assertIn(27, audit.APIS)
+                self.assertIn(36, audit.APIS)
+
+    def test_beta_clean_install_rejects_exposed_old_certificate(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "old-signer.apk"
+            candidate.write_bytes(b"disposable-cert-test-only")
+            with patch.object(audit.sys, "argv",
+                              ["audit-apk-signatures.py", "--clean-install-beta", str(candidate)]), \
+                 patch.object(audit.shutil, "which", return_value="/sdk/apksigner"), \
+                 patch.object(audit, "inspect", return_value=("EXPOSED_OLD", audit.EXPOSED_OLD)):
+                self.assertEqual(audit.main(), 1)
+
+    def test_beta_clean_install_rejects_any_unverified_android_api(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "mixed-signatures.apk"
+            candidate.write_bytes(b"disposable-cert-test-only")
+            def check(_signer, _apk, api):
+                return (("UNKNOWN_OR_MULTIPLE", "other") if api == 36
+                        else ("OWNER_V2", audit.OWNER_V2))
+            with patch.object(audit.sys, "argv",
+                              ["audit-apk-signatures.py", "--clean-install-beta", str(candidate)]), \
+                 patch.object(audit.shutil, "which", return_value="/sdk/apksigner"), \
+                 patch.object(audit, "inspect", side_effect=check):
+                self.assertEqual(audit.main(), 1)
+
     def test_failed_signature_is_not_treated_as_valid(self):
         with patch.object(audit.subprocess, "run", return_value=SimpleNamespace(
             stdout="", stderr="DOES NOT VERIFY", returncode=1
