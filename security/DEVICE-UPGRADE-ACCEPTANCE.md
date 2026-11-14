@@ -42,6 +42,31 @@ success proves an installed old-signer package can be upgraded.
 - https://source.android.com/docs/security/features/apksigning/v3
 - https://source.android.com/docs/security/features/apksigning/v3-1
 
+## Critical backup exclusions discovered in current Android configuration
+
+Both `android-native/app/src/main/res/xml/backup_rules.xml` and
+`android-native/app/src/main/res/xml/data_extraction_rules.xml` exclude
+**some user-specific adhan settings** from cloud backup / device transfer:
+
+- `adhan_settings.xml`
+- `adhan_ringer.xml`
+- `adhan_audio_volume.xml`
+- `custom-adhan/` files
+
+Therefore **Android Auto Backup is NOT a complete user-data migration path**.
+An install-over update normally retains app-private data, but reinstalling with
+a different signer can lose settings. The Android 8/8.1 migration plan MUST
+include explicit backup/export/restore support and verification for these
+excluded adhan settings and custom audio, in addition to WebView localStorage,
+Quran position/bookmarks and other private preferences.
+
+**Do not remove these exclusions blindly**: notifications, ringtone/DND
+permissions and file locations may differ by device. Review and test a
+versioned owner-consented export/import mechanism before allowing any
+uninstall, alternate-package migration, or factory reset. A successful
+`WebLocalContentMigrationTest` only covers same-install origin migration,
+NOT data recovery across package-signature replacement.
+
 ## Required evidence for EACH real-device test
 
 1. Record model, Android API, exact installed app version and the observed
