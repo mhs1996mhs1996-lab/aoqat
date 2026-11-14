@@ -17,9 +17,7 @@ class WebUpdates(private val context:Context, private val fetch:(String,Int)->By
     private val nativeBuild=context.packageManager.getPackageInfo(context.packageName,0).versionCode
     private var active:File?=(if(prefs.getInt("nativeBuild",-1)==nativeBuild)prefs.getString("active",null)else null)?.takeIf{it.matches(Regex("[a-f0-9]{64}"))}?.let{File(root,it)}?.takeIf{File(it,"complete").isFile}
     fun response(uri:Uri):WebResourceResponse? {
-        if(uri.scheme!="file"||uri.host?.isNotEmpty()==true)return null
-        val path=uri.path?.removePrefix("/android_asset/www/")?:return null
-        if(!uri.path.orEmpty().startsWith("/android_asset/www/")||!allowed(path))return null
+        val path=assetPath(uri)?:return null
         val file=active?.let{File(it,path)}?.takeIf{it.isFile}?:return null
         val mime=when(file.extension){"js"->"application/javascript";"css"->"text/css";"html"->"text/html";"json"->"application/json";else->"application/octet-stream"}
         return WebResourceResponse(mime,"UTF-8",file.inputStream())
@@ -57,6 +55,19 @@ class WebUpdates(private val context:Context, private val fetch:(String,Int)->By
             }catch(e:Exception){android.util.Log.w("WebUpdates","Keep installed offline version",e)}
     }
     companion object {
+        // The updated WebView uses an interceptable HTTPS origin, not file:///android_asset/.
+        fun assetPath(uri:Uri):String? {
+            val path=when {
+                uri.scheme=="file" && uri.host.isNullOrEmpty() &&
+                    uri.path.orEmpty().startsWith("/android_asset/www/") ->
+                    uri.path!!.removePrefix("/android_asset/www/")
+                uri.scheme=="https" && uri.host=="appassets.androidplatform.net" &&
+                    uri.port==-1 && uri.encodedPath.orEmpty().startsWith("/assets/www/") ->
+                    uri.path!!.removePrefix("/assets/www/")
+                else -> return null
+            }
+            return path.takeIf{allowed(it)}
+        }
         fun allowed(path:String)=!path.contains("..")&&!path.contains('%')&&!path.contains('\\')&&(
             path=="index.html"||path.matches(Regex("(js|css)/[a-zA-Z0-9_./-]+\\.(js|css)")))
         fun digest(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
