@@ -40,7 +40,8 @@ const {spawn} = require('node:child_process');
     await page.locator('#reminderInbox p').filter({hasText:'التذكير الأصلي مع تفاصيله'}).waitFor();
     assert.equal(await page.locator('#reminderInbox button.aoqat-help-eligible').count(),0,
       'Detail action is not a generic settings help target');
-    await page.locator('#webDrawerSub .web-back').click();
+    await page.reload({waitUntil:'domcontentloaded'});
+    await page.waitForSelector('[data-drawer="alertSettings"]',{state:'attached'});
     await page.evaluate(()=>document.body.classList.add('design-menu-open'));
     await page.locator('[data-drawer="alertSettings"]').click();
     const settings=page.locator('#webSubBody [data-alert-section="friday"]');
