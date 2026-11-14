@@ -240,7 +240,7 @@ class WebUpdates(
     companion object {
         const val MIN_CHECK_INTERVAL_MS = 5 * 60 * 1000L
         const val SIGNING_PUBLIC_KEY_B64 =
-            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAErzyNMdEJDHP87D66Oo923p5vQiF4nN+2ddOqSB2Z2Ur9s/dq+7YUu7sNfHm07eluO4KHwU23nuS2CvSddUuE/w=="
+            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6W6qe1MBZFNrD2u1NT9AhNaUeO+fUShOkN0udFvkt4CWwnsGCp777mBYd6ckklFqeOjuAbl6N07/hQmmdRJ9ug=="
         private val REVISION_PATTERN = Regex("[a-f0-9]{64}")
         private val HASH_PATTERN = Regex("[a-f0-9]{64}")
 
