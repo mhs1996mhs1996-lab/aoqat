@@ -42,6 +42,17 @@ class ApkAuditTests(TestCase):
         self.assertEqual(fp, "a" * 64)
         self.assertEqual(executor.call_args.args[0][6:8], ["--max-sdk-version", "28"])
 
+    def test_android8_in_place_migration_never_receives_false_approval(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as tmp:
+            candidate = Path(tmp) / "signed-candidate.apk"
+            candidate.write_bytes(b"test-only")
+            with patch.object(audit.sys, "argv",
+                              ["audit-apk-signatures.py", str(candidate)]), \
+                 patch.object(audit.shutil, "which", return_value="/sdk/apksigner"), \
+                 patch.object(audit, "inspect", return_value=("OWNER_V2", audit.OWNER_V2)):
+                self.assertEqual(audit.main(), 1)
+
     def test_failed_signature_is_not_treated_as_valid(self):
         with patch.object(audit.subprocess, "run", return_value=SimpleNamespace(
             stdout="", stderr="DOES NOT VERIFY", returncode=1
