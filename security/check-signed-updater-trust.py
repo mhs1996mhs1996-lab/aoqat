@@ -47,6 +47,12 @@ def main():
     assert not (ROOT/"android-native/signing/aoqat-stable-debug.keystore.b64").exists(), "Exposed old signing key still tracked"
     for file in (ROOT/"android-native/app/src/main/res/xml/backup_rules.xml", ROOT/"android-native/app/src/main/res/xml/data_extraction_rules.xml"):
         assert 'web_updates_v2_signed.xml' in file.read_text(), "Updater anti-replay state backed up"
+    publishing = (ROOT / ".github/workflows/publish-signed-build146.yml").read_text()
+    for prohibited in ("AOQAT_UPDATE_KEY_ENCRYPTED_B64", "AOQAT_UPDATE_KEY_PASSPHRASE",
+                       "git push origin HEAD:main", "Sign with encrypted private key"):
+        assert prohibited not in publishing, "GitHub workflow must NEVER access private signing keys or publish"
+    assert "contents: read" in publishing, "Signed update validator needs no repository write access"
+    assert "security/aoqat-update-public-v2.pem" in publishing, "Offline-signed updates must validate using V2 publisher"
     print("PASS: pinned OTA publisher, signed-before-download, rollback confirmation, restricted WebView and external-only APK signing")
 
 if __name__ == "__main__":
