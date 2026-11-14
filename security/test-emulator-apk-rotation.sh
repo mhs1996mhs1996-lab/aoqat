@@ -20,7 +20,7 @@ export FIXTURE_PASS
 
 # Two version codes of the same harmless, debuggable, no-code app.
 for version in 1 2; do
-  cat > "$tmp/manifest-$version.xml" <<MANIFEST
+  cat > "$tmp/AndroidManifest.xml" <<MANIFEST
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="$pkg" android:versionCode="$version" android:versionName="fixture-$version">
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28" />
@@ -28,7 +28,7 @@ for version in 1 2; do
         android:debuggable="true" android:hasCode="false" />
 </manifest>
 MANIFEST
-  "$aapt" package -f -M "$tmp/manifest-$version.xml" -I "$platform" -F "$tmp/unsigned-$version.apk"
+  "$aapt" package -f -M "$tmp/AndroidManifest.xml" -I "$platform" -F "$tmp/unsigned-$version.apk"
 done
 
 for identity in old new; do
