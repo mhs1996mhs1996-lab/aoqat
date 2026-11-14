@@ -46,11 +46,21 @@ jobs:
           grep -F "versionCode='146'" version.txt
           grep -F "versionName='2.11-security-test'" version.txt
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          "$signer" verify --print-certs "$apk" | tee cert.txt
-          if grep -Fqi 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' cert.txt; then
-            echo 'SECURITY FAILURE: compromised historical certificate reused'
+          "$signer" verify --verbose --print-certs --min-sdk-version 26 "$apk" | tee cert.txt
+          # Validate the owner's PUBLIC production certificate independently
+          # without ever reading a private APK keystore or its passphrase.
+          approved_cert=security/aoqat-apk-public-v2.crt
+          test -s "$approved_cert"
+          approved_sha=$(openssl x509 -in "$approved_cert" -outform DER | sha256sum | awk '{print $1}')
+          test "$approved_sha" = '9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765'
+          openssl x509 -in "$approved_cert" -pubkey -noout | openssl pkey -pubin -text -noout | grep -Fq '(3072 bit)'
+          # Debug builds must never be signed with either the exposed old
+          # production identity or the new owner-controlled production key.
+          if grep -Eqi 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496|9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765' cert.txt; then
+            echo 'SECURITY FAILURE: debug APK used historical or owner production certificate'
             exit 1
           fi
+          echo 'PUBLIC_APK_CERT_OK_AND_DEBUG_KEY_ISOLATED'
           python3 - <<'PY'
           import zipfile,hashlib,json,pathlib
           apk=pathlib.Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
