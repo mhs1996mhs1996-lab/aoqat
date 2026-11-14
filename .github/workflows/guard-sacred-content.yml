@@ -33,6 +33,8 @@ jobs:
         run: python3 security/check-signed-updater-trust.py
       - name: Test offline signed-manifest validation with ephemeral keypair
         run: python3 security/test-signed-update-manifest.py
+      - name: Test read-only APK certificate migration audit parser
+        run: python3 security/test-audit-apk-signatures.py
       - name: Test that unauthorised Quran change fails closed
         run: |
           set -euo pipefail
