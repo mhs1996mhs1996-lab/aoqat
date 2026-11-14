@@ -40,7 +40,7 @@ class ApkAuditTests(TestCase):
             status, fp = audit.inspect("apksigner", Path("/tmp/test.apk"), 28)
         self.assertEqual(status, "UNKNOWN_OR_MULTIPLE")
         self.assertEqual(fp, "a" * 64)
-        self.assertEqual(executor.call_args.args[0][5:7], ["--max-sdk-version", "28"])
+        self.assertEqual(executor.call_args.args[0][6:8], ["--max-sdk-version", "28"])
 
     def test_failed_signature_is_not_treated_as_valid(self):
         with patch.object(audit.subprocess, "run", return_value=SimpleNamespace(
