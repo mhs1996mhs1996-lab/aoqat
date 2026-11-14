@@ -3,10 +3,15 @@ package com.aoqat.calendar
 import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.security.KeyPairGenerator
 import java.security.Signature
 import java.util.Base64
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28, 34])
 class SignedWebUpdateManifestTest {
     private fun manifest(): JSONObject {
         val files = JSONObject()
