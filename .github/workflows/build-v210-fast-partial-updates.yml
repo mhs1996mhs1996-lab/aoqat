@@ -3,9 +3,9 @@ name: Build verified v2.10 fast partial update foundation APK
 on:
   push:
     branches:
-      - fix/native-web-updates-loading-v210-20261114
+      - release/v210-fast-partial-updates-20261114
     paths:
-      - '.github/workflows/build-v210-native-web-update-base.yml'
+      - '.github/workflows/build-v210-fast-partial-updates.yml'
   workflow_dispatch:
 
 permissions:
@@ -89,7 +89,7 @@ jobs:
           set -euo pipefail
           tag=v2.10-fast-partial-update-foundation-test
           cat > release/notes.txt <<'NOTES'
-          إصدار تجريبي للتثبيت فوق v2.08، لتصحيح تحميل ملفات التحديث الجزئي داخل Android WebView، مع ترحيل إعدادات الواجهة القديمة، دون تغيير المصحف أو المواقيت.
+          إصدار تأسيسي تجريبي 2.10 لترقية نسخة 2.09: فحص التحديث الجزئي عند فتح التطبيق أو العودة إليه كل خمس دقائق بحد أدنى، وتصحيح دوائر الاستفهام غير المفيدة بقائمة الإشعارات. المصحف والمواقيت محفوظان دون تغيير.
           اختبارات Android الآلية واختبارات التوقيع والملفات دون إنترنت نجحت. يلزم اختبار ظهور علامة التحديث الجزئي على هاتف حقيقي قبل اعتماد النظام للإنتاج.
           ملاحظة: نسخة 2.10 / البناء 145 تحتاج حزمة ويب مخصصة للبناء 145؛ لا يمكن استلام حزمة النسخ القديمة.
           NOTES
