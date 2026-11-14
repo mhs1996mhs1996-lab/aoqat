@@ -23,6 +23,20 @@ class ApkAuditTests(TestCase):
         self.assertEqual(audit.parse_signer_digests(sample), {audit.OWNER_V2})
         self.assertEqual(audit.classify(audit.parse_signer_digests(sample)), "OWNER_V2")
 
+    def test_build_tools_37_apksigner_v2_v3_labels_are_accepted(self):
+        for label in ("V2 Signer:", "V3.0 Signer:", "V3.1 Signer:",
+                      "V3.2 Signer:"):
+            with self.subTest(label=label):
+                output = "Verifies\\n" + label + " certificate SHA-256 digest: " + audit.OWNER_V2 + "\\n"
+                self.assertEqual(audit.parse_signer_digests(output), {audit.OWNER_V2})
+                self.assertEqual(audit.classify(audit.parse_signer_digests(output)), "OWNER_V2")
+
+    def test_build_tools_37_conflicting_schemes_fail_closed(self):
+        output = ("V2 Signer: certificate SHA-256 digest: " + audit.EXPOSED_OLD + "\\n"
+                  "V3.0 Signer: certificate SHA-256 digest: " + audit.OWNER_V2 + "\\n")
+        self.assertEqual(audit.classify(audit.parse_signer_digests(output)),
+                         "UNKNOWN_OR_MULTIPLE")
+
     def test_unknown_and_multiple_signers_fail_closed(self):
         self.assertEqual(audit.classify(set()), "UNKNOWN_OR_MULTIPLE")
         self.assertEqual(audit.classify({"0" * 64}), "UNKNOWN_OR_MULTIPLE")
