@@ -55,8 +55,10 @@ def main() -> int:
         if path.suffix.lower() not in SCAN_SUFFIXES or not path.is_file() or path.stat().st_size > 2_000_000:
             continue
         # Build markers dynamically so this guard doesn't falsely flag itself.
-        markers = ["-----BEGIN " + prefix + " PRIVATE KEY-----"
-                   for prefix in ("", "ENCRYPTED", "RSA", "EC", "DSA", "OPENSSH")]
+        markers = ["-----BEGIN " + "PRIVATE KEY-----"] + [
+            "-----BEGIN " + prefix + " PRIVATE KEY-----"
+            for prefix in ("ENCRYPTED", "RSA", "EC", "DSA", "OPENSSH")
+        ]
         try:
             contents = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
