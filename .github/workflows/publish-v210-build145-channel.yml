@@ -1,0 +1,116 @@
+name: Publish v2.10 baseline update to independent build-145 channel
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aoqat-production-partial-update-publish
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      # The APK was built and signed in the isolated v2.10 release workflow.
+      - name: Check inbox behavior and active settings help on mobile
+        run: |
+          node --check js/settings-help-live.js
+          npm install --no-save --package-lock=false playwright
+          node tests/inbox-help-scope-browser.cjs
+      - name: Confirm the signed v2.10 APK release already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v2.10-fast-partial-updates-base --json assets --jq '.assets[].name' | grep -Fx aoqat-v2.10-partial-update-foundation.apk
+      - name: Generate web-only update compatible with installed APK v2.10
+        run: python3 scripts/prepare-android-update.py
+      - name: Verify manifest checksum and strictly scoped help fix
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,re
+          root=pathlib.Path('android-updates')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['nativeBuild']==145, 'Only installed APK v2.10 (145) may receive this update'
+          files=m['files']
+          assert 1<=len(files)<=250 and 'index.html' in files
+          assert 'js/settings-help-live.js' in files
+          html=(root/'files/index.html').read_text()
+          # Android loads the bundled startup script; the standalone module is
+          # retained in the snapshot but is not directly referenced by index.html.
+          assert 'js/apk-startup-bundle.js' in html
+          code=(root/'files/js/settings-help-live.js').read_text()
+          bundle=(root/'files/js/apk-startup-bundle.js').read_text()
+          for source in (code,bundle):
+              assert "if(button.closest('#reminderInbox'))return;" in source
+              assert "button.classList.add('aoqat-help-eligible')" in source
+          total=0
+          for path,expected in files.items():
+              assert path=='index.html' or re.fullmatch(r'(?:js|css)/[a-zA-Z0-9_./-]+\.(?:js|css)',path),path
+              assert '..' not in path and '%' not in path and '\\' not in path
+              raw=(root/'files'/path).read_bytes()
+              assert len(raw)<=6*1024*1024, path
+              assert hashlib.sha256(raw).hexdigest()==expected, path
+              total+=len(raw)
+          assert total<=24*1024*1024
+          canonical='\n'.join(f'{path}:{files[path]}' for path in sorted(files))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==m['revision']
+          print('VERIFIED: v2.10 / build 145; files:',len(files),'uncompressed bytes:',total)
+          PY
+      - name: Publish only Android update snapshot; leave other projects untouched
+        run: |
+          set -euo pipefail
+          cp -a android-updates /tmp/aoqat-v210-build145
+          # Clean only temporary runner files; do not mutate the source branch.
+          git reset --hard HEAD
+          git clean -fd -- android-updates
+          git fetch origin main
+          git checkout -B publish-v210-channel origin/main
+          # Keep the existing build-144 manifest/files intact.
+          rm -rf android-updates/build-145
+          mkdir -p android-updates/build-145
+          cp -a /tmp/aoqat-v210-build145/. android-updates/build-145/
+          git add -A -- android-updates/build-145
+          python3 - <<'PY'
+          import subprocess
+          changed=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert changed and all(p.startswith('android-updates/build-145/') for p in changed),changed
+          print('Only the new build-145 channel changed:',len(changed))
+          PY
+          git -c user.name='aoqat-partial-update-bot' -c user.email='actions@users.noreply.github.com' commit -m 'Publish isolated build 145 web update channel [web-only]'
+          git push origin HEAD:main
+      - name: Verify the deployed manifest and edited asset
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,time,urllib.request
+          expected=json.load(open('android-updates/manifest.json'))
+          origin='https://aoqat.vercel.app/android-updates/build-145/'
+          for attempt in range(1,19):
+              try:
+                  with urllib.request.urlopen(origin+'manifest.json',timeout=15) as response:
+                      live=json.load(response)
+                      assert response.geturl()==origin+'manifest.json'
+                  if live.get('nativeBuild')==145 and live.get('revision')==expected['revision']:
+                      with urllib.request.urlopen(origin+'files/js/settings-help-live.js',timeout=15) as response:
+                          data=response.read()
+                      assert hashlib.sha256(data).hexdigest()==live['files']['js/settings-help-live.js']
+                      assert b'#reminderInbox' in data
+                      print('LIVE_VERIFIED: build 145 channel valid, build 144 endpoint remains untouched')
+                      break
+                  print('Awaiting hosting update',attempt,'build',live.get('nativeBuild'))
+              except Exception as e:
+                  print('Live check',attempt,str(e))
+              time.sleep(10)
+          else:
+              raise SystemExit('Update committed to main but hosting revision could not be confirmed')
+          # Old installed v2.09 builds must remain on their original endpoint.
+          with urllib.request.urlopen('https://aoqat.vercel.app/android-updates/manifest.json',timeout=15) as response:
+              old=json.load(response)
+          assert old['nativeBuild']==144, 'Legacy v2.09 update endpoint unexpectedly changed'
+          PY
