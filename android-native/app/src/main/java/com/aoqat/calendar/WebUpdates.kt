@@ -33,8 +33,18 @@ class WebUpdates(
     // Never read v1 unsigned updates from earlier APKs, even if their files exist.
     private var active: File? = selectSnapshotOnLaunch()
 
+    // A file must be explicitly listed by the verified signed manifest.
+    // Merely existing under a signed snapshot directory never makes it trusted.
+    private val signedActivePaths: Set<String> = active?.let { snapshot ->
+        try {
+            JSONObject(File(snapshot, "verified-manifest.json").readText())
+                .getJSONObject("files").keys().asSequence().toSet()
+        } catch (_: Exception) { emptySet() }
+    } ?: emptySet()
+
     fun response(uri: Uri): WebResourceResponse? {
         val path = assetPath(uri) ?: return null
+        if (path !in signedActivePaths) return null
         val file = active?.let { File(it, path) }?.takeIf { it.isFile } ?: return null
         val mime = when (file.extension) {
             "js" -> "application/javascript"
