@@ -8,6 +8,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Only a complete, checksum-verified snapshot compatible with this native build is activated.
  * Large Quran/audio assets always remain in the installed APK. Native code needs an APK update. */
@@ -15,6 +16,7 @@ class WebUpdates(private val context:Context, private val fetch:(String,Int)->By
     private val root=File(context.filesDir,"web-updates-v1")
     private val prefs=context.getSharedPreferences("web_updates_v1",Context.MODE_PRIVATE)
     private val nativeBuild=context.packageManager.getPackageInfo(context.packageName,0).versionCode
+    private val checking=AtomicBoolean(false)
     private var active:File?=(if(prefs.getInt("nativeBuild",-1)==nativeBuild)prefs.getString("active",null)else null)?.takeIf{it.matches(Regex("[a-f0-9]{64}"))}?.let{File(root,it)}?.takeIf{File(it,"complete").isFile}
     fun response(uri:Uri):WebResourceResponse? {
         val path=assetPath(uri)?:return null
@@ -23,8 +25,15 @@ class WebUpdates(private val context:Context, private val fetch:(String,Int)->By
         return WebResourceResponse(mime,"UTF-8",file.inputStream())
     }
     fun check() {
-        if(System.currentTimeMillis()-prefs.getLong("checked",0)<6*60*60*1000)return
-        Thread { checkNow() }.start()
+        // Check when launched / resumed, with a short persistent throttle.
+        // No six-hour wait and no repeated concurrent downloads.
+        val now=System.currentTimeMillis()
+        val last=maxOf(prefs.getLong("checked",0),prefs.getLong("attempt",0))
+        if(!due(now,last) || !checking.compareAndSet(false,true))return
+        prefs.edit().putLong("attempt",now).apply()
+        Thread {
+            try { checkNow() } finally { checking.set(false) }
+        }.start()
     }
     internal fun checkNow(){
             try {
@@ -55,6 +64,9 @@ class WebUpdates(private val context:Context, private val fetch:(String,Int)->By
             }catch(e:Exception){android.util.Log.w("WebUpdates","Keep installed offline version",e)}
     }
     companion object {
+        const val MIN_CHECK_INTERVAL_MS=5*60*1000L
+        fun due(now:Long,last:Long):Boolean =
+            last<=0 || now<last || now-last>=MIN_CHECK_INTERVAL_MS
         // The updated WebView uses an interceptable HTTPS origin, not file:///android_asset/.
         fun assetPath(uri:Uri):String? {
             val path=when {
