@@ -64,14 +64,18 @@ class WebLocalContent(
         url == LEGACY_URL && !prefs.getBoolean("complete", false)
 
     /** Input is the JSON-encoded String returned by evaluateJavascript. */
-    fun captureLegacy(jsValue: String?): Boolean = try {
-        val raw = JSONTokener(jsValue ?: "null").nextValue() as? String ?: return false
-        if (raw.length > MAX_LOCAL_STORAGE) return false
-        JSONObject(raw) // Validate the snapshot before leaving the old origin.
-        prefs.edit().putString("snapshot", raw).putBoolean("captured", true).commit()
-    } catch (e: Exception) {
-        android.util.Log.w("WebUpdates", "Unable to capture legacy settings; keep old page", e)
-        false
+    fun captureLegacy(jsValue: String?): Boolean {
+        return try {
+            val raw = JSONTokener(jsValue ?: "null").nextValue() as? String
+            if (raw == null || raw.length > MAX_LOCAL_STORAGE) false
+            else {
+                JSONObject(raw) // Validate the snapshot before leaving the old origin.
+                prefs.edit().putString("snapshot", raw).putBoolean("captured", true).commit()
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("WebUpdates", "Unable to capture legacy settings; keep old page", e)
+            false
+        }
     }
 
     fun confirmMigration() {
