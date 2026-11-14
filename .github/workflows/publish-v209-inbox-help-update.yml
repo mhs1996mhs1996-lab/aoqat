@@ -23,6 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      # Browser regression passed on the same branch; recheck before publishing.
       - name: Check inbox behavior and active settings help on mobile
         run: |
           node --check js/settings-help-live.js
