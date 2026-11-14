@@ -8,6 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 EXPECTED_SPKI_SHA256 = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d"
+EXPECTED_APK_CERT_SHA256 = "9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765"
 
 def main():
     updates = (ROOT / "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt").read_text()
@@ -27,6 +28,16 @@ def main():
     public_der = base64.b64decode("".join(pem_lines[1:-1]), validate=True)
     assert hashlib.sha256(public_der).hexdigest() == EXPECTED_SPKI_SHA256, "V2 public PEM fingerprint mismatch"
     assert base64.b64decode(match.group(1), validate=True) == public_der, "Kotlin pin differs from reviewed V2 public PEM"
+    # Independent public APK certificate. The private .p12 is NEVER available
+    # to CI. Reject any unreviewed replacement of the owner's new certificate.
+    apk_certificate = ROOT / "security/aoqat-apk-public-v2.crt"
+    cert_lines = [line.strip() for line in apk_certificate.read_text().splitlines()
+                  if line.strip()]
+    assert len(cert_lines) >= 3 and cert_lines[0] == "-----BEGIN CERTIFICATE-----" and \\
+        cert_lines[-1] == "-----END CERTIFICATE-----", "Invalid V2 APK public certificate PEM"
+    cert_der = base64.b64decode("".join(cert_lines[1:-1]), validate=True)
+    assert hashlib.sha256(cert_der).hexdigest() == EXPECTED_APK_CERT_SHA256, "APK V2 public certificate changed"
+
     check_now = updates.split("internal fun checkNow()", 1)[1].split("companion object", 1)[0]
     assert "SignedWebUpdateManifest.verify(" in check_now, "No publisher check in update download path"
     assert check_now.index("SignedWebUpdateManifest.verify(") < check_now.index('fetch("files/$path"'), "Files downloaded before signature verification"
