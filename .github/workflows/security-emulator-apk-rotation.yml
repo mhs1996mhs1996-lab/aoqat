@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        api-level: [26, 28, 33]
+        api-level: [26, 27, 28, 33]
     steps:
       - name: Checkout reviewed security branch only
         uses: actions/checkout@v4
