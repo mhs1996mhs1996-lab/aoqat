@@ -20,7 +20,8 @@ permissions:
 
 jobs:
   build-apk:
-    if: github.event_name != 'push' || !contains(github.event.head_commit.message, '[web-only]')
+    # Security work must not publish a CI-debug APK as a user upgrade.
+    if: (github.event_name != 'push' || !contains(github.event.head_commit.message, '[web-only]')) && !startsWith(github.ref, 'refs/heads/security/')
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     steps:
@@ -39,11 +40,6 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-
-      - name: Prepare deterministic Android signing key
-        run: |
-          mkdir -p android-native/signing
-          base64 --decode android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
 
       - name: Check prayer timing and web settings
         run: node --test tests/quran-pages.test.cjs tests/adhan-core.test.cjs tests/prayer-cache.test.cjs tests/prayer-alarm-core.test.cjs tests/friday-core.test.cjs tests/iqama-minute-stepper.test.cjs tests/iqama-stepper-responsive.test.cjs
