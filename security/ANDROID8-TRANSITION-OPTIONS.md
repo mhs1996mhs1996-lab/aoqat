@@ -16,6 +16,36 @@ exists.** Cloud and device-transfer backup exclude:
 and `custom-adhan/`. Other app-private state may include the WebView
 localStorage origin, Quran position, alarm settings and scheduled reminders.
 
+## Persistent user choice versus runtime recovery state (verified in code)
+
+**Do not blindly export/restore every excluded preference XML file.**
+A migration must separate user-selected options from device-specific,
+in-progress Android sound/alarm state:
+
+- `adhan_settings.xml` contains the user-selected `settings` JSON, but it
+  also holds transient `delivered_*`, `started_*`, `retryAt_*`,
+  `retryCount_*` and `enabledAt` scheduling markers. Only reviewed
+  user-selected settings should be copied, then native alarms re-scheduled.
+- `adhan_ringer.xml` stores the previous ringer/DND mode, mute state and
+  temporary restore deadline. This is *runtime rollback state*, not a user
+  preference. **Never import it to a different phone or separate app.**
+- `adhan_audio_volume.xml` stores previous/applied Android stream volume for
+  restoring audio after playback; it is also transient. User-chosen adhan
+  volume belongs in the reviewed `settings` JSON, not a restored stream state.
+- `adhan_resume.xml` stores a temporary playback position. Do not transfer
+  it; start fresh. Android scheduled `PendingIntent` alarms, permission
+  grants, battery policy and notification channels must be configured anew.
+- `filesDir/custom-adhan` is **one user-provided audio file**, not a directory.
+  It is limited to 25 MiB by the native audio picker and must be expressly
+  selected, validated and copied with consent if the user still has it.
+- WebView localStorage, fonts, Quran bookmarks, calendar choices and prayer
+  design preferences require their own inventory. The existing origin
+  migration works only within the **same installed application**.
+
+Restore should be a reviewed, versioned user-consent process with a dry-run
+preview and safe rollback; never overwrite a working installed app's data
+automatically.
+
 ## Conservative option A: distinct-package side-by-side transition
 
 Use an **explicitly identified and separately signed** Android 8/8.1
