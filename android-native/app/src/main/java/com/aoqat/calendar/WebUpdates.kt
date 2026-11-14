@@ -273,6 +273,7 @@ class WebUpdates(
         // Crucial: no Quran/prayer data, images or native source in OTA.
         fun allowed(path: String) =
             !path.contains("..") && !path.contains('%') && !path.contains('\\') &&
+            !path.contains("//") && !path.contains("/.") && !path.contains("./") &&
             (path == "index.html" ||
                 path.matches(Regex("(js|css)/[a-zA-Z0-9_./-]+\\.(js|css)")))
 
