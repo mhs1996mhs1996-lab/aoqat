@@ -1,8 +1,16 @@
-name: Prepare unsigned V2 beta candidate - MANUAL ONLY, never publish
+name: Prepare unsigned V2 beta candidate - explicit owner-review trigger, never publish
 
 # Produces an UNSIGNED, NON-INSTALLABLE inspection artifact. The owner's final
 # V2 APK signer stays OFFLINE. This workflow cannot create an installable APK.
+# One-off commit trigger is scoped to THIS security branch and workflow file.
+# Needed because workflow_dispatch cannot run a workflow absent from default branch.
+# A push without the exact review marker NEVER starts the build job.
 on:
+  push:
+    branches:
+      - security/v210-sacred-content-integrity-20261114
+    paths:
+      - .github/workflows/prepare-unsigned-v2-beta.yml
   workflow_dispatch:
     inputs:
       acknowledgement:
@@ -17,7 +25,12 @@ permissions:
 
 jobs:
   prepare-owner-local-signing-input:
-    if: github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114' && inputs.acknowledgement == 'UNSIGNED_ONLY_NO_RELEASE'
+    if: >-
+      github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114'
+      && (
+        (github.event_name == 'workflow_dispatch' && inputs.acknowledgement == 'UNSIGNED_ONLY_NO_RELEASE')
+        || (github.event_name == 'push' && contains(github.event.head_commit.message, '[unsigned-b146-owner-review]'))
+      )
     runs-on: ubuntu-22.04
     timeout-minutes: 65
     steps:
