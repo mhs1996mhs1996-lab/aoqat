@@ -19,7 +19,7 @@ OWNER_V2 = "9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765"
 EXPOSED_OLD = "aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496"
 APIS = (26, 27, 28, 32, 33, 35)
 FINGERPRINT = re.compile(
-    r"(?im)^Signer #\d+ certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)\s*$"
+    r"(?im)^(?:Signer #\d+|V\d+(?:\.\d+)? Signer:)\s+certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)\s*$"
 )
 
 
