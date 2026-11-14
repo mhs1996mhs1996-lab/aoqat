@@ -1,0 +1,17 @@
+# Religious sources and native update trust chain must be reviewed by repo owner.
+# IMPORTANT: CODEOWNERS only requests review; enforce it via GitHub rulesets
+# (required codeowner reviews, restricted push, no admin bypass).
+/assets/quran.json                     @mhs1996mhs1996-lab
+/assets/quran-pages.json               @mhs1996mhs1996-lab
+/assets/mushaf-phone-hafs*             @mhs1996mhs1996-lab
+/assets/qcf-v2-page-fonts/             @mhs1996mhs1996-lab
+/data/prayer-times*                    @mhs1996mhs1996-lab
+/js/quran-reader.js                    @mhs1996mhs1996-lab
+/js/prayer-countdown*                  @mhs1996mhs1996-lab
+/js/prayer-time-choice.js              @mhs1996mhs1996-lab
+/js/adhan-core.js                      @mhs1996mhs1996-lab
+/js/iqama-timing.js                    @mhs1996mhs1996-lab
+/android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt @mhs1996mhs1996-lab
+/android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt @mhs1996mhs1996-lab
+/security/                             @mhs1996mhs1996-lab
+/.github/workflows/                    @mhs1996mhs1996-lab
