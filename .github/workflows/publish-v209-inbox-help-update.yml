@@ -67,6 +67,11 @@ jobs:
         run: |
           set -euo pipefail
           cp -a android-updates /tmp/aoqat-v209-inbox-web-only
+          # The generator modifies tracked files on the CI runner. Save the
+          # verified snapshot, then clean only this throwaway checkout before
+          # switching to main; never reset the actual repository branch.
+          git reset --hard HEAD
+          git clean -fd -- android-updates
           git fetch origin main
           git checkout -B v209-web-update-publish origin/main
           rm -rf android-updates
