@@ -11,6 +11,7 @@ import argparse
 import base64
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -89,9 +90,14 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("Save signed manifest to a separate path")
             body = payload(manifest)
             # Only public-key bytes may ever be committed. Never print the private key.
+            command = ["openssl", "dgst", "-sha256"]
+            # Private key can stay encrypted at rest. Passphrase must be supplied
+            # via the process environment, never command-line plaintext.
+            if os.environ.get("AOQAT_UPDATE_KEY_PASSPHRASE"):
+                command += ["-passin", "env:AOQAT_UPDATE_KEY_PASSPHRASE"]
+            command += ["-sign", str(args.private_key)]
             result = subprocess.run(
-                ["openssl", "dgst", "-sha256", "-sign", str(args.private_key)],
-                input=body, capture_output=True, check=True
+                command, input=body, capture_output=True, check=True
             )
             manifest["signature"] = base64.b64encode(result.stdout).decode("ascii")
             verify(manifest, args.public_key, expected_build=manifest["nativeBuild"],
