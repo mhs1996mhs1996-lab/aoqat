@@ -33,8 +33,8 @@ def main():
     apk_certificate = ROOT / "security/aoqat-apk-public-v2.crt"
     cert_lines = [line.strip() for line in apk_certificate.read_text().splitlines()
                   if line.strip()]
-    assert len(cert_lines) >= 3 and cert_lines[0] == "-----BEGIN CERTIFICATE-----" and \\
-        cert_lines[-1] == "-----END CERTIFICATE-----", "Invalid V2 APK public certificate PEM"
+    assert (len(cert_lines) >= 3 and cert_lines[0] == "-----BEGIN CERTIFICATE-----"
+            and cert_lines[-1] == "-----END CERTIFICATE-----"), "Invalid V2 APK public certificate PEM"
     cert_der = base64.b64decode("".join(cert_lines[1:-1]), validate=True)
     assert hashlib.sha256(cert_der).hexdigest() == EXPECTED_APK_CERT_SHA256, "APK V2 public certificate changed"
 
