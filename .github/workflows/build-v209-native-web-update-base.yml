@@ -1,0 +1,91 @@
+name: Build signed v2.09 native partial-update foundation APK
+
+on:
+  push:
+    branches:
+      - fix/native-web-updates-loading-v209-20261114
+    paths:
+      - '.github/workflows/build-v209-native-web-update-base.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aoqat-v209-foundation-apk
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish-beta:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Restore existing APK signing key
+        run: |
+          mkdir -p android-native/signing
+          base64 -d android-native/signing/aoqat-stable-debug.keystore.b64 > android-native/signing/aoqat-stable-debug.keystore
+      - name: Verify native update handling and build installable APK
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Verify exact version, offline assets, signature and SHA-256
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$apk"
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,json,hashlib
+          apk=Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
+          with zipfile.ZipFile(apk) as z:
+              p='assets/www/'
+              qcf=[name for name in z.namelist() if name.startswith(p+'assets/qcf-v2-page-fonts/p') and name.endswith('.woff2')]
+              assert len(qcf)==604, len(qcf)
+              hashes=json.loads(z.read(p+'assets/mushaf-apk-sha256.json'))
+              for path,digest in hashes.items():
+                  archived=p+path+('.bin' if path.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(archived)).hexdigest()==digest,path
+              assert len(json.loads(z.read(p+'data/prayer-times-offline.json')))==366
+          print('Offline Quran/prayer data retained, size:',apk.stat().st_size)
+          PY
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | head -1 | tee version.txt
+          grep -F "versionCode='144'" version.txt
+          grep -F "versionName='2.09'" version.txt
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$signer" verify --print-certs "$apk" | tee signature.txt
+          grep -Fi 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496' signature.txt
+          mkdir -p release
+          cp "$apk" release/aoqat-v2.09-partial-update-foundation.apk
+          (cd release && sha256sum aoqat-v2.09-partial-update-foundation.apk > checksum.sha256)
+      - name: Upload verified installable APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-v2.09-partial-update-foundation
+          path: release/
+          compression-level: 0
+          retention-days: 30
+          if-no-files-found: error
+      - name: Publish pre-release to download for physical-device test
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag=v2.09-partial-update-foundation-test
+          cat > release/notes.txt <<'NOTES'
+          إصدار تجريبي للتثبيت فوق v2.08، لتصحيح تحميل ملفات التحديث الجزئي داخل Android WebView، مع ترحيل إعدادات الواجهة القديمة، دون تغيير المصحف أو المواقيت.
+          اختبارات Android الآلية واختبارات التوقيع والملفات دون إنترنت نجحت. يلزم اختبار ظهور علامة التحديث الجزئي على هاتف حقيقي قبل اعتماد النظام للإنتاج.
+          ملاحظة: حزمة الويب المنشورة حالياً للبناء 143؛ بناء 144 يحتاج حزمة متوافقة قبل تجربة التنزيل الجزئي.
+          NOTES
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --target "$GITHUB_SHA" --title 'أوقات الصلاة في الحويجة v2.09 — أساس التحديث الجزئي (تجريبي)' --notes-file release/notes.txt --prerelease
+          fi
+          gh release upload "$tag" release/aoqat-v2.09-partial-update-foundation.apk release/checksum.sha256 --clobber
+          gh release view "$tag" --json url,assets
