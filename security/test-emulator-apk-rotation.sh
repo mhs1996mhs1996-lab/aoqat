@@ -6,7 +6,7 @@ set -euo pipefail
 trap 'rc=$?; echo "EMULATOR_FIXTURE_FAILURE: exit=$rc line=$LINENO" >&2' ERR
 : "${ANDROID_HOME:?Android SDK required}"
 api="$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
-case "$api" in 26|28|33) ;; *) echo "Unsupported fixture API: $api"; exit 1 ;; esac
+case "$api" in 26|27|28|33) ;; *) echo "Unsupported fixture API: $api"; exit 1 ;; esac
 aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
 signer="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
 echo "FIXTURE_DEBUG: SDK=$ANDROID_HOME API=$api aapt=$aapt signer=$signer"
@@ -84,7 +84,37 @@ if (( api < 28 )); then
   # legacy-key update is NOT considered a safe production transition.
   test "$signed_sha" = "$old_sha"
   echo "PASS: API $api signs legacy fallback with disposable old identity"
-  echo "MANDATORY SECURITY HOLD: real Android 8 apps need owner-reviewed data migration"
+
+  # Safer Android 8/8.1 transition proof: a separately identified NEW-signer
+  # fake app can install beside the old fake app without replacing its package
+  # or disturbing the old package's private data. No automatic migration is
+  # claimed; the production app still needs reviewed export/import or manual
+  # user-consented setup, without silently losing excluded adhan settings.
+  second_pkg='com.example.aoqat.rotationfixture.newsigner'
+  cat > "$tmp/AndroidManifest.xml" <<MANIFEST_ALT
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="$second_pkg" android:versionCode="2" android:versionName="side-by-side-test">
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="28" />
+    <application android:label="Throwaway Separate-Signer Fixture"
+        android:debuggable="true" android:hasCode="false" />
+</manifest>
+MANIFEST_ALT
+  "$aapt" package -f -M "$tmp/AndroidManifest.xml" -I "$platform" -F "$tmp/alternate-unsigned.apk"
+  "$signer" sign --ks "$tmp/new.p12" --ks-type PKCS12 \
+    --ks-pass env:FIXTURE_PASS --out "$tmp/alternate-new.apk" "$tmp/alternate-unsigned.apk"
+  "$signer" verify --print-certs --min-sdk-version "$api" \
+    --max-sdk-version "$api" "$tmp/alternate-new.apk" > "$tmp/alternate-cert.log"
+  grep -Fqi "$new_sha" "$tmp/alternate-cert.log"
+
+  adb install "$tmp/old.apk"
+  adb shell "run-as $pkg sh -c 'mkdir -p files && echo legacy-keep-me > files/fixture-sentinel'"
+  test "$(adb shell "run-as $pkg cat files/fixture-sentinel" | tr -d '\r')" = 'legacy-keep-me'
+  adb install "$tmp/alternate-new.apk"
+  adb shell pm path "$pkg" | grep -Fq 'package:'
+  adb shell pm path "$second_pkg" | grep -Fq 'package:'
+  test "$(adb shell "run-as $pkg cat files/fixture-sentinel" | tr -d '\r')" = 'legacy-keep-me'
+  echo "PASS: API $api independent new-signer fixture installed beside old; old data untouched"
+  echo "MANDATORY SECURITY HOLD: Android 8 users still need consent-based settings migration"
   exit 0
 fi
 test "$signed_sha" = "$new_sha"
