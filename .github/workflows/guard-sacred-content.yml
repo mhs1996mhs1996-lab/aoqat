@@ -31,6 +31,10 @@ jobs:
         run: python3 security/check-sacred-content.py
       - name: Fail closed on signing-key substitution or downgraded trust-chain
         run: python3 security/check-signed-updater-trust.py
+      - name: Reject accidental private key or APK keystore commits
+        run: |
+          python3 security/test-check-no-private-keys.py
+          python3 security/check-no-private-keys.py
       - name: Test offline signed-manifest validation with ephemeral keypair
         run: python3 security/test-signed-update-manifest.py
       - name: Test read-only APK certificate migration audit parser
