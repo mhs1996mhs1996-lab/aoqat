@@ -154,9 +154,12 @@ class WebUpdatesTest {
     }
 
     @Test fun onlyWebPathsAndAppAssetsAreAllowed() {
-        for(p in listOf("index.html","js/app.js","css/style.css"))
+        for(p in listOf("index.html","js/app.js","css/style.css",
+            "js/components/app.min.js","css/theme-dark.min.css"))
             assertTrue(WebUpdates.allowed(p))
         for(p in listOf("js/../x.js","js/%2e%2e/x.js","js/x\\y.js",
+            "js//app.js","js/./app.js","js/.hidden.js","css/theme//base.css",
+            "css/.hidden.css","js/part./app.js",
             "data/prayer-times-offline.json","assets/quran.json","app.apk"))
             assertFalse(p,WebUpdates.allowed(p))
         assertEquals("index.html",WebUpdates.assetPath(uri))
