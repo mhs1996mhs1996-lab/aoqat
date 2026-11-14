@@ -4,6 +4,7 @@ on:
     branches: [fix/v209-inbox-no-useless-help-20261114]
     paths:
       - 'js/settings-help-live.js'
+      - 'js/reminder-inbox.js'
       - 'tests/inbox-help-scope-browser.cjs'
       - '.github/workflows/check-inbox-help-scope.yml'
   workflow_dispatch:
