@@ -20,8 +20,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 144 // New HTTPS WebView origin with verified partial updates and legacy settings transfer
-        versionName '2.09'
+        versionCode 145 // Fast, verified partial-update checks on foreground, with existing offline content preserved
+        versionName '2.10'
     }
 
     compileOptions {
