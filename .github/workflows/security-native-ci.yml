@@ -84,6 +84,57 @@ jobs:
                   assert hashlib.sha256(z.read(archived)).hexdigest()==digest, name
           print('CI_ONLY_VERIFIED: 604 offline mushaf page fonts and 366 days of prayer data unchanged')
           PY
+      - name: Build strictly unsigned V2 owner-review candidate (no production signing keys)
+        run: |
+          set -euo pipefail
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'FAIL: owner signing secrets must never enter GitHub Actions'
+            exit 1
+          fi
+          gradle -p android-native --no-daemon assembleRelease
+      - name: Verify unsigned APK version, sacred offline payload, and zero signatures
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | head -1 | tee unsigned-b146-version.txt
+          grep -F "versionCode='146'" unsigned-b146-version.txt
+          grep -F "versionName='2.11-security-test'" unsigned-b146-version.txt
+          if "$signer" verify --min-sdk-version 26 "$apk"; then
+            echo 'SECURITY STOP: owner-review artifact unexpectedly has an APK signature'
+            exit 1
+          fi
+          python3 - <<'PY'
+          import hashlib,json,pathlib,zipfile
+          apk=pathlib.Path('android-native/app/build/outputs/apk/release/app-release-unsigned.apk')
+          with zipfile.ZipFile(apk) as z:
+              base='assets/www/'
+              fonts=[n for n in z.namelist() if n.startswith(base+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+              assert len(fonts)==604, f'Missing offline Quran page fonts: {len(fonts)}'
+              rows=json.loads(z.read(base+'data/prayer-times-offline.json'))
+              assert len(rows)==366, f'Offline prayer timetable changed: {len(rows)}'
+              protected=json.loads(z.read(base+'assets/mushaf-apk-sha256.json'))
+              for name,digest in protected.items():
+                  archived=base+name+('.bin' if name.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(archived)).hexdigest()==digest, name
+              assert not any(n.startswith(base+'assets/mushaf-hafs-') or n.startswith(base+'assets/mushaf-tajwid') for n in z.namelist())
+          print('PASS: unsigned 146, 604 Quran fonts, 366 offline days, protected asset hashes')
+          PY
+          sha256sum "$apk" | tee unsigned-b146-sha256.txt
+          echo 'NON-INSTALLABLE unsigned owner-review artifact; no release authorized'
+      - name: Upload unsigned APK solely for owner-local V2 signing review
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B146-UNSIGNED-REVIEW-DO-NOT-INSTALL
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            unsigned-b146-sha256.txt
+            unsigned-b146-version.txt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
       - name: Exercise ephemeral Android certificate rotation across API levels
         run: bash security/test-synthetic-apk-rotation.sh
       - name: Final release prohibition
