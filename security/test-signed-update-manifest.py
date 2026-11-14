@@ -53,7 +53,9 @@ class SigningSecurityTests(unittest.TestCase):
         canonical = "index.html:"+files["index.html"]
         sample = {"nativeBuild":146,"sequence":1,"expiresAt":int(time.time()*1000)+7200000,
                   "revision":hashlib.sha256(canonical.encode()).hexdigest(),"files":files}
-        for path in ("data/prayer-times-offline.json","../outside.js","js/%2e%2e/escape.js","assets/quran.json"):
+        for path in ("data/prayer-times-offline.json","../outside.js","js/%2e%2e/escape.js",
+                     "js//app.js","js/./app.js","js/.hidden.js","css/theme//base.css",
+                     "css/.hidden.css","js/part./app.js","assets/quran.json"):
             sample["files"][path] = "0"*64
             with self.assertRaises(ValueError,msg=path):
                 module.payload(sample)
