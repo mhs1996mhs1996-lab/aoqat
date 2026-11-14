@@ -67,7 +67,7 @@ in memory, and verification temporary files are automatically erased.
 existing 2.10 APK has V2 public-key verification.** Existing user installations
 must not receive a V2 update until a reviewed compatible APK is installed.
 
-## Production update preparation (only after signed APK upgrade is approved)
+## Future signed partial-update preparation (after a clean-installed V2-signed base APK is verified)
 
 1. Obtain an owner-reviewed `build-146` HTML/JS/CSS payload and its exact
    SHA-256 hashes. Do not place Quran, prayer timetable, native code or APKs in
@@ -90,21 +90,31 @@ must not receive a V2 update until a reviewed compatible APK is installed.
    `.github/workflows/publish-signed-build146.yml` workflow with
    `expected_sequence` and the exact SHA-256 of the public signed manifest.
    Its job has read-only GitHub permissions and no deployment step.
-7. An independent reviewed approval and compatible APK migration must exist
-   before any channel can be manually deployed. No unsigned legacy fallback.
+7. The verified **V2-signed base APK must already be installed**, its actual
+   release checked and accepted by the owner, and independent review completed
+   before any partial-update channel can be deployed. Never deploy signed OTA
+   to an old APK lacking the V2 public-key verifier.
 
 ## Android APK signer is a DIFFERENT trust chain
 
 The `aoqat-apk-production-v2.p12` key does not sign web update manifests.
-It cannot simply replace the original APK signing certificate on devices
-already running v2.10. Android 9+ rotation lineage and Android 8/8.1 data
-migration must be independently tested before installation or publication.
-See `security/APK-SIGNING-ROTATION.md`.
+The few current recipients are **informed beta testers**, and the owner
+selected a **consent-based clean installation** (uninstall old trial, then
+install verified V2-signed APK) rather than legacy-signer compatibility.
+A clean reinstall normally removes old private trial data, so test users
+must be warned and agree **before** uninstalling. The clean-install beta
+policy is `security/BETA-CLEAN-INSTALL-V2.md`.
+
+Subsequent APK upgrades must retain the exact V2 APK signing identity.
+Legacy-signature migration for a future, wider user population is separate
+optional research; see `security/APK-SIGNING-ROTATION.md`.
 
 ## Current hold status
 
 - Public V2 key pinned in Android security trial build 146.
 - No V2 private signing key or passphrase in GitHub.
 - No owner-signed production update manifest has been submitted.
-- No APK signature migration has been approved or tested on real devices.
+- No real owner V2-signed installable APK has yet been verified on test devices.
+- The old beta installer is not upgraded in-place; informed testers will
+  receive a clean-install notice only after a validated new APK exists.
 - The security branch remains a draft PR; release remains prohibited.
