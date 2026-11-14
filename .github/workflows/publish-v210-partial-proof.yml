@@ -1,0 +1,135 @@
+name: Publish v2.10 visual proof through partial update only
+
+on:
+  push:
+    branches:
+      - test/v210-partial-update-visible-proof-20261114
+    paths:
+      - '.github/workflows/publish-v210-partial-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aoqat-production-partial-update-publish
+  cancel-in-progress: false
+
+jobs:
+  test-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Confirm marker works and does not change reminders
+        run: |
+          node --check scripts/v210-partial-delivery-proof.js
+          npm install --no-save --package-lock=false playwright
+          node tests/v210-partial-delivery-proof-browser.cjs
+      - name: Generate standard verified web update snapshot
+        run: python3 scripts/prepare-android-update.py
+      - name: Attach visual proof ONLY to build-145 web update
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('android-updates')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['nativeBuild']==145,m.get('nativeBuild')
+          original=pathlib.Path('index.html').read_text()
+          assert 'v210-partial-delivery-proof.js' not in original
+          index=root/'files/index.html'
+          html=index.read_text()
+          assert 'js/apk-startup-bundle.js' in html
+          assert 'v210-partial-delivery-proof.js' not in html
+          html=html.replace('</body>','<script defer src="js/v210-partial-delivery-proof.js"></script></body>')
+          index.write_text(html)
+          proof=(root/'files/js/v210-partial-delivery-proof.js')
+          proof.write_bytes(pathlib.Path('scripts/v210-partial-delivery-proof.js').read_bytes())
+          m['files']['index.html']=hashlib.sha256(index.read_bytes()).hexdigest()
+          m['files']['js/v210-partial-delivery-proof.js']=hashlib.sha256(proof.read_bytes()).hexdigest()
+          canonical='\n'.join(f'{p}:{m["files"][p]}' for p in sorted(m['files']))
+          m['revision']=hashlib.sha256(canonical.encode()).hexdigest()
+          (root/'manifest.json').write_text(json.dumps(m,separators=(',',':')))
+          assert len(m['files'])==89
+          print('Update-only proof prepared:',m['revision'])
+          PY
+      - name: Verify SHA-256 of full snapshot, build compatibility and offline-safe scope
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,re
+          root=pathlib.Path('android-updates')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['nativeBuild']==145
+          assert len(m['files'])==89
+          assert m['files'].get('index.html') and m['files'].get('js/v210-partial-delivery-proof.js')
+          assert 'v210-partial-delivery-proof.js' in (root/'files/index.html').read_text()
+          assert 'v210-partial-delivery-proof.js' not in pathlib.Path('index.html').read_text()
+          assert 'وصل التحديث الجزئي 2.10' in (root/'files/js/v210-partial-delivery-proof.js').read_text()
+          total=0
+          for path,digest in m['files'].items():
+              assert path=='index.html' or (re.fullmatch(r'(js|css)/[a-zA-Z0-9_./-]+\.(js|css)',path) and '..' not in path and '%' not in path and '\\' not in path),path
+              content=(root/'files'/path).read_bytes()
+              assert len(content)<=6*1024*1024
+              assert hashlib.sha256(content).hexdigest()==digest,path
+              total+=len(content)
+          assert total<=24*1024*1024,total
+          canonical='\n'.join(f'{p}:{m["files"][p]}' for p in sorted(m['files']))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==m['revision']
+          print(f'VERIFIED: v2.10 build 145, {len(m["files"])} files, {total} bytes')
+          PY
+      - name: Publish only build 145 update channel without touching other code or builds
+        run: |
+          set -euo pipefail
+          cp -a android-updates /tmp/aoqat-v210-visual-proof
+          git reset --hard HEAD
+          git clean -fd -- android-updates
+          git fetch origin main
+          git checkout -B publish-v210-proof origin/main
+          rm -rf android-updates/build-145
+          mkdir -p android-updates/build-145
+          cp -a /tmp/aoqat-v210-visual-proof/. android-updates/build-145/
+          git add -A -- android-updates/build-145
+          python3 - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert paths and all(p.startswith('android-updates/build-145/') for p in paths),paths
+          print('Only build-145 updated:',paths)
+          PY
+          git -c user.name='aoqat-partial-update-bot' -c user.email='actions@users.noreply.github.com' commit -m 'Test-only proof in build 145 partial web update [web-only]'
+          git push origin HEAD:main
+      - name: Confirm HTTPS site serves the new revision and proof
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,time,urllib.request
+          expected=json.load(open('android-updates/build-145/manifest.json'))
+          origin='https://aoqat.vercel.app/android-updates/build-145/'
+          for attempt in range(1,19):
+              try:
+                  with urllib.request.urlopen(origin+'manifest.json',timeout=15) as res:
+                      live=json.load(res)
+                      assert res.geturl()==origin+'manifest.json'
+                  if live.get('nativeBuild')!=145 or live.get('revision')!=expected['revision']:
+                      print('Waiting for CDN refresh',attempt,live.get('revision'),flush=True)
+                      time.sleep(10)
+                      continue
+                  with urllib.request.urlopen(origin+'files/js/v210-partial-delivery-proof.js',timeout=15) as res:
+                      proof=res.read()
+                  with urllib.request.urlopen(origin+'files/index.html',timeout=15) as res:
+                      index=res.read()
+                  assert hashlib.sha256(proof).hexdigest()==live['files']['js/v210-partial-delivery-proof.js']
+                  assert hashlib.sha256(index).hexdigest()==live['files']['index.html']
+                  assert 'وصل التحديث الجزئي 2.10' in proof.decode()
+                  assert b'js/v210-partial-delivery-proof.js' in index
+                  with urllib.request.urlopen('https://aoqat.vercel.app/android-updates/manifest.json',timeout=15) as res:
+                      legacy=json.load(res)
+                  assert legacy['nativeBuild']==144
+                  print('LIVE_VERIFIED: build 145 visual proof delivered; original 144 channel unchanged',flush=True)
+                  break
+              except Exception as e:
+                  print('Check',attempt,str(e),flush=True)
+              time.sleep(10)
+          else:
+              raise SystemExit('Live proof not verified')
+          PY
