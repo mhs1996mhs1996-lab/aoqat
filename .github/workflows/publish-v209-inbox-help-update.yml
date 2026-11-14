@@ -1,0 +1,102 @@
+name: Publish v2.09 notification inbox help fix as partial update
+
+on:
+  push:
+    branches:
+      - fix/v209-inbox-no-useless-help-20261114
+    paths:
+      - '.github/workflows/publish-v209-inbox-help-update.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aoqat-production-partial-update-publish
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check inbox behavior and active settings help on mobile
+        run: |
+          node --check js/settings-help-live.js
+          npm install --no-save --package-lock=false playwright
+          node tests/inbox-help-scope-browser.cjs
+      - name: Generate web-only update compatible with installed APK v2.09
+        run: python3 scripts/prepare-android-update.py
+      - name: Verify manifest checksum and strictly scoped help fix
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,pathlib,re
+          root=pathlib.Path('android-updates')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['nativeBuild']==144, 'Only installed APK v2.09 (144) may receive this update'
+          files=m['files']
+          assert 1<=len(files)<=250 and 'index.html' in files
+          assert 'js/settings-help-live.js' in files
+          html=(root/'files/index.html').read_text()
+          assert 'js/settings-help-live.js' in html
+          code=(root/'files/js/settings-help-live.js').read_text()
+          assert "if(button.closest('#reminderInbox'))return;" in code
+          assert "button.classList.add('aoqat-help-eligible')" in code
+          total=0
+          for path,expected in files.items():
+              assert path=='index.html' or re.fullmatch(r'(?:js|css)/[a-zA-Z0-9_./-]+\.(?:js|css)',path),path
+              assert '..' not in path and '%' not in path and '\\' not in path
+              raw=(root/'files'/path).read_bytes()
+              assert len(raw)<=6*1024*1024, path
+              assert hashlib.sha256(raw).hexdigest()==expected, path
+              total+=len(raw)
+          assert total<=24*1024*1024
+          canonical='\n'.join(f'{path}:{files[path]}' for path in sorted(files))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==m['revision']
+          print('VERIFIED: v2.09 / build 144; files:',len(files),'uncompressed bytes:',total)
+          PY
+      - name: Publish only Android update snapshot; leave other projects untouched
+        run: |
+          set -euo pipefail
+          cp -a android-updates /tmp/aoqat-v209-inbox-web-only
+          git fetch origin main
+          git checkout -B v209-web-update-publish origin/main
+          rm -rf android-updates
+          cp -a /tmp/aoqat-v209-inbox-web-only android-updates
+          git add -A -- android-updates
+          python3 - <<'PY'
+          import subprocess
+          changed=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert changed and all(x.startswith('android-updates/') for x in changed),changed
+          print('Only partial-update files changed:',len(changed))
+          PY
+          git -c user.name='aoqat-partial-update-bot' -c user.email='actions@users.noreply.github.com' commit -m 'Publish build 144 inbox-help correction only [web-only]'
+          git push origin HEAD:main
+      - name: Verify the deployed manifest and edited asset
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,time,urllib.request
+          expected=json.load(open('android-updates/manifest.json'))
+          origin='https://aoqat.vercel.app/android-updates/'
+          for attempt in range(1,19):
+              try:
+                  with urllib.request.urlopen(origin+'manifest.json',timeout=15) as response:
+                      live=json.load(response)
+                      assert response.geturl()==origin+'manifest.json'
+                  if live.get('nativeBuild')==144 and live.get('revision')==expected['revision']:
+                      with urllib.request.urlopen(origin+'files/js/settings-help-live.js',timeout=15) as response:
+                          data=response.read()
+                      assert hashlib.sha256(data).hexdigest()==live['files']['js/settings-help-live.js']
+                      assert b'#reminderInbox' in data
+                      print('LIVE_VERIFIED: compatible v2.09 partial update and inbox help fix delivered')
+                      break
+                  print('Awaiting hosting update',attempt,'build',live.get('nativeBuild'))
+              except Exception as e:
+                  print('Live check',attempt,str(e))
+              time.sleep(10)
+          else:
+              raise SystemExit('Update committed to main but hosting revision could not be confirmed')
+          PY
