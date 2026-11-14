@@ -17,12 +17,16 @@ def main():
     assert match, "Missing pinned publisher public key"
     actual = hashlib.sha256(base64.b64decode(match.group(1), validate=True)).hexdigest()
     assert actual == EXPECTED_SPKI_SHA256, "Publisher identity changed without key rotation review"
-    assert "SignedWebUpdateManifest.verify(" in updates
-    assert updates.index("SignedWebUpdateManifest.verify(") < updates.index('fetch("files/$path"'), "Files downloaded before signature verification"
+    check_now = updates.split("internal fun checkNow()", 1)[1].split("companion object", 1)[0]
+    assert "SignedWebUpdateManifest.verify(" in check_now, "No publisher check in update download path"
+    assert check_now.index("SignedWebUpdateManifest.verify(") < check_now.index('fetch("files/$path"'), "Files downloaded before signature verification"
     assert "web-updates-v2-signed" in updates and "web_updates_v2_signed" in updates
     assert "webUpdates.confirmStartup()" in native
     assert "allowUniversalAccessFromFileURLs = false" in native
     assert "allowFileAccessFromFileURLs = false" in native
+    assert "shouldOverrideUrlLoading(" in native
+    local = (ROOT / "android-native/app/src/main/java/com/aoqat/calendar/WebLocalContent.kt").read_text()
+    assert "frame-src 'none'; object-src 'none'; base-uri 'self'" in local
     assert "versionCode 146" in gradle, "Only the isolated security build 146 can use this key"
     assert "storePassword 'android'" not in gradle, "Old APK signing secret still hard-coded"
     assert not (ROOT/"android-native/signing/aoqat-stable-debug.keystore.b64").exists(), "Exposed old signing key still tracked"
