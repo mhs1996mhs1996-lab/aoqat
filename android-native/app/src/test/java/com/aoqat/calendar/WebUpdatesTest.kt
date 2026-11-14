@@ -35,5 +35,20 @@ class WebUpdatesTest {
   for(path in listOf("index.html","js/apk-startup-bundle.js","css/style.css"))assertTrue(path,WebUpdates.allowed(path))
   for(path in listOf("../index.html","js/../../main.kt","js/%2e%2e/a.js","js/a\\b.js","assets/mushaf-phone-hafs/001.json.gz","data/prayer-times-offline.json","app.apk"))assertFalse(path,WebUpdates.allowed(path))
  }
+ @Test fun verifiedSnapshotIsAccessibleViaInterceptableHttpsAssetsOrigin(){
+  val uri=android.net.Uri.parse("https://appassets.androidplatform.net/assets/www/js/example.js")
+  assertEquals("js/example.js",WebUpdates.assetPath(uri))
+  assertEquals("index.html",WebUpdates.assetPath(android.net.Uri.parse("https://appassets.androidplatform.net/assets/www/index.html")))
+  assertNull(WebUpdates.assetPath(android.net.Uri.parse("http://appassets.androidplatform.net/assets/www/index.html")))
+  assertNull(WebUpdates.assetPath(android.net.Uri.parse("https://evil.example/assets/www/index.html")))
+  assertNull(WebUpdates.assetPath(android.net.Uri.parse("https://appassets.androidplatform.net/assets/www/../secret.js")))
+  assertNull(WebUpdates.assetPath(android.net.Uri.parse("https://appassets.androidplatform.net/assets/private.html")))
+  val body="window.verifiedUpdate=1;".toByteArray()
+  val files=mapOf("index.html" to "<head></head>".toByteArray(),"js/example.js" to body)
+  val update=WebUpdates(c){path,_->if(path=="manifest.json")manifest(files)else files.getValue(path.removePrefix("files/"))}
+  update.checkNow()
+  assertNull(update.response(uri))
+  assertEquals(String(body),WebUpdates(c).response(uri)!!.data.bufferedReader().use{it.readText()})
+ }
  @Test fun checksumsAreStable(){assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",WebUpdates.digest(byteArrayOf()))}
 }
