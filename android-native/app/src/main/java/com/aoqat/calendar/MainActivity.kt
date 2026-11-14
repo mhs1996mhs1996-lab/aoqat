@@ -332,6 +332,7 @@ class MainActivity : Activity() {
     private lateinit var webView: WebView
     private var capturingLegacyWebStorage = false
     private lateinit var localWebContent: WebLocalContent
+    private lateinit var webUpdates: WebUpdates
     private val ADHAN_AUDIO_REQUEST = 812
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
@@ -399,6 +400,8 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        // Recheck at each foreground entry, subject to the five-minute throttle.
+        if (::webUpdates.isInitialized) webUpdates.check()
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatRefreshNativeReminders?.()",null)
         if (::webView.isInitialized) { protectDisplayColors(); webView.evaluateJavascript("window.aoqatRefreshNativePrayerRows?.()", null) }
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
@@ -479,7 +482,7 @@ class MainActivity : Activity() {
         webView.addJavascriptInterface(AndroidBridge(), "AndroidNative")
 
         val mushafStore = MushafAssetStore(this)
-        val webUpdates = WebUpdates(this)
+        webUpdates = WebUpdates(this)
         localWebContent = WebLocalContent(this, webUpdates, mushafStore)
         webUpdates.check()
         if (Build.VERSION.SDK_INT >= 33) {
