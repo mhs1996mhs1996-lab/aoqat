@@ -133,6 +133,23 @@ This script reports the signing certificate visible at API levels
 26/27/28/32/33/35. It does **not** require the PKCS#12 keystore or a
 password; its results do not authorize an installation or a release.
 
+### Beta V2 signer certificate audit (different from in-place migration research)
+
+For the few informed test users who have agreed to a **clean installation**, the
+owner's actual V2-signed candidate is checked read-only with:
+
+```sh
+python3 security/audit-apk-signatures.py --clean-install-beta \
+  --apksigner /path/to/Android/Sdk/build-tools/VERSION/apksigner \
+  /safe/path/to/owner-v2-signed.apk
+```
+
+This mode requires the final owner V2 certificate on every tested Android API,
+including Android 8/8.1 and 16. Old, unknown and multiple certificates fail.
+It does NOT establish in-place compatibility or authorize uninstall, release,
+or distribution. The earlier `--original-apk` audit remains for separate
+legacy-signer migration research and cannot be combined with this beta mode.
+
 ### Beta clean-install release gate (all mandatory)
 
 - [ ] Final source code reviewed and CI green on **exact release SHA**
