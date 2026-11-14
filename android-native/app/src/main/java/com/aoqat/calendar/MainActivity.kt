@@ -330,6 +330,8 @@ class MainActivity : Activity() {
 
     private var firstResume = true
     private lateinit var webView: WebView
+    private var capturingLegacyWebStorage = false
+    private lateinit var localWebContent: WebLocalContent
     private val ADHAN_AUDIO_REQUEST = 812
     private var fileCallback: ValueCallback<Array<Uri>>? = null
 
@@ -374,7 +376,8 @@ class MainActivity : Activity() {
         if (AdhanSchedule.enabled(this)) requestIqamaBackgroundAccessIfNeeded(forAdhan = true)
         else if (IqamaNativeScheduler.enabled(this)) requestIqamaBackgroundAccessIfNeeded()
 
-        webView.loadUrl("file:///android_asset/www/index.html")
+        // The asset HTTPS origin is interceptable, unlike Android's special file:///android_asset/ path.
+        webView.loadUrl(localWebContent.initialUrl())
         webView.postDelayed({showFirstInstallPermissionGuide()},2200L)
         PrayerStartup.refresh(this)
         restoreIqamaServiceIfActive()
@@ -477,6 +480,7 @@ class MainActivity : Activity() {
 
         val mushafStore = MushafAssetStore(this)
         val webUpdates = WebUpdates(this)
+        localWebContent = WebLocalContent(this, webUpdates, mushafStore)
         webUpdates.check()
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(
@@ -484,7 +488,7 @@ class MainActivity : Activity() {
         }
         webView.webViewClient = object : WebViewClient() {
             override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? {
-                return if (request.method == "GET") (webUpdates.response(request.url) ?: mushafStore.response(request.url)) else null
+                return if (request.method == "GET") localWebContent.response(request.url) else null
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
@@ -494,6 +498,36 @@ class MainActivity : Activity() {
 
             override fun onPageFinished(view: WebView, url: String) {
                 super.onPageFinished(view, url)
+                if (localWebContent.needsLegacyCapture(url)) {
+                    if (!capturingLegacyWebStorage) {
+                        capturingLegacyWebStorage = true
+                        // Copy the old file-origin localStorage before changing document origin.
+                        view.evaluateJavascript("""
+                          (function(){try{
+                            var values={};
+                            for(var i=0;i<localStorage.length;i++){
+                              var k=localStorage.key(i);values[k]=localStorage.getItem(k);
+                            }
+                            return JSON.stringify(values);
+                          }catch(e){return null;}})()
+                        """.trimIndent()) { snapshot ->
+                            if (localWebContent.captureLegacy(snapshot)) {
+                                view.loadUrl(WebLocalContent.APP_URL)
+                            } else {
+                                // Do not discard user preferences if capture failed.
+                                capturingLegacyWebStorage = false
+                                android.util.Log.w("WebUpdates", "Legacy settings capture unavailable; keep installed page")
+                            }
+                        }
+                    }
+                    return
+                }
+                if (url == WebLocalContent.APP_URL &&
+                    localWebContent.initialUrl() != WebLocalContent.APP_URL) {
+                    view.evaluateJavascript("localStorage.getItem('${WebLocalContent.MIGRATED_KEY}')") { result ->
+                        if (result == "\"1\"") localWebContent.confirmMigration()
+                    }
+                }
                 applyAndroidCompatibilityFixes(view)
             }
         }
