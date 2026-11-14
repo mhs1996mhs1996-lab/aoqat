@@ -1,0 +1,120 @@
+name: Verify second v2.10 partial update removes only test 01
+
+on:
+  push:
+    branches:
+      - test/v210-remove-partial-proof-20261114
+    paths:
+      - '.github/workflows/v210-remove-proof-partial-update.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: aoqat-production-partial-update-publish
+  cancel-in-progress: false
+
+jobs:
+  verify-publish-verify:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 16
+    steps:
+      - name: Checkout source and full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read current production update snapshot; remove ONLY proof
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git checkout -B publish-v210-proof-removal origin/main
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          root=pathlib.Path('android-updates/build-145')
+          manifest_file=root/'manifest.json'
+          m=json.loads(manifest_file.read_text())
+          assert m['nativeBuild']==145, 'Only the v2.10 / build 145 channel is allowed'
+          # Never overwrite a concurrent/newer web deployment.
+          assert m['revision']=='dff5ac0163a18d51ac6d2afddc39f482b7ee5d544651cec0c182525d77fb1f36', 'Unexpected production revision: refuse to remove'
+          proof_name='js/v210-partial-delivery-proof.js'
+          proof_file=root/'files'/proof_name
+          page=root/'files/index.html'
+          assert proof_file.is_file() and proof_name in m['files']
+          assert 'وصل التحديث الجزئي 2.10' in proof_file.read_text()
+          tag='<script defer src="js/v210-partial-delivery-proof.js"></script>'
+          html=page.read_text()
+          assert html.count(tag)==1, 'The proof must appear exactly once'
+          assert hashlib.sha256(page.read_bytes()).hexdigest()==m['files']['index.html']
+          assert hashlib.sha256(proof_file.read_bytes()).hexdigest()==m['files'][proof_name]
+          # Keep the remainder of the page, including all notifications, unmodified.
+          page.write_text(html.replace(tag,''))
+          proof_file.unlink()
+          del m['files'][proof_name]
+          m['files']['index.html']=hashlib.sha256(page.read_bytes()).hexdigest()
+          canonical='\n'.join(f'{path}:{m["files"][path]}' for path in sorted(m['files']))
+          m['revision']=hashlib.sha256(canonical.encode()).hexdigest()
+          assert m['revision']!='dff5ac0163a18d51ac6d2afddc39f482b7ee5d544651cec0c182525d77fb1f36'
+          assert len(m['files'])==88
+          manifest_file.write_text(json.dumps(m,separators=(',',':')))
+          for file,digest in m['files'].items():
+              body=(root/'files'/file).read_bytes()
+              assert hashlib.sha256(body).hexdigest()==digest,file
+          assert 'v210-partial-delivery-proof.js' not in page.read_text()
+          assert "if(button.closest('#reminderInbox'))return;" in (root/'files/js/apk-startup-bundle.js').read_text()
+          assert '#reminderInbox button.main-action::before' in (root/'files/js/reminder-inbox.js').read_text()
+          # Ensure every other file is untouched.
+          subprocess.run(['git','add','-A','--','android-updates/build-145'],check=True)
+          changed=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          expected={
+            'android-updates/build-145/files/index.html',
+            'android-updates/build-145/files/js/v210-partial-delivery-proof.js',
+            'android-updates/build-145/manifest.json',
+          }
+          assert set(changed)==expected, f'Out-of-scope modifications rejected: {changed}'
+          print('SECOND_UPDATE_VERIFIED: 3 paths only; removal of test01; remaining 88 files checksum-verified; revision='+m['revision'])
+          PY
+
+      - name: Publish only verified build-145 3-file change to main
+        run: |
+          set -euo pipefail
+          git -c user.name='aoqat-partial-update-bot' -c user.email='actions@users.noreply.github.com' commit -m 'Remove v2.10 test marker via second partial web update only'
+          git push origin HEAD:main
+
+      - name: Verify live website serves clean v2.10 snapshot, preserve build-144
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,time,urllib.request,urllib.error
+          expected=json.load(open('android-updates/build-145/manifest.json'))
+          origin='https://aoqat.vercel.app/android-updates/build-145/'
+          for attempt in range(1,19):
+              try:
+                  with urllib.request.urlopen(origin+'manifest.json',timeout=15) as res:
+                      live=json.load(res)
+                      assert res.geturl()==origin+'manifest.json'
+                  if live.get('nativeBuild')!=145 or live.get('revision')!=expected['revision']:
+                      print('Awaiting CDN deployment',attempt,live.get('revision'),flush=True)
+                      time.sleep(10)
+                      continue
+                  assert 'js/v210-partial-delivery-proof.js' not in live['files']
+                  assert len(live['files'])==88
+                  with urllib.request.urlopen(origin+'files/index.html',timeout=15) as res:
+                      page=res.read()
+                  assert hashlib.sha256(page).hexdigest()==live['files']['index.html']
+                  assert b'v210-partial-delivery-proof.js' not in page
+                  with urllib.request.urlopen(origin+'files/js/apk-startup-bundle.js',timeout=15) as res:
+                      bundle=res.read()
+                  assert hashlib.sha256(bundle).hexdigest()==live['files']['js/apk-startup-bundle.js']
+                  # No alteration to v2.09's existing update channel.
+                  with urllib.request.urlopen('https://aoqat.vercel.app/android-updates/manifest.json',timeout=15) as res:
+                      old=json.load(res)
+                  assert old['nativeBuild']==144
+                  print('LIVE_SECOND_UPDATE_SUCCESS: build 145, test marker removed, build 144 untouched')
+                  break
+              except Exception as e:
+                  print('Verify',attempt,repr(e),flush=True)
+              time.sleep(10)
+          else:
+              raise SystemExit('Publishing committed, but new live CDN revision was not verified')
+          PY
