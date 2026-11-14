@@ -1,6 +1,9 @@
 name: Publish v2.10 baseline update to independent build-145 channel
 
 on:
+  push:
+    branches: [release/v210-fast-partial-updates-20261114]
+    paths: ['.github/workflows/publish-v210-build145-channel.yml']
   workflow_dispatch:
 
 permissions:
@@ -50,6 +53,7 @@ jobs:
           for source in (code,bundle):
               assert "if(button.closest('#reminderInbox'))return;" in source
               assert "button.classList.add('aoqat-help-eligible')" in source
+          assert '#reminderInbox button.main-action::before' in (root/'files/js/reminder-inbox.js').read_text()
           total=0
           for path,expected in files.items():
               assert path=='index.html' or re.fullmatch(r'(?:js|css)/[a-zA-Z0-9_./-]+\.(?:js|css)',path),path
