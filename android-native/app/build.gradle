@@ -62,10 +62,10 @@ android {
     buildTypes {
         debug {
             minifyEnabled false
-            // For local/CI testing only; ephemeral debug certificate cannot
-            // silently overwrite existing v2.10 installations.
-            if (signingConfigured) signingConfig signingConfigs.secureUpgrade
-            else signingConfig signingConfigs.debug
+            // Debug builds MUST use the disposable debug certificate,
+            // even when production signing env vars happen to be present.
+            // Only an explicitly reviewed release build may use the secure signer.
+            signingConfig signingConfigs.debug
         }
         release {
             minifyEnabled false
