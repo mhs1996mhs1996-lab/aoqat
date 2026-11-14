@@ -17,7 +17,27 @@ The V2 ECDSA *partial-update* signing key is NOT an APK signing certificate.
 Pinning it in Kotlin does not repair the old APK signer or give Android
 permission to replace the installed package.
 
-## Devices requiring independently witnessed install-over tests
+## Newly approved scope: informed beta testers may clean-install V2
+
+The owner clarified on 2026-11-14 that recipients of the previous APK are a
+small, informed group testing an unfinished application. For **this cohort
+only**, an owner-approved, clearly communicated **uninstall of the old trial
+APK followed by a fresh V2-signed install** is acceptable. The old trial
+data and settings will generally be lost; ask the testers to record essential
+choices and explicitly consent before uninstalling.
+
+The previously proposed no-data-loss in-place signing-lineage migration and
+Android 8/8.1 transfer workflow remain **research for non-consenting users
+and future distributions**, NOT gates for this consent-based beta clean
+installation. The relevant scoped policy and tester notice are in
+`security/BETA-CLEAN-INSTALL-V2.md`.
+
+**Still mandatory for beta:** independently validate the owner V2 APK
+certificate, offline assets, startup, adhan/iqama/notifications, QR/bookmark
+controls, signed partial updates, and owner acceptance of the final candidate.
+No APK may be published merely because the signer changed.
+
+## Optional legacy-to-V2 in-place migration test matrix (research, NOT beta gate)
 
 | Android | API | Proposed check | Stop condition |
 |---|---:|---|---|
@@ -71,7 +91,7 @@ uninstall, alternate-package migration, or factory reset. A successful
 `WebLocalContentMigrationTest` only covers same-install origin migration,
 NOT data recovery across package-signature replacement.
 
-## Required evidence for EACH real-device test
+## Required evidence for EACH legacy in-place migration research test (optional for beta clean installs)
 
 1. Record model, Android API, exact installed app version and the observed
    original APK certificate SHA-256 **before** changing anything.
@@ -113,16 +133,19 @@ This script reports the signing certificate visible at API levels
 26/27/28/32/33/35. It does **not** require the PKCS#12 keystore or a
 password; its results do not authorize an installation or a release.
 
-### Final release gate (all mandatory)
+### Beta clean-install release gate (all mandatory)
 
 - [ ] Final source code reviewed and CI green on **exact release SHA**
 - [ ] New signer verified independently from the exported owner public cert
-- [ ] Valid proof-of-rotation tested on targeted Android 9+ versions
-- [ ] Android 8/8.1 data migration demonstrated, approved and documented
-- [ ] Owner's actual v2.10 installs upgrade without clearing user data
+- [ ] Testers explicitly told old trial data/settings will be deleted and
+      accept a clean reinstall after the new beta is ready
+- [ ] New V2-signed APK installs cleanly on representative Android 8+ phones
+- [ ] The V2-signed APK preserves its OWN data across a subsequent V2-signed
+      APK update with increased versionCode, wherever this is tested
 - [ ] Offline Quran, prayer timetable, alarms, silent mode, adhkar and settings pass
 - [ ] Signed update generated offline by owner; tampering/replay rejected
 - [ ] No private APK / update signing material entered GitHub, Vercel or chat
 - [ ] Enforced branch rules, reviewer approvals and owner authorization
 
-**Until all items are satisfied: NO MERGE, NO APK RELEASE.**
+**Until the relevant beta gates are satisfied: NO MERGE, NO APK RELEASE.**
+The optional old-signer lineage research above is **not** a beta clean-install gate.
