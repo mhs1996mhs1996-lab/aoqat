@@ -1,0 +1,43 @@
+name: Diagnose v2.10 live channel revision and CDN
+on:
+  push:
+    branches: [release/v210-fast-partial-updates-20261114]
+    paths: ['.github/workflows/diagnose-v210-live-channel.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compare:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare main manifest and Vercel response with/without cache busting
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request,time,hashlib
+          repo='https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/main/android-updates/build-145/manifest.json'
+          origin='https://aoqat.vercel.app/android-updates/build-145/manifest.json'
+          old='https://aoqat.vercel.app/android-updates/manifest.json'
+          def fetch(url):
+              request=urllib.request.Request(url,headers={'Cache-Control':'no-cache','Pragma':'no-cache'})
+              try:
+                  with urllib.request.urlopen(request,timeout=20) as r:
+                      content=r.read()
+                      d=json.loads(content)
+                      print('CHECK',url,'status',r.status,'build',d.get('nativeBuild'),
+                            'revision',d.get('revision'),'len',len(content),
+                            'cache',r.headers.get('x-vercel-cache'),
+                            'etag',r.headers.get('etag'))
+                      return d
+              except Exception as e:
+                  print('CHECK_FAILED',url,str(e))
+                  return {}
+          github=fetch(repo)
+          live=fetch(origin)
+          fresh=fetch(origin+'?check='+str(int(time.time())))
+          prev=fetch(old)
+          print('GITHUB_EQUAL_LIVE',github.get('revision')==live.get('revision'))
+          print('GITHUB_EQUAL_BUST',github.get('revision')==fresh.get('revision'))
+          print('OLD_BUILD_UNCHANGED',prev.get('nativeBuild')==144)
+          PY
