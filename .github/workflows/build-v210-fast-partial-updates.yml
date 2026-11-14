@@ -59,10 +59,10 @@ jobs:
                   archived=p+path+('.bin' if path.endswith('.gz') else '')
                   assert hashlib.sha256(z.read(archived)).hexdigest()==digest,path
               assert len(json.loads(z.read(p+'data/prayer-times-offline.json')))==366
-          inbox=z.read(p+'js/reminder-inbox.js').decode('utf-8')
-          startup=z.read(p+'js/apk-startup-bundle.js').decode('utf-8')
-          assert "#reminderInbox button.main-action::before" in inbox
-          assert "if(button.closest('#reminderInbox'))return;" in startup
+              inbox=z.read(p+'js/reminder-inbox.js').decode('utf-8')
+              startup=z.read(p+'js/apk-startup-bundle.js').decode('utf-8')
+              assert "#reminderInbox button.main-action::before" in inbox
+              assert "if(button.closest('#reminderInbox'))return;" in startup
           print('Offline Quran/prayer data retained, size:',apk.stat().st_size)
           PY
           aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
