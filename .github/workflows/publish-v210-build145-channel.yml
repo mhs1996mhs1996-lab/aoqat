@@ -84,16 +84,21 @@ jobs:
           python3 - <<'PY'
           import subprocess
           changed=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
-          assert changed and all(p.startswith('android-updates/build-145/') for p in changed),changed
+          assert all(p.startswith('android-updates/build-145/') for p in changed),changed
           print('Only the new build-145 channel changed:',len(changed))
           PY
-          git -c user.name='aoqat-partial-update-bot' -c user.email='actions@users.noreply.github.com' commit -m 'Publish isolated build 145 web update channel [web-only]'
-          git push origin HEAD:main
+          if git diff --cached --quiet; then
+            echo 'Build-145 channel already published; perform read-only live verification.'
+          else
+            git -c user.name='aoqat-partial-update-bot' -c user.email='actions@users.noreply.github.com' commit -m 'Publish isolated build 145 web update channel [web-only]'
+            git push origin HEAD:main
+          fi
       - name: Verify the deployed manifest and edited asset
         run: |
           python3 - <<'PY'
           import json,hashlib,time,urllib.request
-          expected=json.load(open('android-updates/manifest.json'))
+          # After checking out main, the root manifest still belongs to build 144.
+          expected=json.load(open('android-updates/build-145/manifest.json'))
           origin='https://aoqat.vercel.app/android-updates/build-145/'
           for attempt in range(1,19):
               try:
