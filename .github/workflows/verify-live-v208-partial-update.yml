@@ -1,0 +1,40 @@
+name: Verify every published v2.08 partial-update asset
+on:
+  push:
+    branches: [feature/partial-web-updates-v208-20261114]
+    paths: ['.github/workflows/verify-live-v208-partial-update.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-live:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 9
+    steps:
+      - name: Check all files on the live host match the published hash manifest
+        run: |
+          python3 - <<'PY'
+          import concurrent.futures, hashlib, json, urllib.request
+          origin='https://aoqat.vercel.app/android-updates/'
+          def get(path):
+              url=origin+path
+              with urllib.request.urlopen(url,timeout=20) as r:
+                  assert r.status==200 and r.geturl()==url, url
+                  return r.read()
+          manifest=json.loads(get('manifest.json'))
+          assert manifest['nativeBuild']==143, manifest.get('nativeBuild')
+          files=manifest['files']
+          assert len(files)==89 and 'index.html' in files and 'js/partial-update-proof.js' in files
+          canonical='\n'.join(f'{p}:{files[p]}' for p in sorted(files))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==manifest['revision']
+          def verify(item):
+              path,hashval=item
+              content=get('files/'+path)
+              assert hashlib.sha256(content).hexdigest()==hashval,path
+              return path,content
+          with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
+              data=dict(pool.map(verify,files.items()))
+          assert b'js/partial-update-proof.js' in data['index.html']
+          assert 'تجربة التحديث الجزئي 01' in data['js/partial-update-proof.js'].decode()
+          print('LIVE_VERIFIED: 89 files match SHA-256; v2.08 proof will appear after update activation')
+          PY
