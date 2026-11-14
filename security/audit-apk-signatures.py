@@ -17,7 +17,7 @@ import sys
 # Known certificate identities: inspect real signer, not its filename.
 OWNER_V2 = "9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765"
 EXPOSED_OLD = "aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496"
-APIS = (26, 27, 28, 32, 33, 35)
+APIS = (26, 27, 28, 32, 33, 35, 36)
 FINGERPRINT = re.compile(
     r"(?im)^(?:Signer #\d+|V\d+(?:\.\d+)? Signer:)\s+certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)\s*$"
 )
@@ -55,7 +55,11 @@ def main() -> int:
     parser.add_argument("--apksigner", default="apksigner", help="Path to the Android SDK apksigner binary")
     parser.add_argument("--original-apk", type=Path,
                         help="Optional actual installed v2.10 APK for certificate comparison")
+    parser.add_argument("--clean-install-beta", action="store_true",
+                        help="Audit a fresh V2-signed beta installation, not an in-place legacy upgrade")
     args = parser.parse_args()
+    if args.clean_install_beta and args.original_apk:
+        parser.error("--clean-install-beta cannot be combined with --original-apk; no in-place migration is claimed")
     if not args.apk.is_file():
         parser.error("No signed candidate APK at the supplied path")
     if args.original_apk and not args.original_apk.is_file():
@@ -67,6 +71,18 @@ def main() -> int:
     for api in APIS:
         observed, fingerprint = inspect(args.apksigner, args.apk, api)
         print(f"Android API {api}: {observed}; cert={fingerprint}")
+        if args.clean_install_beta:
+            # A consent-based CLEAN install does not need old-signer lineage.
+            # It still MUST use the one approved owner V2 identity on every API.
+            if observed != "OWNER_V2":
+                print("  SECURITY HOLD: clean-install beta requires the approved V2 signer")
+                error = True
+            elif api < 28:
+                print("  CLEAN INSTALL ONLY: old trial must be removed with prior user consent;"
+                      " Android 8/8.1 cannot update over the different old signer")
+            else:
+                print("  CLEAN INSTALL ONLY: signature matches, not a claim of old->V2 upgrade")
+            continue
         if observed not in ("OWNER_V2", "EXPOSED_OLD"):
             error = True
         if api < 28:
@@ -89,7 +105,10 @@ def main() -> int:
                 print("  ERROR: original installed APK's signer does not match recorded v2.10 identity")
                 error = True
     if error:
-        print("SECURITY HOLD: migration audit has blocking findings.")
+        print("SECURITY HOLD: signature audit has blocking findings.")
+    elif args.clean_install_beta:
+        print("PASS: every inspected Android API accepts the exact owner V2 signing certificate.")
+        print("PENDING: real-device checks, Quran/prayer integrity, owner approval, and informed beta consent.")
     print("STOP: this audit never authorizes installation, migration or publishing.")
     return 1 if error else 0
 
