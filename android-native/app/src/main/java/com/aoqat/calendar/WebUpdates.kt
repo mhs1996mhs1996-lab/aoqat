@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Only a complete, checksum-verified snapshot compatible with this native build is activated.
  * Large Quran/audio assets always remain in the installed APK. Native code needs an APK update. */
-class WebUpdates(private val context:Context, private val fetch:(String,Int)->ByteArray={path,limit->download(path,limit)}) {
+class WebUpdates(private val context:Context, private val fetch:(String,Int)->ByteArray={path,limit->download(path,limit,context.packageManager.getPackageInfo(context.packageName,0).versionCode)}) {
     private val root=File(context.filesDir,"web-updates-v1")
     private val prefs=context.getSharedPreferences("web_updates_v1",Context.MODE_PRIVATE)
     private val nativeBuild=context.packageManager.getPackageInfo(context.packageName,0).versionCode
@@ -83,8 +83,11 @@ class WebUpdates(private val context:Context, private val fetch:(String,Int)->By
         fun allowed(path:String)=!path.contains("..")&&!path.contains('%')&&!path.contains('\\')&&(
             path=="index.html"||path.matches(Regex("(js|css)/[a-zA-Z0-9_./-]+\\.(js|css)")))
         fun digest(bytes:ByteArray)=MessageDigest.getInstance("SHA-256").digest(bytes).joinToString(""){"%02x".format(it)}
-        private fun download(path:String,limit:Int):ByteArray {
-            val c=URL("https://aoqat.vercel.app/android-updates/$path").openConnection() as HttpURLConnection
+        fun baseUrl(build:Int):String =
+            if(build>=145) "https://aoqat.vercel.app/android-updates/build-$build/"
+            else "https://aoqat.vercel.app/android-updates/"
+        private fun download(path:String,limit:Int,build:Int):ByteArray {
+            val c=URL(baseUrl(build)+path).openConnection() as HttpURLConnection
             c.connectTimeout=15000;c.readTimeout=20000;c.instanceFollowRedirects=false
             try{require(c.responseCode==200);return c.inputStream.use{val out=java.io.ByteArrayOutputStream();val buffer=ByteArray(16384);var total=0;while(true){val count=it.read(buffer);if(count<0)break;total+=count;require(total<=limit);out.write(buffer,0,count)};out.toByteArray()}}finally{c.disconnect()}
         }
