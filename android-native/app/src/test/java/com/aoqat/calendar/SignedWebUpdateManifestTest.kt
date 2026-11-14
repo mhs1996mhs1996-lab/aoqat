@@ -39,24 +39,26 @@ class SignedWebUpdateManifestTest {
         val pub = Base64.getEncoder().encodeToString(pair.public.encoded)
         val m = manifest()
         sign(m, pair.private)
-        assertTrue(SignedWebUpdateManifest.verify(m, pub, 1800000000000L))
-        assertFalse("expired", SignedWebUpdateManifest.verify(m, pub, 4102444800000L))
-        assertFalse("malformed public key", SignedWebUpdateManifest.verify(m, "not-base64", 1800000000000L))
+        assertTrue(SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 146, 0L))
+        assertFalse("replayed update", SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 146, 1L))
+        assertFalse("other build", SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 147, 0L))
+        assertFalse("expired", SignedWebUpdateManifest.verify(m, pub, 4102444800000L, 146, 0L))
+        assertFalse("malformed public key", SignedWebUpdateManifest.verify(m, "not-base64", 1800000000000L, 146, 0L))
 
         val differentKey = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
         assertFalse("unexpected publisher", SignedWebUpdateManifest.verify(m,
-            Base64.getEncoder().encodeToString(differentKey.public.encoded), 1800000000000L))
+            Base64.getEncoder().encodeToString(differentKey.public.encoded), 1800000000000L, 146, 0L))
 
         m.put("nativeBuild", 147)
-        assertFalse("build switched", SignedWebUpdateManifest.verify(m, pub, 1800000000000L))
+        assertFalse("build switched", SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 146, 0L))
         m.put("nativeBuild", 146)
 
         m.put("sequence", 2)
-        assertFalse("sequence changed", SignedWebUpdateManifest.verify(m, pub, 1800000000000L))
+        assertFalse("sequence changed", SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 146, 0L))
         m.put("sequence", 1L)
 
         m.getJSONObject("files").put("js/app.js", WebUpdates.digest("window.ok=2".toByteArray()))
-        assertFalse("content altered", SignedWebUpdateManifest.verify(m, pub, 1800000000000L))
+        assertFalse("content altered", SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 146, 0L))
     }
 
     @Test fun rejectUnsanctionedPathsAndForgedRevision() {
