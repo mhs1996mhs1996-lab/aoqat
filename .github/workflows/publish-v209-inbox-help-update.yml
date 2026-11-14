@@ -42,10 +42,14 @@ jobs:
           assert 1<=len(files)<=250 and 'index.html' in files
           assert 'js/settings-help-live.js' in files
           html=(root/'files/index.html').read_text()
-          assert 'js/settings-help-live.js' in html
+          # Android loads the bundled startup script; the standalone module is
+          # retained in the snapshot but is not directly referenced by index.html.
+          assert 'js/apk-startup-bundle.js' in html
           code=(root/'files/js/settings-help-live.js').read_text()
-          assert "if(button.closest('#reminderInbox'))return;" in code
-          assert "button.classList.add('aoqat-help-eligible')" in code
+          bundle=(root/'files/js/apk-startup-bundle.js').read_text()
+          for source in (code,bundle):
+              assert "if(button.closest('#reminderInbox'))return;" in source
+              assert "button.classList.add('aoqat-help-eligible')" in source
           total=0
           for path,expected in files.items():
               assert path=='index.html' or re.fullmatch(r'(?:js|css)/[a-zA-Z0-9_./-]+\.(?:js|css)',path),path
