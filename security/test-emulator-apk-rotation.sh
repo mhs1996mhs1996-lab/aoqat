@@ -69,7 +69,14 @@ new_sha="$(sha_of_public_cert new)"
     --max-sdk-version "$api" "$tmp/rotated.apk" > "$tmp/verify.log"
 echo "FIXTURE_DEBUG: apksigner certificate output (public only):"
 cat "$tmp/verify.log"
-signed_sha="$(sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' "$tmp/verify.log" | tr -d '\r' | head -1)"
+# Build-Tools 37 uses "V2 Signer:" / "V3.0 Signer:" instead of the
+# historical "Signer #1" label. Require EXACTLY ONE API-specific signer.
+mapfile -t api_sha < <(
+  sed -nE 's/^(Signer #[0-9]+|V[0-9]+(\\.[0-9]+)? Signer:)[[:space:]]+certificate SHA-256 digest:[[:space:]]*([[:xdigit:]]{64})$/\\3/p' "$tmp/verify.log" |
+    tr '[:upper:]' '[:lower:]'
+)
+test "${#api_sha[@]}" -eq 1
+signed_sha="${api_sha[0]}"
 echo "FIXTURE_DEBUG: fingerprint observed=$signed_sha old=$old_sha new=$new_sha"
 test -n "$signed_sha"
 if (( api < 28 )); then
