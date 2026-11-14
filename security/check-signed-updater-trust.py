@@ -30,6 +30,8 @@ def main():
     check_now = updates.split("internal fun checkNow()", 1)[1].split("companion object", 1)[0]
     assert "SignedWebUpdateManifest.verify(" in check_now, "No publisher check in update download path"
     assert check_now.index("SignedWebUpdateManifest.verify(") < check_now.index('fetch("files/$path"'), "Files downloaded before signature verification"
+    assert 'if (path !in signedActivePaths) return null' in updates, "Unsigned local snapshot file could be served"
+    assert 'getJSONObject("files").keys().asSequence().toSet()' in updates, "Snapshot allowlist not derived from signed manifest"
     assert "web-updates-v2-signed" in updates and "web_updates_v2_signed" in updates
     assert "webUpdates.confirmStartup()" in native
     assert "allowUniversalAccessFromFileURLs = false" in native
@@ -39,6 +41,9 @@ def main():
     assert "frame-src 'none'; object-src 'none'; base-uri 'self'" in local
     assert "versionCode 146" in gradle, "Only the isolated security build 146 can use this key"
     assert "storePassword 'android'" not in gradle, "Old APK signing secret still hard-coded"
+    debug_section = gradle.split("debug {", 1)[1].split("release {", 1)[0]
+    assert "signingConfig signingConfigs.debug" in debug_section, "Debug signing no longer isolated"
+    assert "signingConfigs.secureUpgrade" not in debug_section, "Production key must never sign a debug APK"
     assert not (ROOT/"android-native/signing/aoqat-stable-debug.keystore.b64").exists(), "Exposed old signing key still tracked"
     for file in (ROOT/"android-native/app/src/main/res/xml/backup_rules.xml", ROOT/"android-native/app/src/main/res/xml/data_extraction_rules.xml"):
         assert 'web_updates_v2_signed.xml' in file.read_text(), "Updater anti-replay state backed up"
