@@ -1,0 +1,55 @@
+name: Guard Quran and prayer data against unreviewed edits
+on:
+  pull_request:
+    branches: [main, 'release/**']
+  push:
+    branches: [security/v210-sacred-content-integrity-20261114]
+    paths:
+      - 'security/**'
+      - 'data/**'
+      - 'assets/quran*'
+      - 'assets/mushaf*'
+      - 'assets/qcf-v2-page-fonts/**'
+      - 'js/quran-reader.js'
+      - 'js/prayer-countdown.js'
+      - 'js/prayer-time-choice.js'
+      - '.github/workflows/guard-sacred-content.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sacred-content-integrity:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Protect Quran text, prayer schedule and calculation sources
+        run: python3 security/check-sacred-content.py
+      - name: Fail closed on signing-key substitution or downgraded trust-chain
+        run: python3 security/check-signed-updater-trust.py
+      - name: Test offline signed-manifest validation with ephemeral keypair
+        run: python3 security/test-signed-update-manifest.py
+      - name: Test that unauthorised Quran change fails closed
+        run: |
+          set -euo pipefail
+          test -f assets/quran.json
+          cp assets/quran.json /tmp/aoqat-quran-original.json
+          python3 - <<'PY'
+          # Create an isolated adversarial commit in the ephemeral CI clone.
+          # Never push or publish these bytes.
+          import subprocess,pathlib
+          subprocess.run(['git','config','user.name','integrity-test'],check=True)
+          subprocess.run(['git','config','user.email','integrity-test@users.noreply.github.com'],check=True)
+          path=pathlib.Path('assets/quran.json')
+          path.write_bytes(path.read_bytes()+b'\n')
+          subprocess.run(['git','add','--','assets/quran.json'],check=True)
+          subprocess.run(['git','commit','-qm','UNPUBLISHED test modification'],check=True)
+          result=subprocess.run(['python3','security/check-sacred-content.py'],capture_output=True,text=True)
+          assert result.returncode==1,result.stdout+result.stderr
+          assert 'assets/quran.json' in result.stderr
+          print('PASS: A one-byte Quran text change was rejected')
+          PY

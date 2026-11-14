@@ -1,0 +1,187 @@
+name: Signed build-146 web update - owner-approved only
+
+on:
+  workflow_dispatch:
+    inputs:
+      sequence:
+        description: Strictly increasing signed update sequence
+        required: true
+        type: number
+      expires_at_millis:
+        description: UTC expiration Unix milliseconds (future)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aoqat-signed-build146-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  sign-and-publish:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 22
+    environment: production-signed-updates
+    permissions:
+      contents: write
+    env:
+      KEY_B64: ${{ secrets.AOQAT_UPDATE_KEY_ENCRYPTED_B64 }}
+      KEY_PASS: ${{ secrets.AOQAT_UPDATE_KEY_PASSPHRASE }}
+      GH_TOKEN: ${{ github.token }}
+      BUILD_SEQUENCE: ${{ inputs.sequence }}
+      EXPIRES_MILLIS: ${{ inputs.expires_at_millis }}
+    steps:
+      - name: Checkout reviewed security branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Refuse to publish without all protected secrets and approved APK release
+        run: |
+          set -euo pipefail
+          test -n "$KEY_B64" || { echo "Missing protected encrypted signing key"; exit 1; }
+          test -n "$KEY_PASS" || { echo "Missing protected signing passphrase"; exit 1; }
+          [[ "$BUILD_SEQUENCE" =~ ^[0-9]+$ ]] && test "$BUILD_SEQUENCE" -gt 0
+          [[ "$EXPIRES_MILLIS" =~ ^[0-9]+$ ]] && test "$EXPIRES_MILLIS" -gt 0
+          gh release view v2.11-security-reviewed --json assets --jq '.assets[].name' | grep -Fq aoqat-v2.11-security-reviewed.apk
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          python3 security/check-sacred-content.py
+      - name: Run publisher signature and attack tests
+        run: python3 security/test-signed-update-manifest.py
+      - name: Generate build-146 isolated web snapshot
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare-android-update.py
+          python3 - <<'PY'
+          import json,os,pathlib,time
+          path=pathlib.Path('android-updates/manifest.json')
+          data=json.loads(path.read_text())
+          assert data['nativeBuild']==146, 'Refuse unsigned or wrong native build'
+          sequence=int(os.environ['BUILD_SEQUENCE'])
+          expires=int(os.environ['EXPIRES_MILLIS'])
+          assert sequence>0 and expires>int(time.time()*1000)
+          assert expires<int(time.time()*1000)+31*86400*1000
+          data['sequence']=sequence
+          data['expiresAt']=expires
+          path.write_text(json.dumps(data,separators=(',',':')))
+          PY
+      - name: Sign with encrypted private key entirely in temporary runner
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/aoqat-keys"
+          trap 'rm -rf "$RUNNER_TEMP/aoqat-keys"' EXIT
+          printf '%s' "$KEY_B64" | base64 -d > "$RUNNER_TEMP/aoqat-keys/private.enc.pem"
+          python3 - <<'PY'
+          import base64,re,pathlib
+          code=pathlib.Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          found=re.search(r'const val SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',code)
+          assert found, 'Missing pinned public key'
+          pathlib.Path('android-updates/pinned-public.pem').write_text(
+              '-----BEGIN PUBLIC KEY-----\n'+found.group(1)+'\n-----END PUBLIC KEY-----\n')
+          PY
+          AOQAT_UPDATE_KEY_PASSPHRASE="$KEY_PASS" python3 security/signed-update-manifest.py sign \
+            android-updates/manifest.json android-updates/signed-manifest.json \
+            --private-key "$RUNNER_TEMP/aoqat-keys/private.enc.pem" \
+            --public-key android-updates/pinned-public.pem
+          mv android-updates/signed-manifest.json android-updates/manifest.json
+          python3 security/signed-update-manifest.py verify android-updates/manifest.json \
+            --public-key android-updates/pinned-public.pem --build 146 --last-sequence 0
+          rm -f android-updates/pinned-public.pem
+          unset KEY_PASS KEY_B64
+      - name: Verify hashes and prohibit source changes
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          root=pathlib.Path('android-updates')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['nativeBuild']==146 and m['signature']
+          assert len(m['files'])<=250 and 'index.html' in m['files']
+          total=0
+          for path,expected in m['files'].items():
+              data=(root/'files'/path).read_bytes()
+              assert len(data)<=6*1024*1024
+              assert hashlib.sha256(data).hexdigest()==expected,path
+              total+=len(data)
+          assert total<=24*1024*1024,total
+          print('SIGNED_BUILD146_CHECKED: verified '+str(len(m['files']))+' content paths')
+          PY
+      - name: Enforce previous signed sequence to prevent downgrade across releases
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          if git cat-file -e origin/main:android-updates/build-146/manifest.json 2>/dev/null; then
+            git show origin/main:android-updates/build-146/manifest.json > /tmp/aoqat-previous-manifest.json
+            python3 - <<'PY'
+          import base64,importlib.util,json,pathlib,re
+          path=pathlib.Path('security/signed-update-manifest.py')
+          spec=importlib.util.spec_from_file_location('signed_update',path)
+          module=importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+          previous=json.loads(pathlib.Path('/tmp/aoqat-previous-manifest.json').read_text())
+          new=json.loads(pathlib.Path('android-updates/manifest.json').read_text())
+          code=pathlib.Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          key=re.search(r'const val SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',code)
+          assert key
+          public=pathlib.Path('/tmp/aoqat-signed-publisher-pub.pem')
+          public.write_text('-----BEGIN PUBLIC KEY-----\n'+key.group(1)+'\n-----END PUBLIC KEY-----\n')
+          # A prior *known-good* manifest may be expired; its cryptographic
+          # signature must still verify before we trust the sequence.
+          module.verify(previous,public,expected_build=146,
+                        min_sequence=0,now_ms=previous['expiresAt']-1)
+          assert new['sequence']>previous['sequence'], 'Replay / downgrade blocked'
+          print('MONOTONIC_SEQUENCE_OK:',previous['sequence'],'->',new['sequence'])
+          PY
+          else
+            echo "First signed build-146 snapshot (no prior sequence)"
+          fi
+      - name: Publish ONLY signed build-146 channel; keep older builds unchanged
+        run: |
+          set -euo pipefail
+          cp -a android-updates /tmp/aoqat-build146-signed
+          git reset --hard HEAD
+          git clean -fd -- android-updates
+          git fetch origin main
+          git checkout -B publish-signed-build146 origin/main
+          # Replace ONLY the independently signed build-146 channel.
+          rm -rf android-updates/build-146
+          mkdir -p android-updates/build-146
+          cp -a /tmp/aoqat-build146-signed/. android-updates/build-146/
+          git add -A -- android-updates/build-146
+          python3 - <<'PY'
+          import subprocess
+          changed=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert changed and all(path.startswith('android-updates/build-146/') for path in changed),changed
+          PY
+          git -c user.name='aoqat-security-release' -c user.email='actions@users.noreply.github.com' commit -m 'Publish signed build146 web snapshot after owner-approved security release [web-only]'
+          git push origin HEAD:main
+      - name: Verify live signed build-146 channel and legacy isolation
+        run: |
+          python3 - <<'PY'
+          import hashlib,json,time,urllib.request
+          expected=json.load(open('/tmp/aoqat-build146-signed/manifest.json'))
+          root='https://aoqat.vercel.app/android-updates/build-146/'
+          for attempt in range(1,19):
+              try:
+                  with urllib.request.urlopen(root+'manifest.json',timeout=15) as res:
+                      live=json.load(res)
+                  if live.get('revision')!=expected['revision'] or live.get('sequence')!=expected['sequence']:
+                      print('Awaiting signed CDN manifest',attempt,flush=True)
+                      time.sleep(10)
+                      continue
+                  assert live.get('signature')==expected['signature']
+                  assert live['nativeBuild']==146
+                  with urllib.request.urlopen(root+'files/index.html',timeout=15) as res:
+                      html=res.read()
+                  assert hashlib.sha256(html).hexdigest()==live['files']['index.html']
+                  with urllib.request.urlopen('https://aoqat.vercel.app/android-updates/build-145/manifest.json',timeout=15) as res:
+                      old=json.load(res)
+                  assert old['nativeBuild']==145, 'Legacy v2.10 channel changed unexpectedly'
+                  print('LIVE_SIGNED_BUILD146_VERIFIED; old build 145 unchanged')
+                  break
+              except Exception as e:
+                  print('Live check',attempt,repr(e),flush=True)
+              time.sleep(10)
+          else:
+              raise SystemExit('Signed snapshot pushed but CDN verification failed')
+          PY
