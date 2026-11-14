@@ -67,6 +67,8 @@ old_sha="$(sha_of_public_cert old)"
 new_sha="$(sha_of_public_cert new)"
 "$signer" verify --verbose --print-certs --min-sdk-version "$api" \
     --max-sdk-version "$api" "$tmp/rotated.apk" > "$tmp/verify.log"
+echo "FIXTURE_DEBUG: apksigner certificate output (public only):"
+cat "$tmp/verify.log"
 signed_sha="$(sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' "$tmp/verify.log" | tr -d '\r' | head -1)"
 echo "FIXTURE_DEBUG: fingerprint observed=$signed_sha old=$old_sha new=$new_sha"
 test -n "$signed_sha"
