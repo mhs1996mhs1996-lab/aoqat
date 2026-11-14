@@ -27,6 +27,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Ensure security work has not modified either app outside approved files
+        run: |
+          python3 security/test-project-scope.py
+          python3 security/check-project-scope.py
       - name: Verify sacred Quran/prayer data unchanged and old signing file absent
         run: |
           python3 security/check-sacred-content.py
