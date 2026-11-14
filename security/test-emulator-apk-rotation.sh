@@ -3,13 +3,16 @@
 # Uses ONLY two freshly generated, throwaway test keystores and an empty fake
 # package. Does NOT touch real AOQAT apps, data, signing keys or users.
 set -euo pipefail
+trap 'rc=$?; echo "EMULATOR_FIXTURE_FAILURE: exit=$rc line=$LINENO" >&2' ERR
 : "${ANDROID_HOME:?Android SDK required}"
 api="$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
 case "$api" in 26|28|33) ;; *) echo "Unsupported fixture API: $api"; exit 1 ;; esac
 aapt="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)"
 signer="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+echo "FIXTURE_DEBUG: SDK=$ANDROID_HOME API=$api aapt=$aapt signer=$signer"
 test -x "$aapt" && test -x "$signer"
 platform="$ANDROID_HOME/platforms/android-$api/android.jar"
+echo "FIXTURE_DEBUG: platform jar=$platform"
 test -s "$platform"
 pkg='com.example.aoqat.rotationfixture'
 tmp="$(mktemp -d)"
@@ -31,6 +34,7 @@ MANIFEST
   "$aapt" package -f -M "$tmp/AndroidManifest.xml" -I "$platform" -F "$tmp/unsigned-$version.apk"
 done
 
+echo "FIXTURE_DEBUG: manifest-only APKs created"
 for identity in old new; do
   keytool -genkeypair -noprompt -keystore "$tmp/$identity.p12" -storetype PKCS12 \
     -alias "$identity" -keyalg RSA -keysize 3072 -validity 7 \
@@ -38,6 +42,7 @@ for identity in old new; do
     -storepass "$FIXTURE_PASS" >/dev/null 2>&1
 done
 
+echo "FIXTURE_DEBUG: disposable test keystores created"
 # Baseline fake package signed by old THROWAWAY identity.
 "$signer" sign --ks "$tmp/old.p12" --ks-type PKCS12 \
   --ks-pass env:FIXTURE_PASS --out "$tmp/old.apk" "$tmp/unsigned-1.apk"
@@ -52,6 +57,7 @@ done
   --lineage "$tmp/disposable.lineage" --rotation-min-sdk-version 28 \
   --out "$tmp/rotated.apk" "$tmp/unsigned-2.apk"
 
+echo "FIXTURE_DEBUG: disposable old/new lineage and candidate APK created"
 sha_of_public_cert() {
   keytool -exportcert -rfc -keystore "$tmp/$1.p12" -storetype PKCS12 \
     -alias "$1" -storepass "$FIXTURE_PASS" 2>/dev/null | \
@@ -62,6 +68,7 @@ new_sha="$(sha_of_public_cert new)"
 "$signer" verify --verbose --print-certs --min-sdk-version "$api" \
     --max-sdk-version "$api" "$tmp/rotated.apk" > "$tmp/verify.log"
 signed_sha="$(sed -n 's/^Signer #1 certificate SHA-256 digest: *//p' "$tmp/verify.log" | tr -d '\r' | head -1)"
+echo "FIXTURE_DEBUG: fingerprint observed=$signed_sha old=$old_sha new=$new_sha"
 test -n "$signed_sha"
 if (( api < 28 )); then
   # Android 8 cannot use the new v3 key. Even a technically accepted
