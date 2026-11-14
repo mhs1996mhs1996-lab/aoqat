@@ -3098,9 +3098,9 @@ else {
       autoBtn.setAttribute("aria-pressed",String(on));
       autoBtn.dataset.enabled=String(on);
     }
-    if(notifyBtn){
+    if(notifyBtn&&!window.aoqatNativePublishAlarm){
       const on=notifyEnabled()&&typeof Notification!=="undefined"&&Notification.permission==="granted";
-      notifyBtn.textContent=on?"🔔 التنبيه: تشغيل":"🔕 التنبيه: إيقاف";
+      notifyBtn.textContent=on?"🔔 تنبيه النشر على الهاتف: تشغيل":"🔕 تنبيه النشر على الهاتف: إيقاف";
       notifyBtn.classList.toggle("enabled",on);
       notifyBtn.classList.toggle("is-on",on);
       notifyBtn.setAttribute("aria-pressed",String(on));
@@ -3178,7 +3178,7 @@ else {
       button.type="button";
       button.className="main-action switch-action";
       button.dataset.openPanel="switchPanel";
-      button.innerHTML="⏰ <span>التبديل والتنبيه</span>";
+      button.innerHTML="⏰ <span>التبديل التلقائي و التنبيه</span>";
       mainPanel.appendChild(button);
     }
     if(!panel){
@@ -3191,6 +3191,7 @@ else {
         ${!window.AndroidNative?.configureAdhan?'<button type="button" id="previewDayToggle" class="switch-control-btn manual"></button>':''}
         <button type="button" id="showTomorrowNowBtn" class="switch-control-btn manual">➡ عرض اليوم التالي الآن</button>
         <button type="button" id="showTodayNowBtn" class="switch-control-btn manual secondary">↩ الرجوع إلى اليوم</button>
+        <button type="button" id="tomorrowNotifyToggle" class="switch-control-btn" aria-pressed="false">🔕 تنبيه النشر على الهاتف: إيقاف</button>
         <div id="tomorrowSwitchStatus" class="tomorrow-switch-status">التبديل التلقائي متوقف</div>`;
       button.insertAdjacentElement("afterend",panel);
     }
@@ -3267,6 +3268,7 @@ else {
       localStorage.setItem(AUTO_KEY,autoEnabled()?"0":"1");manualOverrideUntil=0;refreshToggleButtons();if(autoEnabled()){setSwitchStatus("جاري تحديث حالة التبديل التلقائي...","success");evaluateAutoSwitch(true);}else setSwitchStatus("التبديل التلقائي متوقف");
     });
     document.getElementById("tomorrowNotifyToggle")?.addEventListener("click",async()=>{
+      if(window.aoqatNativePublishAlarm)return;
       if(notifyEnabled()){localStorage.setItem(NOTIFY_KEY,"0");refreshToggleButtons();return;}
       if(typeof Notification==="undefined"){setSwitchStatus("هذا المتصفح لا يدعم التنبيهات","error");return;}
       const permission=await Notification.requestPermission();
@@ -3310,11 +3312,13 @@ else {
  localStorage.setItem(KEY,enabled?'1':'0');
  // Native Android is the only audio/snooze owner. No WebAudio or browser alarm survives in the APK.
  window.PrayerTomorrowAlarm={stop:()=>N.stopPublishAlarm?.()};
- function mount(){const panel=document.getElementById('switchPanel');if(!panel||document.getElementById('tomorrowAlarmEnable'))return;
-  const b=document.createElement('button');b.id='tomorrowAlarmEnable';b.type='button';b.dataset.androidNativeAlarm='1';
+ function mount(){const panel=document.getElementById('switchPanel');if(!panel||document.getElementById('publishSnoozeMinutes'))return;
+  const b=document.getElementById('tomorrowNotifyToggle')||document.createElement('button');
+  if(!b.parentElement)panel.insertBefore(b,document.getElementById('tomorrowSwitchStatus'));
+  b.type='button';b.dataset.androidNativeAlarm='1';
   function draw(){b.setAttribute('aria-pressed',String(enabled));b.dataset.enabled=String(enabled);b.dataset.androidAlarmEnabled=enabled?'1':'0';b.className='switch-control-btn'+(enabled?' enabled is-on':'');b.textContent='🔔 تنبيه النشر على الهاتف: '+(enabled?'تشغيل':'إيقاف');}
   b.onclick=()=>{enabled=!enabled;localStorage.setItem(KEY,enabled?'1':'0');if(enabled)N.enableAlarm();else N.disableAlarm();draw();};
-  panel.insertBefore(b,document.getElementById('tomorrowSwitchStatus'));draw();
+  draw();
   const label=document.createElement('label');label.textContent='مدة غفوة تنبيه النشر';
   const select=document.createElement('select');select.id='publishSnoozeMinutes';
   for(let m=1;m<=30;m++)select.add(new Option(m+' دقائق',m));
@@ -3360,6 +3364,7 @@ else {
       partial: false,
       customEnd: 35,
       overrideSilent: false,
+      audibility: Object.fromEntries(ids.map((id) => [id, {silent:false,dnd:false}])),
       vibrate: false,
       pattern: "short",
       screen: false,
@@ -3373,6 +3378,7 @@ else {
         enabled: false,
         minutes: Object.fromEntries(ids.map((id) => [id, 0])),
       },
+      atAdhanSilent: {enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))},
       modes: Object.fromEntries([...ids, "friday"].map((id) => [id, "sound"])),
     };
   }
@@ -3412,6 +3418,15 @@ else {
       if (Number.isFinite(n))
         d.afterIqamaSilent.minutes[id] = Math.max(0, Math.min(120, Math.floor(n)));
     }
+    for (const id of ids) {
+      // Existing users keep their previous adhan override preference until
+      // they explicitly select the new per-prayer silent/DND switches.
+      const selected = s.audibility?.[id];
+      d.audibility[id].silent = selected ? selected.silent === true : s.overrideSilent === true;
+      d.audibility[id].dnd = selected ? selected.dnd === true : s.overrideSilent === true;
+    }
+    d.atAdhanSilent.enabled=s.atAdhanSilent?.enabled===true;
+    for(const id of ids){const n=Number(s.atAdhanSilent?.minutes?.[id]);if(Number.isFinite(n))d.atAdhanSilent.minutes[id]=Math.max(0,Math.min(120,Math.floor(n)));}
     d.friday = normalizeFriday(s.friday);
     return d;
   }
@@ -3580,11 +3595,11 @@ window.AoqatAzkar = (function () {
 
 /* js/azkar-reminders-core.js */
 (function(root){'use strict';
-  const ids=['morning','evening','prayer','sleep','waking','tasbih'];
+  const ids=['morning','evening','prayer','sleep','waking','tasbih','salawat'];
   const prayers=['fajr','dhuhr','asr','maghrib','isha'];
-  const titles={morning:'أذكار الصباح',evening:'أذكار المساء',prayer:'أذكار بعد الصلاة',sleep:'أذكار النوم',waking:'أذكار الاستيقاظ',tasbih:'التسبيح والاستغفار والصلاة على النبي ﷺ'};
+  const titles={morning:'أذكار الصباح',evening:'أذكار المساء',prayer:'أذكار بعد الصلاة',sleep:'أذكار النوم',waking:'أذكار الاستيقاظ',tasbih:'الذكر والتسبيح والاستغفار',salawat:'الصلاة على النبي ﷺ يوم الجمعة'};
   const iqamaDefaults={fajr:20,dhuhr:10,asr:10,maghrib:10,isha:10};
-  const clocks={morning:['06:00'],evening:['17:00'],prayer:['05:30','12:30','15:30','18:30','20:00'],sleep:['22:00'],waking:['07:00'],tasbih:['09:00','16:00']};
+  const clocks={morning:['06:00'],evening:['17:00'],prayer:['05:30','12:30','15:30','18:30','20:00'],sleep:['22:00'],waking:['07:00'],tasbih:['09:00','16:00'],salawat:['09:00']};
   function clock(v){const m=/^(\d{2}):(\d{2})$/.exec(String(v));return m&&+m[1]<24&&+m[2]<60?+m[1]*60+(+m[2]):null;}
   function minutes(v,id){const m=/^(\d{1,2}):([0-5]\d)(?::[0-5]\d)?$/.exec(String(v));if(!m||+m[1]>23)return null;let h=+m[1];if(['asr','maghrib','isha'].includes(id)&&h<12)h+=12;if(id==='fajr'&&h===12)h=0;return h*60+(+m[2]);}
   function normalize(raw={}){return Object.fromEntries(ids.map(id=>{const r=raw?.[id],n=Number(r?.offset);return [id,{enabled:r?.enabled!==false,mode:r?.mode==='custom'?'custom':'default',type:r?.type==='clock'?'clock':'relative',offset:Number.isInteger(n)&&n>=-120&&n<=120?n:0,times:clocks[id].map((v,i)=>clock(r?.times?.[i])!==null?r.times[i]:v)}];}));}
@@ -3596,7 +3611,9 @@ window.AoqatAzkar = (function () {
     const prayer=id=>valid?minutes(row[id],id):null;
     const finish=id=>{const t=prayer(id);return t===null?null:t+duration(iqama,id,iqamaDefaults[id])+duration(after,id,10);};
     const add=(id,slot,t)=>{if(t===null||!Number.isFinite(t))return;out.push({kind:'azkar-reminder',section:'azkar',topicId:id,key:'azkar:'+id+':'+d.key+':'+slot,at:d.start+t*60000,title:'تذكير: '+titles[id],body:'حان وقت '+titles[id]+'. اضغط لفتح الأذكار.'});};
+    const isFriday=new Date(d.key+'T00:00:00Z').getUTCDay()===5;
     for(const id of ids){const v=s[id];if(!v.enabled)continue;
+      if(id==='salawat'&&!isFriday)continue;
       if(id==='sleep'||id==='waking'||v.mode==='custom'&&v.type==='clock'){(v.mode==='default'?clocks[id]:v.times).forEach((t,i)=>add(id,i,clock(t)));continue;}
       const offset=v.mode==='custom'?v.offset:0;
       const shift=t=>t===null?null:t+offset;
@@ -3604,6 +3621,7 @@ window.AoqatAzkar = (function () {
       if(id==='evening'){const t=prayer('maghrib');add(id,0,t===null?null:t-20+offset);}
       if(id==='prayer')prayers.forEach(p=>add(id,p,shift(finish(p))));
       if(id==='tasbih'){const t=prayer('sunrise');add(id,0,t===null?null:t+120+offset);add(id,1,shift(finish('asr')));}
+      if(id==='salawat')add(id,0,clock(clocks.salawat[0])+offset);
     }return out.sort((a,b)=>a.at-b.at);
   }
   const api={ids,prayers,titles,clocks,clock,minutes,day,normalize,events};root.AoqatAzkarRemindersCore=api;if(typeof module!=='undefined')module.exports=api;
@@ -3616,7 +3634,7 @@ window.AoqatAzkar = (function () {
 
   const C=window.AoqatAzkarRemindersCore,KEY='aoqatAzkarRemindersV1',SENT='aoqatAzkarRemindersSentV1';
   const names=['الفجر','الظهر','العصر','المغرب','العشاء'];
-  const descriptions={morning:'بعد صلاة الفجر: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',evening:'قبل أذان المغرب بـ20 دقيقة.',prayer:'بعد كل صلاة: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',sleep:'الساعة 10 مساءً.',waking:'الساعة 7 صباحاً.',tasbih:'بعد الشروق بساعتين، وبعد صلاة العصر حسب أوقات الإقامة ومدة الصلاة.'};
+  const descriptions={morning:'بعد صلاة الفجر: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',evening:'قبل أذان المغرب بـ20 دقيقة.',prayer:'بعد كل صلاة: وقت الإقامة + مدة الصلاة المحددين في التطبيق.',sleep:'الساعة 10 مساءً.',waking:'الساعة 7 صباحاً.',tasbih:'بعد الشروق بساعتين، وبعد صلاة العصر.',salawat:'يوم الجمعة الساعة 9 صباحاً، ويمكن تعديل الوقت.'};
   function json(key,fallback){try{return JSON.parse(localStorage.getItem(key)||'null')??fallback;}catch(_){return fallback;}}
   function read(){return C.normalize(json(KEY,{}));}
   let settings=read(),audio;
@@ -3627,7 +3645,7 @@ window.AoqatAzkar = (function () {
     const out=[];for(const date of [new Date(+now-86400000),now]){const d=C.day(date);let row=typeof cachedAnnualPrayer==='function'?cachedAnnualPrayer(d.month,d.day):null;if(row)row=window.AoqatPrayerTimeChoice?.applyRow(row)||row;out.push(...C.events(date,settings,row,json('aoqatIqamaMinutesV1',{}),json('aoqatAfterIqamaMinutesV1',{})));}return out;
   }
   let pendingKind='';
-  function flushOpen(){if(!pendingKind||!window.aoqatUIReady||!window.aoqatOpenMuslimBagSection )return;const kind=pendingKind;pendingKind='';document.body.classList.add('design-menu-open');window.aoqatOpenMuslimBagSection('azkar');window.aoqatOpenAzkarCategory?.(kind);}
+  function flushOpen(){if(!pendingKind||!window.aoqatUIReady||!window.aoqatOpenMuslimBagSection )return;const kind=pendingKind;pendingKind='';document.body.classList.add('design-menu-open');window.aoqatOpenMuslimBagSection('azkar');window.aoqatOpenAzkarCategory?.(kind==='salawat'?'friday':kind);}
   function open(kind){if(!C.ids.includes(kind))return;pendingKind=kind;flushOpen();}
   async function notify(events){if(!events.length)return;const first=events[0];for(const event of events)window.AoqatReminderInbox?.add(event);
     document.getElementById('azkarReminderBanner')?.remove();const banner=document.createElement('aside');banner.id='azkarReminderBanner';banner.setAttribute('role','alert');
@@ -3730,8 +3748,8 @@ window.AoqatAzkar = (function () {
    list.querySelectorAll('[data-dhikr-reset]').forEach(c=>c.onclick=()=>{const i=Number(c.dataset.dhikrReset),x=data[kind][i],n=x.count??0,button=list.querySelector('[data-dhikr="'+i+'"]');remaining[kind+':'+i]=n;button.dataset.remaining=String(n);button.disabled=false;button.textContent=x.count==null?'عدد التكرار: '+n:'العدد المتبقي: '+n;move(positions[kind]||0);});
    el.querySelector('#fridayReminderHost')?.remove();
    el.querySelector('#communityPostControls-friday')?.remove();
-   if(kind==='friday'){window.AoqatFridayReminders?.mount(page);window.AoqatCommunityPosts?.mount('friday',page);}
-   window.AoqatAzkarReminders?.mount(page,kind);
+   // Reminder controls were moved to "ضبط التنبيهات"; the original azkar content remains.
+   if(kind==='friday')window.AoqatCommunityPosts?.mount('friday',page);
    move(positions[kind]||0);
    document.getElementById('webSubBody')?.scrollTo(0,0);el.querySelector('#adAzkarBack').focus({preventScroll:true});
   }
@@ -3764,6 +3782,9 @@ window.AoqatAzkar = (function () {
   if(state.readingRevision===2 && state.font===36 && !state.fontCustomized)state.font=40;
   if(!state.fontCustomized && (state.readingRevision||0)<4)state.font=44;
   state.readingRevision=4;
+  // Web-only reader experiment; Android keeps the approved offline SVG edition.
+  const webQcfTrial=true;
+  state.renderEngine='qcf';
   state.goal=Math.max(1,Math.min(604,Math.floor(Number(state.goal)||20)));
   state.volume=Math.max(0,Math.min(100,Number(state.volume)||80));
   state.reciter=readers.some(r=>r[0]===state.reciter)?state.reciter:readers[0][0];
@@ -3772,6 +3793,9 @@ window.AoqatAzkar = (function () {
   let root,host,quran,meta,phone,verses=[],loading,resize,audio,selected=0,audioIndex=-1,audioOn=false,audioSequence=0,audioRepeat=1,repeated=0,returnFocus,pointer,ignoreClickUntil=0,searchLimit=60,query='',request,pressTimer,turnAnimation,incomingAnimation,dragOffset=0,dragFrame=0,warmTask=0;
   const fittedSizes=new Map(),preparedPages=new Map(),phonePages=new Map(),phoneRequests=new Map();
   const phoneMode=()=>Boolean(phone);
+  const isQcf=()=>Boolean(phone)&&webQcfTrial&&state.renderEngine==='qcf';
+  const hasReadyPage=page=>isQcf()?qcfData.has(page):phonePages.has(page);
+  const ensureReadyPage=page=>isQcf()?qcfLoad(page):phonePage(page);
   const mobileTrial=()=>false;
   const pageKey=(paper,page)=>[state.layout,page,paper.clientWidth,paper.clientHeight,state.font,Boolean(state.tajwidScreenFit)].join(':');
   const $=id=>root?.querySelector('#'+id), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3792,10 +3816,54 @@ window.AoqatAzkar = (function () {
   }
   function notice(text){if($('aqNotice'))$('aqNotice').textContent=text;}
   function barButton(kind){return `<button type="button" data-qr-panel="${kind}" aria-label="${titles[kind]}"${kind==='mushaf'?' class="aq-active" aria-current="page"':''}><span aria-hidden="true">${icons[kind]}</span><small>${titles[kind]}</small></button>`;}
-  const mushafUrl = url => url.startsWith("assets/mushaf-") ? "https://aoqat.vercel.app/"+url : url;
-  async function compressed(url){const r=await fetch(mushafUrl(url));if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
-  async function loadPhone(){const ready=await fetch(mushafUrl('assets/mushaf-phone-hafs-ready.json'));if(!ready.ok)throw Error('Phone Mushaf unavailable');const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');data.directory=mushafUrl(data.directory);return data;}
-  async function phonePage(page){if(phonePages.has(page))return phonePages.get(page);if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');phonePages.set(page,data);if(phonePages.size>8)phonePages.delete(phonePages.keys().next().value);return data;}).finally(()=>phoneRequests.delete(page)));return phoneRequests.get(page);}
+  const mushafUrl = url => url.endsWith('.gz') ? url+'.bin' : url;
+  async function compressed(url){if(url==='assets/mushaf-phone-hafs.json.gz')return JSON.parse(window.AndroidNative.readQuranAsset('mushaf-phone-hafs.json.gz'));if(url==='experiments/qcf604-web-verse-layouts.json.gz')return JSON.parse(window.AndroidNative.readQuranAsset('qcf604-web-verse-layouts.json.gz'));const r=await fetch(mushafUrl(url));if(!r.ok)throw Error('Mushaf resource unavailable');const bytes=new Uint8Array(await r.arrayBuffer());return bytes[0]===31&&bytes[1]===139?new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).json():JSON.parse(new TextDecoder().decode(bytes));}
+  async function loadPhone(){const data=await compressed('assets/mushaf-phone-hafs.json.gz');if(data.pages.length!==604||data.versePages.length!==6236)throw Error('Invalid responsive Mushaf');data.directory=mushafUrl(data.directory);return data;}
+  // A QCF-outline page can be hundreds of KB compressed and much larger parsed.
+  // Keep a small LRU working set; the service worker retains downloaded pages on disk.
+  function trimPhonePages(){
+    if(phonePages.size<=18)return;
+    for(const p of phonePages.keys()){
+      if(phonePages.size<=18)break;
+      if(Math.abs(p-state.page)<=3||galleryReady.has(p))continue;
+      phonePages.delete(p);
+    }
+  }
+  async function phonePage(page){
+    if(phonePages.has(page)){
+      const data=phonePages.get(page);phonePages.delete(page);phonePages.set(page,data);
+      return data;
+    }
+    if(!phoneRequests.has(page))phoneRequests.set(page,compressed(`${phone.directory}/${String(page).padStart(3,'0')}.json.gz`).then(data=>{
+      if(data.page!==page||!data.lines.length)throw Error('Invalid Mushaf rows');
+      phonePages.set(page,data);trimPhonePages();return data;
+    }).finally(()=>phoneRequests.delete(page)));
+    return phoneRequests.get(page);
+  }
+  // Store every page on disk for offline turns, without retaining 604 DOM trees in RAM.
+  // Adjacent pages still take priority through phonePage() during navigation.
+  let offlineWarmStarted=false;
+  async function cacheAllPhonePages(){
+    if(offlineWarmStarted||!phone?.directory||!('caches' in window))return;
+    offlineWarmStarted=true;
+    try{
+      const cache=await caches.open('aoqat-mushaf-phone-hafs');
+      for(let p=1;p<=TOTAL;p++){
+        if(!root?.isConnected){offlineWarmStarted=false;return;}
+        const url=`${phone.directory}/${String(p).padStart(3,'0')}.json.gz`;
+        if(await cache.match(url))continue;
+        // Keep the browser responsive and avoid competing with an active page turn.
+        while(pointer||phoneRequests.size>0)await new Promise(r=>setTimeout(r,120));
+        const response=await fetch(mushafUrl(url));
+        if(!response.ok)throw Error('Offline Mushaf page '+p+' unavailable');
+        await cache.put(url,response);
+        await new Promise(r=>setTimeout(r,25));
+      }
+    }catch(e){
+      offlineWarmStarted=false;
+      console.warn('Mushaf offline preparation paused:',e);
+    }
+  }
   async function load(){
     if(!loading)loading=Promise.all([Promise.resolve().then(()=>JSON.parse(window.AndroidNative.readQuranAsset("quran.json"))),Promise.resolve().then(()=>JSON.parse(window.AndroidNative.readQuranAsset("quran-pages.json"))),loadPhone()]).then(async ([q,m,f])=>{phone=f;
       if(q.length!==114||m.pages.length!==604)throw Error();quran=q;meta=m;
@@ -3803,6 +3871,8 @@ window.AoqatAzkar = (function () {
       if(verses.length!==6236)throw Error();
       // The approved phone Mushaf is the only reading edition.
       meta={...m,pages:phone.pages};state.layout='phone';state.mobileTrial=false;state.phoneRevision=1;
+      // Start disk prefetch after the reader is mounted; never delay first render.
+      // Disable competing full-library download while the user is reading.
     }).catch(e=>{loading=null;throw e;});
     return loading;
   }
@@ -3830,6 +3900,12 @@ window.AoqatAzkar = (function () {
     root.addEventListener('contextmenu',e=>{if(e.target.closest('#aqSheet')&&!e.target.matches('input,textarea'))e.preventDefault();});
     $('aqPaper').addEventListener('pointerdown',e=>{
       if(!e.isPrimary)return;
+      // Keep the gesture anchored to the permanent paper node. Settling the
+      // previous turn removes the SVG element originally hit by this pointer;
+      // without capture, Chrome can cancel the new rapid swipe mid-gesture.
+      try{e.currentTarget.setPointerCapture(e.pointerId);}catch(_){}
+      // A fast second swipe must finish the previous turn instead of being lost.
+      if(galleryBusy)gallerySettle?.();
       if(galleryBusy)return;clearTurn();dragOffset=0;pointer={x:e.clientX,y:e.clientY,id:e.pointerId,t:performance.now()};
       const v=e.target.closest('[data-qr-verse]');
       clearTimeout(pressTimer);
@@ -3839,15 +3915,20 @@ window.AoqatAzkar = (function () {
       if(!pointer||pointer.id!==e.pointerId)return;
       const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y;
       if(Math.hypot(dx,dy)>12)clearTimeout(pressTimer);
-      if(phoneMode()&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4)galleryDrag(dx);
+      if(phoneMode()&&Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)*1.4){
+        if(isQcf())qcfQueueDrag(dx);
+        else galleryDrag(dx);
+      }
     });
     $('aqPaper').addEventListener('pointerup',e=>{
       clearTimeout(pressTimer);if(!pointer||pointer.id!==e.pointerId)return;
-      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);pointer=null;
-      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true);}else if(phoneMode()&&(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))){const from=state.page;Promise.all([phonePage(target),target>=3?qcfLoad(target):Promise.resolve()]).then(()=>{if(root?.isConnected&&state.page===from)go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else go(target);}else {clearTurn();dragOffset=0;}}
+      const dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,speed=Math.abs(dx)/Math.max(1,performance.now()-pointer.t);
+      if(isQcf())qcfFlushDrag(dx);
+      pointer=null;
+      if((Math.abs(dx)>Math.min(48,$('aqPaper').clientWidth*.12)||(Math.abs(dx)>24&&speed>.35))&&Math.abs(dx)>Math.abs(dy)*1.4){ignoreClickUntil=performance.now()+500;const target=state.page+(dx>0?1:-1);if(target>=1&&target<=TOTAL){if(phoneMode()&&galleryNeighbor){galleryFinish(target,true,speed);}else if(phoneMode()&&(!hasReadyPage(target))){const from=state.page;Promise.all([ensureReadyPage(target)]).then(()=>{if(!root?.isConnected||state.page!==from)return;galleryPrepare(target);galleryDrag((target>from?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor)galleryFinish(target,true,speed);else go(target);}).catch(()=>notice('تعذر تجهيز الصفحة التالية؛ حاول مجدداً'));}else {if(phoneMode()&&hasReadyPage(target)){galleryPrepare(target);galleryDrag((target>state.page?1:-1)*Math.max(48,$('aqPaper').clientWidth*.15));if(galleryNeighbor){galleryFinish(target,true,speed);}else go(target);}else go(target);}}else {clearTurn();dragOffset=0;}}
       else {if(Math.hypot(dx,dy)>12)ignoreClickUntil=performance.now()+500;if(galleryNeighbor)galleryFinish(state.page,false);else clearTurn();dragOffset=0;}
     });
-    $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
+    $('aqPaper').addEventListener('pointercancel',()=>{clearTimeout(pressTimer);qcfCancelDrag();pointer=null;clearTurn();dragOffset=0;ignoreClickUntil=performance.now()+500;});
     $('aqPaper').addEventListener('contextmenu',e=>e.preventDefault());
     $('aqPaper').addEventListener('click',e=>{if(performance.now()<ignoreClickUntil||!$('aqSheet').hidden)return;immersive(!document.body.classList.contains('quran-reader-immersive'));});
     root.addEventListener('keydown',e=>{
@@ -3864,10 +3945,100 @@ window.AoqatAzkar = (function () {
     document.body.classList.toggle('quran-reader-immersive',on);
   }
   // Gallery-style horizontal swipe: move two already prepared pages with the finger.
-  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false;
+  let galleryNeighbor=null,galleryDirection=0,galleryBusy=false,galleryAdopted=false,gallerySettle=null,gallerySettleTimer=0,galleryAnimationFrame=0;
+  // Favor the page ahead of the most recent swipe, while retaining the reverse page.
+  let galleryLastDirection=1;
+  // Pointer events can arrive far more frequently than display frames.
+  // Move the two already-painted QCF pages at most once per animation frame.
+  let qcfDragFrame=0,qcfQueuedDx=null;
+  function qcfCancelDrag(){
+    if(qcfDragFrame)cancelAnimationFrame(qcfDragFrame);
+    qcfDragFrame=0;qcfQueuedDx=null;
+  }
+  function qcfQueueDrag(dx){
+    qcfQueuedDx=dx;
+    if(qcfDragFrame)return;
+    qcfDragFrame=requestAnimationFrame(()=>{
+      qcfDragFrame=0;
+      const latest=qcfQueuedDx;qcfQueuedDx=null;
+      if(pointer&&latest!==null&&!galleryBusy)galleryDrag(latest);
+    });
+  }
+  function qcfFlushDrag(dx){
+    qcfCancelDrag();
+    if(pointer&&!galleryBusy&&Math.abs(dx)>12)galleryDrag(dx);
+  }
+  // Build and fit adjacent pages while idle, never in the pointermove handler.
+  const galleryReady=new Map();
+  let galleryPrepareTimer=0;
+  function galleryClearReady(){
+    clearTimeout(galleryPrepareTimer);
+    for(const entry of galleryReady.values())entry.node.remove();
+    galleryReady.clear();
+  }
+  function galleryPruneReady(){
+    const paper=$('aqPaper');if(!paper)return;
+    const wanted=new Set(isQcf()?[
+      state.page+galleryLastDirection,state.page-galleryLastDirection,
+      state.page+galleryLastDirection*2,state.page-galleryLastDirection*2,
+      state.page+galleryLastDirection*3
+    ]:[state.page+1,state.page-1]);
+    for(const [page,entry] of galleryReady){
+      if(page===state.page||!wanted.has(page)||
+         entry.width!==paper.clientWidth||entry.height!==paper.clientHeight||
+         !entry.node.isConnected){
+        entry.node.remove();galleryReady.delete(page);
+      }
+    }
+  }
+  function galleryPrepare(page){
+    const paper=$('aqPaper'),current=$('adVerses');
+    if(!paper||!current||!phoneMode()||galleryBusy||page<1||page>TOTAL)return;
+    const prior=galleryReady.get(page);
+    if(prior){
+      if(prior.width===paper.clientWidth&&prior.height===paper.clientHeight&&prior.node.isConnected)return;
+      prior.node.remove();galleryReady.delete(page);
+    }
+    if(!hasReadyPage(page))return;
+    const node=document.createElement('div');
+    node.className=current.className+' aq-gallery-neighbor';
+    node.innerHTML=pageHTML(page);
+    node.style.cssText='position:absolute!important;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';
+    node.style.top=current.offsetTop+'px';node.style.left=current.offsetLeft+'px';
+    paper.append(node);
+    fitText(paper,node,page);
+    node.style.visibility='visible';
+    node.style.transform='translate3d(-200vw,0,0)';
+    galleryReady.set(page,{node,width:paper.clientWidth,height:paper.clientHeight});
+  }
+  function gallerySchedule(){
+    clearTimeout(galleryPrepareTimer);
+    const activePage=state.page;
+    const prepareIdle=()=>{
+      if(!root?.isConnected||pointer||galleryBusy||state.page!==activePage)return;
+      const targets=isQcf()
+        ?[activePage+galleryLastDirection,activePage-galleryLastDirection,
+          activePage+galleryLastDirection*2,activePage-galleryLastDirection*2,
+          activePage+galleryLastDirection*3]
+        :[activePage+1,activePage-1];
+      // One fully fitted page per task; do not monopolize the main thread
+      // with multiple layouts between two rapid finger gestures.
+      for(const p of targets){
+        if(p<1||p>TOTAL||galleryReady.has(p)||!hasReadyPage(p))continue;
+        galleryPrepare(p);
+        if(isQcf())galleryPrepareTimer=setTimeout(prepareIdle,24);
+        else prepareIdle();
+        break;
+      }
+    };
+    galleryPrepareTimer=setTimeout(prepareIdle,0);
+  }
   function galleryReset(){
+    clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
+    cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
+    gallerySettle=null;galleryBusy=false;
     galleryNeighbor?.remove();galleryNeighbor=null;galleryDirection=0;
-    const current=$('adVerses');if(current){current.style.transition='';current.style.transform='';current.style.willChange='';}
+    const current=$('adVerses');if(current){current.style.transition='';current.style.transform=isQcf()?'translate3d(0,0,0)':'';current.style.willChange='';}
   }
   function galleryDrag(dx){
     const paper=$('aqPaper'),current=$('adVerses');if(!paper||!current||!phoneMode()||galleryBusy)return;
@@ -3875,126 +4046,270 @@ window.AoqatAzkar = (function () {
     if(target<1||target>604){galleryReset();return;}
     if(galleryDirection!==direction){galleryReset();galleryDirection=direction;}
     if(!galleryNeighbor){
-      if(!phonePages.has(target)||(target>=3&&!qcfData.has(target)))return;
-      const neighbor=document.createElement('div');neighbor.className=current.className+' aq-gallery-neighbor';
-      neighbor.innerHTML=pageHTML(target);neighbor.style.cssText='position:absolute!important;z-index:5;pointer-events:none;visibility:hidden;will-change:transform;';neighbor.style.top=current.offsetTop+'px';neighbor.style.left=current.offsetLeft+'px';
-      paper.append(neighbor);fitText(paper,neighbor,target);neighbor.style.visibility='visible';galleryNeighbor=neighbor;
+      if(!hasReadyPage(target))return;
+      const ready=galleryReady.get(target);
+      if(!ready||ready.width!==paper.clientWidth||ready.height!==paper.clientHeight){
+        // QCF glyph layout is expensive: NEVER create and measure it while the
+        // user's finger moves. Warmup runs between gestures instead.
+        if(isQcf())return;
+        // Preserve the previous SVG fallback behavior.
+        galleryReady.get(target)?.node.remove();galleryReady.delete(target);
+        galleryPrepare(target);
+        if(!galleryReady.has(target))return;
+      }
+      const prepared=galleryReady.get(target);
+      if(!prepared)return;
+      galleryReady.delete(target);
+      galleryNeighbor=prepared.node;
     }
     const width=paper.clientWidth,offset=Math.max(-width,Math.min(width,dx));
     current.style.willChange='transform';current.style.transform='translate3d('+offset+'px,0,0)';
     galleryNeighbor.style.transform='translate3d('+(offset-direction*width)+'px,0,0)';
   }
-  function galleryFinish(target,commit){
+  function galleryFinish(target,commit,swipeSpeed=0){
     const paper=$('aqPaper'),current=$('adVerses'),neighbor=galleryNeighbor;
     if(!paper||!current||!neighbor){galleryReset();if(commit)go(target);return;}
     galleryBusy=true;
     const direction=galleryDirection,width=paper.clientWidth;
-    current.style.transition='transform 170ms ease-out';
-    neighbor.style.transition='transform 170ms ease-out';
-    requestAnimationFrame(()=>{
+    // Prevent the hidden offscreen staging transform from flashing on screen.
+    neighbor.style.visibility='visible';
+    // A quick finger flick should not be held back by a long fixed 260ms
+    // animation. Keep the old timing for SVG; QCF gets a responsive finish.
+    const duration=isQcf()?(commit&&swipeSpeed>=1.1?115:commit&&swipeSpeed>=.65?145:commit&&swipeSpeed>=.4?175:210):260;
+    current.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
+    neighbor.style.transition='transform '+duration+'ms cubic-bezier(.22,1,.36,1)';
+    galleryAnimationFrame=requestAnimationFrame(()=>{
+      galleryAnimationFrame=0;
+      if(!galleryBusy)return;
       current.style.transform='translate3d('+(commit?direction*width:0)+'px,0,0)';
       neighbor.style.transform='translate3d('+(commit?0:-direction*width)+'px,0,0)';
     });
     const settle=()=>{
-      if(!galleryBusy)return;
-      galleryBusy=false;
+      // Ignore a delayed transitionend from a previously adopted page: it must
+      // never cancel a newer swipe's animation or steal its pending page turn.
+      if(!galleryBusy||gallerySettle!==settle)return;
+      neighbor.removeEventListener('transitionend',settle);
+      clearTimeout(gallerySettleTimer);gallerySettleTimer=0;
+      cancelAnimationFrame(galleryAnimationFrame);galleryAnimationFrame=0;
+      gallerySettle=null;galleryBusy=false;
       if(commit&&root?.isConnected&&state.page!==target){
         // Keep the already rendered and fitted neighbor; do not rebuild it after the swipe.
-        current.remove();
+        // For QCF, recycle the *previous* rendered page as the reverse-swipe
+        // buffer. Removing it and re-creating it after every turn was the main
+        // source of reflows during rapid back-and-forth reading.
+        if(isQcf()){
+          current.removeAttribute('id');
+          current.classList.add('aq-gallery-neighbor');
+          current.style.setProperty('position','absolute','important');
+          current.style.zIndex='5';
+          current.style.pointerEvents='none';
+          current.style.visibility='visible';
+          current.style.transition='none';
+          current.style.transform='translate3d(-200vw,0,0)';
+          galleryReady.get(state.page)?.node.remove();
+          galleryReady.set(state.page,{node:current,width:paper.clientWidth,height:paper.clientHeight});
+        }else current.remove();
         neighbor.id='adVerses';
         neighbor.classList.remove('aq-gallery-neighbor');
         neighbor.style.removeProperty('position');neighbor.style.removeProperty('top');neighbor.style.removeProperty('left');
         neighbor.style.removeProperty('z-index');neighbor.style.removeProperty('pointer-events');
         neighbor.style.removeProperty('visibility');neighbor.style.removeProperty('will-change');
-        neighbor.style.removeProperty('transition');neighbor.style.removeProperty('transform');
-        galleryNeighbor=null;galleryDirection=0;galleryAdopted=true;
+        neighbor.style.removeProperty('transition');
+        // Keep the QCF page on its existing GPU layer at the *same* zero
+        // translation. Switching transform to 'none' at handoff forces font
+        // rerasterization and can look like a second tiny move after the swipe.
+        if(isQcf())neighbor.style.transform='translate3d(0,0,0)';
+        else neighbor.style.removeProperty('transform');
+        galleryNeighbor=null;galleryLastDirection=direction;galleryDirection=0;galleryAdopted=true;
+        // Do not wipe the pre-fitted QCF neighbors. The next fast swipe needs
+        // the already painted pages, not a fresh hundreds-of-spans rebuild.
+        if(!isQcf())galleryClearReady();
         go(target);
       }else galleryReset();
     };
+    gallerySettle=settle;
     neighbor.addEventListener('transitionend',settle,{once:true});
-    setTimeout(settle,195);
+    gallerySettleTimer=setTimeout(settle,duration+65);
   }
-  function clearTurn(){galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform='';}
-  // Genuine QCF V2 glyphs: page-specific font and code_v2, never replace with vector art.
-  const qcfData=new Map(),qcfPending=new Map(),qcfErrors=new Map(),qcfFontReady=new Set();
-  function qcfLoad(page,force=false){
-    if(qcfData.has(page))return Promise.resolve(qcfData.get(page));
+  function clearTurn(){qcfCancelDrag();galleryReset();cancelAnimationFrame(dragFrame);dragFrame=0;turnAnimation?.cancel();incomingAnimation?.cancel();turnAnimation=null;incomingAnimation=null;$('aqPaper')?.querySelectorAll('.aq-leaf').forEach(e=>e.remove());if($('adVerses'))$('adVerses').style.transform=isQcf()?'translate3d(0,0,0)':'';}
+  // Web QCF V2 experiment: word glyph codes and verse mappings are bundled,
+  // instead of relying on a network API when the user opens a Quran page.
+  const qcfData=new Map(),qcfPending=new Map(),qcfFontFaces=new Map(),qcfFitCache=new Map();
+  let qcfManifestPromise=null;
+  function qcfManifest(){
+    if(!qcfManifestPromise)qcfManifestPromise=compressed('experiments/qcf604-web-verse-layouts.json.gz').then(data=>{
+      if(data.pageCount!==TOTAL||Object.keys(data.pages||{}).length!==TOTAL)throw Error('Incomplete QCF page manifest');
+      return data.pages;
+    }).catch(error=>{qcfManifestPromise=null;throw error;});
+    return qcfManifestPromise;
+  }
+  // A 2-page font cache caused repeated FontFace removal/reload on fast turns.
+  // Retain a bounded recent set, never all 604 QCF page-specific fonts.
+  const QCF_TEXT_CACHE_LIMIT=12,QCF_FONT_CACHE_LIMIT=10;
+  function trimQcfCaches(){
+    const hot=p=>Math.abs(p-state.page)<=3||galleryReady.has(p)||qcfPending.has(p);
+    for(const p of qcfData.keys()){
+      if(qcfData.size<=QCF_TEXT_CACHE_LIMIT)break;
+      if(!hot(p))qcfData.delete(p);
+    }
+    for(const [p,font] of qcfFontFaces){
+      if(qcfFontFaces.size<=QCF_FONT_CACHE_LIMIT)break;
+      if(!hot(p)){
+        document.fonts.delete(font);qcfFontFaces.delete(p);
+        // Never retain a page layout with its required per-page QCF font gone.
+        // renderPage() relies on qcfData.has(page) to decide whether glyphs
+        // are display-ready; stale data without FontFace causes font fallback.
+        qcfData.delete(p);
+      }
+    }
+  }
+  function qcfLoad(page){
+    if(qcfData.has(page)&&qcfFontFaces.has(page)){
+      // Page 2's Basmala borrows authentic page-1 QCF V2 word glyphs.
+      // If its font was evicted, restore it without refetching page 2.
+      if(page===2&&(!qcfData.has(1)||!qcfFontFaces.has(1)))
+        return qcfLoad(1).catch(()=>null).then(()=>qcfData.get(2));
+      // Keep recently used text and its specific font resident for quick
+      // consecutive/reverse flips instead of repeated font decoding.
+      const rows=qcfData.get(page);qcfData.delete(page);qcfData.set(page,rows);
+      const font=qcfFontFaces.get(page);
+      if(font){qcfFontFaces.delete(page);qcfFontFaces.set(page,font);}
+      return Promise.resolve(rows);
+    }
     if(qcfPending.has(page))return qcfPending.get(page);
-    if(qcfErrors.has(page)&&!force)return Promise.reject(qcfErrors.get(page));
-    if(force)qcfErrors.delete(page);
     const job=(async()=>{
-      const url='https://api.quran.com/api/v4/verses/by_page/'+page+'?words=true&word_fields=code_v2%2Ctext_uthmani&per_page=50&mushaf=1';
-      const res=await fetch(mushafUrl(url));if(!res.ok)throw Error('QCF API '+res.status);
-      const data=await res.json(),lines=new Map(),lookup=new Map(verses.map((v,i)=>[v.s+':'+v.a,i]));
-      for(const verse of data.verses||[]){
-        const index=lookup.get(verse.verse_key);
-        if(index===undefined)throw Error('QCF verse index mismatch');
-        for(const w of verse.words||[]){
-          if(!w.code_v2||!Number.isInteger(w.line_number))throw Error('Missing QCF code or line');
-          if(w.page_number&&w.page_number!==page)throw Error('Page mismatch');
-          if(!lines.has(w.line_number))lines.set(w.line_number,[]);
-          lines.get(w.line_number).push({code:w.code_v2,index,end:w.char_type_name==='end'});
-        }
+      // Fetch the Fatiha font and this page's font concurrently. Only the
+      // opening page 2 needs both. A missing Fatiha font can still fall back
+      // to the original readable Basmala rather than blanking the Quran.
+      const fatihaReady=page===2?qcfLoad(1).catch(()=>null):null;
+      const layouts=await qcfManifest();
+      const rows=layouts[String(page)]?.lines;
+      if(!Array.isArray(rows)||rows.length<6||rows.length>15||
+        rows.some(row=>!row.s&&!row.b&&(!Array.isArray(row.v)||!row.v.length||
+          row.v.some(w=>!Array.isArray(w)||w.length!==3||!Number.isInteger(w[0])||w[0]<0||w[0]>=6236||!w[1]))))
+        throw Error('Incomplete native QCF rows for page '+page);
+      if(!qcfFontFaces.has(page)){
+        const font=new FontFace('AqQcfV2Page'+page,
+          'url("assets/qcf-v2-page-fonts/p'+page+'.woff2")',
+          {style:'normal',weight:'400',display:'block'});
+        const loaded=await font.load();
+        document.fonts.add(loaded);
+        qcfFontFaces.set(page,loaded);
       }
-      if(lines.size<1||lines.size>15)throw Error('Unexpected line count');
-      if(!qcfFontReady.has(page)){
-        const font=new FontFace('AqQcfV2Page'+page,'url("https://verses.quran.foundation/fonts/quran/hafs/v2/woff2/p'+page+'.woff2")');
-        await font.load();document.fonts.add(font);qcfFontReady.add(page);
-      }
-      const sorted=[...lines].sort((a,b)=>a[0]-b[0]);
-      const rows=sorted.map(x=>x[1]);rows.lineNumbers=sorted.map(x=>x[0]);
-      qcfData.set(page,rows);if(qcfData.size>16)qcfData.delete(qcfData.keys().next().value);
+      if(fatihaReady)await fatihaReady;
+      qcfData.set(page,rows);
       return rows;
-    })().catch(e=>{qcfErrors.set(page,e);throw e}).finally(()=>qcfPending.delete(page));
-    qcfPending.set(page,job);return job;
+    })().finally(()=>qcfPending.delete(page));
+    qcfPending.set(page,job);
+    return job;
+  }
+  // One contiguous, ornamented title plaque for the first TWO pages only.
+  // The floral pattern is part of the plate itself, never floating rosettes
+  // over "مكية" / "مدنية" or the authentic verse count.
+  // Style 8 (the selected preview): one unified rounded folio with gilded
+  // floral wings at both ends. Called for ALL 114 surahs in the QCF reader.
+  // Verse count, Meccan/Medinan classification and full surah name come
+  // directly from the bundled Quran DB; never render them as a static image.
+  function qcfSurahBanner(id){
+    const surah=quran[id-1];
+    if(!surah)return surahBanner(id);
+    const kind=surah.type==='meccan'?'مكية':'مدنية';
+    const titleScale=Math.max(.69,1-Math.max(0,surah.name.length-9)*.045);
+    const wing='<g class="aq-qcf-floral" stroke="#986d48" stroke-width="1.8" fill="none" stroke-linejoin="round">'+
+      '<path d="M5 60Q20 52 24 33Q32 16 49 16H166Q181 16 192 4" opacity=".7"/>'+
+      '<path d="M5 60Q20 68 24 87Q32 104 49 104H166Q181 104 192 116" opacity=".7"/>'+
+      '<path d="M34 60Q24 49 34 38Q45 27 61 28M34 60Q24 71 34 82Q45 93 61 92"/>'+
+      '<path d="M48 16Q52 34 67 41M48 104Q52 86 67 79M154 22Q143 36 145 45M154 98Q143 84 145 75"/>'+
+      '<path d="M105 15Q118 28 136 23Q130 40 149 60Q130 80 136 97Q118 92 105 105Q92 92 74 97Q80 80 61 60Q80 40 74 23Q92 28 105 15Z" fill="#f0dfc4"/>'+
+      '<path d="M105 24Q121 39 137 38Q124 53 140 60Q124 67 137 82Q121 81 105 96Q89 81 73 82Q86 67 70 60Q86 53 73 38Q89 39 105 24Z" fill="#fff7e9"/>'+
+      '<circle cx="105" cy="60" r="28" stroke="#c4a37c"/>'+
+      '<circle cx="105" cy="60" r="20" stroke="#a47c56" stroke-dasharray="2 3"/>'+
+      '<path d="M105 33C119 45 119 49 105 60C91 49 91 45 105 33Z" fill="#dfc39a"/>'+
+      '<path d="M105 87C91 75 91 71 105 60C119 71 119 75 105 87Z" fill="#dfc39a"/>'+
+      '<path d="M78 60C90 46 94 46 105 60C94 74 90 74 78 60Z" fill="#dfc39a"/>'+
+      '<path d="M132 60C120 74 116 74 105 60C116 46 120 46 132 60Z" fill="#dfc39a"/>'+
+      '<path d="M86 41Q111 44 124 79Q99 76 86 41ZM124 41Q99 44 86 79Q111 76 124 41Z" opacity=".6"/>'+
+      '<circle cx="105" cy="60" r="7" fill="#b18a5f"/><circle cx="105" cy="60" r="2.7" fill="#fff8ed" stroke="none"/>'+
+      '<path d="M14 60H36M166 60H197" stroke="#b7946d"/>'+
+      '</g>';
+    const art='<svg class="aq-qcf-opening-art aq-qcf-style8-art" viewBox="0 0 1000 120" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">'+
+      '<path d="M37 7H963Q986 7 987 27Q990 46 997 60Q990 74 987 93Q986 113 963 113H37Q14 113 13 93Q10 74 3 60Q10 46 13 27Q14 7 37 7Z" fill="#f8ecda" stroke="#ab825a" stroke-width="3"/>'+
+      '<path d="M38 13H962Q979 13 980 31Q984 49 990 60Q984 71 980 89Q979 107 962 107H38Q21 107 20 89Q16 71 10 60Q16 49 20 31Q21 13 38 13Z" fill="none" stroke="#d3b48c" stroke-width="1.6"/>'+
+      '<path d="M235 12H765Q781 12 789 26Q797 41 816 49Q822 60 816 71Q797 79 789 94Q781 108 765 108H235Q219 108 211 94Q203 79 184 71Q178 60 184 49Q203 41 211 26Q219 12 235 12Z" fill="#fffaf0" stroke="#b28c65" stroke-width="2.2"/>'+
+      '<path d="M237 19H763Q777 19 782 32Q792 46 802 51Q809 60 802 69Q792 74 782 88Q777 101 763 101H237Q223 101 218 88Q208 74 198 69Q191 60 198 51Q208 46 218 32Q223 19 237 19Z" fill="none" stroke="#d0ad83" stroke-width="1.5"/>'+
+      '<g class="aq-qcf-ornate-left">'+wing+'</g>'+
+      '<g class="aq-qcf-ornate-right" transform="translate(1000 0) scale(-1 1)">'+wing+'</g>'+
+      '</svg>';
+    return '<div class="aq-qcf-opening-top aq-qcf-surah-plaque aq-native-heading aq-qcf-heading" style="--aq-surah-title-scale:'+titleScale.toFixed(2)+'" role="group" aria-label="معلومات السورة">'+
+      art+'<div class="aq-surah-info-clean aq-qcf-opening-info" role="group" aria-label="اسم السورة وعدد آياتها وتصنيفها">'+
+      '<span class="aq-surah-info-count">'+arabic(surah.total_verses)+' آية</span>'+
+      '<span class="aq-surah-info-name">سورة '+esc(surah.name)+'</span>'+
+      '<span class="aq-surah-info-kind">'+kind+'</span></div></div>';
+  }
+  function qcfOpeningBasmala(){
+    // QCF V2 page 1 stores the four genuine Basmala word glyphs as the
+    // first four entries of its first verse. The FIFTH glyph is the verse
+    // number rosette: never copy that into Al-Baqarah, where Basmala is
+    // unnumbered. Reuse the same font, size and weight as Al-Fatiha.
+    const words=qcfData.get(1)?.find(row=>row.v?.some(w=>w[0]===0))?.v
+      ?.filter(([verseIndex,,end])=>verseIndex===0&&!end);
+    if(words?.length===4&&qcfFontFaces.has(1)){
+      return '<div class="aq-qcf-line aq-qcf-bismillah aq-qcf-authentic-bismillah" '+
+        'style="--aq-qcf-font:AqQcfV2Page1" role="text" aria-label="'+
+        esc(quran[0].verses[0].text)+'">'+
+        words.map(([,code])=>'<span class="aq-qcf-basmala-word" aria-hidden="true">'+
+          esc(code)+'</span>').join('')+'</div>';
+    }
+    // Graceful offline/web fallback only when the extra font is unavailable.
+    return '<div class="aq-native-bismillah aq-qcf-bismillah">'+
+      esc(quran[0].verses[0].text)+'</div>';
+  }
+  // Ayah ornament #1: replace the original QCF rosette with one visible
+  // decorative frame and the real verse number. Never add a second rosette.
+  // Keep the authentic QCF codepoint in DOM for Quran identity and validation.
+  // Replace its visual outline only, using selected decorative frame #1.
+  function selectedAyahMedallion(code,verseNumber){
+    const numeral=arabic(verseNumber);
+    return '<span class="aq-qcf-selected-ayah" data-ayah-number="'+numeral+'">'+
+      '<svg class="aq-qcf-selected-ayah-frame" viewBox="0 0 100 100" focusable="false" aria-hidden="true">'+
+      '<g fill="none" stroke="#aa7c45" stroke-linejoin="round">'+
+      '<path stroke-width="2.5" d="M50 3L58 11L70 8L74 20L86 22L87 35L97 42L91 51L97 60L86 67L85 80L73 82L68 94L57 89L49 98L40 89L28 93L25 81L13 78L13 65L3 58L9 49L3 41L14 34L15 21L27 19L33 7L43 11Z"/>'+
+      '<path stroke-width="1.5" d="M50 10L59 18L69 15L73 26L83 28L81 40L90 50L81 60L83 72L72 74L68 85L58 82L50 91L42 82L32 85L28 74L17 72L19 60L10 50L19 40L17 28L28 26L32 15L41 18Z"/>'+
+      '<circle cx="50" cy="50" r="31" stroke-width="1.7"/>'+
+      '<circle cx="50" cy="50" r="27.5" stroke-width="1"/>'+
+      '<path stroke-width="1.2" d="M50 3v10M50 87v10M3 50h10M87 50h10M17 17l8 8M75 75l8 8M83 17l-8 8M25 75l-8 8"/>'+
+      '</g><g fill="#b38a55"><circle cx="50" cy="6" r="2"/><circle cx="94" cy="50" r="2"/><circle cx="50" cy="94" r="2"/><circle cx="6" cy="50" r="2"/></g></svg>'+
+      '<span class="aq-qcf-selected-ayah-glyph">'+esc(code)+'</span></span>';
   }
   function qcfHTML(page){
-    const rows=qcfData.get(page);if(!rows)return '';
-    const source=phonePages.get(page);
-    const slots=Array.from({length:15},()=>null);
-    // QCF V2 supplies the canonical 1–15 line positions. Never compact or
-    // shift its words to accommodate banners from another mushaf edition.
-    rows.forEach((words,i)=>{
-      const n=rows.lineNumbers[i]-1;
-      if(!Number.isInteger(n)||n<0||n>=15||slots[n])throw Error('Invalid QCF line position');
-      slots[n]={words};
-    });
-    // Derive surah openings from the actual QCF verse stream, not from
-    // another edition's page rows. Each surah begins at ayah 1.
-    const openings=[];
-    for(let i=0;i<rows.length;i++){
-      const words=rows[i],first=words[0];
-      if(!first)continue;
-      const verse=verses[first.index];
-      if(verse?.a===1 && (i===0 || rows[i-1].at(-1)?.index!==first.index)){
-        openings.push({surah:verse.s,line:rows.lineNumbers[i]-1});
-      }
-    }
-    // The title and basmala belong immediately before the first ayah.
-    // Reserve the nearest free rows before it; never shift or overwrite words.
-    for(const opening of openings){
-      const free=slots.map((v,i)=>v===null&&i<opening.line?i:-1).filter(i=>i>=0);
-      const needed=opening.surah===9?1:2;
-      if(free.length>=needed){
-        const positions=free.slice(-needed);
-        slots[positions[0]]={kind:'heading',surah:opening.surah};
-        if(needed===2)slots[positions[1]]={kind:'bismillah'};
-      }else{
-        // Some editions have no spare grid row: attach a compact title to
-        // the first verse line instead of losing it or moving Quran words.
-        const target=slots[opening.line];
-        if(target?.words)target.opening=opening.surah;
-      }
-    }
-    return slots.map((slot,n)=>{
-      if(slot?.kind==='heading')return '<div class="aq-native-heading aq-qcf-heading">'+surahBanner(slot.surah)+'</div>';
-      if(slot?.kind==='bismillah')return '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
-      if(!slot?.words)return '<div class="aq-qcf-spacer" aria-hidden="true"></div>';
-      return (slot.opening?'<div class="aq-qcf-inline-opening">'+surahBanner(slot.opening)+(slot.opening===9?'':'<div class="aq-qcf-inline-bismillah">'+esc(quran[0].verses[0].text)+'</div>')+'</div>':'')+'<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+slot.words.map(w=>'<span class="aq-qcf-word'+(w.end?' aq-qcf-marker':'')+'" role="button" tabindex="0" data-qr-verse="'+w.index+'">'+esc(w.code)+'</span>').join('')+'</div>';
+    const rows=qcfData.get(page);
+    if(!rows)return '';
+    // The first two Mushaf pages keep their original 7 / 286 ayah metadata
+    // in the top surah bar. Only the Quran text occupies the centered folio.
+    // Do not move or remove the reader's existing surah-information header.
+    const html=rows.map((row,n)=>{
+      if(row.s)return page<=2?'':'<div class="aq-native-heading aq-qcf-heading aq-qcf-style8-heading">'+qcfSurahBanner(row.s)+'</div>';
+      if(row.b)return page===2?qcfOpeningBasmala():
+        '<div class="aq-native-bismillah aq-qcf-bismillah">'+esc(quran[0].verses[0].text)+'</div>';
+      return '<div class="aq-qcf-line" style="--aq-qcf-font:AqQcfV2Page'+page+
+        ';--aq-qcf-row:'+(n+1)+'" aria-label="السطر '+arabic(n+1)+'">'+
+        row.v.map(([i,code,end])=>{
+          const v=verses[i];
+          return '<span class="aq-qcf-word'+(end?' aq-qcf-marker':'')+
+            (audioOn&&audioIndex===i?' aq-playing':'')+
+            '" role="button" tabindex="0" data-qr-verse="'+i+
+            '" aria-label="'+esc(v.name)+' الآية '+v.a+'">'+(end?selectedAyahMedallion(code,v.a):esc(code))+'</span>';
+        }).join('')+'</div>';
     }).join('');
+    if(page<=2){
+      return qcfSurahBanner(page)+'<div class="aq-qcf-opening-inner">'+html+'</div>';
+    }
+    return html;
   }
   function pageHTML(page){
-    if(phoneMode()&&page>=3)return qcfHTML(page);
+    if(isQcf())return qcfHTML(page);
+    // Render the bundled original QCF2 outlines, not network-fetched page fonts.
+    // The local SVG paths are produced at build time from the original QCF2 glyphs.
     if(phoneMode()||mobileTrial()){
       const p=phonePages.get(page);if(!p)return '<p class="aq-loading">تحميل الصفحة…</p>';
       return p.lines.map(line=>{if(line.s)return `<div class="aq-native-heading">${surahBanner(line.s)}</div>`;if(line.b)return `<div class="aq-native-bismillah">${esc(quran[0].verses[0].text)}</div>`;
@@ -4017,26 +4332,33 @@ window.AoqatAzkar = (function () {
     return html;
   }
   function renderPage(animate=false){
-    if(phoneMode()&&state.page>=3&&!phonePages.has(state.page)){
+    if(isQcf()&&!qcfData.has(state.page)){
       const target=state.page;
-      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل عنوان السورة والبسملة…</p>';
+      $('adVerses').innerHTML='<p class="aq-loading">جاري تجهيز خط المصحف للصفحة '+arabic(target)+'…</p>';
       root.dataset.ready='false';
-      phonePage(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل تنسيق بداية السورة؛ حاول مجدداً.</p>';root.dataset.ready='error';}});
+      qcfLoad(target).then(()=>{
+        if(root?.isConnected&&isQcf()&&state.page===target){preparedPages.clear();renderPage(animate);}
+      }).catch(()=>{
+        if(root?.isConnected&&isQcf()&&state.page===target){
+          // Never leave readers with a blank page when a trial font is unavailable.
+          galleryClearReady();preparedPages.clear();
+          root.dataset.ready='error';$('adVerses').innerHTML='<p class="aq-loading">تعذّر تحميل صفحة المصحف المحفوظة؛ أعد فتح المصحف.</p>';notice('تعذّر تحميل خط المصحف المحلي.');
+        }
+      });
       return;
     }
-    if(phoneMode()&&state.page>=3&&!qcfData.has(state.page)){
-      const target=state.page;
-      $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل خط QCF V2 الأصلي…</p>';
-      root.dataset.ready='false';
-      qcfLoad(target).then(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&phoneMode()&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل خط QCF V2. تحقق من اتصال الإنترنت وأعد فتح الصفحة.</p>';root.dataset.ready='error';}});
-      return;
-    }
-
-    if((phoneMode()||mobileTrial())&&state.page<=2&&!phonePages.has(state.page)){
+    if(phoneMode()&&!isQcf()&&!phonePages.has(state.page)){
       const target=state.page;
       $('adVerses').innerHTML='<p class="aq-loading">جاري تحميل الصفحة '+arabic(target)+'…</p>';
       root.dataset.ready='false';
-      phonePage(target).then(()=>{if(root?.isConnected&&(phoneMode()||mobileTrial())&&state.page===target){preparedPages.clear();renderPage(animate);}}).catch(()=>{if(root?.isConnected&&state.page===target){$('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل صفحة المصحف؛ حاول مجدداً عند توفر الإنترنت.</p>';root.dataset.ready='error';}});
+      phonePage(target).then(()=>{
+        if(root?.isConnected&&!isQcf()&&state.page===target){preparedPages.clear();renderPage(animate);}
+      }).catch(()=>{
+        if(root?.isConnected&&!isQcf()&&state.page===target){
+          $('adVerses').innerHTML='<p class="aq-loading">تعذر تحميل صفحة المصحف؛ حاول مجدداً.</p>';
+          root.dataset.ready='error';
+        }
+      });
       return;
     }
     root.dataset.ready='true';
@@ -4044,15 +4366,19 @@ window.AoqatAzkar = (function () {
     const pageChanged=root.dataset.page!==String(state.page);
     dragOffset=0;
     clearTurn();
-    const items=pageItems(),start=meta.pages[state.page-1].start,html=pageHTML(state.page);
-    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* The incoming gallery page is already fitted and displayed. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=html;$('adVerses').classList.toggle('aq-opening',state.page<=2);}
+    const items=pageItems(),start=meta.pages[state.page-1].start;
+    const adopted=galleryAdopted;galleryAdopted=false;const cached=!adopted&&!audioOn&&preparedPages.get(pageKey($('aqPaper'),state.page));if(adopted){/* Reuse the fitted incoming DOM without regenerating SVG paths. */}else if(cached){const ready=cached.cloneNode(true);ready.id='adVerses';$('adVerses').replaceWith(ready);}else{$('adVerses').innerHTML=pageHTML(state.page);$('adVerses').classList.toggle('aq-opening',state.page<=2);}
     $('aqSurahName').textContent=items[0].name;$('aqJuz').textContent='الجزء '+arabic(juzOf(start));
     $('aqFolio').textContent=arabic(state.page);$('aqPageNumber').textContent=`${state.page} / 604`;$('aqPageSlider').value=state.page;
     $('aqPrevious').disabled=state.page===1;$('aqNext').disabled=state.page===604;
     const marked=state.bookmarks.some(b=>b.i===start);$('aqBookmark').textContent=marked?'★':'☆';$('aqBookmark').setAttribute('aria-pressed',String(marked));
-    root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition='qcf2-phone';
+    root.dataset.page=state.page;root.dataset.theme=state.theme;root.dataset.edition=isQcf()?'qcf2-font':'qcf2-phone';
     if(Number.isInteger(state.lastVerse))root.querySelectorAll(`[data-qr-verse="${state.lastVerse}"]`).forEach(e=>e.classList.add('aq-selected'));
-    if(!adopted)fit();if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
+    if(!adopted)fit();
+    // QCF glyphs must remain rasterized in the same compositor layer before,
+    // during and after the swipe, including the initial and direct-jump page.
+    if(isQcf())$('adVerses').style.transform='translate3d(0,0,0)';
+    if(pageChanged)$('aqPaper').scrollTop=0;warmAdjacent(80);
   }
 
   function fit(){
@@ -4060,28 +4386,79 @@ window.AoqatAzkar = (function () {
     fitText(paper,text,state.page);
   }
   function fitText(paper,text,page){
+    function zoomBanner(zoom){
+      for(const selector of ['.aq-surah-info-count','.aq-surah-info-kind'])
+        text.querySelectorAll(selector).forEach(el=>{
+          if(!el.closest('.aq-qcf-surah-plaque'))el.style.setProperty('font-size','calc(clamp(11px,3vw,15px) * '+zoom+')','important');
+        });
+      text.querySelectorAll('.aq-surah-info-name').forEach(el=>{
+        if(!el.closest('.aq-qcf-surah-plaque'))el.style.setProperty('font-size','calc(clamp(14px,3.7vw,19px) * '+zoom+')','important');
+      });
+    }
 
-    if(phoneMode()&&page>=3){
-      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page','aq-qcf-opening');
+    if(isQcf()){
+      text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-native-page');
       text.classList.add('aq-qcf-page');
-      text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
-      text.style.height=(paper.clientHeight-12)+'px';
-      text.style.setProperty('--native-rows',15);
-      for(const line of text.querySelectorAll('.aq-qcf-line')){
-        let size=32;line.style.setProperty('font-size',size+'px','important');
-        while(size>18&&line.scrollWidth>line.clientWidth+2){size-=.5;line.style.setProperty('font-size',size+'px','important');}
-        if(line.scrollWidth>line.clientWidth+2)line.style.setProperty('justify-content','flex-start','important');
+      text.classList.toggle('aq-qcf-opening',page<=2);
+      const zoom=Math.max(1,state.font/44);
+      const width=Math.max(50,(paper.clientWidth-18)*zoom),height=(paper.clientHeight-12)*zoom;
+      text.style.setProperty('width',width+'px','important');
+      text.style.height=height+'px';
+      text.style.setProperty('--native-zoom',zoom);
+      zoomBanner(zoom);
+      const rows=qcfData.get(page)?.length||15;
+      text.style.setProperty('--native-rows',rows);
+      // The opening pair is framed and centered, so its eight authentic rows
+      // need a modest font instead of overstretched full-width lines.
+      const startingSize=page<=2?Math.min(32*zoom,Math.max(20*zoom,height/15*0.82)):
+        Math.min(35*zoom,Math.max(23*zoom,height/Math.max(1,rows)*.9));
+      const fitKey=[page,paper.clientWidth,paper.clientHeight,state.font].join(':');
+      const lines=text.querySelectorAll('.aq-qcf-line');
+      const memo=qcfFitCache.get(fitKey);
+      if(memo&&memo.length===lines.length){
+        lines.forEach((line,i)=>line.style.setProperty('font-size',memo[i]+'px','important'));
+      }else{
+        const sizes=[];
+        for(const line of lines){
+          line.style.setProperty('font-size',startingSize+'px','important');
+          // Measure once per page/viewport/zoom, while the page is staged.
+          const allowed=Math.max(40,Math.min(width-6,line.clientWidth-4));
+          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(allowed-3)/measured));
+          line.style.setProperty('font-size',fitted.toFixed(2)+'px','important');
+          if(line.scrollWidth>allowed+2){
+            const smaller=Math.max(11,fitted*(allowed-3)/line.scrollWidth);
+            line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
+          }
+          sizes.push(parseFloat(line.style.fontSize));
+        }
+        if(page<=2&&sizes.length){
+          // The previous renderer fit every line separately: some verses
+          // appeared larger/darker (especially Fatiha's short verses 2 and
+          // 7). Use ONE common fitting size for ALL words on each opening
+          // page, including the genuine QCF Basmala of page 2. The minimum
+          // already guarantees the widest line still fits on small phones.
+          const common=Math.min(...sizes);
+          lines.forEach(line=>line.style.setProperty('font-size',common.toFixed(2)+'px','important'));
+          sizes.fill(common);
+        }
+        if(qcfFitCache.size>=36)qcfFitCache.delete(qcfFitCache.keys().next().value);
+        qcfFitCache.set(fitKey,sizes);
       }
       return;
     }
     if(phoneMode()||mobileTrial()){
       text.classList.remove('aq-lined-page','aq-opening','aq-original-page','aq-qcf-page','aq-qcf-opening');
       text.classList.add('aq-native-page');
-      text.style.setProperty('width',(paper.clientWidth-18)+'px','important');
-      text.style.height=(paper.clientHeight-12)+'px';
+      // Default size remains a fitted, full-screen page. Explicit reading zoom
+      // enlarges the whole SVG page, allowing native scrolling without reflowing
+      // or regenerating its Quran glyph paths.
+      const zoom=Math.max(1,state.font/44);
+      text.style.setProperty('width',((paper.clientWidth-18)*zoom)+'px','important');
+      text.style.height=((paper.clientHeight-12)*zoom)+'px';
       const rows=phonePages.get(page)?.lines.length||15;
       text.style.setProperty('--native-rows',rows);
-      text.style.setProperty('--native-zoom',1);
+      text.style.setProperty('--native-zoom',zoom);
+      zoomBanner(zoom);
       text.querySelectorAll('.aq-native-line').forEach(svg=>{svg.querySelectorAll('.aq-native-verse').forEach(g=>{if(g.querySelector('rect'))return;const b=g.querySelector('path').getBBox(),r=document.createElementNS('http://www.w3.org/2000/svg','rect');for(const [k,v] of Object.entries({x:b.x-20,y:b.y-25,width:b.width+40,height:b.height+50}))r.setAttribute(k,v);g.prepend(r);});});return;
     }
     text.classList.remove('aq-native-page');
@@ -4113,7 +4490,29 @@ window.AoqatAzkar = (function () {
   }
   function warmAdjacent(delay=80){
     clearTimeout(warmTask);
-    if(phoneMode()){for(const p of [state.page+1,state.page-1,state.page+2,state.page-2])if(p>=1&&p<=604){phonePage(p).catch(()=>{});if(p>=3)qcfLoad(p).catch(()=>{});}return;}
+    if(phoneMode()){
+      if(isQcf())galleryPruneReady();
+      else galleryClearReady();
+      trimQcfCaches();
+      const current=state.page;
+      const wanted=isQcf()?
+        [current+galleryLastDirection,current-galleryLastDirection,
+         current+galleryLastDirection*2,current-galleryLastDirection*2,
+         current+galleryLastDirection*3]:
+        [current+1,current-1];
+      for(const p of wanted)if(p>=1&&p<=TOTAL){
+        ensureReadyPage(p).then(()=>{
+          if(root?.isConnected&&state.page===current)gallerySchedule();
+        }).catch(()=>{});
+      }
+      gallerySchedule();
+      // SVG baseline retains its existing small data prefetch window.
+      if(!isQcf())warmTask=setTimeout(()=>{
+        if(!root?.isConnected||pointer||galleryBusy||state.page!==current)return;
+        for(const p of [current+2,current+3,current-2])if(p>=1&&p<=TOTAL)phonePage(p).catch(()=>{});
+      },250);
+      return;
+    }
     const current=state.page;
     warmTask=setTimeout(()=>{
       const paper=$('aqPaper');if(!paper||!root?.isConnected||pointer||state.page!==current)return;
@@ -4196,7 +4595,7 @@ window.AoqatAzkar = (function () {
   function settingsPanel(){
     sheet('إعدادات المصحف',`<label>مظهر المصحف<select id="aqTheme"><option value="sepia">ورقي — المظهر الحالي</option><option value="ivory">عاجي بخط أسود</option><option value="white">أبيض</option><option value="night">ليلي</option><option value="green">أخضر هادئ</option><option value="blue">أزرق هادئ</option><option value="contrast">تباين عالٍ: أسود وأبيض</option></select></label><label>${phone?'تكبير القراءة':'حجم الخط'}<input id="aqFont" type="range" min="${phone?44:22}" max="${phone?80:46}" value="${state.font}"></label><p>المس الصفحة لإظهار الأدوات أو إخفائها. اضغط مطوّلاً على الآية لفتح خدماتها. تقليب الصفحات بالسحب يميناً ويساراً، أو بزرّي السابق والتالي.</p><p>يحفظ المصحف آخر صفحة وملاحظاتك على هذا الجهاز.</p>`);
     
-    if(phone){const button=document.createElement('button');button.type='button';button.textContent='تنزيل صفحات المصحف للقراءة بدون إنترنت';const status=document.createElement('p');status.setAttribute('role','status');$('aqSheetBody').append(button,status);button.onclick=async()=>{button.disabled=true;let next=1,done=0;try{const cache=await caches.open(phone.cacheName||'aoqat-mushaf-phone-hafs');await Promise.all(Array.from({length:4},async()=>{while(next<=604){const n=next++,url=`${phone.directory}/${String(n).padStart(3,'0')}.json.gz`;if(!await cache.match(url)){const response=await fetch(mushafUrl(url));if(!response.ok)throw Error();await cache.put(url,response);}status.textContent=`تم تنزيل ${++done} / 604 صفحة`;}}));status.textContent='تم تنزيل المصحف كاملاً للقراءة بدون إنترنت';}catch(_){status.textContent='توقف التنزيل؛ الصفحات المكتملة محفوظة. يمكنك إعادة المحاولة.';}finally{button.disabled=false;}};}
+    if(webQcfTrial&&$('aqRenderingMode')){$('aqRenderingMode').value=state.renderEngine;$('aqRenderingMode').onchange=e=>{state.renderEngine=e.target.value==='qcf'?'qcf':'svg';save();clearTurn();galleryClearReady();preparedPages.clear();closeSheet();renderPage(false);};}
     $('aqTheme').value=state.theme;$('aqTheme').onchange=e=>{state.theme=e.target.value;save();root.dataset.theme=state.theme;};$('aqFont').oninput=e=>{state.font=Number(e.target.value);state.fontCustomized=true;save();fit();};
   }
   function markRead(){const pages=readToday();if(!pages.includes(state.page))pages.push(state.page);state.days[today()]=pages;const keys=Object.keys(state.days);if(keys.length>90)delete state.days[keys[0]];save();}
@@ -4257,7 +4656,7 @@ window.AoqatAzkar = (function () {
     host=element;const token=element;document.body.classList.add('quran-reader-open');shell();root.inert=true;notice('تحميل المصحف…');
     try{await load();if(host!==token||!token.isConnected)return;
       const url=new URL(location.href),shared=Number(url.searchParams.get('quranPage'));if(Number.isInteger(shared)&&shared>=1&&shared<=604){state.layout='phone';state.page=shared;save();url.searchParams.delete('quranPage');url.searchParams.delete('quranLayout');history.replaceState(history.state,'',url.href);}
-      root.inert=false;renderPage();notice('');
+      root.inert=false;renderPage();notice('');void Promise.resolve();
     }catch(_){if(host===token&&token.isConnected){root.inert=false;$('adVerses').innerHTML='<p>تعذر فتح ملفات المصحف المحفوظة داخل التطبيق. أعد المحاولة؛ إذا استمرت المشكلة يلزم تحديث التطبيق.</p><button type="button" id="aqRetry">إعادة المحاولة</button>';$('aqRetry').onclick=()=>open(token);}}
   }
   function close(){clearTimeout(warmTask);save();clearTimeout(pressTimer);pointer=null;clearTurn();immersive(false);host=null;resize?.disconnect();request?.abort();request=null;stopAudio();document.body.classList.remove('quran-reader-open');}
@@ -4325,6 +4724,8 @@ window.AoqatAzkar = (function () {
     locationBearing,
     openSection = "",
     silentSettingsOpen = false,
+    audibilityOpen = false,
+    audibilityHelpOpen = false,
     quietWindow = null,
     selectedSurah = "1",
     azkarKind = "",
@@ -4497,7 +4898,7 @@ window.AoqatAzkar = (function () {
   function fridayMarkup(){const f=state.friday;const checkF=(k,label)=>`<label>${label}<input type="checkbox" data-friday="${k}" ${f[k]?'checked':''}></label>`;const numberF=(k,label,min,max)=>`<label>${label}<input type="number" data-friday="${k}" min="${min}" max="${max}" step="1" value="${f[k]}"></label>`;return `<section id="adSection-friday" class="ad-section" hidden><div class="ad-card"><button type="button" id="adFridayBack" class="ad-inner-back">‹ رجوع إلى الأذان والتنبيه</button><h3>تخصيص صلاة الجمعة</h3>${checkF('enabled','تفعيل تخصيص صلاة الجمعة')}<p class="ad-note">الأذان الأول قبل وقت الظهر من قاعدة البيانات بـ15 دقيقة، والثاني بوقت الظهر. عند التفعيل تُستبدل إعدادات الظهر يوم الجمعة فقط؛ تبقى محفوظة لبقية الأيام.</p><fieldset ${f.enabled?'':'disabled'}>${numberF('reminder','بدء إشعار الأذان الأول قبله (دقيقة)',1,180)}${numberF('sermon','مدة عدّاد مضى على الخطبة (دقيقة)',1,120)}${checkF('firstSound','تشغيل صوت الأذان الأول')}${checkF('secondSound','تشغيل صوت الأذان الثاني')}<p class="ad-note">يُستخدم المؤذن ومستوى الصوت المختاران في «صوت الأذان». عدّاد باقي على الخطبة: 15 دقيقة.</p>${checkF('quiet','تفعيل الصامت أثناء الجمعة')}<label>وضع الهاتف<select data-friday="quietMode"><option value="silent" ${f.quietMode==='silent'?'selected':''}>صامت</option><option value="dnd" ${f.quietMode==='dnd'?'selected':''}>عدم الإزعاج</option></select></label><label>بدء الصامت<select data-friday="quietTiming"><option value="default" ${f.quietTiming==='default'?'selected':''}>قبل الأذان الأول بـ15 دقيقة</option><option value="custom" ${f.quietTiming==='custom'?'selected':''}>وقت مخصص قبل الأذان الأول</option></select></label>${f.quietTiming==='custom'?numberF('quietBefore','الصامت قبل الأذان الأول (دقيقة)',0,180):''}</fieldset><p class="ad-note">ينتهي الصامت بانتهاء مدة الخطبة ويُستعاد وضع الهاتف السابق. ${native?'الصامت وإشعار الخلفية يحتاجان أذونات Android.':'الويب يعرض العدادات والإشعار أثناء تشغيل الصفحة؛ التحكم بصامت الهاتف والخلفية يعملان في تطبيق Android.'}</p>${native?'<button type="button" id="adFridayPermissions">أذونات إشعار الجمعة والصامت</button>':''}</div></section>`;}
   function silentSettingsMarkup(){
     const s=state.afterIqamaSilent;
-    return `<button type="button" id="adSilentSettingsToggle" class="ad-section-toggle ad-silent-toggle" aria-expanded="false" aria-controls="adSilentSettings">🤫 تفعيل وضع صامت بعد الإقامة</button><div id="adSilentSettings" class="ad-silent-settings" hidden><label>وضع صامت بعد الإقامة<input id="adSilentAfterEnabled" type="checkbox" ${s.enabled ? 'checked' : ''}></label><p class="ad-note">يبدأ عند الإقامة حسب المدة المحددة لكل صلاة في أوقات الإقامة. حدّد مدة الصامت بالدقائق؛ صفر لإيقافه لهذه الصلاة. الجمعة تتبع إعداد الظهر.</p><fieldset ${s.enabled ? '' : 'disabled'}>${C.ids.map(id=>`<label>${names[id]}<span class="ad-minute-control"><input type="number" min="0" max="120" step="1" data-silent-minutes="${id}" aria-label="مدة الصامت بعد إقامة ${names[id]}" value="${s.minutes[id]}"><span>دقيقة</span></span></label>`).join('')}</fieldset><p class="ad-note">يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.</p></div>`;
+    return `<button type="button" id="adSilentSettingsToggle" class="ad-section-toggle ad-silent-toggle" aria-expanded="false" aria-controls="adSilentSettings">🤫 تفعيل وضع صامت بعد الإقامة</button><div id="adSilentSettings" class="ad-silent-settings" hidden><label>وضع صامت بعد الإقامة<input id="adSilentAfterEnabled" type="checkbox" ${s.enabled ? 'checked' : ''}></label><p class="ad-note">يبدأ عند الإقامة حسب المدة المحددة لكل صلاة في أوقات الإقامة. حدّد مدة الصامت بالدقائق؛ صفر لإيقافه لهذه الصلاة. الجمعة تتبع إعداد الظهر.</p><fieldset ${s.enabled ? '' : 'disabled'}>${C.ids.map(id=>`<label>${names[id]}<span class="ad-minute-control"><input type="number" min="0" max="120" step="1" data-silent-minutes="${id}" aria-label="مدة الصامت بعد إقامة ${names[id]}" value="${s.minutes[id]}"><span>دقيقة</span></span></label>`).join('')}</fieldset><p class="ad-note">يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.</p>${native&&s.enabled&&!window.AndroidNative?.hasQuietPolicyAccess?.()?'<button type="button" id="adQuietPermission">منح صلاحية تشغيل الصامت للهاتف</button>':''}</div>`;
   }
   function stopServiceSensors(){
     window.AoqatQuranReader?.close();
@@ -4522,6 +4923,11 @@ window.AoqatAzkar = (function () {
   }
   function render() {
     if (!panel) return;
+    if(!document.getElementById("adAudibilityStyles")){
+      const st=document.createElement("style");st.id="adAudibilityStyles";
+      st.textContent=".ad-audibility-list{display:grid;gap:8px}.ad-audibility-row{display:grid;gap:7px;padding:11px;border-radius:12px;border:1px solid #c9b88f;background:linear-gradient(110deg,#fffdf7,#f5edda);color:#285342}.ad-audibility-row>strong{font-size:16px}.ad-audibility-row>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ad-audibility-row button{min-height:44px;padding:8px 5px;border-radius:10px;font:inherit;font-size:13px;background:#ece7dc;color:#514b42;border:1px solid #c9bb9c}.ad-audibility-row button.selected{background:#176e58;color:white;border-color:#176e58}.ad-audibility-row button:focus-visible{outline:3px solid #b99442;outline-offset:2px}@media(max-width:340px){.ad-audibility-row>div{grid-template-columns:1fr}}";
+      document.head.append(st);
+    }
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
  <button type="button" id="adEnable" class="ad-master ${state.enabled ? "on" : ""}" aria-pressed="${state.enabled}">${state.enabled ? "🔊 الأذان مفعل" : "🔇 الأذان متوقف — اضغط للتفعيل"}</button>
  <button type="button" class="ad-section-toggle" data-ad-section="friday" aria-expanded="false" aria-controls="adSection-friday"><span class="ad-section-icon" aria-hidden="true">🕌</span><span>تخصيص صلاة الجمعة</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>${fridayMarkup()}
@@ -4575,7 +4981,7 @@ window.AoqatAzkar = (function () {
    )
    .join(
      "",
-   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
+   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${check("screen", "عرض الأذان بملء الشاشة عند الرنين (اختياري، مستقل عن إضاءة جميع التنبيهات)")}<p class="ad-note">اختيار اختياري للأذان أثناء الرنين فقط. الويب يعرض الإعداد ويحفظه، أما فتح شاشة القفل وإضاءتها فيحتاج إصدار APK وصلاحية ملء الشاشة على أندرويد.</p>${native ? `<p class="ad-note">التحكم بالصوت أثناء الصامت وعدم الإزعاج منفصل لكل صلاة أسفل القائمة.</p>${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
  <section id="adSection-services" class="ad-section" hidden><div class="ad-card"><h3>الخدمات</h3><div id="adServiceMenu" class="ad-service-menu"><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button>${native ? '<button type="button" data-service="widget">📱 الصلاة القادمة على الهاتف</button>' : ''}</div><div id="adServiceFrame" class="ad-service-frame" hidden><button type="button" id="adServiceBack" class="ad-inner-back">‹ رجوع إلى الخدمات</button><h4 id="adServiceTitle"></h4><div id="adService" class="ad-service"></div><div id="adWidgetControls" hidden> ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -4592,7 +4998,20 @@ window.AoqatAzkar = (function () {
          )}</select></label><button type="button" id="adWidget">إضافة ودجت للشاشة الرئيسية</button></div>`
      : ""
  }
-</div></div></div></section></fieldset><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+</div></div></div></section></fieldset>
+ <div class="ad-card" id="adAudibility" style="padding:8px!important;border:1px solid var(--wt-border,#b4ccb9)!important;background:var(--wt-surface,#fbfdf9)!important">
+  <div class="ad-audibility-menu" style="display:flex;align-items:center;gap:8px;direction:rtl">
+    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid var(--wt-border,#b4ccb9);border-radius:12px;background:linear-gradient(110deg,var(--wt-surface2,#e0eee2),var(--wt-surface,#f8fcf7));color:var(--wt-text,#214832);font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
+    <button type="button" id="adAudibilityHelp" class="aoqat-help-circle" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="flex:none!important;align-self:center!important;width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;max-width:22px!important;border:1.5px solid var(--wt-text,#244d36)!important;border-radius:50%!important;background:transparent!important;color:var(--wt-text,#244d36)!important;font-size:12px!important;font-weight:700!important;line-height:1!important;padding:0!important;box-shadow:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer">؟</button>
+  </div>
+  <p id="adAudibilityHelpText" class="ad-note" ${audibilityHelpOpen?'':'hidden'}>التحكم بسماع الأذان ومنبّه الصلاة عند وضع الهاتف على الصامت أو عدم الإزعاج. لكل صلاة زران مستقلان. لا يغيّر هذا الخيار مواعيد الصلاة أو وضع رنين الهاتف. إذا اجتمع الصامت وعدم الإزعاج يلزم تفعيل الخيارين معاً.</p>
+  <div id="adAudibilityDetails" ${audibilityOpen?'':'hidden'}>
+    <button type="button" id="adAudibilityBack" class="ad-inner-back" style="display:block;min-height:44px;margin:10px 0">‹ رجوع إلى تنبيهات الصلاة</button>
+    <h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
+ <p class="ad-note">زرّان لكل صلاة من الصلوات الخمس، ينطبقان على الأذان ومنبّه الصلاة إذا كانا مفعّلين. إشعار الصلاة العادي مستقل.</p>
+ <div class="ad-audibility-list">${C.ids.map(id => '<div class="ad-audibility-row"><strong>'+names[id]+'</strong><div><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 بالصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 بعدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div></div>').join('')}</div>
+ <p class="ad-note">إذا اجتمع الصامت وعدم الإزعاج، يجب تشغيل الزرين للصلاة. تشغيل الصوت أثناء عدم الإزعاج على أندرويد قد يحتاج منح إذن «التحكم بعدم الإزعاج»، ويستعاد وضعه السابق بعد انتهاء الصوت. المتصفح لا يستطيع تغيير أو قراءة وضع صوت الهاتف.</p>
+ </div></div><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     if (servicePanel) {
       const services = panel.querySelector("#adSection-services"); services.hidden = false;
       services.querySelector("h3")?.remove();
@@ -4609,10 +5028,15 @@ window.AoqatAzkar = (function () {
       };
     });
     $('adFridayBack').onclick=()=>{openSection='';syncSections();};
+    $('adAudibilityOpen').onclick=()=>{audibilityOpen=!audibilityOpen;const details=$('adAudibilityDetails');details.hidden=!audibilityOpen;$('adAudibilityOpen').setAttribute('aria-expanded',String(audibilityOpen));if(audibilityOpen)requestAnimationFrame(()=>details.scrollIntoView({block:'nearest'}));};
+    $('adAudibilityBack').onclick=()=>{audibilityOpen=false;$('adAudibilityDetails').hidden=true;$('adAudibilityOpen').setAttribute('aria-expanded','false');$('adAudibilityOpen').focus({preventScroll:true});};
+    $('adAudibilityHelp').onclick=()=>{audibilityHelpOpen=!audibilityHelpOpen;$('adAudibilityHelpText').hidden=!audibilityHelpOpen;$('adAudibilityHelp').setAttribute('aria-expanded',String(audibilityHelpOpen));};
+
     panel.querySelectorAll('[data-friday]').forEach(input=>input.onchange=async()=>{state.friday[input.dataset.friday]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;state.friday=C.normalizeFriday(state.friday);persist();render();if(state.friday.enabled&&!native&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();});
     $('adFridayPermissions')?.addEventListener('click',()=>window.AndroidNative?.adhanPermissions());
     $("adSilentSettingsToggle").onclick=()=>{silentSettingsOpen=!silentSettingsOpen;syncSections();};
     $("adSilentAfterEnabled").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};
+    $("adQuietPermission")?.addEventListener("click",()=>window.AndroidNative?.requestQuietPolicyAccess?.());
     panel.querySelectorAll("[data-silent-minutes]").forEach((input)=>input.onchange=()=>{
       state.afterIqamaSilent.minutes[input.dataset.silentMinutes]=Number(input.value);
       state=C.normalize(state);persist();render();
@@ -4695,6 +5119,16 @@ window.AoqatAzkar = (function () {
           render();
         }),
     );
+    panel.querySelectorAll("[data-ad-audibility]").forEach(button => button.onclick=()=>{
+      const id=button.dataset.adAudibility,condition=button.dataset.soundCondition;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(condition))return;
+      state.audibility[id][condition]=!state.audibility[id][condition];
+      state=C.normalize(state);
+      persist();
+      if(native&&condition==="dnd"&&state.audibility[id].dnd)
+        window.AndroidNative.requestPrayerAudioDndPermission?.();
+      render();
+    });
     if (native) {
       $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
       $("adPermission").onclick = () => window.AndroidNative.adhanPermissions();
@@ -5029,15 +5463,25 @@ window.AoqatAzkar = (function () {
   
   const KEY='aoqatReminderInboxV1',TTL=86400000;
   const excluded=new Set(['prayer','adhan','iqama','prayer-alarm','prayer-notice','tomorrow-publish-alarm']);
+  // Daily adhkar still reach the phone normally; only the in-app 24-hour
+  // history omits their repetitive entries. Friday salawat remains visible.
+  const repetitiveAzkar=new Set(['prayer','morning','evening','sleep','waking','tasbih']);
+  function excludedEntry(e){
+    if(!e)return true;
+    if(excluded.has(e.kind))return true;
+    if(e.kind!=='azkar-reminder')return false;
+    if(repetitiveAzkar.has(e.topicId))return true;
+    return !e.topicId && /^تذكير[:：]\s*(?:أذكار (?:بعد الصلاة|الصباح|المساء|النوم|الاستيقاظ)|التسبيح)/.test(e.title||'');
+  }
   function read(now=Date.now()){
     let rows;try{rows=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(_){rows=[];}
     if(!Array.isArray(rows))rows=[];
-    rows=rows.filter(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.body==='string'&&Number.isFinite(x.createdAt)&&now-x.createdAt<TTL&&x.createdAt<=now&&!excluded.has(x.kind));
+    rows=rows.filter(x=>x&&typeof x.id==='string'&&typeof x.title==='string'&&typeof x.body==='string'&&Number.isFinite(x.createdAt)&&now-x.createdAt<TTL&&x.createdAt<=now&&!excludedEntry(x));
     try{localStorage.setItem(KEY,JSON.stringify(rows));}catch(_){}
     return rows;
   }
   function add(event){
-    if(!event||excluded.has(event.kind)||event.kind==='preview')return null;
+    if(!event||excludedEntry(event)||event.kind==='preview')return null;
     const now=Date.now(),createdAt=Number.isFinite(event.createdAt)?event.createdAt:now;if(now-createdAt>=TTL||createdAt>now)return null;const entry={id:String(event.id||event.key||('reminder-'+now)),kind:String(event.kind||'reminder'),title:String(event.title||'تذكير'),body:String(event.body||''),createdAt,section:event.section==='calendar'?'calendar':event.section==='azkar'?'azkar':event.section==='fasting'?'fasting':'friday',topicId:String(event.topicId||''),action:event.action==='post'?'post':'detail',targetDate:/^\d{4}-\d{2}-\d{2}$/.test(event.targetDate||'')?event.targetDate:''};
     const rows=read(now);if(rows.some(x=>x.id===entry.id))return rows.find(x=>x.id===entry.id);
     rows.unshift(entry);try{localStorage.setItem(KEY,JSON.stringify(rows));}catch(_){}
@@ -5294,7 +5738,7 @@ window.AoqatAzkar = (function () {
 /* js/iqama-timing.js */
 "use strict";
 (function () {
-  const OPTIONS = [5, 10, 15, 20, 25, 30];
+  const OPTIONS = Array.from({length:30},(_,index)=>index+1);
 
   function normalize(saved, defaults) {
     const values = {};
@@ -5346,13 +5790,35 @@ window.AoqatAzkar = (function () {
   function afterSettings(){return readMinutes(AFTER_KEY,AFTER_DEFAULTS);}
   const nativeIqama=!!window.AndroidNative?.configureIqamaTiming;
   let lastNativeSettings="";
+  let minuteNativeSyncTimer=null,minutePreviewTimer=null;
+  // One native reschedule after the user's last tap. Each press still persists
+  // its latest value locally, so no changes are lost during a fast sequence.
   function syncNativeIqama(){
+    if(minuteNativeSyncTimer!==null){clearTimeout(minuteNativeSyncTimer);minuteNativeSyncTimer=null;}
     if(!nativeIqama)return;
-    const payload=JSON.stringify([iqamaNotifyEnabled(),settings(),afterSettings()]);
+    const before=settings(),after=afterSettings(),enabled=iqamaNotifyEnabled();
+    const payload=JSON.stringify([enabled,before,after]);
     if(payload===lastNativeSettings)return;
-    lastNativeSettings=payload;
-    AndroidNative.configureIqamaTiming(iqamaNotifyEnabled(),JSON.stringify(settings()),JSON.stringify(afterSettings()));
+    try{
+      AndroidNative.configureIqamaTiming(enabled,JSON.stringify(before),JSON.stringify(after));
+      lastNativeSettings=payload;
+    }catch(error){console.error("iqama native sync",error);}
   }
+  function queueNativeIqamaSync(){
+    if(!nativeIqama)return;
+    if(minuteNativeSyncTimer!==null)clearTimeout(minuteNativeSyncTimer);
+    minuteNativeSyncTimer=setTimeout(()=>{minuteNativeSyncTimer=null;syncNativeIqama();},650);
+  }
+  function queueMinutePreview(){
+    if(minutePreviewTimer!==null)clearTimeout(minutePreviewTimer);
+    // A full countdown update must never delay the visible press feedback.
+    minutePreviewTimer=setTimeout(()=>{minutePreviewTimer=null;tick();},110);
+  }
+  function flushPendingMinuteSync(){
+    if(minuteNativeSyncTimer!==null)syncNativeIqama();
+  }
+  window.addEventListener("pagehide",flushPendingMinuteSync);
+  document.addEventListener("visibilitychange",()=>{if(document.hidden)flushPendingMinuteSync();});
   function hydrateNativeIqama(){
     if(!nativeIqama||!AndroidNative.readIqamaTiming)return;
     try{const saved=JSON.parse(AndroidNative.readIqamaTiming());
@@ -5361,7 +5827,7 @@ window.AoqatAzkar = (function () {
       if(localStorage.getItem(AFTER_KEY)===null)localStorage.setItem(AFTER_KEY,JSON.stringify(saved.afterMinutes||{}));
     }catch(e){console.error("iqama settings",e);}
   }
-  function save(s){localStorage.setItem(KEY,JSON.stringify(s));syncNativeIqama();}
+  function save(s){localStorage.setItem(KEY,JSON.stringify(s));queueNativeIqamaSync();}
   function iqamaNotifyEnabled(){return localStorage.getItem(IQAMA_NOTIFY_KEY)==="1";}
   async function setIqamaNotify(on){
     localStorage.setItem(IQAMA_NOTIFY_KEY,on?"1":"0");
@@ -5391,26 +5857,151 @@ window.AoqatAzkar = (function () {
   async function fetchRow(month,day){const row=await readAnnualPrayer(month,day);return window.AoqatPrayerTimeChoice?.applyRow(row)||row;}
   async function loadToday(){if(busy||typeof SUPABASE_URL==="undefined"||typeof dbHeaders!=="function")return;busy=true;try{const n=new Date(),key=`${n.getFullYear()}-${n.getMonth()+1}-${n.getDate()}`;if(key!==todayKey||!todayRow){todayRow=await fetchRow(n.getMonth()+1,n.getDate());todayKey=key;}const t=new Date(n.getFullYear(),n.getMonth(),n.getDate()+1,12);const tk=`${t.getFullYear()}-${t.getMonth()+1}-${t.getDate()}`;if(tk!==tomorrowKey){const row=await fetchRow(t.getMonth()+1,t.getDate());tomorrowFajr=row?parse(row.fajr,"fajr"):null;tomorrowKey=tk;}}catch(e){console.error("prayer countdown",e)}finally{busy=false;}}
   function createDisplay(){let host=document.querySelector(".workspace")||document.querySelector(".main-content")||document.body;let old=document.getElementById("mainPrayerCountdownHost");if(!old){old=document.createElement("div");old.id="mainPrayerCountdownHost";old.className="preview-header prayer-countdown-host";const preview=host.querySelector(".previewBox")||host.firstElementChild;if(preview)host.insertBefore(old,preview);else host.prepend(old);}old.innerHTML=`<div class="live-prayer-status"><div class="next-prayer"><span id="nextPrayerLabel">الأذان القادم بعد</span><b id="nextPrayerCountdown">--:--:--</b></div><div class="countdown-separator" id="countdownSeparator" aria-hidden="true"></div><div class="iqama-status" id="iqamaStatus"><span id="iqamaLabel">باقي على الإقامة</span><b id="iqamaCountdown">00:00</b></div></div>`;}
-  function createPanel(){const main=document.querySelector(".sidebar .main-panel");if(!main||document.getElementById("iqamaPanel"))return;const prayerBtn=main.querySelector('[data-open-panel="prayerPanel"]');const btn=document.createElement("button");btn.type="button";btn.className="main-action iqama-action";btn.dataset.openPanel="iqamaPanel";btn.innerHTML="⏳ <span>أوقات الإقامة</span>";prayerBtn?.insertAdjacentElement("afterend",btn);const p=document.createElement("section");p.id="iqamaPanel";p.className="panel inline-control-panel";const opts=[5,10,15,20,25,30].map(v=>`<option value="${v}">${v} دقيقة</option>`).join("");p.innerHTML=`<div class="iqama-help">حدد المدة من وقت الأذان حتى الإقامة.</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-iqama="${id}">${opts}</select></label>`).join("")}<label>الجمعة الأولى<select data-iqama="friday">${opts}</select></label><div class="iqama-friday-help">الجمعة الأولى تكون قبل أذان الظهر بالمدة المحددة.</div>`;btn.insertAdjacentElement("afterend",p);const s=settings();p.querySelectorAll("[data-iqama]").forEach(el=>{el.value=String(s[el.dataset.iqama]||DEFAULTS[el.dataset.iqama]);el.addEventListener("change",()=>{const q=settings();q[el.dataset.iqama]=+el.value;save(q);tick();});});btn.addEventListener("click",()=>{const open=p.classList.toggle("inline-open");document.querySelectorAll(".inline-control-panel.inline-open").forEach(x=>{if(x!==p)x.classList.remove("inline-open")});btn.classList.toggle("inline-active",open);});}
+  // Both settings pages use this same compact control. Timings and native
+  // notification scheduling remain in their existing components.
+  function minuteStepperStyles(){
+    if(document.getElementById('aoqatIqamaMinuteStepperStyles'))return;
+    const style=document.createElement('style');
+    style.id='aoqatIqamaMinuteStepperStyles';
+    style.textContent="\n#iqamaPanel .iqama-minute-row,#afterIqamaPanel .iqama-minute-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;margin:4px 0;min-height:51px;direction:rtl}\n#iqamaPanel .iqama-minute-name,#afterIqamaPanel .iqama-minute-name{font-size:17px;font-weight:650;line-height:1.5;color:#183b33;min-width:0}\n#iqamaPanel .iqama-minute-stepper,#afterIqamaPanel .iqama-minute-stepper{display:inline-flex;align-items:center;justify-content:center;gap:4px;direction:ltr;flex-shrink:0;box-sizing:border-box;padding:4px;border:1px solid #aac6bb;background:#edf3f0;border-radius:13px;box-shadow:0 1px 3px rgba(8,49,39,.11)}\n#iqamaPanel .iqama-minute-stepper button,#afterIqamaPanel .iqama-minute-stepper button{width:35px;min-width:35px;height:35px;min-height:35px;padding:0;margin:0;display:inline-flex;justify-content:center;align-items:center;border:1px solid #acc6bb;border-radius:9px;background:#fff;color:#215741;font-size:23px;font-weight:700;line-height:1;cursor:pointer;touch-action:manipulation;box-shadow:none}\n#iqamaPanel .iqama-minute-stepper button:active,#afterIqamaPanel .iqama-minute-stepper button:active{background:#d8e9df;transform:scale(.97)}\n#iqamaPanel .iqama-minute-stepper button:focus-visible,#afterIqamaPanel .iqama-minute-stepper button:focus-visible{outline:2px solid #387457;outline-offset:2px}\n#iqamaPanel .iqama-minute-stepper button:disabled,#afterIqamaPanel .iqama-minute-stepper button:disabled{opacity:.35;cursor:default;transform:none}\n#iqamaPanel .iqama-minute-stepper output,#afterIqamaPanel .iqama-minute-stepper output{display:inline-flex;justify-content:center;align-items:baseline;gap:4px;min-width:89px;text-align:center;direction:rtl;color:#183b33;white-space:nowrap;font-variant-numeric:tabular-nums}\n#iqamaPanel .iqama-minute-stepper output strong,#afterIqamaPanel .iqama-minute-stepper output strong{font-size:21px;font-weight:750}\n#iqamaPanel .iqama-minute-stepper output small,#afterIqamaPanel .iqama-minute-stepper output small{font-size:12px;font-weight:500}\n@media(max-width:360px){#iqamaPanel .iqama-minute-name,#afterIqamaPanel .iqama-minute-name{font-size:15px}#iqamaPanel .iqama-minute-stepper output,#afterIqamaPanel .iqama-minute-stepper output{min-width:74px}#iqamaPanel .iqama-minute-stepper button,#afterIqamaPanel .iqama-minute-stepper button{width:32px;min-width:32px;height:33px;min-height:33px}}\n";
+    document.head.appendChild(style);
+  }
+  function minuteStepperMarkup(id,name,attribute,value){
+    return '<div class="iqama-minute-row"><span class="iqama-minute-name">'+name+'</span>'+
+      '<div class="iqama-minute-stepper" role="group" aria-label="مدة '+name+'">'+
+      '<button type="button" data-minute-step="-1" aria-label="تقليل مدة '+name+' دقيقة واحدة">−</button>'+
+      '<output '+attribute+'="'+id+'" aria-live="polite" aria-atomic="true"><strong>'+value+'</strong><small>دقيقة</small></output>'+
+      '<button type="button" data-minute-step="1" aria-label="زيادة مدة '+name+' دقيقة واحدة">+</button>'+
+      '</div></div>';
+  }
+  function bindMinuteSteppers(panel,attribute,read,persist){
+    panel.querySelectorAll('output['+attribute+']').forEach(out=>{
+      const id=out.getAttribute(attribute),wrap=out.parentElement;
+      const minus=wrap.querySelector('[data-minute-step="-1"]');
+      const plus=wrap.querySelector('[data-minute-step="1"]');
+      function render(value){
+        out.querySelector('strong').textContent=String(value);
+        minus.disabled=value<=1;plus.disabled=value>=30;
+      }
+      function change(delta){
+        // Update the number BEFORE local storage, Android scheduling, or
+        // repainting other prayer timers. Rapid repeated taps stay responsive.
+        const before=Number(out.querySelector('strong').textContent)||read()[id];
+        const next=Math.max(1,Math.min(30,before+delta));
+        if(next===before)return;
+        render(next);
+        const updated=read();
+        updated[id]=next;
+        persist(updated);
+        queueMinutePreview();
+      }
+      minus.addEventListener('click',()=>change(-1));
+      plus.addEventListener('click',()=>change(1));
+      render(read()[id]);
+    });
+  }
+  function createPanel(){
+    const main=document.querySelector(".sidebar .main-panel");
+    if(!main||document.getElementById("iqamaPanel"))return;
+    minuteStepperStyles();
+    const prayerBtn=main.querySelector('[data-open-panel="prayerPanel"]');
+    const btn=document.createElement("button");
+    btn.type="button";btn.className="main-action iqama-action";btn.dataset.openPanel="iqamaPanel";
+    btn.innerHTML="⏳ <span>أوقات الإقامة</span>";
+    prayerBtn?.insertAdjacentElement("afterend",btn);
+    const panel=document.createElement("section");
+    panel.id="iqamaPanel";panel.className="panel inline-control-panel";
+    const values=settings();
+    panel.innerHTML='<div class="iqama-help">حدد المدة من وقت الأذان حتى الإقامة.</div>'+
+      [...IDS,"friday"].map(id=>minuteStepperMarkup(id,id==="friday"?"الجمعة الأولى":NAMES[id],"data-iqama",values[id])).join("")+
+      '<div class="iqama-friday-help">الجمعة الأولى تكون قبل أذان الظهر بالمدة المحددة.</div>';
+    btn.insertAdjacentElement("afterend",panel);
+    bindMinuteSteppers(panel,"data-iqama",settings,updated=>save(updated));
+    btn.addEventListener("click",()=>{
+      const open=panel.classList.toggle("inline-open");
+      document.querySelectorAll(".inline-control-panel.inline-open").forEach(x=>{
+        if(x!==panel)x.classList.remove("inline-open");
+      });
+      btn.classList.toggle("inline-active",open);
+    });
+  }
   function createAfterPanel(){
     const main=document.querySelector(".sidebar .main-panel");
     if(!main||document.getElementById("afterIqamaPanel"))return;
+    minuteStepperStyles();
     const panel=document.createElement("section");
     panel.id="afterIqamaPanel";panel.className="panel inline-control-panel";
-    const options=TIMING.OPTIONS.map(value=>`<option value="${value}">${value} دقيقة</option>`).join("");
-    panel.innerHTML=`<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يختفي الإشعار فقط؛ وتبقى واجهة البرنامج «باقي على الإقامة 00:00».</div>${IDS.map(id=>`<label>${NAMES[id]}<select data-after-iqama="${id}">${options}</select></label>`).join("")}`;
     const values=afterSettings();
-    panel.querySelectorAll("[data-after-iqama]").forEach(select=>{
-      select.value=String(values[select.dataset.afterIqama]);
-      select.addEventListener("change",()=>{
-        const updated=afterSettings();updated[select.dataset.afterIqama]=Number(select.value);
-        localStorage.setItem(AFTER_KEY,JSON.stringify(updated));syncNativeIqama();tick();
-      });
+    panel.innerHTML='<div class="iqama-help">حدد مدة ظهور عدّاد «مضى على الإقامة» بعد إقامة كل صلاة. عند انتهاء المدة يختفي الإشعار فقط؛ وتبقى واجهة البرنامج «باقي على الإقامة 00:00».</div>'+
+      IDS.map(id=>minuteStepperMarkup(id,NAMES[id],"data-after-iqama",values[id])).join("");
+    bindMinuteSteppers(panel,"data-after-iqama",afterSettings,updated=>{
+      localStorage.setItem(AFTER_KEY,JSON.stringify(updated));
+      queueNativeIqamaSync();
     });
     main.appendChild(panel);
   }
-  function css(){if(document.getElementById("prayerCountdownStyles"))return;const s=document.createElement("style");s.id="prayerCountdownStyles";s.textContent=`#mainPrayerCountdownHost{display:block!important;width:100%;min-height:36px;margin:0 auto 8px;padding:0;position:relative;z-index:20}.live-prayer-status{width:max-content;max-width:100%;margin:auto;display:flex;justify-content:center;align-items:center;gap:6px;direction:rtl;white-space:nowrap}.next-prayer,.iqama-status{display:inline-flex;width:auto;align-items:center;justify-content:center;gap:4px;padding:4px 7px;border-radius:9px;background:rgba(5,28,39,.88);border:1px solid rgba(255,255,255,.12);white-space:nowrap}#nextPrayerLabel,#nextPrayerCountdown,#iqamaLabel,#iqamaCountdown{color:#fff!important}.next-prayer span,.iqama-status span{font-size:12px;font-weight:700}.next-prayer b,.iqama-status b{font-size:15px;direction:ltr;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0}#iqamaStatus[hidden],#countdownSeparator[hidden]{display:none!important}.countdown-separator{display:block;width:1px;height:28px;flex:0 0 1px;margin:0 2px;background:linear-gradient(to bottom,transparent,rgba(218,178,82,.95),transparent);box-shadow:0 0 5px rgba(218,178,82,.25)}.main-action.iqama-action{background:#8a6518}.iqama-help,.iqama-friday-help{font-size:12px;opacity:.85;margin-bottom:8px}#iqamaPanel label,#afterIqamaPanel label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}#iqamaPanel select,#afterIqamaPanel select{max-width:125px}@media(max-width:600px){.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:wrap!important}.next-prayer,.iqama-status{padding:3px 5px!important;gap:3px!important}#nextPrayerLabel,#nextPrayerCountdown,#iqamaLabel,#iqamaCountdown{color:#fff!important}#nextPrayerLabel,#iqamaLabel{font-size:12px}.next-prayer span,.iqama-status span{font-size:12px}.next-prayer b,.iqama-status b{font-size:15px}.countdown-separator{height:23px;margin:0 1px}}`;document.head.appendChild(s);}
-  function tick(){if(!todayRow){loadToday();return;}const n=new Date(),now=n.getHours()*3600+n.getMinutes()*60+n.getSeconds(),s=settings();const times=IDS.map(id=>({id,min:parse(todayRow[id],id)})).filter(x=>x.min!=null);let next=times.find(x=>x.min*60>now),left=null;if(next){left=next.min*60-now;}else{next={id:"fajr"};if(tomorrowFajr!=null)left=(24*3600-now)+tomorrowFajr*60;}
+  function css(){if(document.getElementById("prayerCountdownStyles"))return;const s=document.createElement("style");s.id="prayerCountdownStyles";s.textContent=`#mainPrayerCountdownHost{display:block!important;width:100%;min-height:36px;margin:0 auto 8px;padding:0;position:relative;z-index:20}.live-prayer-status{width:max-content;max-width:100%;margin:auto;display:flex;flex-wrap:nowrap!important;justify-content:center;align-items:center;gap:6px;direction:rtl;white-space:nowrap}.live-prayer-status .next-prayer,.live-prayer-status .iqama-status{flex:0 1 auto;min-width:0}.live-prayer-status :is(#nextPrayerLabel,#iqamaLabel,#nextPrayerCountdown,#iqamaCountdown){flex-shrink:0;white-space:nowrap}.next-prayer,.iqama-status{display:inline-flex;width:auto;align-items:center;justify-content:center;gap:4px;padding:4px 7px;border-radius:9px;background:rgba(5,28,39,.88);border:1px solid rgba(255,255,255,.12);white-space:nowrap}#nextPrayerLabel,#nextPrayerCountdown,#iqamaLabel,#iqamaCountdown{color:#fff!important}.next-prayer span,.iqama-status span{font-size:12px;font-weight:700}.next-prayer b,.iqama-status b{font-size:15px;direction:ltr;font-weight:900;font-variant-numeric:tabular-nums;letter-spacing:0}#iqamaStatus[hidden],#countdownSeparator[hidden]{display:none!important}.countdown-separator{display:block;width:1px;height:28px;flex:0 0 1px;margin:0 2px;background:linear-gradient(to bottom,transparent,rgba(218,178,82,.95),transparent);box-shadow:0 0 5px rgba(218,178,82,.25)}.main-action.iqama-action{background:#8a6518}.iqama-help,.iqama-friday-help{font-size:12px;opacity:.85;margin-bottom:8px}#iqamaPanel label,#afterIqamaPanel label{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}#iqamaPanel select,#afterIqamaPanel select{max-width:125px}@media(max-width:600px){.live-prayer-status{width:max-content!important;max-width:calc(100vw - 12px)!important;gap:3px!important;flex-wrap:nowrap!important}.next-prayer,.iqama-status{padding:3px 5px!important;gap:3px!important}#nextPrayerLabel,#nextPrayerCountdown,#iqamaLabel,#iqamaCountdown{color:#fff!important}#nextPrayerLabel,#iqamaLabel{font-size:12px}.next-prayer span,.iqama-status span{font-size:12px}.next-prayer b,.iqama-status b{font-size:15px}.countdown-separator{height:23px;margin:0 1px}}`;document.head.appendChild(s);}
+  // Local to the main interface, never shares home-widget typography state.
+  function savedLiveSize(el){
+      const k=el.id.startsWith('iqama')?'aoqat-live-iqama-style-v1':'aoqat-live-adhan-style-v1';
+      try{
+        const old=JSON.parse(localStorage.getItem('aoqat-live-countdown-style-v2')||'{}');
+        const custom=JSON.parse(localStorage.getItem(k)||'{}');
+        const size=Number(Object.assign({},old,custom).fontSize);
+        if(Number.isFinite(size)&&size>0)return {size,custom:true};
+      }catch(_){}
+      if(!el.dataset.countdownBaseSize)
+        el.dataset.countdownBaseSize=String(parseFloat(getComputedStyle(el).fontSize)||12);
+      return {size:Number(el.dataset.countdownBaseSize)||12,custom:false};
+    }
+    // Keep custom typography unchanged; on overflow stack rather than reset.
+    function fitLiveCountdownRow(){
+      const row=document.querySelector('#mainPrayerCountdownHost .live-prayer-status');
+      if(!row)return;
+      const next=row.querySelector('.next-prayer'),iqama=row.querySelector('.iqama-status');
+      if(!next||!iqama)return;
+      const txt=['nextPrayerLabel','nextPrayerCountdown','iqamaLabel','iqamaCountdown']
+        .map(id=>document.getElementById(id)).filter(Boolean);
+      const sizes=txt.map(savedLiveSize);
+      const container=row.parentElement?.clientWidth||window.innerWidth;
+      const available=Math.max(160,Math.min(container,window.innerWidth||container)-12);
+      const sep=row.querySelector('#countdownSeparator');
+      row.style.setProperty('max-width',available+'px','important');
+      row.style.setProperty('flex-wrap','nowrap','important');
+      for(const block of [next,iqama]){
+        block.style.removeProperty('max-width');
+        block.style.setProperty('flex-wrap','nowrap','important');
+        block.style.removeProperty('white-space');
+      }
+      const paint=(scale)=>txt.forEach((el,i)=>{
+        const item=sizes[i];
+        const n=item.custom?item.size:Math.max(8,item.size*scale);
+        el.style.setProperty('font-size',n.toFixed(2)+'px','important');
+      });
+      const needed=()=>Math.max(next.scrollWidth,next.offsetWidth)+
+        (iqama.hidden?0:Math.max(iqama.scrollWidth,iqama.offsetWidth))+
+        (sep&&!sep.hidden&&!iqama.hidden?sep.offsetWidth+6:0);
+      let scale=1;
+      for(let i=0;i<19;i++){
+        paint(scale);
+        if(needed()<=available-2||sizes.every(x=>x.custom))break;
+        scale=Math.max(.58,scale-.025);
+      }
+      if(needed()>available-2){
+        row.style.setProperty('flex-wrap','wrap','important');
+        for(const block of [next,iqama]){
+          block.style.setProperty('max-width','100%','important');
+          if(block.scrollWidth>available){
+            block.style.setProperty('flex-wrap','wrap','important');
+            block.style.setProperty('white-space','normal','important');
+          }
+        }
+      }
+      row.style.setProperty('justify-content','center','important');
+    }
+    window.aoqatLiveCountdownFit=fitLiveCountdownRow;
+    window.addEventListener('aoqatLiveCountdownStyleChanged',fitLiveCountdownRow);
+    function tick(){if(!todayRow){loadToday();return;}const n=new Date(),now=n.getHours()*3600+n.getMinutes()*60+n.getSeconds(),s=settings();const times=IDS.map(id=>({id,min:parse(todayRow[id],id)})).filter(x=>x.min!=null);let next=times.find(x=>x.min*60>now),left=null;if(next){left=next.min*60-now;}else{next={id:"fajr"};if(tomorrowFajr!=null)left=(24*3600-now)+tomorrowFajr*60;}
     const label=document.getElementById("nextPrayerLabel"),counter=document.getElementById("nextPrayerCountdown");if(label)label.textContent=`أذان ${NAMES[next.id]} بعد`;if(counter)counter.textContent=left==null?"--:--:--":fmt(left);
     const iq=document.getElementById("iqamaStatus"),sep=document.getElementById("countdownSeparator"),iqLabel=document.getElementById("iqamaLabel"),iqCounter=document.getElementById("iqamaCountdown");
     let friday={};try{friday=window.AoqatAdhanCore.normalizeFriday(JSON.parse(localStorage.getItem('aoqatAdhanV1')||'{}').friday);}catch(_){}
@@ -5430,7 +6021,7 @@ window.AoqatAzkar = (function () {
   }
 
   window.addEventListener("aoqatPrayerRowsUpdated",()=>{todayKey="";tomorrowKey="";loadToday().then(tick);});
-  function init(){hydrateNativeIqama();syncNativeIqama();css();createDisplay();createPanel();createAfterPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(loadToday,60000);window.addEventListener("focus",refreshIqamaNotifyButton);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
+  function init(){hydrateNativeIqama();syncNativeIqama();css();createDisplay();createPanel();createAfterPanel();loadToday().then(tick);setInterval(tick,1000);setInterval(fitLiveCountdownRow,1000);window.addEventListener("resize",fitLiveCountdownRow);setTimeout(fitLiveCountdownRow,150);setInterval(loadToday,60000);window.addEventListener("focus",refreshIqamaNotifyButton);let tries=0,t=setInterval(()=>{tries++;if(addIqamaNotifyButton()||tries>80)clearInterval(t);},150);}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
 
@@ -5644,10 +6235,12 @@ window.AoqatAzkar = (function () {
     const box=document.createElement('div');box.id='interfaceVisibilityControls';box.className='visibility-section';box.innerHTML='<button type="button" class="visibility-section-toggle" aria-expanded="false"><span>👁️ إظهار عناصر واجهة البرنامج</span><span class="visibility-arrow">▼</span></button><div class="visibility-section-body"><div class="interface-visibility-grid"></div></div>';
     const sectionToggle=box.querySelector('.visibility-section-toggle');sectionToggle.onclick=()=>{const open=!box.classList.contains('visibility-section-open');document.querySelectorAll('#backgroundPanel .visibility-section').forEach(x=>{if(x!==box){x.classList.remove('visibility-section-open');x.querySelector('.visibility-section-toggle')?.setAttribute('aria-expanded','false');}});box.classList.toggle('visibility-section-open',open);sectionToggle.setAttribute('aria-expanded',String(open));};
     const grid=box.querySelector('.interface-visibility-grid'),KEY='aoqatInterfaceVisibilityV1';
-    let state={};try{state={clock:true,date:true,adhan:true,iqama:true,...(JSON.parse(localStorage.getItem(KEY)||'{}')||{})};}catch(_){state={clock:true,date:true,adhan:true,iqama:true};}
+    let state={clock:true,date:true,adhan:true,iqama:true};
+    try{state={...state,...(JSON.parse(localStorage.getItem(KEY)||'{}')||{})};}catch(_){}
+    // First installation defaults to visible; an explicit saved false stays false.
     const items=[['clock','الساعة','.interface-clock-card'],['date','التاريخ','.interface-date-card'],['adhan','باقي على الصلاة','.next-prayer'],['iqama','باقي على الإقامة','.iqama-status']];
-    const apply=()=>{items.forEach(([k,,sel])=>{document.querySelectorAll(sel).forEach(el=>el.style.setProperty('display',state[k]===true&&!el.hidden?'inline-flex':'none','important'));});const sep=document.getElementById('countdownSeparator');if(sep)sep.style.setProperty('display',(state.adhan===true&&state.iqama===true&&!sep.hidden)?'block':'none','important');};
-    items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]===true;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=!(state[k]===true);localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
+    const apply=()=>{items.forEach(([k,,sel])=>{document.querySelectorAll(sel).forEach(el=>el.style.setProperty('display',state[k]!==false&&!el.hidden?'inline-flex':'none','important'));});const sep=document.getElementById('countdownSeparator');if(sep)sep.style.setProperty('display',(state.adhan!==false&&state.iqama!==false&&!sep.hidden)?'block':'none','important');};
+    items.forEach(([k,label])=>{const b=document.createElement('button');b.type='button';b.className='interface-visibility-btn';const draw=()=>{const on=state[k]!==false;b.classList.toggle('is-on',on);b.setAttribute('aria-pressed',String(on));b.innerHTML='<span>'+label+'</span><strong>'+(on?'تشغيل':'إيقاف')+'</strong>';};b.onclick=()=>{state[k]=state[k]===false;localStorage.setItem(KEY,JSON.stringify(state));draw();apply();};draw();grid.appendChild(b);});
     panel.appendChild(box);apply();setInterval(apply,1000);return true;
   }
   function addDesignVisibilityControls(){
@@ -5816,13 +6409,89 @@ window.AoqatAzkar = (function () {
 })();
 ;
 
+/* js/alerts-hub.js */
+(function(){'use strict';
+  // Reparent original controls only. Never create a second timer, notification or storage key.
+  const parked=document.createElement('div');
+  parked.id='aoqatAlertSettingsParking';parked.hidden=true;
+  (document.body||document.documentElement).appendChild(parked);
+  const publishIds=['autoTomorrowToggle','tomorrowAlarmEnable','tomorrowNotifyToggle','publishSnoozeMinutes'];
+  function original(id){
+    const node=document.getElementById(id);
+    if(!node)return null;
+    return id==='publishSnoozeMinutes'?(node.closest('label')||node):node;
+  }
+  function adopt(){
+    for(const id of publishIds){
+      const node=original(id);
+      if(node&&!parked.contains(node)&&!node.closest('#webSubBody'))parked.appendChild(node);
+    }
+    const note=document.querySelector('#switchPanel .tomorrow-alarm-note');
+    if(note&&!parked.contains(note))parked.appendChild(note);
+    if(window.AndroidNative?.configureAdhan){
+      // The original toggle, permission control and appearance selector belong
+      // to one group; parking only the toggle emptied the Iqama submenu.
+      const group=document.getElementById('iqamaNotificationSettings');
+      if(group){
+        if(!parked.contains(group)&&!group.closest('#webSubBody'))parked.appendChild(group);
+      }else{
+        const button=document.getElementById('iqamaNotificationToggle');
+        if(button&&!parked.contains(button)&&!button.closest('#webSubBody'))parked.appendChild(button);
+      }
+    }
+  }
+  function park(){
+    const body=document.getElementById('webSubBody');
+    if(!body)return;
+    for(const selector of ['#iqamaNotificationSettings','#iqamaNotificationToggle','#autoTomorrowToggle','#tomorrowAlarmEnable','#tomorrowNotifyToggle','#publishSnoozeMinutes','.tomorrow-alarm-note']){
+      const node=body.querySelector(selector);if(!node)continue;
+      const element=node.id==='publishSnoozeMinutes'?(node.closest('label')||node):node;
+      if(body.contains(element))parked.appendChild(element);
+    }
+  }
+  function page(title,description){
+    const root=document.createElement('section');root.dir='rtl';root.className='web-settings-list';
+    const head=document.createElement('h3');head.textContent=title;root.append(head);
+    if(description){const note=document.createElement('p');note.className='ad-note';note.textContent=description;root.append(note);}
+    return root;
+  }
+  function publishView(){
+    adopt();
+    const root=page('التبديل التلقائي وتنبيه النشر');
+    for(const id of publishIds){const node=original(id);if(node)root.append(node);}
+    // Keep explanatory prose out of the controls; original timer and snooze handlers are retained.
+    if(!root.querySelector('button'))root.append('خيارات تنبيه النشر غير متاحة على هذا الجهاز.');
+    return root;
+  }
+  function iqamaView(){
+    adopt();
+    const root=page('إشعار الإقامة','تفعيل الإشعار وخيارات ظهوره على الهاتف، مع الحفاظ على إعدادات الإقامة المحفوظة.');
+    const web=document.getElementById('iqamaNotificationSettings');
+    if(web){
+      const toggle=document.getElementById('iqamaNotificationToggle');
+      if(toggle&&!web.contains(toggle))web.insertBefore(toggle,web.querySelector('label')||null);
+      const repair=document.getElementById('iqamaBackgroundAccess');
+      if(repair&&!web.contains(repair))web.insertBefore(repair,web.querySelector('label')||null);
+      root.append(web);return root;
+    }
+    const button=document.getElementById('iqamaNotificationToggle');
+    if(button){root.append(button);return root;}
+    const info=document.createElement('p');info.textContent='تنبيهات الإقامة تعتمد على إعدادات الإقامة الأصلية في التطبيق.';root.append(info);return root;
+  }
+  new MutationObserver(adopt).observe(document.body,{childList:true,subtree:true});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',adopt,{once:true});else adopt();
+  window.addEventListener('aoqatModulesReady',adopt);
+  window.AoqatAlertsHub={park,adopt,publishView,iqamaView};
+})();
+;
+
 /* js/notification-settings-layout.js */
 (function(){'use strict';
   if(window.AndroidNative?.configureAdhan)return;
   const KEY='aoqatIqamaAppearanceV1',MODES=['white','dark','transparent'];
   function mode(){try{const value=localStorage.getItem(KEY);return MODES.includes(value)?value:'transparent';}catch(_){return 'transparent';}}
   function paint(){const select=document.getElementById('iqamaAppearance'),preview=document.getElementById('iqamaAppearancePreview');if(!select||!preview)return;select.value=mode();preview.dataset.appearance=mode();}
-  function move(){const target=document.getElementById('iqamaPanel'),button=document.getElementById('iqamaNotificationToggle');if(!target||!button)return false;
+  function move(){const target=document.getElementById('aoqatAlertSettingsParking')||document.getElementById('iqamaPanel'),button=document.getElementById('iqamaNotificationToggle');if(!target||!button)return false;
     let controls=document.getElementById('iqamaNotificationSettings');if(!controls){controls=document.createElement('section');controls.id='iqamaNotificationSettings';const title=document.createElement('h3');title.textContent='إشعار الإقامة';controls.appendChild(title);target.appendChild(controls);}
     // Move originals, preserving listeners, permissions and saved timing settings.
     if(button.parentElement!==controls)controls.appendChild(button);
@@ -6289,11 +6958,486 @@ window.AoqatAzkar = (function () {
     const intro=document.createElement('p');intro.textContent='صيام التطوع عبادة مستحبة. افتح القسم لقراءة الشرح ومصدره.';root.appendChild(intro);
     for(const item of topics){const details=document.createElement('details');details.dataset.fastingTopic=item.id;details.open=item.id===topicId;const summary=document.createElement('summary');summary.textContent=item.title;const text=document.createElement('p');text.textContent=item.text;const source=document.createElement('a');source.textContent=item.ref+' — المصدر';source.href=item.url;source.target='_blank';source.rel='noopener noreferrer';details.append(summary,text,source);if(item.id==='arafah'||item.id==='ashura'){const extra=document.createElement('a');extra.href=item.id==='arafah'?'https://sunnah.com/bukhari:1988':'https://sunnah.com/muslim:1162b';extra.textContent=item.id==='arafah'?' — هدي النبي ﷺ بعرفة في الحج':' — فضل صيام عاشوراء';extra.target='_blank';extra.rel='noopener noreferrer';details.appendChild(extra);}root.appendChild(details);}
     const note=document.createElement('aside');note.className='ad-note';note.textContent='لا يُصام يوم عيد الفطر أو عيد الأضحى، ولا أيام التشريق تطوعاً (11 و12 و13 ذي الحجة).';
-    for(const [label,url] of [['النهي عن صيام العيدين','https://sunnah.com/bukhari:1990'],['أيام التشريق','https://sunnah.com/muslim:1141a']]){const a=document.createElement('a');a.textContent=' '+label+' ';a.href=url;a.target='_blank';a.rel='noopener noreferrer';note.appendChild(a);}root.appendChild(note);if(window.AoqatFastingReminders)root.appendChild(window.AoqatFastingReminders.createControls());if(window.AoqatCommunityPosts)window.AoqatCommunityPosts.mount('fasting',root);return root;}
+    for(const [label,url] of [['النهي عن صيام العيدين','https://sunnah.com/bukhari:1990'],['أيام التشريق','https://sunnah.com/muslim:1141a']]){const a=document.createElement('a');a.textContent=' '+label+' ';a.href=url;a.target='_blank';a.rel='noopener noreferrer';note.appendChild(a);}root.appendChild(note);if(window.AoqatCommunityPosts)window.AoqatCommunityPosts.mount('fasting',root);return root;}
   const style=document.createElement('style');style.textContent='#muslimBagMenu button{display:flex;align-items:center;gap:10px;text-align:right}#muslimBagMenu button span:last-child{margin-inline-start:auto}.muslim-bag-content{direction:rtl;line-height:1.9;color:var(--wt-text,#182c34)}.muslim-bag-content details{margin:12px 0;padding:12px;border:1px solid var(--wt-border,#d9c8a8);border-radius:10px;background:var(--wt-surface,#fffaf0)}.muslim-bag-content summary{font-size:18px;font-weight:700;cursor:pointer}.muslim-bag-content p{font-size:17px;margin:12px 0}.muslim-bag-content a{color:var(--wt-accent,#137985);text-decoration:underline}.muslim-bag-content aside{padding:12px;border-radius:10px;background:var(--wt-surface2,#f8efd9)}';document.head.appendChild(style);
   window.AoqatMuslimBag={topics,createFastingView};
 })();
 
+;
+
+/* js/help-support.js */
+(function(){'use strict';
+  // Support number is set by the app owner; country code without a leading +.
+  const WHATSAPP_NUMBER='9647857994000';
+  const MESSAGE='السلام عليكم، أود التواصل بخصوص تطبيق أوقات الصلاة في الحويجة.';
+  // Keep these labels identical to the app's settings and home buttons.
+  const guides=[
+    {icon:'⚙️',title:'إعدادات التصميم',hint:'الأيقونة 1: أدوات تصميم المواقيت',steps:[
+      'افتح الأيقونة 1 «إعدادات التصميم» للواجهة والخطوط والخلفيات.',
+      'الأيقونة 7 «التقاويم» لتصميم تقاويم الأشهر وعرضها ومشاركتها.',
+      'تغيير الشكل لا يغير مواقيت الصلاة المحفوظة.'
+    ]},
+    {icon:'🕌',title:'مواقيت الصلاة',hint:'الصلاة القادمة وبيانات اليوم التالي',steps:[
+      'افتح الواجهة الرئيسية حتى تشاهد موعد الصلاة القادمة والوقت المتبقي عليها.',
+      'تعتمد المواقيت على قاعدة بيانات الصلاة لمدينة الحويجة وضواحيها داخل التطبيق.',
+      'من «بيانات التاريخ و الصلاة» تستطيع مراجعة الأوقات، واستخدم خيار «بيانات اليوم التالي» لمشاهدة مواقيت الغد.'
+    ]},
+    {icon:'🔊',title:'الأذان والتنبيهات',hint:'اختيار صوت الأذان وتشغيل كل صلاة',steps:[
+      'من الأيقونة 5 «بيانات الأذان والإقامة» افتح «الأذان والتنبيه» لمشاهدة الصلاة القادمة والمواقيت واختيار صوت الأذان ومستوى الصوت وتجربته.',
+      'لتفعيل الأذان أو منبّه الصلاة أو إشعار الصلاة افتح الأيقونة 8 «ضبط التنبيهات» ثم «تنبيهات أوقات الصلاة والصامت وعدم الإزعاج»؛ إعدادات الصوت تبقى في بيانات الأذان والإقامة.',
+      'من إعدادات الهاتف امنح التطبيق أذونات التنبيهات والمنبّه والعمل في الخلفية. إشعار الصلاة ومنبّه الصلاة إعدادان مستقلان عن الأذان.'
+    ]},
+    {icon:'⏰',title:'منبّه الصلاة',hint:'المنبه والغفوة وأوقات التشغيل',steps:[
+      'افتح الأيقونة 8 «ضبط التنبيهات» ثم «تنبيهات أوقات الصلاة والصامت وعدم الإزعاج» ثم «اختيار طريقة تنبيه الصلاة» للوصول إلى «منبّه أوقات الصلاة».',
+      'حدّد إعدادات الغفوة والتكرار حسب رغبتك.',
+      'اسمح للمنبّه بالعمل في الخلفية وإظهار التنبيه على الشاشة، وتأكد من صلاحية المنبّهات الدقيقة.'
+    ]},
+    {icon:'⏳',title:'الإقامة والعدّاد',hint:'باقي على الإقامة ومضى على الإقامة',steps:[
+      'من «بيانات الاذان والإقامة» اختر مدة «أوقات الإقامة» المناسبة لكل صلاة.',
+      'بعد الأذان يظهر «باقي على الإقامة». وعند وصوله إلى 00:00 يبدأ «مضى على الإقامة».',
+      'العدّاد يعتمد على الوقت المحدد للصلاة والإقامة، وليس على وقت فتح التطبيق.'
+    ]},
+    {icon:'🔕',title:'وضع الصامت بعد الإقامة',hint:'تشغيل الصامت واستعادة الرنين تلقائياً',steps:[
+      'افتح الأيقونة 8 «ضبط التنبيهات» ثم «تنبيهات أوقات الصلاة والصامت وعدم الإزعاج» لضبط الصامت عند الأذان أو بعد الإقامة، أو «إشعار الإقامة» لضبط إشعارها.',
+      'عند انتهاء عدّاد «باقي على الإقامة» يحاول التطبيق جعل رنين الهاتف صامتاً للمدة التي حددتها.',
+      'عند انتهاء المدة يحاول التطبيق استعادة وضع الرنين السابق. يبقى جدول «عدم الإزعاج» الذي ضبطته على الهاتف مستقلاً.',
+      'إذا لم يتغيّر الصوت، افتح تفاصيل حالة الصامت في الإعدادات وتحقق من صلاحية التحكم بالصامت والمنبّهات الدقيقة.'
+    ]},
+    {icon:'📖',title:'القرآن الكريم',hint:'تقليب الصفحات والعلامات المرجعية',steps:[
+      'افتح الأيقونة 2 «القرآن الكريم» من القائمة الرئيسية للدخول إلى المصحف.',
+      'انتقل بين الصفحات بالسحب، واضغط على الصفحة لإظهار أدوات القراءة أو إخفائها.',
+      'اضغط مطولاً على الآية لإضافة علامة مرجعية، واستعرضها من «علاماتي». المصحف المضمّن في APK يعمل بدون إنترنت.'
+    ]},
+    {icon:'📅',title:'التقاويم السنوية',hint:'الاستعراض والحفظ والمشاركة',steps:[
+      'افتح الأيقونة 7 «التقاويم» واختر السنة والشهر.',
+      'عدّل تنسيق التقويم بحسب الخيارات المتاحة.',
+      'استخدم خيار حفظ صورة التقويم أو مشاركتها على الهاتف.'
+    ]},
+    {icon:'🌿',title:'حقيبة المسلم',hint:'الأذكار وسنن الجمعة وصيام التطوع',steps:[
+      'افتح الأيقونة 3 «حقيبة المسلم» من القائمة الرئيسية.',
+      'اختر «الأذكار» أو «سنن يوم الجمعة» أو «صيام التطوع».',
+      'تنبيهات الأذكار والجمعة والصيام وأوقاتها تُضبط من الأيقونة 8 «ضبط التنبيهات»، دون تكرار أزرار التحكم داخل الحقيبة.'
+    ]},
+    {icon:'🎚️',title:'ضبط التنبيهات',hint:'الأيقونة 8: مركز التنبيهات الموحد',steps:[
+      'تنبيهات أوقات الصلاة والأذان والمنبّه والإشعار، والصامت وعدم الإزعاج، والإقامة، والجمعة والصيام والأذكار ونشر المواقيت والتقويم كلها تُضبط من هنا. داخل «بيانات الأذان والإقامة» تبقى المواقيت واختيار صوت الأذان وملحقاته فقط.',,
+      'جميع الخيارات تحافظ على نفس المواعيد والأصوات والإعدادات السابقة ولا تنشئ تنبيهات مكررة.',
+      'من «ضبط التنبيهات» افتح «إضاءة الشاشة لجميع التنبيهات». زر واحد يشمل الأذان ومنبّه الصلاة وإشعارات الصلاة ونشر المواقيت والتقويم والجمعة والصيام والأذكار. عرض الأذان بملء الشاشة خيار منفصل، وتتطلب إضاءة الشاشة المقفلة إمكانيات وصلاحيات أندرويد.'
+    ]},
+    {icon:'🔔',title:'الإشعارات',hint:'الأيقونة 9: سجل الإشعارات',steps:[
+      'من الأيقونة 9 «الإشعارات» استعرض التذكيرات ومحتواها.',
+      'لتغيير موعد التنبيه أو تشغيله ادخل إلى الأيقونة 8 «ضبط التنبيهات».'
+    ]},
+    {icon:'🎨',title:'شكل التطبيق واتجاه القبلة',hint:'الأيقونتان 10 و11',steps:[
+      'الأيقونة 10 «شكل التطبيق» للألوان والثيمات.',
+      'الأيقونة 11 «اتجاه القبلة» للبوصلة.'
+    ]},
+    {icon:'🛠️',title:'حل المشكلات الشائعة',hint:'إذا تأخر الأذان أو الصامت أو الإشعارات',steps:[
+      'تأكد أولاً من تفعيل الخدمة المطلوبة داخل التطبيق ومن إعدادات كل صلاة.',
+      'راجع «بيانات الأذان والإقامة» للمواقيت وصوت الأذان، و«ضبط التنبيهات» لتفعيل الأذان والمنبّه والإشعار والصامت وعدم الإزعاج، وتحقق من أذونات المنبّهات الدقيقة.',
+      'راجع إعدادات البطارية والعمل في الخلفية؛ بعض الهواتف قد تؤخر التنبيهات أو تقيدها.',
+      'إذا استمرت المشكلة استخدم «تواصل معنا عبر واتساب» وأرسل نوع الهاتف ووصف المشكلة، من دون مشاركة أي بيانات خاصة.'
+    ]}
+  ];
+
+  function element(tag,text,cls){
+    const x=document.createElement(tag);
+    if(text!=null)x.textContent=text;
+    if(cls)x.className=cls;
+    return x;
+  }
+  function applyCss(){
+    if(document.getElementById('aoqatHelpStyle'))return;
+    const style=element('style');style.id='aoqatHelpStyle';
+    style.textContent=[
+      '.aoqat-help{direction:rtl;max-width:720px;margin:0 auto;padding:8px 7px 25px;line-height:1.8;color:var(--wt-text,#403528);font-family:inherit}',
+      '.aoqat-help *{box-sizing:border-box}',
+      '.aoqat-help .ah-intro{padding:15px 16px;margin:6px 0 15px;border:1px solid #dac9a7;border-radius:16px;background:linear-gradient(135deg,#fffdf8,#f4ebd7);border-right:4px solid #b89240}',
+      '.aoqat-help .ah-intro h3{font-size:19px;line-height:1.6;margin:0 0 4px;color:#155c48;font-weight:750}',
+      '.aoqat-help .ah-intro p{font-size:14px;color:#625c4c;margin:0}',
+      '.aoqat-help .ah-list{border-radius:16px;overflow:hidden;border:1px solid #dfd0b1;box-shadow:0 2px 9px #5e49310d;background:#fffaf0}',
+      '.aoqat-help .ah-row{display:flex;align-items:center;width:100%;gap:13px;min-height:70px;padding:10px 14px;border:0;border-bottom:1px solid #e8dabe;border-radius:0;background:linear-gradient(90deg,#fffaf1,#f8eed9);font:inherit;color:#3f3425;text-align:right;cursor:pointer}',
+      '.aoqat-help .ah-row:nth-child(even){background:linear-gradient(90deg,#f8eed9,#fffaf1)}',
+      '.aoqat-help .ah-list>:last-child .ah-row,.aoqat-help .ah-list>.ah-row:last-child{border-bottom:0}',
+      '.aoqat-help .ah-row:active{background:#eee0bf}',
+      '.aoqat-help .ah-icon{display:flex;align-items:center;justify-content:center;flex:0 0 42px;height:42px;border:1px solid #dec99e;border-radius:13px;background:#f4e6c7;font-size:24px}',
+      '.aoqat-help .ah-copy{display:flex;flex:1;flex-direction:column;gap:1px;min-width:0}',
+      '.aoqat-help .ah-label{font-size:16px;line-height:1.45;font-weight:750;color:#305341}',
+      '.aoqat-help .ah-hint{font-size:12px;line-height:1.6;color:#776d58}',
+      '.aoqat-help .ah-chevron{font-size:25px;color:#b18a3e;line-height:1;transition:transform .15s ease}',
+      '.aoqat-help details{margin:0;border-bottom:1px solid #e8dabe}',
+      '.aoqat-help details:last-child{border-bottom:0}',
+      '.aoqat-help summary{list-style:none;cursor:pointer;outline-offset:-3px}',
+      '.aoqat-help summary::-webkit-details-marker{display:none}',
+      '.aoqat-help details[open] .ah-chevron{transform:rotate(-90deg)}',
+      '.aoqat-help .ah-steps{background:#fffdf8;padding:12px 18px 17px;margin:0;border-top:1px solid #ebdeca;list-style:none;counter-reset:aqStep}',
+      '.aoqat-help .ah-steps li{counter-increment:aqStep;display:flex;align-items:flex-start;gap:11px;padding:8px 0;font-size:14px;color:#3e4c3e;line-height:1.85}',
+      '.aoqat-help .ah-steps li:before{content:counter(aqStep);flex:0 0 27px;height:27px;border-radius:50%;background:#e5d3a6;color:#426246;font-size:13px;text-align:center;font-weight:750;line-height:27px}',
+      '.aoqat-help .ah-note{border:1px solid #e2cca1;background:#fff6df;border-radius:12px;padding:12px 14px;margin:13px 0;color:#6c5b38;font-size:13px}',
+      '.aoqat-help .ah-card{border:1px solid #decbaa;border-radius:13px;background:#fffcf4;padding:14px;margin:10px 0;font-size:14px;overflow-wrap:anywhere}',
+      '.aoqat-help .ah-button{display:flex;justify-content:center;align-items:center;gap:8px;width:100%;min-height:54px;background:#176c54;border:1px solid #12563f;color:#fff;border-radius:13px;margin-top:14px;padding:12px;font-size:16px;font-family:inherit;font-weight:750;cursor:pointer}',
+      '.aoqat-help .ah-button:disabled{background:#98a59e;border-color:#98a59e;cursor:default}',
+      '.aoqat-help button:focus-visible,.aoqat-help summary:focus-visible{outline:3px solid #c89d41;outline-offset:2px}',
+      '.aoqat-help .ah-muted{font-size:13px;color:#776d58;margin:8px 0 0}',
+      '@media(max-width:370px){.aoqat-help .ah-row{min-height:66px;padding:8px 10px;gap:9px}.aoqat-help .ah-icon{flex-basis:36px;height:36px;font-size:21px}.aoqat-help .ah-label{font-size:15px}}'
+    ].join('');
+    document.head.append(style);
+  }
+  function page(title,description){
+    applyCss();
+    const root=element('section',null,'aoqat-help');root.dir='rtl';
+    const intro=element('div',null,'ah-intro');
+    intro.append(element('h3',title),element('p',description));
+    root.append(intro);return root;
+  }
+  function row(icon,title,hint){
+    const b=element('button',null,'ah-row');b.type='button';
+    b.append(element('span',icon,'ah-icon'));
+    const copy=element('span',null,'ah-copy');
+    copy.append(element('span',title,'ah-label'),element('span',hint,'ah-hint'));
+    b.append(copy,element('span','‹','ah-chevron'));
+    return b;
+  }
+  function home(go){
+    const root=page('المساعدة والتواصل','كل ما تحتاجه للتعرف على التطبيق أو التواصل معنا، بخيارات واضحة وسهلة.');
+    const list=element('div',null,'ah-list');
+    for(const [id,icon,title,detail] of [
+      ['guide','📖','شرح استخدام التطبيق','شرح الخدمات خطوة بخطوة، بدون إنترنت'],
+      ['contact','💬','تواصل معنا عبر واتساب','للمساعدة والاقتراحات والإبلاغ عن مشكلة']
+    ]){const b=row(icon,title,detail);b.onclick=()=>go(id);list.append(b);}
+    root.append(list);return root;
+  }
+  function guide(){
+    const root=page('شرح استخدام التطبيق','اضغط على القسم الذي تريد شرحه؛ الأزرار مرتبة مثل قائمة إعدادات التطبيق.');
+    const list=element('div',null,'ah-list');
+    for(const entry of guides){
+      const details=element('details');
+      const summary=element('summary',null,'ah-row');
+      summary.append(element('span',entry.icon,'ah-icon'));
+      const copy=element('span',null,'ah-copy');
+      copy.append(element('span',entry.title,'ah-label'),element('span',entry.hint,'ah-hint'));
+      summary.append(copy,element('span','‹','ah-chevron'));
+      const ol=element('ol',null,'ah-steps');
+      for(const instruction of entry.steps)ol.append(element('li',instruction));
+      details.append(summary,ol);list.append(details);
+    }
+    root.append(list,element('p','ملاحظة: خدمات الأذان والصامت والمنبّه تتأثر بصلاحيات الهاتف وإعدادات البطارية. المواقيت داخل التطبيق مخصصة لمدينة الحويجة وضواحيها.','ah-note'));
+    return root;
+  }
+  function openWhatsApp(){
+    const digits=WHATSAPP_NUMBER.replace(/\D/g,'');
+    if(!/^[1-9]\d{7,14}$/.test(digits))return false;
+    const url='https://wa.me/'+digits+'?text='+encodeURIComponent(MESSAGE);
+    if(typeof window.AndroidNative?.openSupportWhatsApp==='function')window.AndroidNative.openSupportWhatsApp(url);
+    else window.open(url,'_blank','noopener,noreferrer');
+    return true;
+  }
+  function contact(){
+    const root=page('تواصل معنا عبر واتساب','للاستفسارات أو الاقتراحات أو الإبلاغ عن مشكلة في التطبيق.');
+    root.append(element('p','رسالتك الجاهزة: '+MESSAGE,'ah-card'));
+    const digits=WHATSAPP_NUMBER.replace(/\D/g,'');
+    const valid=/^[1-9]\d{7,14}$/.test(digits);
+    const button=element('button',valid?'💬 فتح محادثة واتساب':'💬 واتساب — بانتظار رقم الدعم','ah-button');
+    button.type='button';button.disabled=!valid;
+    if(valid)button.onclick=openWhatsApp;
+    root.append(button);
+    if(!valid)root.append(element('p','سيتفعّل زر واتساب بعد إضافة رقم التواصل الرسمي.','ah-muted'));
+    else root.append(element('p','يُفتح واتساب خارج التطبيق. قد يحتاج الهاتف إلى اتصال بالإنترنت.','ah-muted'));
+    return root;
+  }
+  window.AoqatHelpSupport={home,guide,contact,openWhatsApp};
+})();
+;
+
+/* js/widget-appearance.js */
+(function(){
+"use strict";
+if(window.AoqatWidgetAppearance)return;
+const KEY="aoqatWidgetAppearanceV1";
+const IDS=["next","times","five_grid","five_featured","iqama","combined"];
+const NAMES={
+ next:"الصلاة القادمة",
+ times:"مواقيت الصلاة مع الصلاة القادمة",
+ five_grid:"المواقيت الستة 3 + 3",
+ five_featured:"المواقيت الستة بإطارات مميزة",
+ iqama:"باقي ومضى على الإقامة",
+ combined:"الصلاة القادمة والإقامة"
+};
+const BG={
+ transparent:["شفاف","transparent"],
+ mist:["ضبابي هادئ","rgba(37,78,100,.50)"],
+ blue:["أزرق هادئ","rgba(17,80,109,.83)"],
+ dark:["داكن مميز","rgba(12,37,53,.88)"],
+ cream:["عاجي شفاف","rgba(239,230,213,.87)"]
+};
+const FONTS={
+ sans:["واضح حديث","Tahoma,Arial,sans-serif"],
+ serif:["نسخي كلاسيكي","serif"],
+ condensed:["خط مختصر","Arial Narrow,Tahoma,sans-serif"],
+ medium:["حديث متوسط","Arial,Tahoma,sans-serif"]
+};
+const WEIGHTS={normal:"عادي",bold:"عريض"};
+const COLOR_NAMES={white:"#ffffff",ivory:"#fff6d6",gold:"#ffdb80",navy:"#123143",black:"#1c2327",emerald:"#237f60"};
+const GROUP_DEFAULT={font:"sans",size:105,weight:"bold",color:"#ffffff"};
+const group=(item,legacy)=>({
+ font:FONTS[item?.font]?item.font:legacy.font,
+ size:Math.max(65,Math.min(170,Number(item?.size)||legacy.size)),
+ weight:WEIGHTS[item?.weight]?item.weight:legacy.weight,
+ color:/^#[0-9a-fA-F]{6}$/.test(item?.color||"")?item.color:(COLOR_NAMES[item?.color]||legacy.color)
+});
+const defaults=id=>({
+ background:["times","combined","five_grid","five_featured"].includes(id)?"mist":"transparent",
+ labels:{...GROUP_DEFAULT},
+ numbers:{...GROUP_DEFAULT},
+ color:"white",font:"sans",scale:105,layout:"classic"
+});
+const normalize=(id,value)=>{
+ const v=value&&typeof value==="object"?value:{};
+ const d=defaults(id);
+ if(BG[v.background])d.background=v.background;
+ if(typeof v.layout==="string")d.layout=v.layout;
+ const legacy={
+  font:FONTS[v.font]?v.font:"sans",
+  color:COLOR_NAMES[v.color]||( /^#[0-9a-fA-F]{6}$/.test(v.color||"")?v.color:"#ffffff"),
+  size:Math.max(75,Math.min(145,Number(v.scale)||105)),weight:"bold"
+ };
+ d.color=v.color||"white";d.font=legacy.font;d.scale=legacy.size;
+ d.labels=group(v.labels,legacy);d.numbers=group(v.numbers,legacy);
+ return d;
+};
+function load(){
+ let saved={};
+ try{saved=JSON.parse(window.AndroidNative?.readWidgetAppearance?.()||localStorage.getItem(KEY)||"{}")||{};}catch(_){}
+ return Object.fromEntries(IDS.map(id=>[id,normalize(id,saved[id]||((id==="five_grid"||id==="five_featured")?saved.times:undefined))]));
+}
+function save(data){
+ try{
+  const value=JSON.stringify(data);
+  if(window.AndroidNative?.configureWidgetAppearance && window.AndroidNative.configureWidgetAppearance(value)===false)return false;
+  localStorage.setItem(KEY,value);return true;
+ }catch(e){console.warn("Widget style could not save",e);return false;}
+}
+function css(){
+ if(document.getElementById("aoqatWidgetAppearanceCss"))return;
+ const sheet=document.createElement("style");sheet.id="aoqatWidgetAppearanceCss";
+ sheet.textContent=[
+ "#aoqatWidgetAppearance{display:grid;gap:9px;direction:rtl;font-family:Tahoma,Arial,sans-serif;color:#1d3d44}",
+ "#aoqatWidgetAppearance button,#aoqatWidgetAppearance select,#aoqatWidgetAppearance input{font:inherit}",
+ "#aoqatWidgetAppearance .wa-primary{width:100%;border:1px solid #a7bdb7;border-radius:10px;background:#edf4f2;color:#204650;padding:10px;font-weight:800;text-align:center}",
+ "#aoqatWidgetAppearance .wa-chooser{display:grid;grid-template-columns:1fr 1fr;gap:5px}",
+ "#aoqatWidgetAppearance .wa-chooser[hidden],#aoqatWidgetAppearance .wa-style-editor[hidden]{display:none!important}",
+ "#aoqatWidgetAppearance .wa-chooser button{border:1px solid #b5cbca;border-radius:9px;background:#f8f9f7;padding:9px 5px;font-size:12px;color:#173a43}",
+ "#aoqatWidgetAppearance .wa-chooser button[aria-pressed=true]{background:#1b6161;color:white}",
+ "#aoqatWidgetAppearance .wa-preview{display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:18px;padding:10px;gap:5px;min-height:75px;max-width:100%;overflow:hidden;box-shadow:inset 0 0 0 1px #c2d2d1a8}",
+ "#aoqatWidgetAppearance .wa-preview *{box-sizing:border-box;min-width:0}",
+ "#aoqatWidgetAppearance .wa-line{display:flex;align-items:center;justify-content:center;direction:rtl;gap:8px;max-width:100%;line-height:1.25}",
+ "#aoqatWidgetAppearance .wa-line .wa-number{white-space:nowrap;direction:ltr;unicode-bidi:isolate}",
+ "#aoqatWidgetAppearance .wa-timetable{display:grid;gap:3px;min-width:55%;max-width:100%}",
+ "#aoqatWidgetAppearance .wa-time-row{display:flex;justify-content:center;align-items:center;gap:13px;direction:rtl;border-radius:7px;padding:1px 4px}",
+ "#aoqatWidgetAppearance .wa-time-row.is-next{background:#21766379;outline:1px solid #e6cf9b}",
+ "#aoqatWidgetAppearance .wa-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px;width:100%;direction:rtl;text-align:center}",
+ "#aoqatWidgetAppearance .wa-grid-cell{display:flex;flex-direction:column;align-items:center;gap:0;padding:2px 0}",
+ "#aoqatWidgetAppearance .wa-grid:not(.wa-featured) .wa-grid-cell{border-bottom:1px solid #e5f2ef66}",
+ "#aoqatWidgetAppearance .wa-grid.wa-featured .wa-grid-cell{border:1px solid #dcc28c;border-radius:8px}",
+ "#aoqatWidgetAppearance .wa-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;width:100%;direction:rtl}",
+ "#aoqatWidgetAppearance .wa-pair>.wa-line{border:1px solid #8aa7aa;border-radius:11px;padding:5px 3px;gap:4px}",
+ "#aoqatWidgetAppearance .wa-style-editor{display:grid;gap:7px}",
+ "#aoqatWidgetAppearance .wa-style-group{border:1px solid #a8c6c8;border-radius:10px;padding:8px;display:grid;gap:6px}",
+ "#aoqatWidgetAppearance .wa-style-group>strong{font-size:14px}",
+ "#aoqatWidgetAppearance .wa-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}",
+ "#aoqatWidgetAppearance .wa-field{display:grid;gap:3px;font-size:12px;font-weight:700}",
+ "#aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=color]{height:37px;border:1px solid #adc5c6;border-radius:8px;width:100%;background:white;color:#18353f}",
+ "#aoqatWidgetAppearance input[type=range]{width:100%;accent-color:#25766a}",
+ "#aoqatWidgetAppearance .wa-note{font-size:12px;color:#4b5c63;line-height:1.7}",
+ "#aoqatWidgetAppearance .wa-actions{display:grid;grid-template-columns:1fr 1fr;gap:5px}"
+ ].join("\n");
+ document.head.append(sheet);
+}
+function createPanel(){
+ css();
+ const data=load();
+ let active="next",showList=false,showEditor=false;
+ const root=document.createElement("section");root.id="aoqatWidgetAppearance";root.dir="rtl";
+ const title=document.createElement("strong");title.textContent="تعديل بطاقات الشاشة الرئيسية";
+ const chooserBtn=document.createElement("button");chooserBtn.type="button";chooserBtn.className="wa-primary";
+ const chooser=document.createElement("div");chooser.className="wa-chooser";chooser.hidden=true;
+ const buttons={};
+ const preview=document.createElement("div");preview.className="wa-preview";
+ const typographyBtn=document.createElement("button");typographyBtn.className="wa-primary";typographyBtn.type="button";
+ typographyBtn.textContent="🔤 تنسيق الخط — العبارات والأرقام بشكل منفصل";
+ const styleEditor=document.createElement("div");styleEditor.className="wa-style-editor";styleEditor.hidden=true;
+ const bgField=document.createElement("label");bgField.className="wa-field";bgField.textContent="خلفية البطاقة";
+ const bgSelect=document.createElement("select");bgSelect.setAttribute("aria-label","خلفية البطاقة");
+ Object.entries(BG).forEach(([id,arr])=>{const o=document.createElement("option");o.value=id;o.textContent=arr[0];bgSelect.append(o);});
+ bgField.append(bgSelect);
+ const actions=document.createElement("div");actions.className="wa-actions";
+ const pin=document.createElement("button");pin.type="button";pin.className="wa-primary";pin.textContent="إضافة إلى الشاشة الرئيسية";
+ const reset=document.createElement("button");reset.type="button";reset.className="wa-primary";reset.textContent="إرجاع البطاقة للأصل";
+ actions.append(pin,reset);
+ const note=document.createElement("p");note.className="wa-note";
+ note.textContent="حجم البطاقات تحدده شاشة الهاتف الرئيسية.";
+ const status=document.createElement("p");status.className="wa-note";status.setAttribute("role","status");
+ const lockSection=document.createElement("section");lockSection.className="wa-style-group";lockSection.id="aoqatLockScreenSection";
+ const lockHeading=document.createElement("strong");lockHeading.textContent="الصلاة القادمة على شاشة القفل";
+ const lockExplanation=document.createElement("p");lockExplanation.className="wa-note";
+ lockExplanation.textContent="";
+ const lockToggle=document.createElement("button");lockToggle.className="wa-primary";lockToggle.type="button";
+ const lockAccess=document.createElement("button");lockAccess.className="wa-primary";lockAccess.type="button";
+ lockAccess.textContent="ضبط أذونات التنبيهات وشاشة القفل";
+ const lockStatus=document.createElement("p");lockStatus.className="wa-note";lockStatus.setAttribute("role","status");
+ const hasLock=!!window.AndroidNative?.configureLockScreenPrayer;
+ let lockEnabled=hasLock&&window.AndroidNative.readLockScreenPrayerEnabled?.()===true;
+ const syncLock=()=>{
+  lockToggle.textContent=lockEnabled?"إيقاف إشعار شاشة القفل":"تشغيل إشعار شاشة القفل";
+  lockToggle.setAttribute("aria-pressed",String(lockEnabled));
+ };
+ function checkLock(){
+  if(!hasLock)return;
+  try{
+   const state=JSON.parse(window.AndroidNative.readLockScreenPrayerStatus?.()||"{}");
+   if(!state.enabled)lockStatus.textContent="متوقف. شغّل الإشعار حتى يظهر عدّاد الصلاة.";
+   else if(!state.notificationsAllowed||!state.channelAllowed)lockStatus.textContent="يلزم السماح بإشعارات التطبيق وإظهارها على شاشة القفل. استخدم زر ضبط الأذونات.";
+   else if(!state.notificationActive)lockStatus.textContent="الإشعار مفعل، وسينشر عند تحديث المواقيت. إذا لم يظهر افتح ضبط الأذونات.";
+   else lockStatus.textContent="الإشعار منشور. لإظهار الأرقام على القفل اسمح بعرض محتوى إشعارات الهاتف.";
+  }catch(_){lockStatus.textContent="تحقق من أذونات إشعارات الهاتف.";}
+ }
+ lockToggle.onclick=()=>{
+  if(!hasLock)return;
+  const next=!lockEnabled;
+  if(window.AndroidNative.configureLockScreenPrayer(next)!==true){lockStatus.textContent="تعذر حفظ الخيار.";return;}
+  lockEnabled=next;syncLock();checkLock();
+ };
+ lockAccess.onclick=()=>{
+  if(window.AndroidNative?.openPrayerEssentialPermissions){
+   const state=JSON.parse(window.AndroidNative.readLockScreenPrayerStatus?.()||"{}");
+   if(!state.notificationsAllowed)window.AndroidNative.openPrayerEssentialPermissions();
+   else window.AndroidNative.openLockScreenNotificationSettings?.();
+  }else window.AndroidNative?.openLockScreenNotificationSettings?.();
+ };
+ // The universal CSS-only help indicator keeps native permission buttons intact.
+ function lockButtonWithHelp(action,description){
+   action.dataset.helpDescription=description;
+   return action;
+ }
+ lockSection.append(lockHeading);
+ if(hasLock){syncLock();
+  lockSection.append(
+   lockButtonWithHelp(lockToggle,'عرض عدّاد الصلاة والإقامة في إشعار شاشة القفل.'),
+   lockButtonWithHelp(lockAccess,'السماح بعرض الإشعارات على شاشة القفل.')
+  );
+  lockSection.append(lockStatus);checkLock();}
+ else {
+  const webNote=document.createElement("p");webNote.className="wa-note";
+  webNote.textContent="إشعار شاشة القفل وأذوناته متاحان في نسخة أندرويد فقط.";
+  lockSection.append(webNote);
+ }
+ const line=(parent,a,b)=>{
+  const el=document.createElement("div");el.className="wa-line";
+  const label=document.createElement("span");label.className="wa-label";label.textContent=a;
+  const time=document.createElement("strong");time.className="wa-number";time.textContent=b;
+  el.append(label,time);parent.append(el);return el;
+ };
+ function demo(){
+  const cfg=data[active];preview.replaceChildren();
+  preview.style.background=BG[cfg.background][1];
+  const prayers=[["الفجر","5:17 ص"],["الشروق","6:33 ص"],["الظهر","11:53 ص"],
+                 ["العصر","2:49 م"],["المغرب","5:09 م"],["العشاء","6:29 م"]];
+  if(active==="next"){
+   line(preview,"باقي على صلاة الفجر","06:23:03");
+  }else if(active==="combined"){
+   const both=document.createElement("div");both.className="wa-pair";
+   line(both,"أذان الفجر بعد","06:23:03");line(both,"باقي على الإقامة","00:00");preview.append(both);
+  }else if(active==="iqama"){
+   const title=document.createElement("strong");title.className="wa-label";title.textContent="الفجر";preview.append(title);
+   line(preview,"باقي على الإقامة","00:00");line(preview,"مضى على الإقامة","00:00");
+  }else if(active==="times"){
+   line(preview,"باقي على صلاة الفجر","06:23:03");
+   const header=document.createElement("strong");header.className="wa-label";header.textContent="مواقيت الصلاة اليوم";preview.append(header);
+   const rows=document.createElement("div");rows.className="wa-timetable";
+   prayers.forEach(([a,b],i)=>{const r=document.createElement("div");r.className="wa-time-row"+(i===0?" is-next":"");
+    line(r,a,b);rows.append(r);});preview.append(rows);
+  }else{
+   const header=document.createElement("strong");header.className="wa-label";header.textContent="مواقيت الصلاة اليوم";preview.append(header);
+   const grid=document.createElement("div");grid.className="wa-grid"+(active==="five_featured"?" wa-featured":"");
+   prayers.forEach(([a,b])=>{const cell=document.createElement("div");cell.className="wa-grid-cell";
+    const n=document.createElement("span");n.className="wa-label";n.textContent=a;
+    const t=document.createElement("strong");t.className="wa-number";t.textContent=b;
+    cell.append(n,t);grid.append(cell);});preview.append(grid);
+  }
+  preview.querySelectorAll(".wa-label").forEach(el=>{
+   el.style.fontFamily=FONTS[cfg.labels.font][1];
+   el.style.fontWeight=cfg.labels.weight==="bold"?"800":"400";
+   el.style.color=cfg.labels.color;
+   el.style.fontSize=(15*cfg.labels.size/100)+"px";
+  });
+  preview.querySelectorAll(".wa-number").forEach(el=>{
+   el.style.fontFamily=FONTS[cfg.numbers.font][1];
+   el.style.fontWeight=cfg.numbers.weight==="bold"?"800":"400";
+   el.style.color=cfg.numbers.color;
+   el.style.fontSize=(18*cfg.numbers.size/100)+"px";
+  });
+ }
+ function persist(){
+  status.textContent=save(data)?"تم حفظ إعدادات هذه البطاقة وتحديثها.":"تعذر الحفظ؛ أعد المحاولة.";
+  demo();
+ }
+ function field(label,name,element){
+  const wrap=document.createElement("label");wrap.className="wa-field";wrap.textContent=label;
+  element.setAttribute("aria-label",label);wrap.append(element);return wrap;
+ }
+ function choices(options,value,onChange){
+  const select=document.createElement("select");
+  Object.entries(options).forEach(([id,label])=>{
+   const option=document.createElement("option");option.value=id;
+   option.textContent=Array.isArray(label)?label[0]:label;
+   select.append(option);
+  });
+  select.value=value;select.onchange=()=>onChange(select.value);return select;
+ }
+ function buildGroups(){
+  styleEditor.replaceChildren();
+  for(const key of ["labels","numbers"]){
+   const g=data[active][key];const groupBox=document.createElement("div");groupBox.className="wa-style-group";
+   const name=document.createElement("strong");name.textContent=key==="labels"?"تنسيق العبارات وأسماء الصلوات":"تنسيق الأرقام والأوقات والعدادات";
+   const fields=document.createElement("div");fields.className="wa-fields";
+   fields.append(
+     field("نوع الخط",key==="labels"?"labels-font":"numbers-font",
+       choices(FONTS,g.font,value=>{g.font=value;persist();})),
+     field("سمك الخط",key==="labels"?"labels-weight":"numbers-weight",
+       choices(WEIGHTS,g.weight,value=>{g.weight=value;persist();}))
+   );
+   const size=document.createElement("input");size.type="range";size.min="65";size.max="170";size.step="5";size.value=g.size;
+   const sizeValue=document.createElement("span");sizeValue.textContent=g.size+"٪";
+   size.oninput=()=>{g.size=Number(size.value);sizeValue.textContent=size.value+"٪";demo();};
+   size.onchange=persist;
+   const sz=field("حجم الخط",key+"-size",size);sz.append(sizeValue);
+   const color=document.createElement("input");color.type="color";color.value=g.color;
+   color.oninput=()=>{g.color=color.value;demo();};color.onchange=persist;
+   fields.append(sz,field("لون الخط",key+"-color",color));
+   groupBox.append(name,fields);styleEditor.append(groupBox);
+  }
+ }
+ function render(){
+  chooserBtn.textContent="اختيار البطاقة (6): "+NAMES[active]+(showList?" ▲":" ▼");
+  chooser.hidden=!showList;styleEditor.hidden=!showEditor;
+  typographyBtn.setAttribute("aria-expanded",String(showEditor));
+  Object.entries(buttons).forEach(([id,el])=>el.setAttribute("aria-pressed",String(id===active)));
+  bgSelect.value=data[active].background;buildGroups();demo();
+ }
+ IDS.forEach(id=>{
+  const b=document.createElement("button");b.type="button";b.textContent=NAMES[id];b.onclick=()=>{active=id;showList=false;status.textContent="";render();};
+  chooser.append(b);buttons[id]=b;
+ });
+ chooserBtn.onclick=()=>{showList=!showList;render();};
+ typographyBtn.onclick=()=>{showEditor=!showEditor;render();};
+ bgSelect.onchange=()=>{data[active].background=bgSelect.value;persist();};
+ pin.onclick=()=>{if(window.AndroidNative?.pinWidget)window.AndroidNative.pinWidget(active);
+  else status.textContent="إضافة البطاقات تتم من تطبيق أندرويد؛ هذه معاينة الويب فقط.";};
+ reset.onclick=()=>{data[active]=defaults(active);persist();render();};
+ root.append(title,chooserBtn,chooser,preview,typographyBtn,styleEditor,bgField,actions,lockSection,note,status);
+ render();return root;
+}
+window.AoqatWidgetAppearance={createPanel,load};
+})();
 ;
 
 /* js/web-menu-order.js */
@@ -6316,13 +7460,62 @@ window.AoqatAzkar = (function () {
     ["afterIqama","⏱️","اوقات بعد الاقامة","afterIqamaPanel"]
   ];
   const webOnly=true;
-  const MENU_ROWS=webOnly?[...ROWS.filter(([id])=>!["savePhone","prayerTimeChoice","notifications","azkar"].includes(id)),["muslimBag",'<svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true"><path d="M3 9c5-2 9-1 13 2 4-3 8-4 13-2v18c-5-2-9-1-13 2-4-3-8-4-13-2Z" fill="#e9d59b" stroke="#216644" stroke-width="2"/><path d="M16 11v18M6 14l6 1M6 19l6 1M20 15l6-1M20 20l6-1" stroke="#216644" stroke-width="1.5"/><path d="M21 2a5 5 0 1 0 6 6 4 4 0 0 1-6-6Z" fill="#c39327"/></svg>',"حقيبة المسلم"],["reminderInbox","🔔","الإشعارات"]]:ROWS;
+  // Twelve primary icons in the owner's order, identical on web and APK.
+  const BAG_ICON='<svg viewBox="0 0 32 32" width="30" height="30" fill="none" aria-hidden="true"><path d="M3 9c5-2 9-1 13 2 4-3 8-4 13-2v18c-5-2-9-1-13 2-4-3-8-4-13-2Z" fill="#e9d59b" stroke="#216644" stroke-width="2"/><path d="M16 11v18M6 14l6 1M6 19l6 1M20 15l6-1M20 20l6-1" stroke="#216644" stroke-width="1.5"/><path d="M21 2a5 5 0 1 0 6 6 4 4 0 0 1-6-6Z" fill="#c39327"/></svg>';
+  const CALENDAR_ICON='<svg viewBox="0 0 32 32" width="28" height="28" fill="none" aria-hidden="true"><rect x="4" y="6" width="24" height="23" rx="4" stroke="currentColor" stroke-width="2"/><path d="M4 13h24M10 3v7M22 3v7M10 18h3m6 0h3m-12 6h3m6 0h3" stroke="currentColor" stroke-width="2"/></svg>';
+  const MENU_ROWS=[
+    ["settings","⚙️","إعدادات التصميم"],
+    ["quran","📖","القرآن الكريم"],
+    ["muslimBag",BAG_ICON,"حقيبة المسلم"],
+    ["datePrayer","📅","بيانات التاريخ والصلاة"],
+    ["adhanIqama","🕌","بيانات الأذان والإقامة"],
+    ["usageGuide","📘","شرح استخدام التطبيق"],
+    ["calendar",CALENDAR_ICON,"التقاويم"],
+    ["alertSettings","🎚️","ضبط التنبيهات"],
+    ["reminderInbox","🔔","الإشعارات"],
+    ["appearance","🎨","شكل التطبيق"],
+    ["qibla","🧭","اتجاه القبلة"],
+    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"]
+  ];
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
 
+  let adhanViewObserver=null, adhanViewQueued=false;
+  function arrangeAdhanView(){
+    adhanViewQueued=false;
+    const dialog=document.getElementById("adhanServicesDialog"),p=document.getElementById("adhanPanel");
+    if(!dialog||dialog.hidden||!p||!dialog.contains(p))return;
+    const voice=dialog.dataset.aoqatView==="voice";
+    const timetable=p.querySelector("#adNext")?.closest(".ad-card");
+    if(timetable)timetable.classList.add("aoqat-prayer-timetable");
+    let holder=p.querySelector("#aoqatVoiceOnly");
+    if(voice){
+      if(!holder){
+        holder=document.createElement("div");holder.id="aoqatVoiceOnly";
+        if(timetable)timetable.after(holder);else p.prepend(holder);
+        const hint=document.createElement("p");hint.className="ad-note";
+        hint.textContent="تنبيهات الصلاة والصامت وعدم الإزعاج موجودة حصراً داخل «ضبط التنبيهات».";
+        holder.append(hint);
+      }
+      const sound=p.querySelector("#adSection-sound .ad-card");
+      if(sound&&sound.parentElement!==holder)holder.prepend(sound);
+    }else if(holder){
+      const sound=holder.querySelector(".ad-card");
+      const home=p.querySelector("#adSection-sound .ad-leaf-body")||p.querySelector("#adSection-sound");
+      if(home&&sound)home.appendChild(sound);
+      holder.remove();
+    }
+  }
+  function queueAdhanView(){
+    if(adhanViewQueued)return;
+    adhanViewQueued=true;requestAnimationFrame(arrangeAdhanView);
+  }
   function closeAdhanServices(){
     const dialog=document.getElementById("adhanServicesDialog");
     if(!dialog||dialog.hidden)return false;
+    if(dialog.dataset.aoqatView==="voice"){
+      dialog.dataset.aoqatView="alerts";arrangeAdhanView();
+    }
     dialog.hidden=true;document.body.classList.remove("adhan-services-open");
     const p=document.getElementById("adhanPanel");
     if(p&&adhanHome){p.classList.remove("inline-open","active-panel");adhanHome.appendChild(p);}
@@ -6330,15 +7523,24 @@ window.AoqatAzkar = (function () {
     if(adhanReturnFocus?.isConnected)adhanReturnFocus.focus({preventScroll:true});
     return true;
   }
-  function openAdhanServices(){
+  function openAdhanServices(view="voice"){
     const p=document.getElementById("adhanPanel");if(!p)return;
     let dialog=document.getElementById("adhanServicesDialog");
     if(!dialog){
       dialog=document.createElement("section");dialog.id="adhanServicesDialog";dialog.hidden=true;
       dialog.dir="rtl";dialog.setAttribute("role","dialog");dialog.setAttribute("aria-modal","true");dialog.setAttribute("aria-labelledby","adhanServicesTitle");
-      dialog.innerHTML='<header class="ad-modal-head"><button type="button" id="adhanServicesBack" aria-label="رجوع إلى بيانات الأذان والإقامة">‹ رجوع</button><h2 id="adhanServicesTitle">الأذان والتنبيه</h2></header><div id="adhanServicesBody"></div>';
+      dialog.innerHTML='<header class="ad-modal-head"><button type="button" id="adhanServicesBack" aria-label="رجوع إلى بيانات الأذان والإقامة">‹ رجوع</button><h2 id="adhanServicesTitle">الأذان والتنبيه</h2></header><div id="adhanServicesBody"><div id="aoqatPrayerAlertExtra" class="web-settings-list" hidden><button type="button" class="main-action" id="aoqatPrayerIqamaEntry">⏳ إشعار الإقامة ‹</button><button type="button" class="main-action" id="aoqatPrayerQuietEntry">🔕 تفعيل وضع الصامت ‹</button></div></div>';
       document.body.appendChild(dialog);
       dialog.querySelector("#adhanServicesBack").onclick=closeAdhanServices;
+      dialog.querySelector("#aoqatPrayerIqamaEntry").onclick=()=>{
+        closeAdhanServices();
+        openSub("إشعار الإقامة",window.AoqatAlertsHub?.iqamaView?.(),"prayerAlerts");
+      };
+      dialog.querySelector("#aoqatPrayerQuietEntry").onclick=()=>{
+        closeAdhanServices();
+        if(window.AndroidNative?.configureAdhan)openAlertSection("quiet");
+        else openSub("تفعيل وضع الصامت",window.AoqatAlertsHub?.iqamaView?.(),"prayerAlerts");
+      };
       dialog.addEventListener("keydown",e=>{
         if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeAdhanServices();}
         if(e.key!=="Tab")return;
@@ -6348,9 +7550,25 @@ window.AoqatAzkar = (function () {
         else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
       });
     }
+    const mode=view==="alerts"?"alerts":"voice";
+    if(!dialog.hidden&&dialog.contains(p)){
+      dialog.dataset.aoqatView=mode;
+      dialog.querySelector("#aoqatPrayerAlertExtra").hidden=mode!=="alerts";
+      dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"مواقيت الصلاة وصوت الأذان";
+      queueAdhanView();return;
+    }
     adhanReturnFocus=document.activeElement;adhanHome=p.parentElement;
     const sidebar=document.querySelector(".sidebar");sidebarWasInert=sidebar?.inert||false;if(sidebar)sidebar.inert=true;
+    dialog.dataset.aoqatView=mode;
+    dialog.querySelector("#aoqatPrayerAlertExtra").hidden=mode!=="alerts";
+    dialog.querySelector("#adhanServicesTitle").textContent=mode==="alerts"?"تنبيهات أوقات الصلاة":"مواقيت الصلاة وصوت الأذان";
+    dialog.querySelector("#adhanServicesBack").setAttribute("aria-label",mode==="alerts"?"رجوع إلى ضبط التنبيهات":"رجوع إلى بيانات الأذان والإقامة");
     dialog.querySelector("#adhanServicesBody").appendChild(p);dialog.hidden=false;
+    if(!adhanViewObserver){
+      adhanViewObserver=new MutationObserver(queueAdhanView);
+      adhanViewObserver.observe(p,{childList:true});
+    }
+    queueAdhanView();
     document.body.classList.add("adhan-services-open");dialog.querySelector("#adhanServicesBody").scrollTop=0;
     dialog.querySelector("#adhanServicesBack").focus({preventScroll:true});
   }
@@ -6374,7 +7592,14 @@ window.AoqatAzkar = (function () {
       #webDrawerSub{display:none;height:100%;overflow:hidden;background:#fff}#webDrawerSub.open{display:flex!important;flex-direction:column!important}.web-sub-head{flex:0 0 58px;display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #ddd;background:#fff}.web-back{width:42px;height:42px;border:0;border-radius:9px;background:#39afd2;color:#fff;font-size:25px;font-weight:900}.web-sub-title{flex:1;text-align:right;font-size:20px;font-weight:800;color:#2b5265}.web-sub-body{flex:1;min-height:0;overflow-y:auto;padding:10px;background:#fff}
       body.design-menu-open #webDrawerSub .inline-control-panel,body.design-menu-open #webDrawerSub .panel,body.design-menu-open #webDrawerSub .font-panel{display:block!important;position:static!important;transform:none!important;inset:auto!important;width:100%!important;max-width:none!important;height:auto!important;min-height:0!important;margin:0!important;padding:12px!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#222)!important;border:1px solid var(--wt-border,#ddd)!important;border-radius:9px!important;box-shadow:none!important}
       body.design-menu-open #webDrawerSub .panel-title,body.design-menu-open #webDrawerSub .font-title{display:none!important}
-      .web-settings-list{display:grid;gap:7px}.web-settings-list .main-action{width:100%!important;min-height:48px!important;height:auto!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important;background:#137985!important;color:#fff!important}
+      .web-settings-list{display:grid;gap:7px}.web-settings-list .main-action{width:100%!important;min-height:48px!important;height:auto!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important;border:1px solid var(--wt-border,#c5d5c8)!important;font-weight:600!important;text-align:right!important;box-shadow:none!important}.web-settings-list .main-action:nth-of-type(odd){background:linear-gradient(90deg,var(--wt-surface2,#f8efd9),var(--wt-surface,#fffaf0))!important}.web-settings-list .main-action[aria-pressed="true"]{outline:2px solid var(--wt-accent,#278052)!important;outline-offset:-2px!important}
+      /* Legible labels and icons on the exact same gradient as the main drawer. */
+      .web-settings-list .main-action{font-family:Tahoma,Arial,sans-serif!important;font-size:17px!important;font-weight:750!important;line-height:1.65!important;color:var(--wt-text,#233c32)!important;text-shadow:none!important}
+      .web-settings-list .main-action :is(span,strong,b,small,em,i){color:inherit!important;text-shadow:none!important;font-weight:inherit}
+      .web-settings-list .main-action span[aria-hidden="true"]{font-size:1.14em!important;text-shadow:0 1px 1px #0004!important}
+      #webExactDrawer #webDrawerMain .web-drawer-row :is(.txt,.ico){color:var(--wt-text,#233c32)!important}
+      #webExactDrawer #webDrawerMain .web-drawer-row .txt{font-weight:750!important}
+      #webExactDrawer #webDrawerMain .web-drawer-row .ico{filter:drop-shadow(0 1px 1px #0004)!important}
       body.design-menu-open #webDrawerSub #webThemePanel{display:block!important;position:static!important;width:100%!important;margin:0!important;padding:8px!important}
       #saveToPhoneBtn{display:none!important}
       /* النص السفلي يُفتح فقط من الإعدادات؛ أخفِ الزر القديم المكرر من واجهة البرنامج. */
@@ -6430,12 +7655,18 @@ window.AoqatAzkar = (function () {
     for(const [key,icon,title] of [['elements','👁️','إظهار عناصر واجهة البرنامج'],['designs','🖼️','إظهار / إخفاء التصاميم'],['tools','🛠️','أدوات تعديل التصميم']]){
       const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.interfacePage=key;b.innerHTML=icon+' <span>'+title+'</span> <span aria-hidden="true">‹</span>';b.onclick=()=>openInterfacePart(key,title);list.appendChild(b);
     }
+    showShortButtonHelp(list,{
+      elements:'إظهار أو إخفاء الساعة والتاريخ وعدّادي الصلاة والإقامة.',
+      designs:'تحديد التصاميم الظاهرة في واجهة البرنامج.',
+      tools:'تعديل أماكن العناصر والتصميم.'
+    });
     panel.insertBefore(list,panel.querySelector('[data-web-footer]'));
-    if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
+    if(!document.getElementById('webInterfaceMenuStyle')){const style=document.createElement('style');style.id='webInterfaceMenuStyle';style.textContent='body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu{padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important}#backgroundPanel.web-interface-menu>#backgroundDesignTools,#backgroundPanel.web-interface-menu>#interfaceVisibilityControls,#backgroundPanel.web-interface-menu>#designVisibilityControls{display:none!important}#webInterfaceMenu button{display:flex;gap:9px;align-items:center;text-align:right}#webInterfaceMenu button span:last-child{margin-inline-start:auto}body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action{background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#233c32)!important;border:1px solid var(--wt-border,#c5d5c8)!important;box-shadow:none!important;text-shadow:none!important}body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action:nth-of-type(odd){background:linear-gradient(90deg,var(--wt-surface2,#f8efd9),var(--wt-surface,#fffaf0))!important}body.design-menu-open #webDrawerSub #backgroundPanel.web-interface-menu #webInterfaceMenu>button.main-action span{color:inherit!important;text-shadow:none!important}#webInterfacePage .interface-visibility-grid,#webInterfacePage .bg-tools-grid{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;width:100%!important}#webInterfacePage button{width:100%!important;min-height:48px!important;margin:0!important;padding:9px 12px!important;border-radius:9px!important;font-size:15px!important}#webInterfacePage .manual-edit-toggle-wrap{margin:0!important;width:100%!important}';document.head.appendChild(style);}
   }
 
   function restoreMoved(){
     restoreInterfacePart();
+    window.AoqatAlertsHub?.park?.();
     window.aoqatCloseService?.();
     const body=document.getElementById("webSubBody"),home=document.querySelector(".sidebar .main-panel");
     if(!body||!home)return;
@@ -6459,14 +7690,95 @@ window.AoqatAzkar = (function () {
     if(webOnly&&id==='fontPanel'){window.PrayerFontCore?.restoreAll?.();window.PrayerFontCore?.load?.();}
     p.classList.add("inline-control-panel","inline-open","active-panel");openSub(title,p,backTo);
   }
+
+  // Help bubbles are rendered by the separate CSS-only helper.
+  // Do not wrap/reparent inner settings actions: doing so broke the adhan menus.
+  function showShortButtonHelp(host,descriptions){
+    // doNotWrapHelpButtons — original button nodes, IDs and handlers remain intact.
+    return host;
+  }
+  const DESIGN_HELP={
+    backgroundPanel:'إظهار عناصر الشاشة والتصاميم وتعديل الواجهة.',
+    fontPanel:'تغيير نوع الخط وحجمه ولونه.',
+    footerPanel:'تعديل النص السفلي للتصميم.'
+  };
+  const ALERT_HELP={
+    prayer:'ضبط الأذان والمنبه والصامت لكل صلاة.',
+    iqama:'إشعار الإقامة وخيارات الصامت.',
+    friday:'تذكير سنن الجمعة وسورة الكهف.',
+    fasting:'تذكير صيام التطوع قبل موعده.',
+    azkar:'أوقات تذكير الأذكار والصلاة على النبي ﷺ.',
+    publish:'التبديل إلى الغد وتنبيه النشر بعد العشاء.',
+    calendarNotice:'تنبيه مشاركة تقويم الشهر الجديد.',
+    screen:'إضاءة الهاتف عند وصول التنبيهات المفعّلة.'
+  };
+
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
-    openSub("إعدادت التصميم",wrap,"main");
-    if(webOnly){const controls=document.getElementById('switchPanel');if(controls){controls.classList.add('inline-open');wrap.appendChild(controls);window.aoqatMoveNotificationSettings?.();}}
+    showShortButtonHelp(wrap,DESIGN_HELP);
+    openSub("إعدادات التصميم",wrap,"main");
+    // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
+  }
+  function guideView(){const api=window.AoqatHelpSupport;if(api)openSub("شرح استخدام التطبيق",api.guide(),"main");}
+  function contactView(){window.AoqatHelpSupport?.openWhatsApp?.();}
+  // Only this master control governs the requested screen-wake policy for ALL
+  // enabled alarms and reminders. It does not create or schedule notifications.
+  // The native Android services will honor this saved preference in the APK;
+  // a web page cannot wake a locked phone from the background.
+  const WAKE_ALERTS_KEY="aoqatAlertScreenWakeV1";
+  function screenWakeView(){
+    const wrap=document.createElement("section");wrap.className="web-settings-list";wrap.id="aoqatWakeAlertsSettings";wrap.dir="rtl";
+    const heading=document.createElement("p");heading.className="ad-note";
+    heading.textContent="إضاءة شاشة الهاتف عند وصول أي تنبيه مفعّل، سواء كان أذاناً أو منبّه صلاة أو إشعار صلاة أو تنبيه نشر مواقيت الغد أو التقويم أو الأذكار والجمعة والصيام. زر واحد للجميع، بدون تغيير الأصوات أو مواعيد التنبيهات.";
+    const button=document.createElement("button");button.type="button";button.id="aoqatWakeAllAlerts";button.className="main-action";
+    const enabled=()=>window.AndroidNative?.readScreenWakeEnabled?.()??(localStorage.getItem(WAKE_ALERTS_KEY)!=="0");
+    const refresh=()=>{const on=enabled();button.textContent="💡 إضاءة الشاشة لجميع التنبيهات: "+(on?"مفعّلة":"متوقفة");button.setAttribute("aria-pressed",String(on));};
+    button.onclick=()=>{const next=!enabled();localStorage.setItem(WAKE_ALERTS_KEY,next?"1":"0");window.AndroidNative?.configureScreenWake?.(next);refresh();window.dispatchEvent(new Event("aoqatScreenWakePreferenceChanged"));};
+    const note=document.createElement("p");note.className="ad-note";
+    note.textContent="التحكم بإضاءة شاشة الهاتف وهي مقفلة يحتاج خدمات أندرويد وصلاحيات الهاتف؛ هذا الخيار يُحفظ هنا لتجهيزه لنسخة APK بعد اعتمادك. عرض الأذان بملء الشاشة خيار مستقل داخل «تنبيهات أوقات الصلاة»؛ أما الإشعارات العادية فيتحكم نظام أندرويد بكيفية إضاءتها.";
+    wrap.append(heading,button,note);refresh();openSub("إضاءة الشاشة عند التنبيهات",wrap,"alertSettings");
+  }
+  function alertSettingsView(){
+    const wrap=document.createElement("section");wrap.id="aoqatAlertSettings";wrap.dir="rtl";wrap.className="web-settings-list";
+    const options=[
+      ["prayer","🔔","تنبيهات أوقات الصلاة"],
+      ["friday","🌿","تنبيهات سنن يوم الجمعة"],
+      ["fasting","🌙","تنبيهات صيام التطوع"],
+      ["azkar","📿","تنبيهات الأذكار"],
+      ["publish","⏰","التبديل التلقائي وتنبيه النشر"],
+      ["calendarNotice","📅","تنبيه نشر تقويم الشهر"],
+      ["screen","💡","إضاءة الشاشة لجميع التنبيهات"]
+    ];
+    options.forEach(([kind,ico,label])=>{
+      const button=document.createElement("button");button.type="button";button.className="main-action";button.dataset.alertSection=kind;
+      button.textContent=ico+" "+label+" ‹";button.onclick=()=>openAlertSection(kind);wrap.append(button);
+    });
+    showShortButtonHelp(wrap,ALERT_HELP);
+    openSub("ضبط التنبيهات",wrap,"main");
+  }
+  function openAlertSection(kind){
+    const api=window.AoqatAlertsHub;
+    if(kind==="prayer"){openAdhanServices("alerts");return;}
+    if(kind==="screen"){screenWakeView();return;}
+    if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
+    if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","prayerAlerts");return;}
+    if(kind==="friday"){const wrap=document.createElement("div");wrap.className="web-settings-list";openSub("تنبيهات سنن يوم الجمعة",wrap,"alertSettings");window.AoqatFridayReminders?.mount?.(wrap);return;}
+    if(kind==="fasting"){const wrap=document.createElement("div");wrap.className="web-settings-list";const controls=window.AoqatFastingReminders?.createControls?.();if(controls)wrap.append(controls);openSub("تنبيهات صيام التطوع",wrap,"alertSettings");return;}
+    if(kind==="azkar"){
+      const wrap=document.createElement("div");wrap.className="web-settings-list";
+      const core=window.AoqatAzkarRemindersCore,controls=document.createElement("div");controls.id="aoqatAzkarAlertControls";
+      (core?.ids||[]).forEach(id=>{const button=document.createElement("button");button.type="button";button.className="main-action";button.dataset.alertAzkar=id;
+        button.textContent="🔔 "+(core.titles[id]||id);button.onclick=()=>{
+          controls.replaceChildren();window.AoqatAzkarReminders?.mount?.(controls,id);
+          wrap.querySelectorAll("[data-alert-azkar]").forEach(x=>x.setAttribute("aria-pressed",String(x===button)));
+        };wrap.append(button);});
+      wrap.append(controls);openSub("تنبيهات الأذكار",wrap,"alertSettings");return;
+    }
+    if(kind==="publish"){openSub("تنبيه نشر مواقيت اليوم التالي",api?.publishView?.(),"alertSettings");return;}
   }
   function datePrayerView(){
     const wrap=document.createElement("div");wrap.id="webDatePrayerTemp";wrap.className="web-settings-list";
@@ -6513,9 +7825,19 @@ window.AoqatAzkar = (function () {
   window.addEventListener('aoqatInboxChanged',()=>{if(document.getElementById('reminderInbox')&&['main','reminderInbox'].includes(returnMode)&&document.getElementById('webDrawerSub')?.classList.contains('open'))inboxView(inboxId);});
   function adhanIqamaView(){
     const wrap=document.createElement("div");wrap.className="web-settings-list";
-    [["🔊","الأذان والتنبيه","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","اوقات بعد الاقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});openSub("بيانات الاذان والإقامة",wrap,"main");
+    [["🔊","مواقيت الصلاة وصوت الأذان","adhanPanel"],["⏳","أوقات الإقامة","iqamaPanel"],["⏱️","أوقات بعد الإقامة","afterIqamaPanel"]].forEach(([icon,title,id])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=id;b.textContent=icon+" "+title;b.onclick=()=>openPanel(title,id,"adhanIqama");wrap.appendChild(b);});
+    showShortButtonHelp(wrap,{adhanPanel:'مواقيت الصلاة وصوت المؤذن.',iqamaPanel:'المدة بين الأذان والإقامة.',afterIqamaPanel:'مدة ظهور مضى على الإقامة.'});
+    openSub("بيانات الاذان والإقامة",wrap,"main");
   }
-  function themeView(){const p=document.createElement("div");p.className="web-theme-drawer-panel";const source=document.getElementById("webThemePanel");if(source){p.innerHTML=source.innerHTML;}else{p.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid"><button type="button" class="wt-card" data-theme="cream-blue">🟦 كريمي وأزرق فاتح</button><button type="button" class="wt-card" data-theme="cream-gold">🟨 كريمي وذهبي هادئ</button><button type="button" class="wt-card" data-theme="white-sky">🔵 أبيض وسماوي حديث</button><button type="button" class="wt-card" data-theme="cream-green">🟩 كريمي وأخضر هادئ</button><button type="button" class="wt-card" data-theme="beige-gold">🟫 بيج وذهبي أنيق</button><button type="button" class="wt-card" data-theme="dark-night">🌙 داكن كحلي (ليلي)</button></div>';}p.addEventListener("click",e=>{const card=e.target.closest(".wt-card");if(!card)return;if(typeof window.applyWebTheme==="function")window.applyWebTheme(card.dataset.theme);p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));window.refreshWebThemeControls?.();});p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));openSub("شكل التطبيق",p,"main");window.refreshWebThemeControls?.();}
+  function widgetAppearanceView(){
+    const panel=window.AoqatWidgetAppearance?.createPanel?.();
+    if(panel)openSub("تعديل بطاقات الشاشة الرئيسية",panel,"appearance");
+  }
+  function themeView(){const p=document.createElement("div");p.className="web-theme-drawer-panel";const source=document.getElementById("webThemePanel");if(source){p.innerHTML=source.innerHTML;}else{p.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid"><button type="button" class="wt-card" data-theme="cream-blue">🟦 كريمي وأزرق فاتح</button><button type="button" class="wt-card" data-theme="cream-gold">🟨 كريمي وذهبي هادئ</button><button type="button" class="wt-card" data-theme="white-sky">🔵 أبيض وسماوي حديث</button><button type="button" class="wt-card" data-theme="cream-green">🟩 كريمي وأخضر هادئ</button><button type="button" class="wt-card" data-theme="beige-gold">🟫 بيج وذهبي أنيق</button><button type="button" class="wt-card" data-theme="dark-night">🌙 داكن كحلي (ليلي)</button></div>';}p.addEventListener("click",e=>{const card=e.target.closest(".wt-card");if(!card)return;if(typeof window.applyWebTheme==="function")window.applyWebTheme(card.dataset.theme);p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));window.refreshWebThemeControls?.();});p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));const widgets=document.createElement("button");widgets.type="button";widgets.className="main-action";
+    widgets.textContent="🖼️ تعديل بطاقات الشاشة الرئيسية";
+    widgets.style.cssText="display:block;width:100%;margin:4px 0 14px;padding:12px;border-radius:12px;text-align:center;font-weight:800;background:linear-gradient(90deg,var(--wt-surface,#f9f7f0),var(--wt-surface2,#e1eeec));color:var(--wt-text,#193f42);border:1px solid var(--wt-border,#b4cbd1)";
+    widgets.onclick=widgetAppearanceView;p.prepend(widgets);
+    openSub("شكل التطبيق",p,"main");window.refreshWebThemeControls?.();}
   function savePhone(){
     if(webOnly&&window.aoqatCreatePrayerShareView){document.body.classList.add('design-menu-open');openSub('مشاركة التصميم',window.aoqatCreatePrayerShareView(),'program');return;}
     const b=document.getElementById("saveToPhoneBtn");if(b){b.click();return;}const x=document.querySelector("[data-save-phone]");if(x)x.click();}
@@ -6530,16 +7852,20 @@ window.AoqatAzkar = (function () {
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}
       if(["quran","qibla","azkar","widget"].includes(id)){
-        const title=ROWS.find(row=>row[0]===id)[2];
+        const title=MENU_ROWS.find(row=>row[0]===id)?.[2]||id;
         openPanel(title,"prayerServicePanel");window.aoqatOpenService?.(id);return;
       }
       if(id==="reminderInbox"){inboxView();return;}
       if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
+      if(id==="usageGuide"){guideView();return;}
+       if(id==="contactWhatsApp"){contactView();return;}
+       if(id==="alertSettings"){alertSettingsView();return;}
+       if(id==="calendar"){window.aoqatOpenCalendar?.();return;}
       if(id==="prayerTimeChoice"){openSub("طريقة اختيار أوقات الصلاة",window.aoqatPrayerTimeChoiceView(),"main");return;}
       if(id==="datePrayer"){datePrayerView();return;}
       if(id==="adhanIqama"){adhanIqamaView();return;}
@@ -6561,7 +7887,7 @@ window.AoqatAzkar = (function () {
   }
   window.AoqatWebSettingsNavigation={
     main:mainView,sub:openSub,panel:(id,title)=>openPanel(title,id,'settings'),interface:openInterfacePart,
-    adhan:()=>{adhanIqamaView();openAdhanServices();},bag:openMuslimBagSection,
+    adhan:()=>{adhanIqamaView();openAdhanServices();},quiet:()=>{if(window.AndroidNative?.configureAdhan)openAlertSection('quiet');else openAdhanServices('alerts');},alerts:alertSettingsView,bag:openMuslimBagSection,
     drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
   };
   function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",install);}
@@ -6574,18 +7900,229 @@ window.AoqatAzkar = (function () {
 
 ;
 
+/* js/settings-help-live.js */
+"use strict";
+(function(){
+  // Web-only, isolated layer. Never replaces the underlying settings handlers.
+  const STYLE_ID="aoqatWebHelpLiveStyle";
+  const ROOT_IDS=["webSubBody","adhanServicesBody"];
+  const DETAILS={
+    "backgroundPanel":"إظهار عناصر الواجهة وتعديل ألوان التصميم.",
+    "fontPanel":"تغيير شكل الخط وحجمه ولونه.",
+    "switchPanel":"ضبط التبديل التلقائي وتنبيه اليوم التالي.",
+    "adhanPanel":"عرض المواقيت وضبط صوت الأذان.",
+    "iqamaPanel":"تحديد الدقائق بين الأذان والإقامة لكل صلاة.",
+    "afterIqamaPanel":"تحديد مدة عداد مضى على الإقامة.",
+    "prayerPanel":"عرض البيانات المتعلقة بأوقات الصلاة.",
+    "datePanel":"تعديل بيانات التاريخ.",
+    "prayer":"تشغيل تنبيهات الصلاة والتحكم في طرقها.",
+    "iqama":"ضبط إشعار الإقامة وخياراته.",
+    "friday":"ضبط تذكير سنن الجمعة وسورة الكهف.",
+    "fasting":"ضبط تذكيرات صيام التطوع.",
+    "azkar":"ضبط أوقات الأذكار والتنبيه بها.",
+    "publish":"ضبط التبديل التلقائي وتنبيه نشر مواقيت الغد.",
+    "calendarNotice":"تذكير نشر تقويم الشهر التالي.",
+    "screen":"التحكم بإضاءة الشاشة عند التنبيه.",
+    "elements":"إظهار أو إخفاء الساعة والتاريخ وعدادي الصلاة والإقامة.",
+    "designs":"اختيار التصاميم التي تظهر بالواجهة.",
+    "tools":"تعديل عناصر الواجهة والتصميم.",
+    "next":"عرض بطاقة الصلاة القادمة وتنسيقها.",
+    "classic":"تخصيص البطاقة وحجم الخط وألوانها."
+  };
+  const LABELS={
+    "مواقيت الصلاة":"عرض الأوقات وخيارات الأذان.",
+    "أوقات بعد الإقامة":"تحديد مدة ظهور مضى على الإقامة.",
+    "أوقات الإقامة":"تحديد عدد الدقائق بين الأذان والإقامة.",
+    "تنسيق الخط":"تغيير نوع الخط وحجمه وألوانه.",
+    "إشعار شاشة القفل":"إظهار أو إخفاء إشعار مواقيت الصلاة على شاشة القفل.",
+    "أذونات التنبيهات":"فتح أذونات الإشعارات في أندرويد.",
+    "الذكر":"عرض الأذكار وضبط التذكير بها.",
+    "الصلاة على النبي":"تذكير الصلاة على النبي ﷺ يوم الجمعة.",
+    "المشاركة":"مشاركة المحتوى أو التصميم مع الآخرين.",
+    "الصامت":"تحديد بدء الصامت ومدته وموعد انتهاءه.",
+    "التسبيح":"ضبط تذكير الذكر والتسبيح.",
+    "الألوان":"اختيار الألوان المناسبة لواجهة التطبيق.",
+    "إضافة":"تنفيذ الإضافة الموضحة في عنوان الزر.",
+    "إرجاع":"استعادة الإعداد السابق للعنصر."
+  };
+  function helpText(button){
+    const key=button.dataset.alertSection||button.dataset.panel||button.dataset.interfacePage||button.dataset.bagSection||button.id;
+    if(button.dataset.helpDescription)return button.dataset.helpDescription;
+    if(DETAILS[key])return DETAILS[key];
+    if(button.matches(".interface-visibility-btn"))return "إظهار أو إخفاء هذا العنصر في واجهة البرنامج، مع الاحتفاظ باختيارك.";
+    const title=(button.innerText||button.textContent||"").trim().replace(/\s+/g," ");
+    const label=Object.keys(LABELS).find(x=>title.includes(x));
+    return label?LABELS[label]:"هذا الزر مخصص لـ «"+title+"». اضغط عليه لتغيير إعداداته.";
+  }
+  function ensureStyle(){
+    if(document.getElementById(STYLE_ID))return;
+    const style=document.createElement("style");
+    style.id=STYLE_ID;
+    style.textContent="#aoqatHelpPage{position:fixed!important;inset:0!important;z-index:2147483000!important;box-sizing:border-box!important;overflow-y:auto!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#253f35)!important;padding:calc(6px + env(safe-area-inset-top,0px)) 14px 22px!important;direction:rtl!important}#aoqatHelpPage .aoqat-help-card{max-width:680px;width:100%;margin:0 auto;min-height:100%;box-sizing:border-box;padding:6px 2px}#aoqatHelpPage .aoqat-help-top{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:57px;border-bottom:1px solid var(--wt-border,#b4c7b8)}#aoqatHelpPage .aoqat-help-heading{font-weight:750;font-size:20px;line-height:1.5}#aoqatHelpPage button.aoqat-help-back{width:auto!important;height:37px!important;min-height:37px!important;padding:6px 10px!important;border-radius:9px!important;border:1px solid var(--wt-border,#b4c7b8)!important;background:var(--wt-surface2,#e9f0e9)!important;color:var(--wt-text,#253f35)!important;font:600 14px/1.4 Tahoma,Arial,sans-serif!important;box-shadow:none!important}#aoqatHelpPage .aoqat-help-subheading{font-size:19px;font-weight:750;line-height:1.65;margin:23px 0 10px;color:var(--wt-text,#253f35)}#aoqatHelpPage .aoqat-help-description{font-size:16px;line-height:1.8;color:var(--wt-text,#253f35);margin:0;white-space:normal}button.aoqat-help-eligible{position:relative!important;box-sizing:border-box!important;padding-left:43px!important}button.aoqat-help-eligible::before{content:'؟';position:absolute!important;left:13px!important;right:auto!important;top:50%!important;transform:translateY(-50%)!important;width:17px!important;height:17px!important;min-width:17px!important;min-height:17px!important;box-sizing:border-box!important;display:flex!important;align-items:center!important;justify-content:center!important;border:1px solid currentColor!important;border-radius:50%!important;background:transparent!important;color:inherit!important;box-shadow:none!important;text-shadow:none!important;font:700 11px/1 Tahoma,Arial,sans-serif!important;pointer-events:none!important;opacity:.88!important}#adhanPanel button.aoqat-help-eligible .ad-section-chevron{margin-left:43px!important}@media(max-width:360px){button.aoqat-help-eligible::before{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;font-size:10px!important}}";
+
+    // Spacing corrections only: no wrapping/reparenting/replacement of buttons.
+    // The actual circle stays small; the surrounding native button remains its tap target.
+    style.textContent += [
+      "button.aoqat-help-eligible::before{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;border:1.4px solid currentColor!important;font:800 11px/1 Tahoma,Arial,sans-serif!important;opacity:1!important;background:color-mix(in srgb,currentColor 7%,transparent)!important}",
+      "#webSubBody button.main-action.aoqat-help-eligible,#webSubBody button.wa-primary.aoqat-help-eligible,#webSubBody button.interface-visibility-btn.aoqat-help-eligible{padding-left:57px!important}",
+      "#webInterfaceMenu button.main-action.aoqat-help-eligible{justify-content:flex-start!important;text-align:right!important}",
+      "#webInterfaceMenu button.main-action.aoqat-help-eligible>span:last-child{margin-inline-start:0!important}",
+      "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-eligible{padding-left:58px!important}",
+      "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-eligible.aoqat-help-with-chevron{padding-left:82px!important}",
+      // Specificity must beat the original ordered alert-menu padding rule.
+      "#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu > button.ad-section-toggle.aoqat-help-eligible{padding-left:60px!important}",
+      "#adhanServicesDialog #adhanPanel.pa-ordered-layout #paAlertMenu > button.ad-section-toggle.aoqat-help-eligible.aoqat-help-with-chevron{padding-left:82px!important}",
+      "#adhanServicesDialog #adhanPanel button.ad-section-toggle.aoqat-help-with-chevron>.ad-section-chevron{margin-left:0!important}",
+      "@media(max-width:360px){button.aoqat-help-eligible::before{width:19px!important;height:19px!important;min-width:19px!important;min-height:19px!important;font-size:12px!important}}"
+    ].join("");
+    document.head.appendChild(style);
+  }
+  let lastFocus=null;
+  function closeHelp(){
+    document.getElementById("aoqatHelpPage")?.remove();
+    document.removeEventListener("keydown",onKey);
+    const focus=lastFocus;lastFocus=null;
+    if(focus?.isConnected)focus.focus({preventScroll:true});
+  }
+  function onKey(e){
+    if(e.key==="Escape"||e.key==="Backspace"){
+      e.preventDefault();
+      closeHelp();
+    }
+  }
+  function showHelp(title,description,source){
+    ensureStyle();
+    document.getElementById("aoqatHelpPage")?.remove();
+    lastFocus=source||document.activeElement;
+    const page=document.createElement("section");
+    page.id="aoqatHelpPage";page.dir="rtl";
+    page.setAttribute("role","dialog");page.setAttribute("aria-modal","true");
+    page.setAttribute("aria-label","شرح "+title);
+    const card=document.createElement("div");card.className="aoqat-help-card";
+    const bar=document.createElement("div");bar.className="aoqat-help-top";
+    const heading=document.createElement("strong");heading.className="aoqat-help-heading";heading.textContent="شرح الزر";
+    const back=document.createElement("button");back.className="aoqat-help-back";back.type="button";back.textContent="‹ رجوع";back.onclick=closeHelp;
+    bar.append(heading,back);
+    const name=document.createElement("h3");name.className="aoqat-help-subheading";name.textContent=title;
+    const body=document.createElement("p");body.className="aoqat-help-description";body.textContent=description;
+    card.append(bar,name,body);page.append(card);document.body.append(page);
+    document.addEventListener("keydown",onKey);
+    back.focus({preventScroll:true});
+  }
+  window.aoqatOpenSettingsHelp=(title,description)=>showHelp(title,description);
+  // Keep all original buttons in their exact DOM position. In particular,
+  // the adhan view reconstructs its buttons often; wrapping them generated
+  // abandoned empty holders and made its page thousands of pixels tall.
+  // A CSS pseudo-element supplies the small help circle without extra nodes.
+  function cleanLegacyHelp(root){
+    root.querySelectorAll('.aoqat-help-holder').forEach(holder=>{
+      const original=[...holder.children].find(el=>el.tagName==='BUTTON'&&!el.classList.contains('aoqat-help-badge'));
+      if(original)holder.replaceWith(original);else holder.remove();
+    });
+    root.querySelectorAll('button.aoqat-help-badge').forEach(badge=>badge.remove());
+  }
+  function decorate(button){
+    if(button.classList.contains('aoqat-help-eligible'))return;
+    if(button.matches('.web-back,[data-minute-step],.design-popup-close,[aria-label="رجوع"]'))return;
+    if(button.closest('#aoqatHelpPage'))return;
+    const title=(button.innerText||button.textContent||'').trim().replace(/\s+/g,' ');
+    if(!title)return;
+    button.classList.add('aoqat-help-eligible');
+    // Explicitly reserve a separate place for the original navigation arrow.
+    // Its element and click handler are left untouched.
+    const last=button.lastElementChild;
+    if(last?.classList.contains('ad-section-chevron')||
+       (last?.tagName==='SPAN'&&/^[‹›❮❯]$/.test(last.textContent.trim())))
+      button.classList.add('aoqat-help-with-chevron');
+    // The left 43px are a comfortable invisible touch target around a 17px
+    // circle. All other parts of the button keep their existing functionality.
+    button.addEventListener('click',event=>{
+      if(event.detail===0)return; // keyboard Enter/Space remains the normal action
+      const bounds=button.getBoundingClientRect();
+      const inHelp=event.clientX>=bounds.left&&event.clientX<=bounds.left+43&&
+        Math.abs(event.clientY-(bounds.top+bounds.height/2))<=23;
+      if(!inHelp)return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      event.stopPropagation();
+      const current=(button.innerText||button.textContent||title).trim().replace(/\s+/g,' ');
+      showHelp(current,helpText(button),button);
+    },true);
+    button.addEventListener('keydown',event=>{
+      if(event.key!=='F1')return;
+      event.preventDefault();event.stopPropagation();
+      const current=(button.innerText||button.textContent||title).trim().replace(/\s+/g,' ');
+      showHelp(current,helpText(button),button);
+    },true);
+  }
+  let queued=false;
+  function apply(){
+    queued=false;
+    ensureStyle();
+    for(const id of ROOT_IDS){
+      const root=document.getElementById(id);
+      if(!root)continue;
+      cleanLegacyHelp(root);
+      root.querySelectorAll('button.main-action,button.wa-primary,button.ad-section-toggle,button.switch-control-btn,button.interface-visibility-btn').forEach(decorate);
+    }
+  }
+  function schedule(){
+    if(queued)return;queued=true;requestAnimationFrame(apply);
+  }
+  const roots=new WeakSet();
+  const observer=new MutationObserver(records=>{
+    if(records.some(r=>r.type==="childList"&&[...r.addedNodes].some(n=>n.nodeType===1)))schedule();
+  });
+  function bind(){
+    let found=false;
+    for(const id of ROOT_IDS){
+      const root=document.getElementById(id);
+      if(root){
+        found=true;
+        if(!roots.has(root)){roots.add(root);observer.observe(root,{childList:true,subtree:true});}
+      }
+    }
+    if(found)schedule();
+    return found;
+  }
+  function start(){
+    ensureStyle();bind();
+    let tries=0;
+    const interval=setInterval(()=>{
+      bind();
+      if(++tries>=60||ROOT_IDS.every(id=>document.getElementById(id)))clearInterval(interval);
+    },200);
+    window.addEventListener("aoqatModulesReady",bind);
+    window.addEventListener("pageshow",bind);
+    window.addEventListener("aoqatButtonAppearanceChanged",schedule);
+    // Re-evaluate text contrast if the user switches to another light/dark
+    // button theme while the settings drawer stays open.
+    new MutationObserver(schedule).observe(document.documentElement,{attributes:true,attributeFilter:["style","data-web-theme","data-button-style"]});
+    new MutationObserver(schedule).observe(document.body,{attributes:true,attributeFilter:["data-web-theme","data-button-style"]});
+    // Some dialogs are instantiated only when first opened.
+    new MutationObserver(records=>{
+      if(records.some(r=>[...r.addedNodes].some(n=>n.nodeType===1&&
+        (n.id==="adhanServicesDialog"||n.querySelector?.("#adhanServicesDialog")))))bind();
+    }).observe(document.body,{childList:true});
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});
+  else start();
+})();
+
+;
+
 /* js/web-menu-button-theme.js */
 "use strict";
 (function(){
 
  const roots='#settingsContentDialog,#adhanServicesDialog';
  const switches='[data-global-mode],[data-prayer][data-mode],.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled],[data-time-mode]';
- const skip='[data-azkar-toggle],[data-azkar-mode],[data-post-reminder],#frReminderToggle,#fastingReminderToggle,.wt-card,.color-swatch,.palette-color,[data-color],.web-drawer-row,[data-drawer],#aqReader button';
+ const skip='#adAudibilityHelp,.aoqat-help-circle,[data-azkar-toggle],[data-azkar-mode],[data-post-reminder],#frReminderToggle,#fastingReminderToggle,.wt-card,.color-swatch,.palette-color,[data-color],.web-drawer-row,[data-drawer],#aqReader button,.web-settings-list .main-action,#adhanServicesDialog #adhanPanel .ad-section-toggle,#adhanServicesDialog #adhanPanel #paMethodOpen,#adhanServicesDialog #adhanPanel #adRefresh';
  function blend(hex,t){const n=parseInt(hex.slice(1),16),rgb=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(t>=0?v*(1-t):v+(255-v)*(-t)));return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
  function lum(hex){const n=parseInt(hex.slice(1),16);return [n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);}
  function palette(){const accent=getComputedStyle(document.documentElement).getPropertyValue('--wt-button-accent').trim()||'#137985',a=blend(accent,.40),b=blend(accent,-.15),l=[lum(a),lum(b)];const white=Math.min(...l.map(v=>1.05/(v+.05))),black=Math.min(...l.map(v=>(v+.05)/.05));return {background:document.body.dataset.buttonStyle==='solid'?accent:'linear-gradient(135deg,'+a+','+b+')',color:(document.body.dataset.buttonStyle==='solid'?lum(accent)<.18:white>=black)?'#fff':'#10212a'};}
  function on(button){const pressed=button.getAttribute('aria-pressed');if(pressed==='true'||pressed==='false')return pressed==='true';if(button.hasAttribute('data-enabled'))return button.dataset.enabled==='true';return button.matches('.pa-on,.is-on,.enabled,.on');}
- // Selection is a state, so it must remain distinct from decorative button palettes.
+ // Main drawer and nested navigation share the exact theme-surface gradients. Do not\n // inline-paint their buttons: inline !important used to override the CSS and\n // made nested sections dark while the twelve main entries stayed pale.\n // Selection is a state, so it must remain distinct from decorative button palettes.
  const modeStyle=document.createElement('style');modeStyle.id='webAdhanModeSelectionStyle';
  modeStyle.textContent=':is(#settingsContentDialog,#adhanServicesDialog) button[data-prayer][data-mode] small{color:inherit!important}:is(#settingsContentDialog,#adhanServicesDialog) button[data-prayer][data-mode][aria-pressed="true"] small::after{content:" ✓";font-weight:900}:is(#settingsContentDialog,#adhanServicesDialog) button[data-global-mode][aria-pressed="true"]::after{content:" ✓";font-weight:900}';
  document.head.appendChild(modeStyle);
@@ -6745,13 +8282,13 @@ window.AoqatAzkar = (function () {
  const nav=()=>window.AoqatWebSettingsNavigation;
  function add(id,title,path,words,run){catalog.set(id,{title,path,words:normal(title+' '+path+' '+words),run});}
  function reveal(selector){requestAnimationFrame(()=>requestAnimationFrame(()=>{const e=document.querySelector(selector);if(e){e.scrollIntoView({block:'center'});e.classList.add('web-search-highlight');setTimeout(()=>e.classList.remove('web-search-highlight'),1600);if(e.matches('input,select,textarea,button')&&!e.disabled)e.focus({preventScroll:true});}}));}
- function openAdhan(section,selector){nav().adhan();if(section==='quiet-iqama')$('adSilentSettingsToggle')?.click();else if(section==='quiet-adhan')$('adAdhanSilentSettingsToggle')?.click();else if(section){$('paMethodOpen')?.click();const b=section==='alarm'?$('paOpen'):section==='notice'?$('pnOpen'):document.querySelector('[data-ad-section="'+(section==='sound'?'modes':section)+'"]');if(b?.disabled){$('adEnable')?.focus();return;}b?.click();if(section==='sound')document.querySelector('[data-ad-section="sound"]')?.click();}if(selector)reveal(selector);}
+ function openAdhan(section,selector){if(section.startsWith('quiet-')&&window.AndroidNative?.configureAdhan){nav().quiet();if(selector)reveal(selector);return;}nav().adhan();if(section==='quiet-iqama')$('adSilentSettingsToggle')?.click();else if(section==='quiet-adhan')$('adAdhanSilentSettingsToggle')?.click();else if(section){$('paMethodOpen')?.click();const b=section==='alarm'?$('paOpen'):section==='notice'?$('pnOpen'):document.querySelector('[data-ad-section="'+(section==='sound'?'modes':section)+'"]');if(b?.disabled){$('adEnable')?.focus();return;}b?.click();if(section==='sound')document.querySelector('[data-ad-section="sound"]')?.click();}if(selector)reveal(selector);}
  function buildIndex(){
   for(const b of document.querySelectorAll('#webDrawerMain [data-drawer]')){const id=b.dataset.drawer;add('drawer:'+id,b.querySelector('.txt')?.textContent||b.textContent,'القائمة الرئيسية','',()=>nav().drawer(id));}
   const panels={backgroundPanel:'واجهة البرنامج',fontPanel:'تنسيق الخط',footerPanel:'النص السفلي',datePanel:'التاريخ الهجري والميلادي',prayerPanel:'أوقات الصلاة',iqamaPanel:'أوقات الإقامة',afterIqamaPanel:'أوقات بعد الإقامة',switchPanel:'التبديل التلقائي وتنبيه النشر'};
   for(const [id,title] of Object.entries(panels)){add('panel:'+id,title,'إعدادات التطبيق','',()=>nav().panel(id,title));const root=$(id);if(!root)continue;for(const e of root.querySelectorAll('label,button')){const clone=e.cloneNode(true);clone.querySelectorAll('input,select,textarea').forEach(n=>n.remove());const text=clone.textContent.trim().replace(/\s+/g,' '),control=e.matches('button')?e:e.querySelector('input,select,textarea'),target=control?.id||e.id;if(!text||text.length>150||!target)continue;add('control:'+target,text,title,'',()=>{nav().panel(id,title);reveal('#'+CSS.escape(target));});}}
   for(const [id,title,words] of [['quiet-adhan','الصامت عند الأذان','صمت صامت الهاتف مدة تفعيل'],['quiet-iqama','الصامت عند الإقامة','صامت بعد الاقامة مدة'],['modes','وضع الأذان لكل صلاة','عام صوت هزاز صامت'],['sound','صوت الأذان','المؤذن قباء السريحي مكة المدينة القطامي مستوى الصوت كامل جزئي تكبيرات ملف الهاتف'],['alarm','منبه أوقات الصلاة','منبه رنين غفوة تكرار ايام نغمة'],['notice','إشعار أوقات الصلاة','اشعار صوت قصير'],['notifications','التنبيهات','سحور تذكير قبل الصلاة اهتزاز']])add('adhan:'+id,title,'الأذان والتنبيه',words,()=>openAdhan(id));
-  for(const [kind,title] of [['quiet-adhan','الصامت عند الأذان'],['quiet-iqama','الصامت عند الإقامة']])for(const [id,name] of Object.entries({fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'}))add(kind+':'+id,'مدة الصامت لصلاة '+name,title,'دقائق وقت',()=>openAdhan(kind,'[data-quiet-kind="'+(kind==='quiet-adhan'?'adhan':'iqama')+'"][data-web-quiet-minutes="'+id+'"]'));
+  for(const [kind,title] of [['quiet-adhan','الصامت عند الأذان'],['quiet-iqama','الصامت عند الإقامة']])for(const [id,name] of Object.entries({fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'}))add(kind+':'+id,'مدة الصامت لصلاة '+name,title,'دقائق وقت',()=>openAdhan(kind,(window.AndroidNative?.configureAdhan?'[data-quiet-key="'+(kind==='quiet-adhan'?'atAdhanSilent':'afterIqamaSilent')+'"][data-quiet-prayer="'+id+'"]':'[data-quiet-kind="'+(kind==='quiet-adhan'?'adhan':'iqama')+'"][data-web-quiet-minutes="'+id+'"]')));
   for(const [id,title] of [['morning','أذكار الصباح'],['evening','أذكار المساء'],['prayer','أذكار بعد الصلاة'],['sleep','أذكار النوم'],['waking','أذكار الاستيقاظ'],['adhan','أذكار الأذان'],['wudu','أذكار الوضوء'],['mosque','أذكار المسجد'],['home','أذكار المنزل'],['food','أذكار الطعام'],['bathroom','أذكار الخلاء'],['travel','أذكار السفر'],['distress','أدعية الهم والكرب'],['illness','الرقية وأدعية المريض'],['weather','أذكار المطر والريح'],['tasbih','التسبيح والاستغفار والصلاة على النبي']])add('azkar:'+id,title,'حقيبة المسلم › الأذكار','تنبيه تذكير الوقت تخصيص المستخدم افتراضي تشغيل ايقاف',()=>{nav().bag('azkar');window.aoqatOpenAzkarCategory?.(id);});
   add('friday','سنن يوم الجمعة وآدابها','حقيبة المسلم','الكهف الصلاة على النبي تنبيه تذكير نشر بوست وقت',()=>nav().bag('friday'));
   add('fasting','صيام التطوع','حقيبة المسلم','الاثنين الخميس الأيام البيض عاشوراء تاسوعاء شوال عرفة ذي الحجة تذكير نشر بوست تنبيه',()=>nav().bag('fasting'));
@@ -6769,7 +8306,8 @@ window.AoqatAzkar = (function () {
   for(const e of matches){const b=document.createElement('button');b.type='button';b.className='web-settings-result';const t=document.createElement('strong'),p=document.createElement('small');t.textContent=e.title;p.textContent=e.path;b.append(t,p);b.onclick=()=>{clearSearch();e.run();};box.append(b);}
  }
  const dayKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
- function openCalendar(){clearSearch();if(window.AoqatCalendars){window.AoqatCalendars.open();return;}openDailyCalendar();}
+ window.aoqatOpenCalendar=()=>openCalendar();
+  function openCalendar(){clearSearch();if(window.AoqatCalendars){window.AoqatCalendars.open();return;}openDailyCalendar();}
  window.aoqatOpenDailyCalendar=openDailyCalendar;window.aoqatMountDailyCalendar=mountDailyCalendar;
  function openDailyCalendar(){clearSearch();const host=document.createElement('div');nav().sub('التقويم اليومي',host,'main');mountDailyCalendar(host);}
  function mountDailyCalendar(host){const page=document.createElement('section');page.id='webCalendar';page.innerHTML='<section id="webCalendarDetail" aria-live="polite"></section><div class="web-calendar-toolbar"><button type="button" data-calendar-step="-1" aria-label="الشهر السابق">‹</button><label>الشهر<input type="month" id="webCalendarMonth" aria-label="شهر التقويم"></label><button type="button" data-calendar-step="1" aria-label="الشهر التالي">›</button><button type="button" id="webCalendarToday">اليوم</button></div><h3 id="webCalendarTitle"></h3><div id="webCalendarGrid" class="web-calendar-grid"></div>';
@@ -6872,7 +8410,7 @@ License: bitstream-vera
 
 */
 (function(){'use strict';const C=window.AoqatMonthlyCalendarsCore;if(!C)return;
- let loaded;function font(){if(!loaded)loaded=(async()=>{const f=new FontFace('AoqatCalendar','url("assets/fonts/amiri-quran.ttf")');await f.load();document.fonts.add(f);const numerals=new FontFace('AoqatNavyNumerals','url(data:font/woff;base64,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)',{unicodeRange:'U+0030-003A'});await numerals.load();document.fonts.add(numerals);await document.fonts.ready;})().catch(e=>{loaded=null;throw e;});return loaded;}
+ let loaded;function font(){if(!loaded)loaded=(async()=>{const f=new FontFace('AoqatCalendar','url("assets/fonts/amiri-quran.ttf")');await f.load();document.fonts.add(f);const numerals=new FontFace('AoqatNavyNumerals','url(data:font/woff;base64,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)',{unicodeRange:'U+0030-003A'});await numerals.load();document.fonts.add(numerals);/* Both calendar fonts were loaded explicitly. */})().catch(e=>{loaded=null;throw e;});return loaded;}
  async function render(model,raw,scale=1){
   await font();if(raw?.design==='navy-gold')return renderNavy(model,C.normalize(raw),scale);if(['iraqi-paper','minimal-modern','islamic-corners'].includes(raw?.design))return renderReference(model,C.normalize(raw),scale);const s=C.normalize(raw),wide=s.design==='landscape',navy=s.design==='navy-gold',iraqi=s.design==='iraqi-paper',minimal=s.design==='minimal-modern',islamic=s.design==='islamic-corners',newDesign=navy||iraqi||minimal||islamic,titleOffset=navy?39:newDesign?40:s.design==='architectural'?30:18,canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),fractions=navy?[.16,.1,...Array(6).fill(.74/6)]:[.165,.11,...Array(6).fill(.725/6)],labels=['الأيام','التاريخ','الفجر','الشروق','الظهر','العصر','المغرب','العشاء'];
   // Reserve real space for the chosen font instead of silently shrinking it.
@@ -6978,11 +8516,11 @@ License: bitstream-vera
  function text(tag,value){const e=document.createElement(tag);e.textContent=value;return e;}
  function label(name,input){const e=document.createElement('label');e.append(text('span',name),input);return e;}
  function show(title,back){if($('adhanServicesDialog')&&!$('adhanServicesDialog').hidden)$('adhanServicesBack')?.click();sequence++;const page=document.createElement('section');page.id='monthlyCalendars';page.className='mc-page';backAction=back;window.AoqatWebSettingsNavigation.sub(title,page,'main');return page;}
- function rawRows(){return typeof availablePrayerRows==='function'?availablePrayerRows(false):window.AoqatPrayerBackupRows||[];}
+ function rawRows(){let rows=typeof availablePrayerRows==='function'?availablePrayerRows(false):[];if(Array.isArray(rows)&&rows.length>=365)return rows;try{const nativeRows=JSON.parse(window.AndroidNative?.readPrayerRows?.()||'[]');if(Array.isArray(nativeRows)&&nativeRows.length>=365)return nativeRows;}catch(_){}return Array.isArray(window.AoqatPrayerBackupRows)?window.AoqatPrayerBackupRows:rows||[];}
  function model(year,month){const m=C.build(year,month,rawRows());if(m.missing.length)throw Error('مواقيت غير متاحة للأيام: '+m.missing.join('، ')+'. لا يمكن مشاركة تقويم ناقص.');return m;}
  function current(){return C.baghdad(new Date());}
  function open(){const p=show('التقاويم',null),now=current(),s=read();p.classList.add('mc-home');window.aoqatMountDailyCalendar?.(p);p.append(text('h3','التقاويم الشهرية'),text('p','اختر السنة ثم الشهر للمعاينة والمشاركة.'));
-  const actions=document.createElement('div');actions.className='mc-actions';actions.append(button('تغيير التصميم',()=>designs(now.year,now.month,open)),button('تنسيق الخط للتقويم',()=>format(now.year,now.month,open)),button('تنبيه نشر تقويم الشهر',reminder));p.append(actions);
+  const actions=document.createElement('div');actions.className='mc-actions';actions.append(button('تغيير التصميم',()=>designs(now.year,now.month,open)),button('تنسيق الخط للتقويم',()=>format(now.year,now.month,open)));p.append(actions);
   const years=[...new Set([...Array.from({length:5},(_,i)=>now.year+i),...s.years])].sort((a,b)=>a-b),grid=document.createElement('div');grid.className='mc-years';for(const year of years){const b=button('📁 '+year+' م',()=>yearView(year));b.dataset.calendarYear=year;b.append(text('small','12 تقويماً شهرياً'));grid.append(b);}p.append(grid);
   const form=document.createElement('form');form.className='mc-add-year';const input=document.createElement('input');input.type='number';input.min='2026';input.max='2200';input.step='1';input.value=now.year+5;input.setAttribute('aria-label','سنة تقاويم إضافية');const add=button('فتح سنة أخرى',()=>{});add.type='submit';form.append(label('السنة الميلادية',input),add);form.onsubmit=e=>{e.preventDefault();if(!input.reportValidity()||!input.value)return;const year=Number(input.value),settings=read();settings.years.push(year);save(settings);yearView(year);};p.append(form);
  }
@@ -7172,17 +8710,17 @@ License: bitstream-vera
     }catch(e){b.append(text('small',e.message));}
   }})();
  }
- function preview(year,month){const p=show(C.months[month-1]+' '+year,()=>yearView(year)),token=sequence,actions=document.createElement('div'),img=document.createElement('img'),status=text('p','جاري تجهيز التقويم…');let file,url,sharing=false;actions.className='mc-actions';img.className='mc-preview';img.alt='مواقيت الصلاة لمدينة الحويجة وضواحيها لشهر '+C.months[month-1]+' '+year;const share=button('مشاركة التقويم',async()=>{if(!file||sharing)return;sharing=true;share.disabled=true;try{if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});status.textContent='التقويم جاهز للمشاركة والحفظ.';}catch(e){status.textContent=e.name==='AbortError'?'تم إلغاء المشاركة.':'تعذرت المشاركة؛ يمكنك حفظ الصورة ومشاركتها من الصور.';}finally{sharing=false;share.disabled=false;}}),download=button('حفظ الصورة على الهاتف',async()=>{if(!file||!url)return;if(window.AndroidNative?.savePrayerImage){download.disabled=true;try{await window.aoqatNativeImageAction('savePrayerImage',file);status.textContent='تم حفظ صورة التقويم على الجهاز.';}catch(_){status.textContent='تعذر حفظ الصورة. أعد المحاولة.';}finally{download.disabled=false;}return;}const a=document.createElement('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();status.textContent='تم طلب حفظ صورة التقويم.';});share.disabled=download.disabled=true;actions.append(share,download,button('تغيير التصميم',()=>designs(year,month,()=>preview(year,month))),button('تنسيق الخط للتقويم',()=>format(year,month,()=>preview(year,month))));const chosen=C.designs.find(d=>d.id===read().design);p.append(actions,text('small','التصميم '+chosen.number+' — '+chosen.name),img,status);status.setAttribute('role','status');
+ function preview(year,month){const p=show(C.months[month-1]+' '+year,()=>yearView(year)),token=sequence,actions=document.createElement('div'),img=document.createElement('img'),status=text('p','جاري تجهيز التقويم…');let file,url,sharing=false;actions.className='mc-actions';img.className='mc-preview';img.style.display='none';img.alt='مواقيت الصلاة لمدينة الحويجة وضواحيها لشهر '+C.months[month-1]+' '+year;const share=button('مشاركة التقويم',async()=>{if(!file||sharing)return;sharing=true;share.disabled=true;try{if(window.AndroidNative?.sharePrayerImage)await window.aoqatNativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:img.alt});status.textContent='التقويم جاهز للمشاركة والحفظ.';}catch(e){status.textContent=e.name==='AbortError'?'تم إلغاء المشاركة.':'تعذرت المشاركة؛ يمكنك حفظ الصورة ومشاركتها من الصور.';}finally{sharing=false;share.disabled=false;}}),download=button('حفظ الصورة على الهاتف',async()=>{if(!file||!url)return;if(window.AndroidNative?.savePrayerImage){download.disabled=true;try{await window.aoqatNativeImageAction('savePrayerImage',file);status.textContent='تم حفظ صورة التقويم على الجهاز.';}catch(_){status.textContent='تعذر حفظ الصورة. أعد المحاولة.';}finally{download.disabled=false;}return;}const a=document.createElement('a');a.href=url;a.download=file.name;document.body.append(a);a.click();a.remove();status.textContent='تم طلب حفظ صورة التقويم.';});share.disabled=download.disabled=true;actions.append(share,download,button('تغيير التصميم',()=>designs(year,month,()=>preview(year,month))),button('تنسيق الخط للتقويم',()=>format(year,month,()=>preview(year,month))));const chosen=C.designs.find(d=>d.id===read().design);p.append(actions,text('small','التصميم '+chosen.number+' — '+chosen.name),img,status);status.setAttribute('role','status');
   let activeUrl;const release=()=>{if(activeUrl){URL.revokeObjectURL(activeUrl);activeUrl=null;}};const observer=new MutationObserver(()=>{if(!p.isConnected){release();observer.disconnect();}});observer.observe(document.body,{childList:true,subtree:true});
-  (async()=>{try{const canvas=await R.render(model(year,month),read()),blob=await R.blob(canvas);if(token!==sequence||!p.isConnected)return;file=new File([blob],'aoqat-hawija-'+year+'-'+String(month).padStart(2,'0')+'.png',{type:'image/png'});activeUrl=url=URL.createObjectURL(blob);img.src=url;download.disabled=false;const can=!!window.AndroidNative?.sharePrayerImage||!!navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}));share.hidden=!can;share.disabled=!can;status.textContent=can?'الصورة جاهزة للمشاركة والحفظ.':'الصورة جاهزة للحفظ؛ المشاركة المباشرة غير متاحة في هذا المتصفح.';}catch(e){if(p.isConnected)status.textContent=e.message||'تعذر تجهيز التقويم.';}})();
+  (async()=>{try{const canvas=await R.render(model(year,month),read()),blob=await R.blob(canvas);if(token!==sequence||!p.isConnected)return;file=new File([blob],'aoqat-hawija-'+year+'-'+String(month).padStart(2,'0')+'.png',{type:'image/png'});activeUrl=url=URL.createObjectURL(blob);img.src=url;img.style.display='';download.disabled=false;const can=!!window.AndroidNative?.sharePrayerImage||!!navigator.share&&(!navigator.canShare||navigator.canShare({files:[file]}));share.hidden=!can;share.disabled=!can;status.textContent=can?'الصورة جاهزة للمشاركة والحفظ.':'الصورة جاهزة للحفظ؛ المشاركة المباشرة غير متاحة في هذا المتصفح.';}catch(e){if(p.isConnected)status.textContent=e.message||'تعذر تجهيز التقويم.';}})();
  }
  function designs(year,month,back=open){const p=show('تغيير التصميم',back),token=sequence,grid=document.createElement('div');grid.className='mc-designs';p.append(text('p','اختر تصميم التقويم بألوانه الجاهزة. يمكنك تعديل الخط والألوان لاحقاً، والمواقيت لا تتغير.'),grid);let s=read();const cards=[];for(const design of C.designs){const b=button('',()=>{s=read();const preset=C.designDefaults(design.id);if(!['navy-gold','iraqi-paper','minimal-modern','islamic-corners'].includes(design.id))for(const id of Object.keys(C.groups))preset.styles[id]={...preset.styles[id],font:s.styles[id].font,size:s.styles[id].size};s=save({...preset,design:design.id,reminder:s.reminder,years:s.years});designs(year,month,back);}),img=document.createElement('img'),name=text('strong','');b.dataset.calendarDesign=design.id;img.alt='التصميم '+design.number+' — '+design.name;b.append(img,name);grid.append(b);cards.push({b,img,name,design});}function paint(){for(const {b,name,design} of cards){const active=s.design===design.id;b.dataset.enabled=String(active);b.setAttribute('aria-pressed',String(active));name.textContent=(active?'✓ ':'')+'التصميم '+design.number+' — '+design.name;}}paint();(async()=>{for(const {img,design} of cards){try{const canvas=await R.render(model(year,month),design.id===s.design?s:{...C.designDefaults(design.id),styles:Object.fromEntries(Object.entries(C.designDefaults(design.id).styles).map(([id,v])=>[id,{...v,font:['navy-gold','iraqi-paper','minimal-modern','islamic-corners'].includes(design.id)?v.font:s.styles[id].font,size:['navy-gold','iraqi-paper','minimal-modern','islamic-corners'].includes(design.id)?v.size:s.styles[id].size}])),design:design.id},.3);if(token!==sequence||!p.isConnected)return;img.src=canvas.toDataURL('image/png');}catch(e){if(p.isConnected)p.append(text('p',e.message));}}})();}
- function format(year,month,back=open){const p=show('تنسيق الخط للتقويم',back),form=document.createElement('div'),img=document.createElement('img'),status=text('p','');form.className='mc-format';img.className='mc-preview';img.alt='معاينة تنسيق التقويم';status.setAttribute('role','status');let s=read(),drawId=0,timer;
+ function format(year,month,back=open){const p=show('تنسيق الخط للتقويم',back),form=document.createElement('div'),img=document.createElement('img'),status=text('p','');form.className='mc-format';img.className='mc-preview';img.style.display='none';img.alt='معاينة تنسيق التقويم';status.setAttribute('role','status');let s=read(),drawId=0,timer;
   const group=document.createElement('select');group.id='mcElement';for(const [id,g] of Object.entries(C.groups))group.append(new Option(g.name,id));const font=document.createElement('select');font.id='mcFont';for(const [id,name] of [['Times New Roman','Times New Roman'],['AoqatCalendar','أميري'],['Arial','Arial']])font.append(new Option(name,id));const size=document.createElement('input');size.id='mcFontSize';size.type='number';size.min='16';size.max='64';const color=document.createElement('input');color.id='mcTextColor';color.type='color';const bg=document.createElement('input');bg.id='mcElementBackground';bg.type='color';const pageBg=document.createElement('input');pageBg.id='mcPageBackground';pageBg.type='color';pageBg.value=s.page;const border=document.createElement('input');border.type='color';border.id='mcBorderColor';border.value=s.border;const palette=document.createElement('select');palette.id='mcPalette';palette.append(new Option('اختيار ألوان جاهزة',''));C.palettes.forEach((v,i)=>palette.append(new Option(v.name,String(i))));
   const sizeRange=document.createElement('input');sizeRange.type='range';sizeRange.min='16';sizeRange.max='64';sizeRange.step='1';sizeRange.id='mcFontSizeRange';sizeRange.setAttribute('aria-label','تغيير حجم خط العنصر');const sizeBox=document.createElement('div');sizeBox.className='mc-size-controls';const stepSize=amount=>{size.value=Math.max(16,Math.min(64,Number(size.value||s.styles[group.value].size)+amount));size.dispatchEvent(new Event('input'));};const smaller=button('−',()=>stepSize(-1)),larger=button('+',()=>stepSize(1));smaller.id='mcFontSmaller';larger.id='mcFontLarger';smaller.setAttribute('aria-label','تصغير حجم الخط');larger.setAttribute('aria-label','تكبير حجم الخط');sizeBox.append(smaller,size,larger,sizeRange);sizeRange.oninput=()=>{size.value=sizeRange.value;size.dispatchEvent(new Event('input'));};
   form.append(label('العنصر المراد تنسيقه',group),label('نوع الخط',font),label('حجم الخط',sizeBox),label('لون الخط / النص',color),label('لون خلفية العنصر',bg),label('لون خلفية التقويم',pageBg),label('لون حدود الجدول',border),label('تناسق الألوان',palette));p.append(text('p','التنسيق يخص التقاويم فقط ويُطبّق على جميع الشهور والسنوات. المواقيت لا تتغير. يتوسع الجدول عند تكبير الخط حتى يُطبّق الحجم المختار. يبقى العنوان بسطر واحد ضمن الإطار.'),form,img,status);
   function fill(){const g=s.styles[group.value];font.value=g.font;size.value=g.size;sizeRange.value=g.size;color.value=g.color;bg.value=g.bg;}
-  async function draw(){const id=++drawId;try{const canvas=await R.render(model(year,month),s,.65);if(id===drawId&&p.isConnected){img.src=canvas.toDataURL('image/png');const applied=canvas.calendarFontSizes?.[group.value],requested=s.styles[group.value].size;status.textContent=applied&&applied<requested-.5?'التنسيق محفوظ. حجم هذا الجزء المعروض '+Math.round(applied)+' بدلاً من '+requested+' لإبقاء العنوان واسم الشهر بسطر واحد داخل الإطار.':'التنسيق محفوظ تلقائياً. حجم الخط '+requested+'.';}}catch(e){if(p.isConnected)status.textContent=e.message;}}
+  async function draw(){const id=++drawId;try{const canvas=await R.render(model(year,month),s,.65);if(id===drawId&&p.isConnected){img.src=canvas.toDataURL('image/png');img.style.display='';const applied=canvas.calendarFontSizes?.[group.value],requested=s.styles[group.value].size;status.textContent=applied&&applied<requested-.5?'التنسيق محفوظ. حجم هذا الجزء المعروض '+Math.round(applied)+' بدلاً من '+requested+' لإبقاء العنوان واسم الشهر بسطر واحد داخل الإطار.':'التنسيق محفوظ تلقائياً. حجم الخط '+requested+'.';}}catch(e){if(p.isConnected)status.textContent=e.message;}}
   function persist(){sizeRange.value=s.styles[group.value].size;s=save(s);status.textContent='جاري تحديث المعاينة…';clearTimeout(timer);timer=setTimeout(draw,100);}
   group.onchange=()=>{fill();status.textContent='تعديل: '+C.groups[group.value].name;};
   const updateStyle=(key,input)=>{const update=()=>{if(key==='size'&&(!input.value||!input.checkValidity())){status.textContent='اختر حجم خط من 16 إلى 64.';return;}s.styles[group.value][key]=key==='size'?Number(input.value):input.value;persist();};input.oninput=update;input.onchange=update;};
@@ -7191,15 +8729,15 @@ License: bitstream-vera
   palette.onchange=()=>{if(palette.value==='')return;const base=C.defaults(Number(palette.value));for(const id of Object.keys(C.groups))base.styles[id]={...base.styles[id],font:s.styles[id].font,size:s.styles[id].size};s=save({...base,design:s.design,reminder:s.reminder,years:s.years});pageBg.value=s.page;border.value=s.border;fill();draw();};fill();draw();
   p.append(button('إرجاع تنسيق التقاويم الافتراضي',()=>{s=save({...C.designDefaults(s.design),design:s.design,reminder:s.reminder,years:s.years});pageBg.value=s.page;border.value=s.border;palette.value='';fill();draw();}));
  }
- function reminder(){const p=show('تنبيه نشر تقويم الشهر',open),s=read(),toggle=button('',async()=>{s.reminder.enabled=!s.reminder.enabled;save(s);paint();if(s.reminder.enabled&&typeof Notification!=='undefined'&&Notification.permission==='default')try{await Notification.requestPermission();}catch(_){}if(!s.reminder.enabled)clearReminder();else tick();}),time=document.createElement('input');time.type='time';time.value=s.reminder.time;time.id='mcReminderTime';const info=text('p','يظهر التذكير في آخر يوم من كل شهر لتجهيز تقويم الشهر القادم ومشاركته. لا ينشر تلقائياً.');function paint(){toggle.textContent='تنبيه نهاية الشهر: '+(s.reminder.enabled?'مفعّل':'متوقف');toggle.setAttribute('aria-pressed',String(s.reminder.enabled));toggle.classList.add('mc-toggle');time.disabled=!s.reminder.enabled;}time.onchange=()=>{if(!time.checkValidity()||!time.value)return;s.reminder.time=time.value;save(s);tick();};paint();p.append(toggle,info,label('وقت التنبيه بتوقيت العراق',time),text('p','تنبيه الويب يعمل أثناء تشغيل الصفحة. إذا كانت الصفحة مغلقة بالكامل، يحتاج التنبيه المضمون بالخلفية إلى نسخة Android.'));}
+ function reminder(back=open){const p=show('تنبيه نشر تقويم الشهر',back),s=read(),toggle=button('',async()=>{s.reminder.enabled=!s.reminder.enabled;save(s);window.AndroidNative?.configureMonthlyPublishReminder?.(JSON.stringify(s.reminder));paint();if(s.reminder.enabled&&typeof Notification!=='undefined'&&Notification.permission==='default')try{await Notification.requestPermission();}catch(_){}if(!s.reminder.enabled)clearReminder();else tick();}),time=document.createElement('input');time.type='time';time.value=s.reminder.time;time.id='mcReminderTime';const info=text('p','يظهر التذكير في آخر يوم من كل شهر لتجهيز تقويم الشهر القادم ومشاركته. لا ينشر تلقائياً.');function paint(){toggle.textContent='تنبيه نهاية الشهر: '+(s.reminder.enabled?'مفعّل':'متوقف');toggle.setAttribute('aria-pressed',String(s.reminder.enabled));toggle.classList.add('mc-toggle');time.disabled=!s.reminder.enabled;}time.onchange=()=>{if(!time.checkValidity()||!time.value)return;s.reminder.time=time.value;save(s);window.AndroidNative?.configureMonthlyPublishReminder?.(JSON.stringify(s.reminder));tick();};paint();p.append(toggle,info,label('وقت التنبيه بتوقيت العراق',time),text('p','تنبيه الويب يعمل أثناء تشغيل الصفحة. إذا كانت الصفحة مغلقة بالكامل، يحتاج التنبيه المضمون بالخلفية إلى نسخة Android.'));}
  function openDate(value){const m=String(value||'').match(/^(\d{4})-(\d{2})/),now=current();const year=m?Number(m[1]):now.year,month=m?Number(m[2]):now.month;if(year<2026||year>2200||month<1||month>12)return;document.body.classList.add('design-menu-open');preview(year,month);}
  async function clearReminder(){fallbackNotification?.close();fallbackNotification=null;$('monthlyCalendarBanner')?.remove();try{const reg=await navigator.serviceWorker?.getRegistration();const notifications=await reg?.getNotifications();notifications?.filter(n=>n.data?.kind==='calendar-post-reminder').forEach(n=>n.close());}catch(_){}}
- async function deliver(event){const entry=window.AoqatReminderInbox?.add(event);$('monthlyCalendarBanner')?.remove();const banner=document.createElement('aside');banner.id='monthlyCalendarBanner';banner.setAttribute('role','alert');banner.dir='rtl';banner.append(text('strong',event.title),button('معاينة التقويم ومشاركته',()=>{openDate(event.targetDate);banner.remove();}),button('إغلاق',()=>banner.remove()));document.body.append(banner);if(typeof Notification==='undefined'||Notification.permission!=='granted')return;const options={body:event.body,icon:'/assets/icons/app-icon.svg',tag:event.key,data:{kind:'calendar-post-reminder',id:entry?.id,entry,url:'/?calendar='+event.targetDate.slice(0,7)}};try{const reg=await navigator.serviceWorker?.getRegistration();if(!read().reminder.enabled)return;if(reg)await reg.showNotification(event.title,options);else {const n=fallbackNotification=new Notification(event.title,options);n.onclick=()=>{window.focus();openDate(event.targetDate);n.close();};}}catch(_){}}
- function tick(now=new Date()){const event=C.reminderEvent(now,read());if(!event)return;let sent;try{sent=JSON.parse(localStorage.getItem(SENT)||'{}');}catch(_){sent={};}if(!sent||typeof sent!=='object'||Array.isArray(sent))sent={};if(sent[event.key])return;sent[event.key]=+now;for(const key of Object.keys(sent))if(+now-sent[key]>400*86400000)delete sent[key];localStorage.setItem(SENT,JSON.stringify(sent));deliver(event);}
+ async function deliver(event){if(window.AndroidNative?.configureMonthlyPublishReminder)return;const entry=window.AoqatReminderInbox?.add(event);$('monthlyCalendarBanner')?.remove();const banner=document.createElement('aside');banner.id='monthlyCalendarBanner';banner.setAttribute('role','alert');banner.dir='rtl';banner.append(text('strong',event.title),button('معاينة التقويم ومشاركته',()=>{openDate(event.targetDate);banner.remove();}),button('إغلاق',()=>banner.remove()));document.body.append(banner);if(typeof Notification==='undefined'||Notification.permission!=='granted')return;const options={body:event.body,icon:'/assets/icons/app-icon.svg',tag:event.key,data:{kind:'calendar-post-reminder',id:entry?.id,entry,url:'/?calendar='+event.targetDate.slice(0,7)}};try{const reg=await navigator.serviceWorker?.getRegistration();if(!read().reminder.enabled)return;if(reg)await reg.showNotification(event.title,options);else {const n=fallbackNotification=new Notification(event.title,options);n.onclick=()=>{window.focus();openDate(event.targetDate);n.close();};}}catch(_){}}
+ function tick(now=new Date()){if(window.AndroidNative?.configureMonthlyPublishReminder)return;const event=C.reminderEvent(now,read());if(!event)return;let sent;try{sent=JSON.parse(localStorage.getItem(SENT)||'{}');}catch(_){sent={};}if(!sent||typeof sent!=='object'||Array.isArray(sent))sent={};if(sent[event.key])return;sent[event.key]=+now;for(const key of Object.keys(sent))if(+now-sent[key]>400*86400000)delete sent[key];localStorage.setItem(SENT,JSON.stringify(sent));deliver(event);}
  document.addEventListener('click',e=>{if(!e.target.closest('.web-back'))return;if($('webCalendar')?.dataset.monthlyParent==='true'){e.preventDefault();e.stopImmediatePropagation();open();return;}if(!$('monthlyCalendars')||!backAction)return;e.preventDefault();e.stopImmediatePropagation();backAction();},true);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick();});window.addEventListener('storage',e=>{if(e.key===KEY&&!read().reminder.enabled)clearReminder();});setInterval(()=>tick(),30000);
  window.AoqatCalendars={open,openDate,yearView,preview,format,designs,reminder,read,tick};
- function ready(){if(!window.aoqatUIReady||!window.AoqatWebSettingsNavigation){setTimeout(ready,150);return;}const target=new URLSearchParams(location.search).get('calendar');if(target)openDate(target);tick();}ready();
+ function ready(){if(!window.aoqatUIReady||!window.AoqatWebSettingsNavigation){setTimeout(ready,150);return;}window.AndroidNative?.configureMonthlyPublishReminder?.(JSON.stringify(read().reminder));const target=new URLSearchParams(location.search).get('calendar');if(target)openDate(target);tick();}ready();
 })();
 
 ;
@@ -8563,7 +10101,7 @@ License: bitstream-vera
   function shadow(v){if(v==='black')return '4px 4px 3px #000';if(v==='gold')return '4px 4px 3px #000,0 0 10px #ffd45c';if(v==='green')return '4px 4px 3px #000,0 0 10px #26ff00';return 'none';}
   function read(k){try{return JSON.parse(localStorage.getItem(k)||'{}');}catch(_){return {};}}
   function write(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(_){}}
-  function applySaved(){const legacy=read(LEGACY_STYLE_KEY);[ADHAN_VALUE,IQAMA_VALUE].forEach(value=>{const own=read(styleKey(value)),v=Object.assign({},legacy,own);targets(value).forEach(el=>{if(v.fontFamily)el.style.setProperty('font-family',`"${v.fontFamily}",Arial,sans-serif`,'important');if(v.fontSize)el.style.setProperty('font-size',`${v.fontSize}px`,'important');if(v.fontWeight)el.style.setProperty('font-weight',v.fontWeight,'important');if(v.fontColor)el.style.setProperty('color',v.fontColor,'important');if(v.textAlign)el.style.setProperty('text-align',v.textAlign,'important');if(v.textShadow!=null)el.style.setProperty('text-shadow',shadow(v.textShadow),'important');});});}
+  function applySaved(){const legacy=read(LEGACY_STYLE_KEY);[ADHAN_VALUE,IQAMA_VALUE].forEach(value=>{const own=read(styleKey(value)),v=Object.assign({},legacy,own);targets(value).forEach(el=>{if(v.fontFamily)el.style.setProperty('font-family',`"${v.fontFamily}",Arial,sans-serif`,'important');if(v.fontSize)el.style.setProperty('font-size',`${v.fontSize}px`,'important');if(v.fontWeight)el.style.setProperty('font-weight',v.fontWeight,'important');if(v.fontColor)el.style.setProperty('color',v.fontColor,'important');if(v.textAlign)el.style.setProperty('text-align',v.textAlign,'important');if(v.textShadow!=null)el.style.setProperty('text-shadow',shadow(v.textShadow),'important');});});window.dispatchEvent(new Event('aoqatLiveCountdownStyleChanged'));}
   function apply(kind){const value=selected();if(value!==ADHAN_VALUE&&value!==IQAMA_VALUE)return;const el=document.getElementById(kind);if(!el)return;const key=styleKey(value),v=read(key);v[kind]=kind==='fontSize'?parseFloat(el.value):el.value;write(key,v);applySaved();}
   function loadControls(){const value=selected();if(value!==ADHAN_VALUE&&value!==IQAMA_VALUE)return;const t=targets(value)[0];if(!t)return;const v=Object.assign({},read(LEGACY_STYLE_KEY),read(styleKey(value))),s=getComputedStyle(t);const fam=document.getElementById('fontFamily');if(fam&&v.fontFamily&&[...fam.options].some(o=>o.value===v.fontFamily))fam.value=v.fontFamily;const sz=document.getElementById('fontSize');if(sz)sz.value=v.fontSize||Math.round(parseFloat(s.fontSize)||14);const w=document.getElementById('fontWeight');if(w&&v.fontWeight&&[...w.options].some(o=>o.value===String(v.fontWeight)))w.value=String(v.fontWeight);const c=document.getElementById('fontColor');if(c)c.value=v.fontColor||rgbToHex(s.color)||'#ffffff';const a=document.getElementById('textAlign');if(a&&v.textAlign)a.value=v.textAlign;const sh=document.getElementById('textShadow');if(sh&&v.textShadow!=null)sh.value=v.textShadow;}
   function rgbToHex(x){const m=String(x).match(/\d+/g);return m?.length>=3?'#'+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join(''):null;}
@@ -8647,5 +10185,245 @@ License: bitstream-vera
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
 })();
 
+;
+
+/* js/native-quiet-menu.js */
+/* Android APK only: independent phone quiet options under Adhan & Iqama. */
+(function(){
+  'use strict';
+  if (!window.AndroidNative?.configureAdhan) return;
+  const ids=['fajr','dhuhr','asr','maghrib','isha'];
+  const names={fajr:'الفجر',dhuhr:'الظهر',asr:'العصر',maghrib:'المغرب',isha:'العشاء'};
+  const core=window.AoqatAdhanCore;
+  let panel, state;
+  const defaultAt=()=>({enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))});
+  function read(){
+    let settings={};
+    try{settings=JSON.parse(window.AndroidNative.readAdhanSettings()||'{}')||{};}catch(_){}
+    const s=core?.normalize?.(settings)||settings;
+    if(!s.atAdhanSilent)s.atAdhanSilent=defaultAt();
+    if(!s.afterIqamaSilent)s.afterIqamaSilent={enabled:false,minutes:{}};
+    return s;
+  }
+  function store(){
+    if(!state)return;
+    window.AndroidNative.configureAdhan(JSON.stringify(state));
+    try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
+  }
+  const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
+  // WebView localizes number controls in Arabic. Text with a numeric keyboard
+  // keeps ASCII digits on screen, without changing stored integer minutes.
+  const latinDigits=value=>String(value).replace(/[٠-٩]/g,ch=>String(ch.charCodeAt(0)-0x0660)).replace(/[۰-۹]/g,ch=>String(ch.charCodeAt(0)-0x06f0));
+  function section(key,title,help,fallback){
+    const s=state[key];
+    const body=ids.map(id=>{
+      const current=num(s.minutes[id],fallback);
+      return '<div class="aq-quiet-minute"><span>'+names[id]+'</span>'+
+        '<div class="aq-quiet-stepper" role="group" aria-label="مدة الصامت لصلاة '+names[id]+'">'+
+        '<button type="button" data-quiet-adjust="-1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="تقليل مدة الصامت لصلاة '+names[id]+'">−</button>'+
+        '<input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" spellcheck="false" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" value="'+current+'" lang="en" dir="ltr" style="font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important" aria-label="مدة الصامت لصلاة '+names[id]+' بالدقائق">'+
+        '<button type="button" data-quiet-adjust="1" data-quiet-key="'+key+'" data-quiet-prayer="'+id+'" aria-label="زيادة مدة الصامت لصلاة '+names[id]+'">+</button>'+
+        '<small>دقيقة</small></div></div>';
+    }).join('');
+
+    return '<section class="aq-quiet-card"><label class="aq-quiet-switch"><span>🔕 '+title+'</span><input type="checkbox" data-quiet-enabled="'+key+'"'+(s.enabled?' checked':'')+' aria-label="'+title+'"></label>'+
+      '<p class="aq-quiet-help">'+help+'</p><div class="aq-quiet-times"'+(!s.enabled?' hidden':'')+'>'+
+      '<p class="aq-quiet-caption">المدة لكل صلاة بالدقائق؛ استخدم + و− كما في أوقات الإقامة (0 = إيقاف).</p>'+body+
+
+      '</div></section>';
+  }
+  function permission(){
+    try{return window.AndroidNative.hasQuietPolicyAccess?.()===true;}catch(_){return false;}
+  }
+  function statusPanel(){
+    const root=document.createElement('div');root.className='aq-quiet-diagnostics';
+    let data={};
+    try{data=JSON.parse(window.AndroidNative.readQuietModeStatus?.()||'{}');}
+    catch(_){root.textContent='تعذر قراءة حالة وضع الصامت من الهاتف.';return root;}
+    const line=text=>{const p=document.createElement('p');p.textContent=text;root.appendChild(p);};
+    const showTime=ms=>ms>0?new Date(ms).toLocaleTimeString('ar-IQ',{hour:'2-digit',minute:'2-digit'}):'—';
+    const name={0:'الوضع الصامت',1:'الاهتزاز',2:'الرنين الطبيعي'}[data.ringer]||'غير معروف';
+    line('حالة رنين الهاتف الآن: '+name);
+    line('عدم الإزعاج: '+(data.dnd===3?'مفعّل من إعدادات الهاتف؛ يبقى مستقلاً عن الصامت':data.dnd===1?'غير مفعّل':'مفعّل حسب إعدادات الهاتف'));
+    line('أذونات التحكم بالصامت: '+(data.permission?'متاحة':'غير متاحة')+' | المنبهات الدقيقة: '+(data.exactAlarm?'متاحة':'غير متاحة'));
+    const status={
+      never:'لم تُسجل محاولة صامت بعد',applied:'تم تفعيل الصامت بواسطة التطبيق',
+      active:'الصامت الذي فعّله التطبيق ما زال مستمراً',
+      already_silent:'كان الهاتف صامتاً أصلاً؛ لم يغيّر التطبيق الوضع',
+      permission_missing:'لم يُفعّل الصامت: صلاحية أندرويد غير متاحة',
+      exact_alarm_missing:'لم يُفعّل الصامت: منبّه أندرويد الدقيق غير مسموح، حتى لا يبقى الهاتف صامتاً بلا نهاية',
+      failed:'فشلت محاولة الصامت؛ رفض الهاتف التغيير',
+      restored:'انتهت المدة وحاول التطبيق استعادة الوضع السابق',
+      restore_failed:'تعذرت استعادة وضع الصوت السابق؛ سيعيد التطبيق المحاولة',
+      recovery_alarm_failed:'تعذر جدولة إرجاع الرنين؛ تحقق من صلاحية المنبهات الدقيقة',
+      expired:'وصل أمر الصامت بعد انتهاء المدة؛ لم يتغير رنين الهاتف'
+    };
+    line('آخر نتيجة: '+(status[data.lastResult]||'لا توجد بيانات')+(data.lastAt?' — '+showTime(data.lastAt):''));
+    if(data.scheduledStart>0&&data.deadline>0){
+      line('وقت بدء الصامت المقرر: '+showTime(data.scheduledStart)+' | نهاية المدة: '+showTime(data.deadline));
+      if(data.lastResult==='applied'&&data.lastAt>data.scheduledStart+30000)
+        line('تنبيه: تنفيذ الصامت تأخر عن موعده '+Math.round((data.lastAt-data.scheduledStart)/60000)+' دقيقة؛ راجع قيود بطارية الهاتف وصلاحية المنبهات.');
+    }
+    if(data.appOwnsQuiet&&data.activeUntil>Date.now())line('الصامت فعّال من التطبيق حتى '+showTime(data.activeUntil));
+    return root;
+  }
+  function render(refresh=true){
+    if(!panel)return;
+    if(refresh || !state)state=read();
+    panel.innerHTML='<h3 class="aq-quiet-title">🔕 تفعيل وضع الصامت</h3>'+
+      section('atAdhanSilent','تفعيل وضع صامت عند الأذان',
+        'يبدأ الصامت حسب وقت الأذان المسجّل بقاعدة البيانات، ويستمر للمدة المحددة. إذا كان صوت الأذان مفعّلاً يستمر صوت الأذان نفسه.',10)+
+      section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
+        'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
+      (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
+    // Detailed diagnostics remain available through native status APIs, but are not displayed in this simple settings page.
+    panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
+      state[input.dataset.quietEnabled].enabled=input.checked;
+      store();render(false);
+    }));
+    panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
+      const group=state[input.dataset.quietKey];
+      const entered=latinDigits(input.value.trim());
+      if(!/^\d{1,3}$/.test(entered)||Number(entered)>120){
+        input.value=String(num(group.minutes[input.dataset.quietPrayer]));return;
+      }
+      group.minutes[input.dataset.quietPrayer]=num(entered);
+      store();render(false);
+    }));
+    panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>button.addEventListener('click',()=>{
+      const group=state[button.dataset.quietKey],id=button.dataset.quietPrayer;
+      group.minutes[id]=num(num(group.minutes[id])+Number(button.dataset.quietAdjust));
+      store();render(false);
+      panel.querySelector('input[data-quiet-key="'+button.dataset.quietKey+'"][data-quiet-prayer="'+id+'"]')?.focus({preventScroll:true});
+    }));
+    panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
+  }
+  function create(){
+    if(document.getElementById('quietPanel'))return;
+    const home=document.querySelector('.sidebar .main-panel');
+    if(!home)return;
+    panel=document.createElement('section');
+    panel.id='quietPanel';
+    panel.className='panel inline-control-panel';
+    home.append(panel);
+    const style=document.createElement('style');
+    style.id='apkQuietMenuStyle';
+    style.textContent=`
+      /* Moved to its own page. Keep its original saved native setting untouched. */
+      #adhanPanel #adSilentSettingsToggle,#adhanPanel #adSilentSettings{display:none!important}
+      #quietPanel{direction:rtl!important;background:#fffefb!important;color:#234037!important;padding:12px!important;margin:0!important;border:1px solid #cad7c8!important;border-radius:14px!important;box-shadow:none!important}
+      #quietPanel .aq-quiet-title{margin:0 0 12px!important;font-size:20px!important;text-align:right!important;color:#254635!important}
+      #quietPanel .aq-quiet-card{border:1px solid #c4d5c7!important;border-radius:12px!important;margin:0 0 13px!important;padding:12px!important;background:#fbfdf9!important}
+      #quietPanel .aq-quiet-switch{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;padding:4px 0!important;font-weight:700!important;font-size:17px!important;color:#214a36!important}
+      #quietPanel .aq-quiet-switch input{width:24px!important;height:24px!important;flex:none!important;accent-color:#158550!important}
+      #quietPanel .aq-quiet-help{font-size:13px!important;line-height:1.7!important;color:#51665a!important;margin:9px 0!important}
+      #quietPanel .aq-quiet-times{display:grid!important;grid-template-columns:1fr!important;gap:5px!important}
+      #quietPanel .aq-quiet-times[hidden]{display:none!important}
+      #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
+      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:8px!important;direction:ltr!important;flex:0 0 auto!important;padding:5px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:13px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 4px #1d533b22!important}
+      #quietPanel .aq-quiet-stepper button{width:43px!important;height:45px!important;min-height:45px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:27px!important}
+      #quietPanel .aq-quiet-stepper input{width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
+      #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
+      #quietPanel .aq-quiet-stepper input{font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important;unicode-bidi:isolate!important}
+      #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
+      #quietPanel .aq-quiet-presets{display:flex!important;flex-wrap:wrap!important;gap:6px!important}
+      #quietPanel .aq-quiet-presets button{min-height:36px!important;padding:5px 9px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:var(--wt-surface2,#e7f0e7)!important;color:var(--wt-text,#234037)!important;font-size:13px!important}
+      #quietPanel .aq-quiet-minute{border-bottom:0!important}
+      #quietPanel .aq-quiet-card{background:var(--wt-surface,#fbfdf9)!important;border-color:var(--wt-border,#c4d5c7)!important}
+      #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#234037)!important;border-color:var(--wt-border,#cad7c8)!important}
+
+      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:63px!important;margin:4px 0!important;color:#234037!important}
+      #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
+      #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
+      #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}
+      /* Compact iqama list on phones without hiding any rows or user choices. */
+      #webSubBody #iqamaPanel{box-sizing:border-box!important;width:100%!important;padding:10px 12px!important;margin:0!important;border-radius:12px!important;overflow:visible!important}
+      #webSubBody #iqamaPanel .iqama-help,#webSubBody #iqamaPanel .iqama-friday-help{margin:0 0 7px!important;line-height:1.5!important;font-size:13px!important}
+      #webSubBody #iqamaPanel label{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:8px!important;min-height:43px!important;max-height:none!important;margin:2px 0!important;padding:1px 0!important;font-size:16px!important;line-height:1.4!important}
+      #webSubBody #iqamaPanel select{width:138px!important;max-width:46%!important;height:38px!important;min-height:38px!important;padding:5px!important;border-radius:8px!important;font-size:16px!important}
+      #webSubBody #iqamaPanel h3,#webSubBody #iqamaPanel h2{margin:10px 0 5px!important;font-size:19px!important}
+      #webSubBody #iqamaPanel hr{margin:10px 0!important}
+      #webSubBody #iqamaPanel .switch-control-btn,#webSubBody #iqamaPanel button{min-height:43px!important;padding:6px 10px!important;margin:5px 0!important}
+      
+    `;
+    document.head.append(style);
+    render();
+  }
+  window.AoqatApkQuietSettings={render,read};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',create,{once:true});
+  else create();
+})();
+
+;
+
+/* js/native-screen-alerts.js */
+(function(){'use strict';
+  // APK only: the web app does not control the physical phone's lock screen.
+  const native=window.AndroidNative;
+  if(!native?.readScreenWakeEnabled)return;
+  function el(tag,text,klass){
+    const n=document.createElement(tag);if(text!=null)n.textContent=text;
+    if(klass)n.className=klass;return n;
+  }
+  function state(){
+    try{return JSON.parse(native.screenWakeStatus?.()||'{}');}catch(_){return{};}
+  }
+  function style(){
+    if(document.getElementById('aoqat-screen-alert-style'))return;
+    const s=el('style');s.id='aoqat-screen-alert-style';
+    s.textContent=[
+      '.asw-page{direction:rtl;padding:18px 12px 25px;font:inherit;color:var(--wt-text,#3f3425);max-width:720px;margin:auto}',
+      '.asw-card{background:linear-gradient(100deg,#fffdf8,#f6ebd5);border:1px solid #d9c69d;border-radius:16px;padding:17px 15px;margin-bottom:13px}',
+      '.asw-card h3{margin:0 0 9px;color:#225c48;font-size:19px}.asw-card p{margin:8px 0;color:#675d4b;font-size:14px;line-height:1.8}',
+      '.asw-switch{width:100%;min-height:56px;background:#e6e5dd;color:#493e2d;border:1px solid #bdaa7e;border-radius:13px;padding:12px;font:inherit;font-weight:750;font-size:17px;cursor:pointer}',
+      '.asw-switch.enabled{background:#176e56;color:#fff;border-color:#176e56}',
+      '.asw-permission{width:100%;padding:12px;min-height:48px;background:#f5ebd4;border:1px solid #bba16c;border-radius:12px;font:inherit;font-size:15px;color:#37583e;cursor:pointer}',
+      '.asw-state{font-size:14px;line-height:1.8;color:#665b45;margin:13px 0 0}',
+      '.asw-switch:focus-visible,.asw-permission:focus-visible{outline:3px solid #ba9244;outline-offset:3px}',
+      // The hosted web calendar uses an outline 32x32 SVG. Keep the exact
+      // intrinsic size and stroke in the APK drawer, regardless of OEM font/emoji.
+      '#webDrawerMain .web-drawer-row[data-drawer="calendar"] .ico{display:inline-flex!important;justify-content:center!important;align-items:center!important;flex-shrink:0!important;width:30px!important;height:32px!important}',
+      '#webDrawerMain .web-drawer-row[data-drawer="calendar"] .ico svg{width:28px!important;height:28px!important;display:block!important;fill:none!important;stroke:currentColor!important;vertical-align:middle!important}'
+    ].join('');document.head.append(s);
+  }
+  function open(){
+    style();
+    const screen=el('section',null,'asw-page'),card=el('div',null,'asw-card');
+    card.append(el('h3','💡 إضاءة شاشة الهاتف'),el('p','عند وصول أذانٍ مفعّل، أو إشعار صلاة اخترته، أو منبّه الصلاة، أو تنبيه النشر، يطلب التطبيق إضاءة شاشة القفل وفتح التنبيه بملء الشاشة.'));
+    const toggle=el('button',null,'asw-switch');toggle.type='button';toggle.id='androidWakeScreenToggle';
+    const status=el('p',null,'asw-state');status.id='androidWakeScreenStatus';
+    const access=el('button','أذونات الإشعارات والعرض بملء الشاشة','asw-permission');access.type='button';access.id='androidWakeScreenAccess';
+    function render(){
+      const data=state(),on=!!native.readScreenWakeEnabled();
+      toggle.classList.toggle('enabled',on);
+      toggle.setAttribute('aria-pressed',String(on));
+      toggle.textContent=on?'💡 إضاءة شاشة الهاتف: تشغيل':'💡 إضاءة شاشة الهاتف: إيقاف';
+      status.textContent=!on?'الشاشة لا تُضاء بواسطة التطبيق، لكن الأذان والتنبيهات والأصوات تستمر بشكل طبيعي.':
+        !data.notifications?'فعّل إذن الإشعارات من إعدادات الهاتف.':
+        !data.fullScreen?'يجب السماح بعرض التنبيهات بملء الشاشة من إعدادات أندرويد 14 أو الأحدث.':
+        'إضاءة الشاشة مفعّلة، وأذونات الإشعارات والعرض بملء الشاشة متاحة.';
+    }
+    toggle.onclick=()=>{native.configureScreenWake(!native.readScreenWakeEnabled());render();};
+    access.onclick=()=>native.requestScreenWakeAccess?.();
+    card.append(toggle,status);
+    screen.append(card,access,
+      el('p','مهم: على بعض أجهزة أندرويد، عند فتح الهاتف بالفعل قد تظهر نافذة علوية بدل ملء الشاشة؛ هذا سلوك يحدده النظام. تنبيه الصلاة المنفصل لا يظهر إلا إذا فعّله المستخدم.',
+        'asw-state'));
+    window.AoqatWebSettingsNavigation?.sub('إضاءة شاشة الهاتف',screen,'alertSettings');
+    render();
+  }
+  // Export before drawer initialization; the settings drawer is built later.
+  window.AoqatScreenAlerts={open};
+  style();
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden&&document.getElementById('androidWakeScreenStatus')){
+      const active=document.getElementById('androidWakeScreenToggle');
+      const data=state();
+      if(active && data.enabled)document.getElementById('androidWakeScreenStatus').textContent=
+        !data.notifications?'فعّل إذن الإشعارات من إعدادات الهاتف.':
+        !data.fullScreen?'اسمح للتطبيق بعرض التنبيهات بملء الشاشة في إعدادات الهاتف.':'أذونات إضاءة الشاشة متاحة.';
+    }
+  });
+})();
 ;
 document.addEventListener('DOMContentLoaded',()=>requestAnimationFrame(()=>window.dispatchEvent(new CustomEvent('aoqatModulesReady'))),{once:true});

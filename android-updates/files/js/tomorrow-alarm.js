@@ -6,11 +6,13 @@
  localStorage.setItem(KEY,enabled?'1':'0');
  // Native Android is the only audio/snooze owner. No WebAudio or browser alarm survives in the APK.
  window.PrayerTomorrowAlarm={stop:()=>N.stopPublishAlarm?.()};
- function mount(){const panel=document.getElementById('switchPanel');if(!panel||document.getElementById('tomorrowAlarmEnable'))return;
-  const b=document.createElement('button');b.id='tomorrowAlarmEnable';b.type='button';b.dataset.androidNativeAlarm='1';
+ function mount(){const panel=document.getElementById('switchPanel');if(!panel||document.getElementById('publishSnoozeMinutes'))return;
+  const b=document.getElementById('tomorrowNotifyToggle')||document.createElement('button');
+  if(!b.parentElement)panel.insertBefore(b,document.getElementById('tomorrowSwitchStatus'));
+  b.type='button';b.dataset.androidNativeAlarm='1';
   function draw(){b.setAttribute('aria-pressed',String(enabled));b.dataset.enabled=String(enabled);b.dataset.androidAlarmEnabled=enabled?'1':'0';b.className='switch-control-btn'+(enabled?' enabled is-on':'');b.textContent='🔔 تنبيه النشر على الهاتف: '+(enabled?'تشغيل':'إيقاف');}
   b.onclick=()=>{enabled=!enabled;localStorage.setItem(KEY,enabled?'1':'0');if(enabled)N.enableAlarm();else N.disableAlarm();draw();};
-  panel.insertBefore(b,document.getElementById('tomorrowSwitchStatus'));draw();
+  draw();
   const label=document.createElement('label');label.textContent='مدة غفوة تنبيه النشر';
   const select=document.createElement('select');select.id='publishSnoozeMinutes';
   for(let m=1;m<=30;m++)select.add(new Option(m+' دقائق',m));

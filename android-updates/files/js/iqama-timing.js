@@ -1,6 +1,6 @@
 "use strict";
 (function () {
-  const OPTIONS = [5, 10, 15, 20, 25, 30];
+  const OPTIONS = Array.from({length:30},(_,index)=>index+1);
 
   function normalize(saved, defaults) {
     const values = {};

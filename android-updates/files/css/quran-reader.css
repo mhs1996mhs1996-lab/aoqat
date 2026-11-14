@@ -325,3 +325,435 @@ body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-sheet{z-i
 /* Final visibility guard: toolbar-open mode fully occludes quick save; reading mode retains it. */
 body.quran-reader-open:not(.quran-reader-immersive) #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{visibility:hidden!important;opacity:0!important;pointer-events:none!important}
 body.quran-reader-open.quran-reader-immersive #webDrawerSub #prayerServicePanel #aqReader #aqQuickSave{visibility:visible!important;opacity:1!important;pointer-events:auto!important}
+
+
+/* QCF V2: a prepared page must have the same exact geometry during the
+   finger drag, during the settling animation and after DOM adoption.
+   Previously it changed from an absolutely placed gallery neighbour to a
+   flex item at settle(), causing a visible secondary shift after the swipe.
+   Keep both nodes on the same stable layer; the JS continues to move ONLY
+   their compositor transforms. Scoped to web QCF, not original SVG or APK. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] #aqPaper>.aq-page-text{
+  position:absolute!important;
+  top:6px!important;
+  left:max(9px, calc((100% - 640px)/2))!important;
+  margin:0!important;
+}
+
+
+/* Quran pages 1–2 only: continuous ornamental title plaque matching the
+   printed Madinah opening spread. The decoration belongs to the ENTIRE
+   banner SVG; there are no corner flowers floating on top of Makki/Madani.
+   All three real data fields remain readable inside its central cartouche. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-page.aq-qcf-opening{
+  /* Generic Quran page adds .22px synthetic stroke. Native QCF V2 glyphs
+     must use their OWN genuine weight, with no inherited thickening. */
+  -webkit-text-stroke:0!important;
+  display:grid!important;
+  position:relative!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:min-content minmax(0,1fr)!important;
+  justify-content:stretch!important;
+  align-content:stretch!important;
+  justify-items:stretch!important;
+  align-items:stretch!important;
+  width:100%!important;
+  gap:0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top{
+  position:relative!important;
+  grid-row:1!important;
+  grid-column:1!important;
+  display:block!important;
+  isolation:isolate!important;
+  width:100%!important;
+  height:clamp(43px,5.4vh,53px)!important;
+  min-height:43px!important;
+  padding:0!important;
+  margin:clamp(4px,1vh,9px) 0 0!important;
+  box-sizing:border-box!important;
+  align-self:start!important;
+  justify-self:stretch!important;
+  overflow:hidden!important;
+  border:0!important;
+  background:transparent!important;
+  z-index:2!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top>.aq-qcf-opening-art{
+  position:absolute!important;
+  display:block!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  z-index:0!important;
+  pointer-events:none!important;
+  background:none!important;
+}
+/* The patterned wings occupy the OUTER sixth of the real plaque; metadata
+   occupies the middle cartouche, never overlapping a flower. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top>.aq-qcf-opening-info{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,26fr) minmax(0,48fr) minmax(0,26fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+  align-items:center!important;
+  justify-items:stretch!important;
+  direction:rtl!important;
+  width:62%!important;
+  height:100%!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0 auto!important;
+  padding:3px 0!important;
+  box-sizing:border-box!important;
+  border:0!important;
+  border-radius:0!important;
+  outline:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  color:#503923!important;
+  z-index:1!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top>.aq-qcf-opening-info>span{
+  position:static!important;
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:auto!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:visible!important;
+  white-space:nowrap!important;
+  line-height:1.4!important;
+  text-shadow:none!important;
+  color:#503923!important;
+  font-style:normal!important;
+  transform:none!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top>.aq-qcf-opening-info>.aq-surah-info-count{
+  grid-column:1!important;
+  text-align:center!important;
+  font:600 clamp(9.5px,2.8vw,15px)/1.35 Tahoma,Arial,sans-serif!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top>.aq-qcf-opening-info>.aq-surah-info-name{
+  grid-column:2!important;
+  text-align:center!important;
+  font:600 clamp(13px,3.7vw,21px)/1.35 AoqatQuran,'Traditional Arabic',serif!important;
+  letter-spacing:0!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top>.aq-qcf-opening-info>.aq-surah-info-kind{
+  grid-column:3!important;
+  text-align:center!important;
+  font:600 clamp(9.5px,2.8vw,15px)/1.35 Tahoma,Arial,sans-serif!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner{
+  position:relative!important;
+  grid-column:1!important;
+  grid-row:2!important;
+  z-index:1!important;
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  align-items:stretch!important;
+  align-self:center!important;
+  justify-self:stretch!important;
+  flex:0 0 auto!important;
+  width:100%!important;
+  max-width:100%!important;
+  height:auto!important;
+  min-height:0!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:0 2px!important;
+  gap:clamp(4px,.7vh,9px)!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  transform:none!important;
+  overflow:visible!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner::before,
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner::after{
+  display:none!important;
+  content:none!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner>.aq-qcf-line{
+  display:flex!important;
+  flex:0 0 auto!important;
+  align-items:center!important;
+  justify-content:center!important;
+  width:100%!important;
+  min-width:0!important;
+  height:auto!important;
+  min-height:0!important;
+  gap:clamp(0px,.2vw,2px)!important;
+  font-family:var(--aq-qcf-font),serif!important;
+  font-weight:400!important;
+  -webkit-text-stroke:0!important;
+  line-height:1.3!important;
+  overflow:visible!important;
+  white-space:nowrap!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner>.aq-qcf-bismillah{
+  flex:0 0 auto!important;
+  min-height:0!important;
+  width:100%!important;
+  margin:0!important;
+  /* For page 2, use the exact page-1 QCF V2 Basmala word glyphs.
+     That guarantees the same actual font outlines as Al-Fatiha. Fitting
+     assigns one common size to all QCF lines on pages 1 and 2. */
+  font-family:var(--aq-qcf-font,AoqatQuran),serif!important;
+  font-size:clamp(29px,7.9vw,35px)!important;
+  font-weight:400!important;
+  line-height:1.3!important;
+  -webkit-text-stroke:0!important;
+  text-rendering:auto!important;
+  color:var(--qr-ink)!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"]
+.aq-qcf-opening>.aq-qcf-opening-inner>.aq-qcf-authentic-bismillah .aq-qcf-basmala-word{
+  font-family:inherit!important;
+  font-weight:400!important;
+  -webkit-text-stroke:0!important;
+  flex:0 0 auto!important;
+  white-space:pre!important;
+  letter-spacing:0!important;
+  color:var(--qr-ink)!important;
+  cursor:default!important;
+  pointer-events:none!important;
+}
+@media(max-height:600px){
+  body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-top{
+    height:39px!important;
+    min-height:39px!important;
+    margin-top:3px!important;
+  }
+  body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-opening>.aq-qcf-opening-inner{
+    gap:2px!important;
+  }
+}
+
+
+/* Selected design 8, WEB QCF V2 only, all 114 surahs / 604 pages.
+   One integrated gilded cartouche with gently scalloped tips and a matching
+   rosette at each end. Do not affect Quran word glyphs or page fit metrics. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque{
+  position:relative!important;
+  isolation:isolate!important;
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  box-sizing:border-box!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  background:transparent!important;
+  overflow:hidden!important;
+  z-index:1!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-style8-heading{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:center!important;
+  align-items:stretch!important;
+  width:100%!important;
+  min-width:0!important;
+  overflow:visible!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-style8-heading>.aq-qcf-surah-plaque{
+  height:clamp(29px,4.8vh,44px)!important;
+  min-height:0!important;
+  max-height:100%!important;
+  flex:0 1 auto!important;
+  align-self:stretch!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-style8-art,
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-art{
+  display:block!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  margin:0!important;
+  border:0!important;
+  z-index:0!important;
+  pointer-events:none!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info{
+  display:grid!important;
+  position:relative!important;
+  grid-template-columns:minmax(0,26fr) minmax(0,48fr) minmax(0,26fr)!important;
+  direction:rtl!important;
+  align-items:center!important;
+  justify-items:stretch!important;
+  width:60%!important;
+  min-width:0!important;
+  max-width:60%!important;
+  height:100%!important;
+  min-height:0!important;
+  margin:0 auto!important;
+  padding:2px 0!important;
+  box-sizing:border-box!important;
+  border:0!important;
+  background:transparent!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  overflow:visible!important;
+  z-index:1!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info>span{
+  position:static!important;
+  display:block!important;
+  min-width:0!important;
+  max-width:100%!important;
+  width:100%!important;
+  padding:0!important;
+  margin:0!important;
+  box-sizing:border-box!important;
+  overflow:visible!important;
+  white-space:nowrap!important;
+  color:#573b25!important;
+  -webkit-text-stroke:0!important;
+  text-shadow:none!important;
+  line-height:1.3!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info>.aq-surah-info-count{
+  grid-column:1!important;
+  text-align:center!important;
+  font:600 clamp(9px,2.65vw,14px)/1.3 Tahoma,Arial,sans-serif!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info>.aq-surah-info-name{
+  grid-column:2!important;
+  text-align:center!important;
+  font:600 calc(clamp(11px,3.35vw,18px) * var(--aq-surah-title-scale,1))/1.3 AoqatQuran,'Traditional Arabic',serif!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-surah-plaque>.aq-qcf-opening-info>.aq-surah-info-kind{
+  grid-column:3!important;
+  text-align:center!important;
+  font:600 clamp(9px,2.65vw,14px)/1.3 Tahoma,Arial,sans-serif!important;
+}
+
+/* QCF V2 ayah medallion: SINGLE authentic rosette, no second SVG/CSS
+   border or extra geometric figure. The glyph already contains both the
+   decorative circle and its numeral; overlaying ::before made it double.
+   Paint only the span's own background, which does not alter line width. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-marker{
+  --qcf-rosette-tint:#f0dbac;
+  --qcf-rosette-ink:#995b29;
+  color:var(--qcf-rosette-ink)!important;
+  background:radial-gradient(circle closest-side,var(--qcf-rosette-tint) 0%,var(--qcf-rosette-tint) 51%,transparent 80%) center/100% 100% no-repeat!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  outline:0!important;
+  text-shadow:none!important;
+  filter:none!important;
+  -webkit-text-stroke:0!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-marker::before,
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-marker::after{
+  content:none!important;
+  display:none!important;
+  background:none!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=night][data-edition="qcf2-font"] .aq-qcf-marker{
+  --qcf-rosette-tint:#473723;
+  --qcf-rosette-ink:#f3d494;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=green][data-edition="qcf2-font"] .aq-qcf-marker{
+  --qcf-rosette-tint:#e5d6a8;
+  --qcf-rosette-ink:#84552d;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=blue][data-edition="qcf2-font"] .aq-qcf-marker{
+  --qcf-rosette-tint:#ebdbb1;
+  --qcf-rosette-ink:#875229;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=contrast][data-edition="qcf2-font"] .aq-qcf-marker{
+  --qcf-rosette-tint:#ffdc82;
+  --qcf-rosette-ink:#111;
+}
+
+/* Selected ayah ornament #1, isolated to the classic text reader. The authentic QCF V2 glyphs remain untouched. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number{
+  position:relative!important;isolation:isolate!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  min-width:1.85em!important;height:1.85em!important;padding:0!important;margin-inline:.08em!important;
+  border:0!important;border-radius:0!important;box-shadow:none!important;background:transparent!important;
+  color:#6e4429!important;font-family:Tahoma,Arial,sans-serif!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number::before{
+  content:""!important;display:block!important;position:absolute!important;inset:0!important;
+  background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%20100%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23aa7c45%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M50%204%20Q59%2013%2070%2011%20Q74%2023%2089%2030%20Q87%2041%2096%2050%20Q87%2059%2089%2070%20Q74%2077%2070%2089%20Q59%2087%2050%2096%20Q41%2087%2030%2089%20Q26%2077%2011%2070%20Q13%2059%204%2050%20Q13%2041%2011%2030%20Q26%2023%2030%2011%20Q41%2013%2050%204Z%22%2F%3E%3Cpath%20d%3D%22M50%2010%20Q60%2019%2068%2017%20Q72%2029%2083%2032%20Q81%2042%2090%2050%20Q81%2058%2083%2068%20Q72%2071%2068%2083%20Q60%2081%2050%2090%20Q40%2081%2032%2083%20Q28%2071%2017%2068%20Q19%2058%2010%2050%20Q19%2042%2017%2032%20Q28%2029%2032%2017%20Q40%2019%2050%2010Z%22%2F%3E%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2231%22%2F%3E%3Cpath%20d%3D%22M50%2012V19%20M50%2081V88%20M12%2050H19%20M81%2050H88%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") center/contain no-repeat!important;pointer-events:none!important;z-index:-1!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number .aq-ayah-rosette{display:none!important}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader .aq-ayah-number .aq-ayah-digits{position:relative!important;z-index:1!important;font-size:.8em!important}
+
+/* Ornament selection 1: fitted frame, never reflow the QCF text. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah{
+  display:inline-grid!important;place-items:center!important;position:relative!important;
+  width:1.12em!important;height:1.12em!important;vertical-align:middle!important;
+  isolation:isolate!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-frame{
+  position:absolute!important;inset:0!important;width:100%!important;height:100%!important;
+  pointer-events:none!important;z-index:0!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-glyph{
+  position:relative!important;z-index:1!important;font:inherit!important;color:inherit!important;
+  transform:scale(.75)!important;display:inline-block!important;
+}
+
+/* Exact selection #1 rendering in the active QCF V2 reader.
+   Turn off legacy "sprayed yellow" rosette styling and draw only one medal. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-word.aq-qcf-marker{
+  background:none!important;border:0!important;box-shadow:none!important;
+  color:#995b29!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah{
+  display:inline-grid!important;place-items:center!important;
+  position:relative!important;width:1.12em!important;height:1.12em!important;
+  min-width:1.12em!important;line-height:1!important;vertical-align:middle!important;
+  isolation:isolate!important;overflow:visible!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-frame{
+  display:block!important;position:absolute!important;inset:0!important;
+  width:100%!important;height:100%!important;pointer-events:none!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-number{
+  display:block!important;position:relative!important;z-index:1!important;
+  font-family:"Traditional Arabic", "Amiri", serif!important;font-size:.47em!important;
+  font-weight:700!important;line-height:1!important;color:#704825!important;
+  transform:translateY(-.01em)!important;white-space:nowrap!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=night][data-edition="qcf2-font"] .aq-qcf-selected-ayah-number{
+  color:#f4d6a8!important;
+}
+
+/* Keep QCF original codepoints available for correctness checks while the
+   user's selected ornament and matching Arabic numeral are actually painted. */
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah-glyph{
+  visibility:hidden!important;display:inline-block!important;font:inherit!important;
+  position:absolute!important;inset:0!important;pointer-events:none!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-edition="qcf2-font"] .aq-qcf-selected-ayah::after{
+  content:attr(data-ayah-number)!important;display:grid!important;place-items:center!important;
+  position:absolute!important;inset:0!important;z-index:2!important;
+  font-family:"Traditional Arabic","Amiri",serif!important;font-size:.47em!important;
+  font-weight:700!important;line-height:1!important;color:#704825!important;
+  pointer-events:none!important;white-space:nowrap!important;
+}
+body.quran-reader-open #webDrawerSub #prayerServicePanel #aqReader[data-theme=night][data-edition="qcf2-font"] .aq-qcf-selected-ayah::after{
+  color:#f4d6a8!important;
+}

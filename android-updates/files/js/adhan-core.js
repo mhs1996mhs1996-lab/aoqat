@@ -27,6 +27,7 @@
       partial: false,
       customEnd: 35,
       overrideSilent: false,
+      audibility: Object.fromEntries(ids.map((id) => [id, {silent:false,dnd:false}])),
       vibrate: false,
       pattern: "short",
       screen: false,
@@ -40,6 +41,7 @@
         enabled: false,
         minutes: Object.fromEntries(ids.map((id) => [id, 0])),
       },
+      atAdhanSilent: {enabled:false,minutes:Object.fromEntries(ids.map(id=>[id,10]))},
       modes: Object.fromEntries([...ids, "friday"].map((id) => [id, "sound"])),
     };
   }
@@ -79,6 +81,15 @@
       if (Number.isFinite(n))
         d.afterIqamaSilent.minutes[id] = Math.max(0, Math.min(120, Math.floor(n)));
     }
+    for (const id of ids) {
+      // Existing users keep their previous adhan override preference until
+      // they explicitly select the new per-prayer silent/DND switches.
+      const selected = s.audibility?.[id];
+      d.audibility[id].silent = selected ? selected.silent === true : s.overrideSilent === true;
+      d.audibility[id].dnd = selected ? selected.dnd === true : s.overrideSilent === true;
+    }
+    d.atAdhanSilent.enabled=s.atAdhanSilent?.enabled===true;
+    for(const id of ids){const n=Number(s.atAdhanSilent?.minutes?.[id]);if(Number.isFinite(n))d.atAdhanSilent.minutes[id]=Math.max(0,Math.min(120,Math.floor(n)));}
     d.friday = normalizeFriday(s.friday);
     return d;
   }

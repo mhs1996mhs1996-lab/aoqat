@@ -50,8 +50,8 @@
    list.querySelectorAll('[data-dhikr-reset]').forEach(c=>c.onclick=()=>{const i=Number(c.dataset.dhikrReset),x=data[kind][i],n=x.count??0,button=list.querySelector('[data-dhikr="'+i+'"]');remaining[kind+':'+i]=n;button.dataset.remaining=String(n);button.disabled=false;button.textContent=x.count==null?'عدد التكرار: '+n:'العدد المتبقي: '+n;move(positions[kind]||0);});
    el.querySelector('#fridayReminderHost')?.remove();
    el.querySelector('#communityPostControls-friday')?.remove();
-   if(kind==='friday'){window.AoqatFridayReminders?.mount(page);window.AoqatCommunityPosts?.mount('friday',page);}
-   window.AoqatAzkarReminders?.mount(page,kind);
+   // Reminder controls were moved to "ضبط التنبيهات"; the original azkar content remains.
+   if(kind==='friday')window.AoqatCommunityPosts?.mount('friday',page);
    move(positions[kind]||0);
    document.getElementById('webSubBody')?.scrollTo(0,0);el.querySelector('#adAzkarBack').focus({preventScroll:true});
   }

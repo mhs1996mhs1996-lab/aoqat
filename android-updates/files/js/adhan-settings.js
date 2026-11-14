@@ -44,6 +44,8 @@
     locationBearing,
     openSection = "",
     silentSettingsOpen = false,
+    audibilityOpen = false,
+    audibilityHelpOpen = false,
     quietWindow = null,
     selectedSurah = "1",
     azkarKind = "",
@@ -216,7 +218,7 @@
   function fridayMarkup(){const f=state.friday;const checkF=(k,label)=>`<label>${label}<input type="checkbox" data-friday="${k}" ${f[k]?'checked':''}></label>`;const numberF=(k,label,min,max)=>`<label>${label}<input type="number" data-friday="${k}" min="${min}" max="${max}" step="1" value="${f[k]}"></label>`;return `<section id="adSection-friday" class="ad-section" hidden><div class="ad-card"><button type="button" id="adFridayBack" class="ad-inner-back">‹ رجوع إلى الأذان والتنبيه</button><h3>تخصيص صلاة الجمعة</h3>${checkF('enabled','تفعيل تخصيص صلاة الجمعة')}<p class="ad-note">الأذان الأول قبل وقت الظهر من قاعدة البيانات بـ15 دقيقة، والثاني بوقت الظهر. عند التفعيل تُستبدل إعدادات الظهر يوم الجمعة فقط؛ تبقى محفوظة لبقية الأيام.</p><fieldset ${f.enabled?'':'disabled'}>${numberF('reminder','بدء إشعار الأذان الأول قبله (دقيقة)',1,180)}${numberF('sermon','مدة عدّاد مضى على الخطبة (دقيقة)',1,120)}${checkF('firstSound','تشغيل صوت الأذان الأول')}${checkF('secondSound','تشغيل صوت الأذان الثاني')}<p class="ad-note">يُستخدم المؤذن ومستوى الصوت المختاران في «صوت الأذان». عدّاد باقي على الخطبة: 15 دقيقة.</p>${checkF('quiet','تفعيل الصامت أثناء الجمعة')}<label>وضع الهاتف<select data-friday="quietMode"><option value="silent" ${f.quietMode==='silent'?'selected':''}>صامت</option><option value="dnd" ${f.quietMode==='dnd'?'selected':''}>عدم الإزعاج</option></select></label><label>بدء الصامت<select data-friday="quietTiming"><option value="default" ${f.quietTiming==='default'?'selected':''}>قبل الأذان الأول بـ15 دقيقة</option><option value="custom" ${f.quietTiming==='custom'?'selected':''}>وقت مخصص قبل الأذان الأول</option></select></label>${f.quietTiming==='custom'?numberF('quietBefore','الصامت قبل الأذان الأول (دقيقة)',0,180):''}</fieldset><p class="ad-note">ينتهي الصامت بانتهاء مدة الخطبة ويُستعاد وضع الهاتف السابق. ${native?'الصامت وإشعار الخلفية يحتاجان أذونات Android.':'الويب يعرض العدادات والإشعار أثناء تشغيل الصفحة؛ التحكم بصامت الهاتف والخلفية يعملان في تطبيق Android.'}</p>${native?'<button type="button" id="adFridayPermissions">أذونات إشعار الجمعة والصامت</button>':''}</div></section>`;}
   function silentSettingsMarkup(){
     const s=state.afterIqamaSilent;
-    return `<button type="button" id="adSilentSettingsToggle" class="ad-section-toggle ad-silent-toggle" aria-expanded="false" aria-controls="adSilentSettings">🤫 تفعيل وضع صامت بعد الإقامة</button><div id="adSilentSettings" class="ad-silent-settings" hidden><label>وضع صامت بعد الإقامة<input id="adSilentAfterEnabled" type="checkbox" ${s.enabled ? 'checked' : ''}></label><p class="ad-note">يبدأ عند الإقامة حسب المدة المحددة لكل صلاة في أوقات الإقامة. حدّد مدة الصامت بالدقائق؛ صفر لإيقافه لهذه الصلاة. الجمعة تتبع إعداد الظهر.</p><fieldset ${s.enabled ? '' : 'disabled'}>${C.ids.map(id=>`<label>${names[id]}<span class="ad-minute-control"><input type="number" min="0" max="120" step="1" data-silent-minutes="${id}" aria-label="مدة الصامت بعد إقامة ${names[id]}" value="${s.minutes[id]}"><span>دقيقة</span></span></label>`).join('')}</fieldset><p class="ad-note">يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.</p></div>`;
+    return `<button type="button" id="adSilentSettingsToggle" class="ad-section-toggle ad-silent-toggle" aria-expanded="false" aria-controls="adSilentSettings">🤫 تفعيل وضع صامت بعد الإقامة</button><div id="adSilentSettings" class="ad-silent-settings" hidden><label>وضع صامت بعد الإقامة<input id="adSilentAfterEnabled" type="checkbox" ${s.enabled ? 'checked' : ''}></label><p class="ad-note">يبدأ عند الإقامة حسب المدة المحددة لكل صلاة في أوقات الإقامة. حدّد مدة الصامت بالدقائق؛ صفر لإيقافه لهذه الصلاة. الجمعة تتبع إعداد الظهر.</p><fieldset ${s.enabled ? '' : 'disabled'}>${C.ids.map(id=>`<label>${names[id]}<span class="ad-minute-control"><input type="number" min="0" max="120" step="1" data-silent-minutes="${id}" aria-label="مدة الصامت بعد إقامة ${names[id]}" value="${s.minutes[id]}"><span>دقيقة</span></span></label>`).join('')}</fieldset><p class="ad-note">يبدأ وضع الصامت عند الإقامة ويُستعاد وضع الهاتف السابق عند انتهاء المدة. يحتاج إذن التحكم بوضع الصامت في Android.</p>${native&&s.enabled&&!window.AndroidNative?.hasQuietPolicyAccess?.()?'<button type="button" id="adQuietPermission">منح صلاحية تشغيل الصامت للهاتف</button>':''}</div>`;
   }
   function stopServiceSensors(){
     window.AoqatQuranReader?.close();
@@ -241,6 +243,11 @@
   }
   function render() {
     if (!panel) return;
+    if(!document.getElementById("adAudibilityStyles")){
+      const st=document.createElement("style");st.id="adAudibilityStyles";
+      st.textContent=".ad-audibility-list{display:grid;gap:8px}.ad-audibility-row{display:grid;gap:7px;padding:11px;border-radius:12px;border:1px solid #c9b88f;background:linear-gradient(110deg,#fffdf7,#f5edda);color:#285342}.ad-audibility-row>strong{font-size:16px}.ad-audibility-row>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.ad-audibility-row button{min-height:44px;padding:8px 5px;border-radius:10px;font:inherit;font-size:13px;background:#ece7dc;color:#514b42;border:1px solid #c9bb9c}.ad-audibility-row button.selected{background:#176e58;color:white;border-color:#176e58}.ad-audibility-row button:focus-visible{outline:3px solid #b99442;outline-offset:2px}@media(max-width:340px){.ad-audibility-row>div{grid-template-columns:1fr}}";
+      document.head.append(st);
+    }
     panel.innerHTML = `<div class="ad-card"><div id="adNext" class="ad-next">تحميل المواقيت…</div><div id="adCountdown" class="ad-counter" style="text-align:center">00:00:00</div><div id="adDates" class="ad-note" style="text-align:center"></div><table id="adTimes"></table><button type="button" id="adRefresh">تحديث المواقيت</button></div>
  <button type="button" id="adEnable" class="ad-master ${state.enabled ? "on" : ""}" aria-pressed="${state.enabled}">${state.enabled ? "🔊 الأذان مفعل" : "🔇 الأذان متوقف — اضغط للتفعيل"}</button>
  <button type="button" class="ad-section-toggle" data-ad-section="friday" aria-expanded="false" aria-controls="adSection-friday"><span class="ad-section-icon" aria-hidden="true">🕌</span><span>تخصيص صلاة الجمعة</span><span class="ad-section-chevron" aria-hidden="true">‹</span></button>${fridayMarkup()}
@@ -294,7 +301,7 @@
    )
    .join(
      "",
-   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${native ? `${check("overrideSilent", "تشغيل الأذان والتذكير حتى إذا الهاتف صامت")}${check("screen", "إضاءة شاشة القفل للأذان والتذكير")}${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
+   )}</select></label>${number("reminder", "تنبيه قبل الصلاة (دقيقة؛ صفر للإيقاف)", 60)}${number("suhoor", "تنبيه السحور قبل الفجر (دقيقة؛ صفر للإيقاف)", 120)}${check("screen", "عرض الأذان بملء الشاشة عند الرنين (اختياري، مستقل عن إضاءة جميع التنبيهات)")}<p class="ad-note">اختيار اختياري للأذان أثناء الرنين فقط. الويب يعرض الإعداد ويحفظه، أما فتح شاشة القفل وإضاءتها فيحتاج إصدار APK وصلاحية ملء الشاشة على أندرويد.</p>${native ? `<p class="ad-note">التحكم بالصوت أثناء الصامت وعدم الإزعاج منفصل لكل صلاة أسفل القائمة.</p>${check("flip", "إيقاف الأذان عند قلب الهاتف")}${number("afterSilent", "صمت الهاتف بعد الأذان (دقيقة؛ صفر للإيقاف)", 60)}<button type="button" id="adPermission">أذونات الصوت وشاشة القفل</button>` : '<p class="ad-note">على الويب يعمل الصوت والاهتزاز أثناء فتح الصفحة وبعد تفاعل المستخدم. تشغيل الأذان والتذكير في الخلفية، والتحكم بصمت الهاتف وشاشة القفل متاحة في تطبيق Android.</p>'}${silentSettingsMarkup()}</div></section>
  <section id="adSection-services" class="ad-section" hidden><div class="ad-card"><h3>الخدمات</h3><div id="adServiceMenu" class="ad-service-menu"><button type="button" data-service="quran">📖 القرآن الكريم</button><button type="button" data-service="qibla">🧭 اتجاه القبلة</button><button type="button" data-service="azkar">📿 الأذكار</button>${native ? '<button type="button" data-service="widget">📱 الصلاة القادمة على الهاتف</button>' : ''}</div><div id="adServiceFrame" class="ad-service-frame" hidden><button type="button" id="adServiceBack" class="ad-inner-back">‹ رجوع إلى الخدمات</button><h4 id="adServiceTitle"></h4><div id="adService" class="ad-service"></div><div id="adWidgetControls" hidden> ${
    native
      ? `<div class="ad-card"><h3>الصلاة القادمة على الهاتف</h3>${check("persistent", "إشعار مستمر للصلاة القادمة")}<label>خلفية الودجت<select data-setting="widget">${[
@@ -311,7 +318,20 @@
          )}</select></label><button type="button" id="adWidget">إضافة ودجت للشاشة الرئيسية</button></div>`
      : ""
  }
-</div></div></div></section></fieldset><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
+</div></div></div></section></fieldset>
+ <div class="ad-card" id="adAudibility" style="padding:8px!important;border:1px solid var(--wt-border,#b4ccb9)!important;background:var(--wt-surface,#fbfdf9)!important">
+  <div class="ad-audibility-menu" style="display:flex;align-items:center;gap:8px;direction:rtl">
+    <button type="button" id="adAudibilityOpen" aria-expanded="${audibilityOpen}" aria-controls="adAudibilityDetails" style="flex:1;min-height:54px;border:1px solid var(--wt-border,#b4ccb9);border-radius:12px;background:linear-gradient(110deg,var(--wt-surface2,#e0eee2),var(--wt-surface,#f8fcf7));color:var(--wt-text,#214832);font-size:18px;font-weight:700;cursor:pointer;text-align:center">🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج ‹</button>
+    <button type="button" id="adAudibilityHelp" class="aoqat-help-circle" aria-label="شرح صوت الصلاة أثناء الصامت وعدم الإزعاج" aria-expanded="${audibilityHelpOpen}" style="flex:none!important;align-self:center!important;width:22px!important;height:22px!important;min-width:22px!important;min-height:22px!important;max-width:22px!important;border:1.5px solid var(--wt-text,#244d36)!important;border-radius:50%!important;background:transparent!important;color:var(--wt-text,#244d36)!important;font-size:12px!important;font-weight:700!important;line-height:1!important;padding:0!important;box-shadow:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;cursor:pointer">؟</button>
+  </div>
+  <p id="adAudibilityHelpText" class="ad-note" ${audibilityHelpOpen?'':'hidden'}>التحكم بسماع الأذان ومنبّه الصلاة عند وضع الهاتف على الصامت أو عدم الإزعاج. لكل صلاة زران مستقلان. لا يغيّر هذا الخيار مواعيد الصلاة أو وضع رنين الهاتف. إذا اجتمع الصامت وعدم الإزعاج يلزم تفعيل الخيارين معاً.</p>
+  <div id="adAudibilityDetails" ${audibilityOpen?'':'hidden'}>
+    <button type="button" id="adAudibilityBack" class="ad-inner-back" style="display:block;min-height:44px;margin:10px 0">‹ رجوع إلى تنبيهات الصلاة</button>
+    <h3>🔔 صوت الصلاة أثناء الصامت وعدم الإزعاج</h3>
+ <p class="ad-note">زرّان لكل صلاة من الصلوات الخمس، ينطبقان على الأذان ومنبّه الصلاة إذا كانا مفعّلين. إشعار الصلاة العادي مستقل.</p>
+ <div class="ad-audibility-list">${C.ids.map(id => '<div class="ad-audibility-row"><strong>'+names[id]+'</strong><div><button type="button" data-ad-audibility="'+id+'" data-sound-condition="silent" aria-pressed="'+!!state.audibility[id].silent+'" class="'+(state.audibility[id].silent?'selected':'')+'">🔕 بالصامت: '+(state.audibility[id].silent?'تشغيل':'إيقاف')+'</button><button type="button" data-ad-audibility="'+id+'" data-sound-condition="dnd" aria-pressed="'+!!state.audibility[id].dnd+'" class="'+(state.audibility[id].dnd?'selected':'')+'">🌙 بعدم الإزعاج: '+(state.audibility[id].dnd?'تشغيل':'إيقاف')+'</button></div></div>').join('')}</div>
+ <p class="ad-note">إذا اجتمع الصامت وعدم الإزعاج، يجب تشغيل الزرين للصلاة. تشغيل الصوت أثناء عدم الإزعاج على أندرويد قد يحتاج منح إذن «التحكم بعدم الإزعاج»، ويستعاد وضعه السابق بعد انتهاء الصوت. المتصفح لا يستطيع تغيير أو قراءة وضع صوت الهاتف.</p>
+ </div></div><div id="adQuietStatus" class="ad-note" hidden role="status"></div><div id="adStatus" class="ad-status" role="status" aria-live="polite"></div>`;
     if (servicePanel) {
       const services = panel.querySelector("#adSection-services"); services.hidden = false;
       services.querySelector("h3")?.remove();
@@ -328,10 +348,15 @@
       };
     });
     $('adFridayBack').onclick=()=>{openSection='';syncSections();};
+    $('adAudibilityOpen').onclick=()=>{audibilityOpen=!audibilityOpen;const details=$('adAudibilityDetails');details.hidden=!audibilityOpen;$('adAudibilityOpen').setAttribute('aria-expanded',String(audibilityOpen));if(audibilityOpen)requestAnimationFrame(()=>details.scrollIntoView({block:'nearest'}));};
+    $('adAudibilityBack').onclick=()=>{audibilityOpen=false;$('adAudibilityDetails').hidden=true;$('adAudibilityOpen').setAttribute('aria-expanded','false');$('adAudibilityOpen').focus({preventScroll:true});};
+    $('adAudibilityHelp').onclick=()=>{audibilityHelpOpen=!audibilityHelpOpen;$('adAudibilityHelpText').hidden=!audibilityHelpOpen;$('adAudibilityHelp').setAttribute('aria-expanded',String(audibilityHelpOpen));};
+
     panel.querySelectorAll('[data-friday]').forEach(input=>input.onchange=async()=>{state.friday[input.dataset.friday]=input.type==='checkbox'?input.checked:input.type==='number'?Number(input.value):input.value;state.friday=C.normalizeFriday(state.friday);persist();render();if(state.friday.enabled&&!native&&'Notification' in window&&Notification.permission==='default')await Notification.requestPermission();});
     $('adFridayPermissions')?.addEventListener('click',()=>window.AndroidNative?.adhanPermissions());
     $("adSilentSettingsToggle").onclick=()=>{silentSettingsOpen=!silentSettingsOpen;syncSections();};
     $("adSilentAfterEnabled").onchange=(e)=>{state.afterIqamaSilent.enabled=e.target.checked;persist();render();};
+    $("adQuietPermission")?.addEventListener("click",()=>window.AndroidNative?.requestQuietPolicyAccess?.());
     panel.querySelectorAll("[data-silent-minutes]").forEach((input)=>input.onchange=()=>{
       state.afterIqamaSilent.minutes[input.dataset.silentMinutes]=Number(input.value);
       state=C.normalize(state);persist();render();
@@ -414,6 +439,16 @@
           render();
         }),
     );
+    panel.querySelectorAll("[data-ad-audibility]").forEach(button => button.onclick=()=>{
+      const id=button.dataset.adAudibility,condition=button.dataset.soundCondition;
+      if(!C.ids.includes(id)||!["silent","dnd"].includes(condition))return;
+      state.audibility[id][condition]=!state.audibility[id][condition];
+      state=C.normalize(state);
+      persist();
+      if(native&&condition==="dnd"&&state.audibility[id].dnd)
+        window.AndroidNative.requestPrayerAudioDndPermission?.();
+      render();
+    });
     if (native) {
       $("adWidget").onclick = () => window.AndroidNative.pinPrayerWidget();
       $("adPermission").onclick = () => window.AndroidNative.adhanPermissions();
