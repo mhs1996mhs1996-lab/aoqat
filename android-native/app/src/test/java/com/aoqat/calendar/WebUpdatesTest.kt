@@ -132,6 +132,27 @@ class WebUpdatesTest {
         assertEquals("v2",page(WebUpdates(c,pub)))
     }
 
+    @Test fun unsignedExtraFileInSnapshotMustNeverBeServed() {
+        val files=mapOf("index.html" to "<p>signed page</p>".toByteArray())
+        updater(files).checkNow()
+        val trial=WebUpdates(c,pub)
+        assertTrue(trial.confirmStartup())
+
+        // Even if a stray executable file appears in the same private
+        // snapshot directory, it is not trusted without manifest inclusion.
+        val revision=c.getSharedPreferences("web_updates_v2_signed",0)
+            .getString("active",null)!!
+        val dir=File(c.filesDir,"web-updates-v2-signed/$revision")
+        val extra=File(dir,"js/unsigned-extra.js")
+        assertTrue(extra.parentFile!!.mkdirs())
+        extra.writeText("window.untrusted=true")
+
+        val reopened=WebUpdates(c,pub)
+        assertEquals("<p>signed page</p>",page(reopened))
+        assertNull(reopened.response(Uri.parse(
+            "https://appassets.androidplatform.net/assets/www/js/unsigned-extra.js")))
+    }
+
     @Test fun onlyWebPathsAndAppAssetsAreAllowed() {
         for(p in listOf("index.html","js/app.js","css/style.css"))
             assertTrue(WebUpdates.allowed(p))
