@@ -29,6 +29,8 @@ jobs:
           fetch-depth: 0
       - name: Protect Quran text, prayer schedule and calculation sources
         run: python3 security/check-sacred-content.py
+      - name: Test offline signed-manifest validation with ephemeral keypair
+        run: python3 security/test-signed-update-manifest.py
       - name: Test that unauthorised Quran change fails closed
         run: |
           set -euo pipefail
