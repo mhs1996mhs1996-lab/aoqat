@@ -152,6 +152,8 @@ def main() -> int:
     group.add_argument("--owner-test", action="store_true", help="Validate owner V2 encrypted keypair on this phone")
     args = parser.parse_args()
     try:
+        if args.owner_test and os.environ.get("GITHUB_ACTIONS", "").lower() == "true":
+            raise ValueError("Owner private-key verification is prohibited inside GitHub Actions")
         if args.self_test:
             with tempfile.TemporaryDirectory(prefix="aoqat-ephemeral-keys-") as tmp:
                 private, public = Path(tmp) / "test-private.pem", Path(tmp) / "test-public.pem"
