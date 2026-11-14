@@ -3,17 +3,9 @@ on:
   pull_request:
     branches: [main, 'release/**']
   push:
+    # No paths filter: every commit must be checked, including changes to
+    # web UI, service worker, CSS, audio, APK data or unrelated native code.
     branches: [security/v210-sacred-content-integrity-20261114]
-    paths:
-      - 'security/**'
-      - 'data/**'
-      - 'assets/quran*'
-      - 'assets/mushaf*'
-      - 'assets/qcf-v2-page-fonts/**'
-      - 'js/quran-reader.js'
-      - 'js/prayer-countdown.js'
-      - 'js/prayer-time-choice.js'
-      - '.github/workflows/guard-sacred-content.yml'
   workflow_dispatch:
 
 permissions:
