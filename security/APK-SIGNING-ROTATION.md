@@ -17,11 +17,17 @@ the ECDSA/P-256 key for partial web updates.
 - Private PKCS#12 filename (owner device only): `aoqat-apk-production-v2.p12`
 - Key alias: `aoqat-production-v2`
 - Distinguished name: `CN=Aoqat Prayer Times, OU=Application, O=Aoqat, L=Hawija, ST=Kirkuk, C=IQ`
-- SHA-256 certificate fingerprint reported by the owner's local `keytool -list`:
+- Reviewed **public certificate only**: `security/aoqat-apk-public-v2.crt`.
+- SHA-256 X.509 certificate fingerprint independently calculated using OpenSSL
+  from the public certificate exported by the owner and matched to the owner's
+  local `keytool -list`:
   `9F:98:1C:7E:29:48:85:99:AA:B1:46:DE:4A:AF:6C:F3:05:FE:30:B0:6F:CE:C3:1A:7A:63:45:78:3C:3A:E7:65`
-- This fingerprint was transcribed from the owner's displayed keytool output.
-  Independently compare it with a freshly exported public certificate before
-  trusting any production build.
+- The certificate is a self-signed X.509 certificate with an RSA-3072 public
+  key, signed using SHA256withRSA. Its validity is 2026-11-14 through 2054-04-01
+  (UTC). `security/check-signed-updater-trust.py` now rejects a modified
+  public certificate fingerprint.
+- A **matching certificate is not proof** of secure APK signing or upgrade
+  compatibility. Every test APK must separately be inspected with `apksigner`.
 - Private key, keystore and password stay with the owner, **not in GitHub or CI**.
 - Owner archive: `AOQAT_FINAL_KEYS_V2.7z` (encrypted; stored separately).
 
@@ -49,7 +55,7 @@ Android to reject an in-place upgrade of existing v2.10 installs.
 
 ## Required pre-release checks (no private secrets in CI)
 
-1. Owner confirms the V2 keystore fingerprint again with local `keytool`.
+1. Owner confirms the V2 keystore fingerprint again with local `keytool`, and compares each signed APK certificate to `security/aoqat-apk-public-v2.crt`.
 2. Evaluate any migration lineage in an isolated, trusted offline environment.
    The formerly exposed legacy signer remains a security risk even if used
    solely to build a lineage.
