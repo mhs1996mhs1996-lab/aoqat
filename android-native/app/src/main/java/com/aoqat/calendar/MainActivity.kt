@@ -461,9 +461,11 @@ class MainActivity : Activity() {
             allowFileAccess = true
             allowContentAccess = true
             @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = true
+            // Old file:///android_asset/ is retained for one-time migration.
+            // Do not grant it access to the network or arbitrary file origins.
+            allowFileAccessFromFileURLs = false
             @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = true
+            allowUniversalAccessFromFileURLs = false
             cacheMode = WebSettings.LOAD_DEFAULT
             builtInZoomControls = false
             displayZoomControls = false
@@ -490,8 +492,33 @@ class MainActivity : Activity() {
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, phoneBackCallback)
         }
         webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: android.webkit.WebResourceRequest
+            ): Boolean {
+                if (!request.isForMainFrame) return false
+                val uri = request.url
+                // Privileged AndroidNative bridge must never belong to a web page.
+                if (WebLocalContent.isAppResource(uri) ||
+                    uri.toString() == WebLocalContent.LEGACY_URL) return false
+                if (uri.scheme == "https" || uri.scheme == "http") {
+                    try {
+                        startActivity(Intent(Intent.ACTION_VIEW, uri))
+                    } catch (_: Exception) { /* never load outside pages into this WebView */ }
+                }
+                return true
+            }
+
             override fun shouldInterceptRequest(view: WebView, request: android.webkit.WebResourceRequest): android.webkit.WebResourceResponse? {
-                return if (request.method == "GET") localWebContent.response(request.url) else null
+                if (request.method != "GET") return null
+                val uri = request.url
+                // Refuse remote main frames; JavaScript bridge belongs to local app.
+                if (request.isForMainFrame && !WebLocalContent.isAppResource(uri) &&
+                    uri.toString() != WebLocalContent.LEGACY_URL) {
+                    return android.webkit.WebResourceResponse("text/plain", "UTF-8",
+                        java.io.ByteArrayInputStream(ByteArray(0)))
+                }
+                return localWebContent.response(uri)
             }
 
             override fun onPageCommitVisible(view: WebView, url: String) {
@@ -774,7 +801,14 @@ class MainActivity : Activity() {
         @JavascriptInterface fun consumeCommunityReminderId():String {val id=intent.getStringExtra("communityReminderId")?:"";intent.removeExtra("communityReminderId");return id}
         @JavascriptInterface fun previewAzkarReminder(kind:String){if(kind !in AzkarReminderPlan.titles)return;CommunityReminders.preview(this@MainActivity,kind)}
         @JavascriptInterface fun communityReminderPermissions(){runOnUiThread{requestPrayerNoticeAccess(force=true)}}
-        @JavascriptInterface fun startupReady() { runOnUiThread { dismissStartupWhenPainted() } }
+        @JavascriptInterface fun startupReady() { runOnUiThread {
+            // A new signed snapshot is confirmed only when the real local app,
+            // not an external page, reports its UI initialization complete.
+            if (::webView.isInitialized && webView.url == WebLocalContent.APP_URL) {
+                webUpdates.confirmStartup()
+            }
+            dismissStartupWhenPainted()
+        } }
 
         @JavascriptInterface fun readIqamaAppearance(): String = IqamaAppearance.mode(this@MainActivity)
         @JavascriptInterface fun configureIqamaAppearance(mode: String) {

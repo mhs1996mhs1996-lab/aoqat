@@ -1,0 +1,146 @@
+name: Guard Quran and prayer data against unreviewed edits
+on:
+  pull_request:
+    branches: [main, 'release/**']
+  push:
+    # No paths filter: every commit must be checked, including changes to
+    # web UI, service worker, CSS, audio, APK data or unrelated native code.
+    branches: [security/v210-sacred-content-integrity-20261114]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sacred-content-integrity:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure web and unrelated native project contents remain unchanged
+        run: |
+          python3 security/test-project-scope.py
+          python3 security/check-project-scope.py
+      - name: Protect Quran text, prayer schedule and calculation sources
+        run: python3 security/check-sacred-content.py
+      - name: Fail closed on signing-key substitution or downgraded trust-chain
+        run: python3 security/check-signed-updater-trust.py
+      - name: Reject accidental private key or APK keystore commits
+        run: |
+          python3 security/test-check-no-private-keys.py
+          python3 security/check-no-private-keys.py
+      - name: Test offline signed-manifest validation with ephemeral keypair
+        run: python3 security/test-signed-update-manifest.py
+      - name: Test read-only APK certificate migration audit parser
+        run: python3 security/test-audit-apk-signatures.py
+      - name: Test local-only V2 signing preflight with disposable encrypted key
+        run: python3 security/owner-v2-key-preflight.py --self-test
+      - name: Cross-check owner preflight matches production manifest semantics
+        run: python3 security/test-owner-v2-preflight.py
+      - name: Test that unauthorised Quran change fails closed
+        run: |
+          set -euo pipefail
+          test -f assets/quran.json
+          cp assets/quran.json /tmp/aoqat-quran-original.json
+          python3 - <<'PY'
+          # Create an isolated adversarial commit in the ephemeral CI clone.
+          # Never push or publish these bytes.
+          import subprocess,pathlib
+          subprocess.run(['git','config','user.name','integrity-test'],check=True)
+          subprocess.run(['git','config','user.email','integrity-test@users.noreply.github.com'],check=True)
+          path=pathlib.Path('assets/quran.json')
+          path.write_bytes(path.read_bytes()+b'\n')
+          subprocess.run(['git','add','--','assets/quran.json'],check=True)
+          subprocess.run(['git','commit','-qm','UNPUBLISHED test modification'],check=True)
+          result=subprocess.run(['python3','security/check-sacred-content.py'],capture_output=True,text=True)
+          assert result.returncode==1,result.stdout+result.stderr
+          assert 'assets/quran.json' in result.stderr
+          print('PASS: A one-byte Quran text change was rejected')
+          PY
+
+  unsigned-owner-review:
+    # Explicitly limited to the same-repo, isolated security DRAFT PR.
+    # No code from a fork, no installation, no signed APK and no release.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.head_ref == 'security/v210-sacred-content-integrity-20261114'
+      && github.event.pull_request.head.repo.full_name == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - name: Checkout exact candidate SHA (not a moving deployment branch)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Check security scope, sacred content and absence of all private keys
+        run: |
+          set -euo pipefail
+          python3 security/check-project-scope.py
+          python3 security/check-sacred-content.py
+          python3 security/check-signed-updater-trust.py
+          python3 security/check-no-private-keys.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'STOP: no production signing credentials may enter CI'
+            exit 1
+          fi
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile and unit-test the candidate, generating unsigned APK only
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease
+      - name: Verify APK is unsigned and package includes unchanged offline Quran/prayer sources
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" > unsigned-b146-badging.txt
+          head -n 1 unsigned-b146-badging.txt | tee unsigned-b146-version.txt
+          grep -F "name='com.aoqat.calendar'" unsigned-b146-version.txt
+          grep -F "versionCode='146'" unsigned-b146-version.txt
+          grep -F "versionName='2.11-security-test'" unsigned-b146-version.txt
+          if "$signer" verify --min-sdk-version 26 "$apk"; then
+            echo 'STOP: review-only APK unexpectedly signed'
+            exit 1
+          fi
+          python3 - <<'PY'
+          import hashlib,json,pathlib,zipfile
+          apk=pathlib.Path('android-native/app/build/outputs/apk/release/app-release-unsigned.apk')
+          with zipfile.ZipFile(apk) as z:
+              base='assets/www/'
+              fonts=[n for n in z.namelist() if n.startswith(base+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+              assert len(fonts)==604, f'Missing offline Quran fonts: {len(fonts)}'
+              data=json.loads(z.read(base+'data/prayer-times-offline.json'))
+              assert len(data)==366, f'Offline prayer day count changed: {len(data)}'
+              guarded=json.loads(z.read(base+'assets/mushaf-apk-sha256.json'))
+              for path,digest in guarded.items():
+                  actual=base+path+('.bin' if path.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(actual)).hexdigest()==digest, path
+              assert not any(n.startswith(base+'assets/mushaf-hafs-') or n.startswith(base+'assets/mushaf-tajwid') for n in z.namelist())
+          print('PASS: 604 offline Quran fonts, 366 days, verified sacred hashes')
+          PY
+          sha256sum "$apk" | tee unsigned-b146-sha256.txt
+          echo 'NON-INSTALLABLE candidate for owner-local signing; no publication'
+      - name: Provide short-lived unsigned inspection ZIP, never a release
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B146-UNSIGNED-OWNER-REVIEW-DO-NOT-INSTALL
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            unsigned-b146-sha256.txt
+            unsigned-b146-version.txt
+          if-no-files-found: error
+          retention-days: 3
+          compression-level: 0
+      - name: Explicit no-publication condition
+        run: |
+          echo 'NO SIGNING KEY. NO RELEASE. NO INSTALLABLE APK. NO CHANGES TO HOSTED WEB.'

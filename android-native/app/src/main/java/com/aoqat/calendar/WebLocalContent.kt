@@ -90,14 +90,36 @@ class WebLocalContent(
 
         val snapshot = if (prefs.getBoolean("captured", false) && !prefs.getBoolean("complete", false))
             prefs.getString("snapshot", null) else null
-        if (snapshot == null || response == null) return response
+        if (response == null) return null
         return try {
             val html = response.data.bufferedReader(Charsets.UTF_8).use { it.readText() }
-            WebResourceResponse("text/html", "UTF-8", ByteArrayInputStream(withMigrations(html, snapshot).toByteArray(Charsets.UTF_8)))
+            // Untrusted iframes can call AndroidNative methods. Forbid them
+            // even if future UI code accidentally inserts an iframe.
+            val csp = "<meta http-equiv=\"Content-Security-Policy\" " +
+                "content=\"frame-src 'none'; object-src 'none'; base-uri 'self'\">"
+            require(html.contains("<head>")) { "Web page must have a head" }
+            val protectedHtml = html.replaceFirst("<head>", "<head>" + csp)
+            val content = if (snapshot == null) protectedHtml
+                else withMigrations(protectedHtml, snapshot)
+            WebResourceResponse("text/html", "UTF-8",
+                ByteArrayInputStream(content.toByteArray(Charsets.UTF_8)))
         } catch (e: Exception) {
-            // Always retain the original offline page in case restore injection fails.
-            android.util.Log.w("WebUpdates", "Legacy restore injection failed", e)
-            WebResourceResponse("text/html", "UTF-8", context.assets.open("www/index.html"))
+            // A corrupt update must not remove CSP or reach a remote origin.
+            android.util.Log.w("WebUpdates", "Local page protection failed; use safe packaged fallback", e)
+            val fallback = try {
+                context.assets.open("www/index.html").bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+            } catch (_: Exception) {
+                "<!doctype html><html><head></head><body>المحتوى المحلي غير متاح</body></html>"
+            }
+            val csp = "<meta http-equiv=\"Content-Security-Policy\" " +
+                "content=\"frame-src 'none'; object-src 'none'; base-uri 'self'\">"
+            val secure = if (fallback.contains("<head>"))
+                fallback.replaceFirst("<head>", "<head>" + csp)
+            else "<!doctype html><html><head>" + csp +
+                "</head><body>المحتوى المحلي غير متاح</body></html>"
+            WebResourceResponse("text/html", "UTF-8",
+                ByteArrayInputStream(secure.toByteArray(Charsets.UTF_8)))
         }
     }
 }

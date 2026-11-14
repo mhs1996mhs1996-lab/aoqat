@@ -1,0 +1,105 @@
+name: Verify owner-signed build-146 update - NEVER publish
+
+# The owner signs the manifest OFFLINE. GitHub receives only the signed
+# manifest and public payload files after review. No private signing keys,
+# passphrases, releases or deployments are created by this workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sequence:
+        description: Sequence from the owner-signed manifest
+        required: true
+        type: number
+      manifest_sha256:
+        description: SHA-256 of the exact owner-signed manifest file
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify-owner-signed-payload:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    env:
+      EXPECTED_SEQUENCE: ${{ inputs.expected_sequence }}
+      EXPECTED_MANIFEST_SHA256: ${{ inputs.manifest_sha256 }}
+    steps:
+      - name: Checkout reviewed security branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Never validate an unreviewed or published branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/security/v210-sacred-content-integrity-20261114"
+          test -f android-updates/build-146/manifest.json
+          test -d android-updates/build-146/files
+          test -f security/aoqat-update-public-v2.pem
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          python3 security/check-sacred-content.py
+          python3 security/check-signed-updater-trust.py
+          python3 security/test-signed-update-manifest.py
+      - name: Verify owner-signed manifest, public-key pin and EVERY file hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, importlib.util, json, os, pathlib, re, subprocess, time
+
+          source = pathlib.Path('android-updates/build-146')
+          manifest_file = source / 'manifest.json'
+          payload_root = source / 'files'
+          pem = pathlib.Path('security/aoqat-update-public-v2.pem')
+          expected_sha = os.environ['EXPECTED_MANIFEST_SHA256'].lower()
+          assert re.fullmatch('[a-f0-9]{64}', expected_sha), 'Invalid expected manifest SHA-256'
+          actual_sha = hashlib.sha256(manifest_file.read_bytes()).hexdigest()
+          assert actual_sha == expected_sha, 'Signed manifest differs from owner-reviewed SHA-256'
+          expected_sequence = int(os.environ['EXPECTED_SEQUENCE'])
+          assert expected_sequence > 0, 'Invalid expected sequence'
+
+          spec = importlib.util.spec_from_file_location(
+              'signed_manifest', 'security/signed-update-manifest.py')
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          manifest = json.loads(manifest_file.read_text())
+          assert manifest['nativeBuild'] == 146, 'Wrong Android build'
+          assert manifest['sequence'] == expected_sequence, 'Sequence mismatch'
+          now_ms = int(time.time() * 1000)
+          assert now_ms < manifest['expiresAt'] <= now_ms + 31 * 86400 * 1000, 'Expiry outside permitted range'
+          mod.verify(manifest, pem, expected_build=146, min_sequence=0, now_ms=now_ms)
+
+          expected_paths = set(manifest['files'])
+          actual_paths = {
+              x.relative_to(payload_root).as_posix()
+              for x in payload_root.rglob('*') if x.is_file()
+          }
+          assert actual_paths == expected_paths, 'Extra or missing unsigned update files'
+          total = 0
+          for name, expected_digest in manifest['files'].items():
+              path = payload_root / name
+              assert path.is_file() and not path.is_symlink(), 'Missing or symlink update file'
+              data = path.read_bytes()
+              assert len(data) <= 6 * 1024 * 1024, 'Oversized update file'
+              total += len(data)
+              assert hashlib.sha256(data).hexdigest() == expected_digest, 'Hash mismatch: '+name
+          assert total <= 24 * 1024 * 1024, 'Total signed update too large'
+
+          subprocess.run(['git', 'fetch', 'origin', 'main'], check=True)
+          prior_path = 'origin/main:android-updates/build-146/manifest.json'
+          prior_exists = subprocess.run(['git', 'cat-file', '-e', prior_path], capture_output=True).returncode == 0
+          if prior_exists:
+              previous = json.loads(subprocess.check_output(['git', 'show', prior_path], text=True))
+              mod.verify(previous, pem, expected_build=146, min_sequence=0,
+                         now_ms=previous['expiresAt'] - 1)
+              assert manifest['sequence'] > previous['sequence'], 'Replay or downgrade from published channel'
+          print('PASS: OWNER-SIGNED UPDATE VERIFIED (signature, sequence, expiry, files, scope)')
+          print('NO PRIVATE KEY ACCESSED. NO DEPLOYMENT OR RELEASE PERFORMED.')
+          PY
+      - name: Release hold - manual review required
+        run: |
+          echo "Validation only. Owner approval, APK signing migration and"
+          echo "a reviewed change request are required before any publication."
+          echo "This workflow has no write permissions and no deployment step."

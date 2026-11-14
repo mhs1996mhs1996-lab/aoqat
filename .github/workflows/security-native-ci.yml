@@ -1,0 +1,153 @@
+name: Security APK build verification only - never publish
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/security-native-ci.yml'
+  push:
+    branches: [security/v210-sacred-content-integrity-20261114]
+    paths:
+      - 'android-native/**'
+      - 'security/**'
+      - '.github/workflows/security-native-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile-verify-dont-publish:
+    # Run only on the isolated security branch (or its existing draft PR).
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114')
+      || (github.event_name == 'pull_request' && github.head_ref == 'security/v210-sacred-content-integrity-20261114')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Ensure security work has not modified either app outside approved files
+        run: |
+          python3 security/test-project-scope.py
+          python3 security/check-project-scope.py
+      - name: Verify sacred Quran/prayer data unchanged and old signing file absent
+        run: |
+          python3 security/check-sacred-content.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          test ! -e android-native/signing/aoqat-stable-debug.keystore
+      - name: Fail closed on signing-key substitution or downgraded trust-chain
+        run: python3 security/check-signed-updater-trust.py
+      - name: Reject accidental private key or APK keystore commits
+        run: |
+          python3 security/test-check-no-private-keys.py
+          python3 security/check-no-private-keys.py
+      - name: Compile and test hardened Android using temporary debug certificate only
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
+      - name: Check security version, packaging and prevent reuse of old public certificate
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/debug/app-debug.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | head -1 | tee version.txt
+          grep -F "versionCode='146'" version.txt
+          grep -F "versionName='2.11-security-test'" version.txt
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$signer" verify --verbose --print-certs --min-sdk-version 26 "$apk" | tee cert.txt
+          # Validate the owner's PUBLIC production certificate independently
+          # without ever reading a private APK keystore or its passphrase.
+          approved_cert=security/aoqat-apk-public-v2.crt
+          test -s "$approved_cert"
+          approved_sha=$(openssl x509 -in "$approved_cert" -outform DER | sha256sum | awk '{print $1}')
+          test "$approved_sha" = '9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765'
+          openssl x509 -in "$approved_cert" -pubkey -noout | openssl pkey -pubin -text -noout | grep -Fq '(3072 bit)'
+          # Debug builds must never be signed with either the exposed old
+          # production identity or the new owner-controlled production key.
+          if grep -Eqi 'aa72af7eb8b22501686b77e86f6c0bf1c6a1b61378cf67ca705076282357b496|9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765' cert.txt; then
+            echo 'SECURITY FAILURE: debug APK used historical or owner production certificate'
+            exit 1
+          fi
+          echo 'PUBLIC_APK_CERT_OK_AND_DEBUG_KEY_ISOLATED'
+          python3 - <<'PY'
+          import zipfile,hashlib,json,pathlib
+          apk=pathlib.Path('android-native/app/build/outputs/apk/debug/app-debug.apk')
+          with zipfile.ZipFile(apk) as z:
+              base='assets/www/'
+              fonts=[p for p in z.namelist() if p.startswith(base+'assets/qcf-v2-page-fonts/p') and p.endswith('.woff2')]
+              assert len(fonts)==604, len(fonts)
+              data=json.loads(z.read(base+'data/prayer-times-offline.json'))
+              assert len(data)==366, len(data)
+              offline=json.loads(z.read(base+'assets/mushaf-apk-sha256.json'))
+              for name,digest in offline.items():
+                  archived=base+name+('.bin' if name.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(archived)).hexdigest()==digest, name
+          print('CI_ONLY_VERIFIED: 604 offline mushaf page fonts and 366 days of prayer data unchanged')
+          PY
+      - name: Build strictly unsigned V2 owner-review candidate (no production signing keys)
+        run: |
+          set -euo pipefail
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'FAIL: owner signing secrets must never enter GitHub Actions'
+            exit 1
+          fi
+          gradle -p android-native --no-daemon assembleRelease
+      - name: Verify unsigned APK version, sacred offline payload, and zero signatures
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" > unsigned-b146-badging.txt
+          head -n 1 unsigned-b146-badging.txt | tee unsigned-b146-version.txt
+          grep -F "versionCode='146'" unsigned-b146-version.txt
+          grep -F "versionName='2.11-security-test'" unsigned-b146-version.txt
+          if "$signer" verify --min-sdk-version 26 "$apk"; then
+            echo 'SECURITY STOP: owner-review artifact unexpectedly has an APK signature'
+            exit 1
+          fi
+          python3 - <<'PY'
+          import hashlib,json,pathlib,zipfile
+          apk=pathlib.Path('android-native/app/build/outputs/apk/release/app-release-unsigned.apk')
+          with zipfile.ZipFile(apk) as z:
+              base='assets/www/'
+              fonts=[n for n in z.namelist() if n.startswith(base+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+              assert len(fonts)==604, f'Missing offline Quran page fonts: {len(fonts)}'
+              rows=json.loads(z.read(base+'data/prayer-times-offline.json'))
+              assert len(rows)==366, f'Offline prayer timetable changed: {len(rows)}'
+              protected=json.loads(z.read(base+'assets/mushaf-apk-sha256.json'))
+              for name,digest in protected.items():
+                  archived=base+name+('.bin' if name.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(archived)).hexdigest()==digest, name
+              assert not any(n.startswith(base+'assets/mushaf-hafs-') or n.startswith(base+'assets/mushaf-tajwid') for n in z.namelist())
+          print('PASS: unsigned 146, 604 Quran fonts, 366 offline days, protected asset hashes')
+          PY
+          sha256sum "$apk" | tee unsigned-b146-sha256.txt
+          echo 'NON-INSTALLABLE unsigned owner-review artifact; no release authorized'
+      - name: Upload unsigned APK solely for owner-local V2 signing review
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B146-UNSIGNED-REVIEW-DO-NOT-INSTALL
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            unsigned-b146-sha256.txt
+            unsigned-b146-version.txt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - name: Exercise ephemeral Android certificate rotation across API levels
+        run: bash security/test-synthetic-apk-rotation.sh
+      - name: Final release prohibition
+        run: |
+          echo "No release step, no artifact upload, no signing key in repository."
+          echo "Security APK remains a local CI build until owner approves credential migration."

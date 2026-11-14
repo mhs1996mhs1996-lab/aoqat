@@ -1,0 +1,108 @@
+name: Prepare unsigned V2 beta candidate - explicit owner-review trigger, never publish
+
+# Produces an UNSIGNED, NON-INSTALLABLE inspection artifact. The owner's final
+# V2 APK signer stays OFFLINE. This workflow cannot create an installable APK.
+# One-off commit trigger is scoped to THIS security branch and workflow file.
+# Needed because workflow_dispatch cannot run a workflow absent from default branch.
+# A push without the exact review marker NEVER starts the build job.
+on:
+  push:
+    branches:
+      - security/v210-sacred-content-integrity-20261114
+    paths:
+      - .github/workflows/prepare-unsigned-v2-beta.yml
+  workflow_dispatch:
+    inputs:
+      acknowledgement:
+        description: Explicitly acknowledge an unsigned, non-installable inspection artifact only
+        required: true
+        type: choice
+        options:
+          - UNSIGNED_ONLY_NO_RELEASE
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-owner-local-signing-input:
+    if: >-
+      github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114'
+      && (
+        (github.event_name == 'workflow_dispatch' && inputs.acknowledgement == 'UNSIGNED_ONLY_NO_RELEASE')
+        || (github.event_name == 'push' && contains(github.event.head_commit.message, '[unsigned-b146-owner-review]'))
+      )
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - name: Review branch without credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure NO APK signing credentials entered GitHub Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'STOP: owner signing material must never be in CI'
+            exit 1
+          fi
+          python3 security/check-project-scope.py
+          python3 security/check-sacred-content.py
+          python3 security/check-signed-updater-trust.py
+          python3 security/check-no-private-keys.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile unsigned release and execute Android unit tests
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease
+      - name: Verify candidate is UNSIGNED, intact and reviewable
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | head -1 | tee /tmp/unsigned-badging.txt
+          grep -F "versionCode='146'" /tmp/unsigned-badging.txt
+          grep -F "versionName='2.11-security-test'" /tmp/unsigned-badging.txt
+          # Do not accidentally share a debug- or production-SIGNED APK.
+          if "$signer" verify --min-sdk-version 26 "$apk"; then
+            echo 'SECURITY STOP: candidate unexpectedly signed in cloud'
+            exit 1
+          fi
+          python3 - <<'PY'
+          import hashlib,json,pathlib,zipfile
+          apk=pathlib.Path("android-native/app/build/outputs/apk/release/app-release-unsigned.apk")
+          with zipfile.ZipFile(apk) as z:
+              base="assets/www/"
+              fonts=[p for p in z.namelist() if p.startswith(base+"assets/qcf-v2-page-fonts/p") and p.endswith(".woff2")]
+              assert len(fonts)==604, f"Expected 604 offline fonts, got {len(fonts)}"
+              data=json.loads(z.read(base+"data/prayer-times-offline.json"))
+              assert len(data)==366, f"Expected 366 prayer timetable rows, got {len(data)}"
+              protected=json.loads(z.read(base+"assets/mushaf-apk-sha256.json"))
+              for name,digest in protected.items():
+                  archive=base+name+(".bin" if name.endswith(".gz") else "")
+                  assert hashlib.sha256(z.read(archive)).hexdigest()==digest, name
+          print("PASS: Unsigned candidate retains 604 offline Quran fonts and 366 prayer days")
+          PY
+          sha256sum "$apk" | tee unsigned-apk-sha256.txt
+          echo "UNSIGNED only; no install, signing, deployment or release"
+      - name: Upload only non-installable unsigned inputs for owner review
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B146-UNSIGNED-OWNER-REVIEW-NOT-INSTALLABLE
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            unsigned-apk-sha256.txt
+          retention-days: 3
+          if-no-files-found: error
+      - name: Explicitly prohibit publication
+        run: |
+          echo 'No APK signing key accessed, no device installation performed.'
+          echo 'This file is NOT INSTALLABLE. Owner must inspect and sign locally with V2.'
+          echo 'No GitHub Release, Vercel deployment or public APK distribution performed.'

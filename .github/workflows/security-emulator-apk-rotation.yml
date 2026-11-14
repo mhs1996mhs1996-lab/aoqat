@@ -1,0 +1,53 @@
+name: Disposable APK signing-lineage emulator acceptance - never publish
+
+on:
+  push:
+    branches: [security/v210-sacred-content-integrity-20261114]
+    paths:
+      - 'security/test-emulator-apk-rotation.sh'
+      - '.github/workflows/security-emulator-apk-rotation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aoqat-disposable-emulator-rotation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  throwaway-signature-install-over:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { api-level: 26, arch: x86_64 }
+          - { api-level: 27, arch: x86 }
+          - { api-level: 28, arch: x86_64 }
+          - { api-level: 33, arch: x86_64 }
+    steps:
+      - name: Checkout reviewed security branch only
+        uses: actions/checkout@v4
+      - name: Stop on other branches; never use private owner keys
+        run: |
+          test "$GITHUB_REF" = 'refs/heads/security/v210-sacred-content-integrity-20261114'
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          python3 security/check-no-private-keys.py
+      - name: Enable hardware acceleration for GitHub hosted Android emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install-over test on an empty throwaway APK and disposable keys
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: ${{ matrix.arch }}
+          script: bash security/test-emulator-apk-rotation.sh
+      - name: Publication prohibited
+        run: |
+          echo 'Only disposable fake APK tested on an emulator; nothing was uploaded or released.'
+          echo 'Actual v2.10->V2 owner signer migration remains blocked pending device and data tests.'
