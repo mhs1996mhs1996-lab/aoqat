@@ -72,7 +72,7 @@ cat "$tmp/verify.log"
 # Build-Tools 37 uses "V2 Signer:" / "V3.0 Signer:" instead of the
 # historical "Signer #1" label. Require EXACTLY ONE API-specific signer.
 mapfile -t api_sha < <(
-  sed -nE 's/^(Signer #[0-9]+|V[0-9]+(\\.[0-9]+)? Signer:)[[:space:]]+certificate SHA-256 digest:[[:space:]]*([[:xdigit:]]{64})$/\\3/p' "$tmp/verify.log" |
+  sed -nE 's/^(Signer #[0-9]+|V[0-9]+([.][0-9]+)? Signer:)[[:space:]]+certificate SHA-256 digest:[[:space:]]*([[:xdigit:]]{64})$/\3/p' "$tmp/verify.log" |
     tr '[:upper:]' '[:lower:]'
 )
 test "${#api_sha[@]}" -eq 1
