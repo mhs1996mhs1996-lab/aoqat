@@ -1,6 +1,10 @@
 name: Security APK build verification only - never publish
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/security-native-ci.yml'
   push:
     branches: [security/v210-sacred-content-integrity-20261114]
     paths:
@@ -14,6 +18,11 @@ permissions:
 
 jobs:
   compile-verify-dont-publish:
+    # Run only on the isolated security branch (or its existing draft PR).
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114')
+      || (github.event_name == 'pull_request' && github.head_ref == 'security/v210-sacred-content-integrity-20261114')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/security/v210-sacred-content-integrity-20261114')
     runs-on: ubuntu-22.04
     timeout-minutes: 65
     steps:
@@ -99,7 +108,8 @@ jobs:
           test -s "$apk"
           aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
           signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
-          "$aapt" dump badging "$apk" | head -1 | tee unsigned-b146-version.txt
+          "$aapt" dump badging "$apk" > unsigned-b146-badging.txt
+          head -n 1 unsigned-b146-badging.txt | tee unsigned-b146-version.txt
           grep -F "versionCode='146'" unsigned-b146-version.txt
           grep -F "versionName='2.11-security-test'" unsigned-b146-version.txt
           if "$signer" verify --min-sdk-version 26 "$apk"; then
