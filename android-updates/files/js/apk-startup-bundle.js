@@ -8022,6 +8022,10 @@ window.AoqatWidgetAppearance={createPanel,load};
     root.querySelectorAll('button.aoqat-help-badge').forEach(badge=>badge.remove());
   }
   function decorate(button){
+    // Inbox rows are delivered reminders, not settings. Their only action is
+    // opening the reminder itself, so a generic question-mark help is useless.
+    // Leave their original labels, tap handlers and spacing untouched.
+    if(button.closest('#reminderInbox'))return;
     if(button.classList.contains('aoqat-help-eligible'))return;
     if(button.matches('.web-back,[data-minute-step],.design-popup-close,[aria-label="رجوع"]'))return;
     if(button.closest('#aoqatHelpPage'))return;
