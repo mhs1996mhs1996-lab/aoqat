@@ -72,8 +72,12 @@ def main() -> int:
         if api < 28:
             print("  HOLD: Android 8/8.1 cannot migrate old->V2 through v3 lineage;"
                   " keep user data and design consent-based export/import.")
+            # A single universal APK cannot provide an approved in-place
+            # signer migration for the existing Android 8/8.1 installs.
+            error = True
         elif observed == "EXPOSED_OLD":
             print("  SECURITY HOLD: still using exposed old signer on this Android version.")
+            error = True
         elif observed == "OWNER_V2":
             print("  PENDING DEVICE TEST: correct new certificate alone does NOT prove"
                   " that an installed old-signer APK can upgrade via valid lineage.")
@@ -84,6 +88,8 @@ def main() -> int:
             if old != "EXPOSED_OLD":
                 print("  ERROR: original installed APK's signer does not match recorded v2.10 identity")
                 error = True
+    if error:
+        print("SECURITY HOLD: migration audit has blocking findings.")
     print("STOP: this audit never authorizes installation, migration or publishing.")
     return 1 if error else 0
 
