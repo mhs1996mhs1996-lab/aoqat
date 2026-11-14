@@ -53,6 +53,33 @@ Android to reject an in-place upgrade of existing v2.10 installs.
   storage and offline Mushaf must be preserved or separately recoverable.
 - Never instruct users to uninstall as a shortcut.
 
+## Read-only migration certificate audit for a FUTURE signed APK
+
+After the owner signs a test APK **outside GitHub**, an operator can audit its
+actual public APK signature identity against Android API 26, 27, 28, 32, 33 and
+35 without opening the owner's signing keys:
+
+```sh
+python3 security/audit-apk-signatures.py /path/to/owner-signed-candidate.apk \
+  --apksigner /path/to/Android/Sdk/build-tools/VERSION/apksigner \
+  --original-apk /path/to/previously-installed-v210.apk
+```
+
+`--original-apk` is optional, but strongly recommended: inspect an APK that
+was actually installed on the target device, not an assumed download.
+The audit identifies owner V2, exposed old, unknown or multiple signers and
+signature verification failures. **A successful signature check is NOT proof
+that `adb install -r` will preserve data or accept the rotation lineage.**
+Manual install-over tests with backed-up user data remain mandatory.
+
+For a valid migration trial, record signer fingerprints actually observed
+for each platform version. Pay special attention to
+`--rotation-min-sdk-version 28` vs the Android 13+ default v3.1 behavior.
+Do not infer support for Android 8/8.1 from `apksigner verify`: those OS
+versions cannot use v3 lineage to migrate from the old certificate to V2.
+
+Source: https://developer.android.com/tools/apksigner
+
 ## Required pre-release checks (no private secrets in CI)
 
 1. Owner confirms the V2 keystore fingerprint again with local `keytool`, and compares each signed APK certificate to `security/aoqat-apk-public-v2.crt`.
