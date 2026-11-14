@@ -32,6 +32,8 @@ jobs:
           python3 security/check-sacred-content.py
           test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
           test ! -e android-native/signing/aoqat-stable-debug.keystore
+      - name: Fail closed on signing-key substitution or downgraded trust-chain
+        run: python3 security/check-signed-updater-trust.py
       - name: Compile and test hardened Android using temporary debug certificate only
         run: gradle -p android-native --no-daemon testDebugUnitTest assembleDebug
       - name: Check security version, packaging and prevent reuse of old public certificate
