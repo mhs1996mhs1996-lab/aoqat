@@ -36,7 +36,7 @@ def payload(manifest: dict) -> bytes:
     for path, checksum in files.items():
         if path != "index.html" and (not isinstance(path, str) or not WEB_PATH_RE.fullmatch(path)):
             raise ValueError(f"Unsupported path: {path!r}")
-        if ".." in path or "%" in path or "\\" in path:
+        if any(token in path for token in ("..", "%", "\\", "//", "/.", "./")):
             raise ValueError(f"Unsafe path: {path!r}")
         if not isinstance(checksum, str) or not HASH_RE.fullmatch(checksum):
             raise ValueError(f"Invalid SHA256 for {path!r}")
