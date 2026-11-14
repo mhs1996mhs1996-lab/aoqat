@@ -7,10 +7,10 @@ import java.security.spec.X509EncodedKeySpec
 import java.util.Base64
 
 /**
- * Future signed-update verifier. This class is deliberately NOT connected to
- * production WebUpdates until the owner securely generates and pins a public
- * key, stores its PRIVATE counterpart outside the repository, and deploys a
- * signed manifest. Never add a fail-open legacy fallback in a security release.
+ * Fail-closed signed-update verifier used by WebUpdates v2.
+ * Only this pinned publisher key's ECDSA/P-256 signatures are accepted.
+ * The private key MUST remain encrypted and outside GitHub.
+ * Any unsigned legacy manifest is rejected, with APK contents kept offline.
  *
  * SHA256withECDSA (P-256) is supported on our minSdk 26 target.
  */
