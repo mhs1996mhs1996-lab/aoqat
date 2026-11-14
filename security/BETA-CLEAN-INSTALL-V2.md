@@ -67,6 +67,33 @@ It does not authorize publishing an APK before it is ready.
 > نستلم ونتأكد من ملف الإصدار التجريبي الجديد. بعد التثبيت راح تحتاج
 > تفعّل الأذونات والإشعارات وتضبط اختياراتك من جديد.
 
+## Owner-only read-only certificate gate (after signing, before asking testers to uninstall)
+
+An owner-signed V2 APK must pass the **clean-install** certificate audit with
+Android SDK Build-Tools `apksigner` available locally:
+
+```sh
+python3 security/audit-apk-signatures.py --clean-install-beta \
+  --apksigner apksigner /safe/path/to/owner-v2-signed.apk
+```
+
+This checks the **actual APK bytes**, for Android 8 (API 26), 8.1 (27),
+9 (28), 12L-era (32), 13 (33), 15 (35) and 16 (36), and **only** accepts the
+approved owner V2 certificate fingerprint
+`9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765`.
+Missing, old, mixed or unknown signers are rejected.
+
+The original audit mode (without `--clean-install-beta`) intentionally rejects
+legacy-to-new **in-place migration** for Android 8/8.1; do not use that mode
+to judge the owner-approved clean reinstall. Do not combine
+`--clean-install-beta` with `--original-apk`.
+
+A PASS certifies the *signing identity only*, not app functionality or release
+readiness. Test offline content, alarms, access permissions and the first run
+on real devices and obtain owner approval **before** sending any installer.
+Never send the private PKCS12, its password or the update-signing PEM to CI,
+GitHub, Vercel or chat.
+
 ## Status
 
 This file records a scoped migration decision, **not an APK release**.
