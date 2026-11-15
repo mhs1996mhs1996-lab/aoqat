@@ -453,6 +453,30 @@ qcf_apk_patch(
     if(isQcf())qcfScheduleNavigationSave();else save();
     if($('aqSheet')&&!$('aqSheet').hidden)closeSheet();
     renderPage(animate);notice('');""")
+
+# APK-only page-text typography + swipe fix after real-device B148 screenshots.
+# Independently measured all 604 original QCF WOFF2 files using glyph advances:
+# longest visible row incl. the already-selected 1.12em verse ornament = 17.222em.
+# One font size for a WHOLE page (and across normal pages), never a per-row
+# scale. No scrollWidth/clientWidth or synchronous reflow in the normal reader.
+qcf_apk_patch(
+  """      const lines=text.querySelectorAll('.aq-qcf-line');
+      const memo=qcfFitCache.get(fitKey);""",
+  """      const lines=text.querySelectorAll('.aq-qcf-line');
+      if(page>2){
+        // APK_QCF_UNIFORM_LINES_V149: max measured across all 604 genuine
+        // page fonts is 17.222em; 17.60em leaves room for medallions and
+        // rounding. All text rows share ONE size; short last verses no longer
+        // suddenly become huge. Staged pages are sized with NO layout reads.
+        const fullLineEm=17.60;
+        const uniformSize=Math.max(9,Math.min(startingSize,(width-12)/fullLineEm));
+        const px=uniformSize.toFixed(2)+'px';
+        for(const line of lines)line.style.setProperty('font-size',px,'important');
+        return;
+      }
+      const memo=qcfFitCache.get(fitKey);""")
+if "APK_QCF_UNIFORM_LINES_V149" not in source: raise RuntimeError("APK-only uniform font sizes missing")
+
 if "APK_QCF_TURN_LATENCY_V148" not in source: raise RuntimeError("B148 native QCF timing patch missing")
 
 if 'APK_QCF_FAST_SWIPE_V147' not in source: raise RuntimeError('Missing fast-swipe verification marker')
