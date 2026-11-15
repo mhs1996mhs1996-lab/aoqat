@@ -7,7 +7,9 @@ Modes:
       from Termux ($HOME/aoqat-keys), prompting the owner securely for the
       passphrase. Nothing secret leaves the local phone.
 
-This is intentionally standalone so Android Termux can run one downloaded file.\nThe B149 marker selects synthetic manifest test build ONLY; it never signs\nuser-facing web content and never deploys to Vercel or GitHub.
+This is intentionally standalone so Android Termux can run one downloaded file.
+The B149 marker selects synthetic manifest test build ONLY; it never signs
+user-facing web content and never deploys to Vercel or GitHub.
 """
 from __future__ import annotations
 
