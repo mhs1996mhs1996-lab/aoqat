@@ -409,6 +409,52 @@ qcf_apk_patch(
           sizes[i]=parseFloat(lines[i].style.fontSize);
         });""")
 # Keep any change to the public web reader or the 604 sacred glyph files prohibited.
+
+# APK-only second-stage QCF timing changes after real-phone B147 test:
+# "improved but delays remain". Do not change hosted web or Quran glyphs.
+qcf_apk_patch(
+  "const QCF_TEXT_CACHE_LIMIT=12,QCF_FONT_CACHE_LIMIT=10;",
+  """// APK_QCF_TURN_LATENCY_V148: keep a modest hot set to prevent
+  // repeated decompression/re-rasterization on 15–20 page reversals.
+  const QCF_TEXT_CACHE_LIMIT=24,QCF_FONT_CACHE_LIMIT=20;""")
+qcf_apk_patch(
+  "const duration=isQcf()?(commit&&swipeSpeed>=1.1?115:commit&&swipeSpeed>=.65?145:commit&&swipeSpeed>=.4?175:210):260;",
+  "const duration=isQcf()?(commit&&swipeSpeed>=1.1?85:commit&&swipeSpeed>=.65?105:commit&&swipeSpeed>=.4?130:155):260;")
+qcf_apk_patch(
+  """        const ahead=current+galleryLastDirection*2;
+        if(ahead>=1&&ahead<=TOTAL)qcfLoad(ahead).catch(()=>{});
+      },260);""",
+  """        const ahead=current+galleryLastDirection*2;
+        if(ahead>=1&&ahead<=TOTAL)qcfLoad(ahead).catch(()=>{});
+      },85);""")
+# Repeated focus() and synchronous localStorage writes during every turn can
+# block the WebView compositor. Only the "page" navigation value is coalesced;
+# bookmarks, personal notes and settings retain their synchronous saving.
+qcf_apk_patch(
+  "  function go(page,highlight,animate=true){",
+  """  let qcfNavigationSaveTimer=0;
+  function qcfScheduleNavigationSave(){
+    clearTimeout(qcfNavigationSaveTimer);
+    qcfNavigationSaveTimer=setTimeout(()=>{
+      qcfNavigationSaveTimer=0;
+      save();
+    },180);
+  }
+  window.addEventListener('pagehide',()=>{
+    if(!qcfNavigationSaveTimer)return;
+    clearTimeout(qcfNavigationSaveTimer);
+    qcfNavigationSaveTimer=0;
+    save();
+  });
+  function go(page,highlight,animate=true){""")
+qcf_apk_patch(
+  "state.surah=Number.isInteger(highlight)?verses[highlight].s:pageItems(page)[0].s;save();closeSheet();renderPage(animate);notice('');",
+  """state.surah=Number.isInteger(highlight)?verses[highlight].s:pageItems(page)[0].s;
+    if(isQcf())qcfScheduleNavigationSave();else save();
+    if($('aqSheet')&&!$('aqSheet').hidden)closeSheet();
+    renderPage(animate);notice('');""")
+if "APK_QCF_TURN_LATENCY_V148" not in source: raise RuntimeError("B148 native QCF timing patch missing")
+
 if 'APK_QCF_FAST_SWIPE_V147' not in source: raise RuntimeError('Missing fast-swipe verification marker')
 if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('Remote QCF font unexpectedly reintroduced')
 qcf.write_text(source)
