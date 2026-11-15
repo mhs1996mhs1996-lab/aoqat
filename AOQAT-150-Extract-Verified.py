@@ -49,7 +49,9 @@ def main():
                         if digest.hexdigest()!=EXPECTED:
                             print("NOT MATCHING B150 SHA:",digest.hexdigest())
                             continue
-                        os.link(tmp,OUT)  # atomic create; never overwrite
+                        # Android shared-storage FUSE may forbid hard links: use same-dir rename.
+                        if OUT.exists(): raise ValueError("Output exists; will not overwrite")
+                        os.rename(tmp,OUT)
                         print("PASS: exact build150 verified:",EXPECTED)
                         print("Saved:",OUT)
                         return
