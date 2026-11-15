@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 147 // APK-only QCF performance trial; unsigned until owner-local V2 signing
-        versionName '2.11.1-qcf-performance-test'
+        versionCode 148 // APK-only QCF turn-latency trial; unsigned until owner-local V2 signing
+        versionName '2.11.2-qcf-turn-test'
     }
 
     compileOptions {
