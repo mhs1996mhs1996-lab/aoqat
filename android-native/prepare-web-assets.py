@@ -318,6 +318,101 @@ if 'aqRenderingMode"><option' in source: raise RuntimeError('Old Quran edition s
 if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('QCF font URLs not local')
 qcf.write_text(source)
 
+
+# APK-only QCF swipe optimizations. They run on the STAGED APK bundle, never
+# on hosted web assets or Quran text/layout/font resources.
+def qcf_apk_patch(old,new):
+    global source
+    count=source.count(old)
+    if count!=1: raise RuntimeError('APK QCF speed patch drift: expected 1 match, found '+str(count))
+    source=source.replace(old,new,1)
+
+# The old path built/fitted FIVE full Quran DOM trees around each turn,
+# each potentially containing hundreds of glyph spans and multiple GPU layers.
+# Two immediately adjacent pages are enough for a finger swipe; the next
+# forward font is loaded separately during idle time.
+qcf_apk_patch(
+"""const wanted=new Set(isQcf()?[
+      state.page+galleryLastDirection,state.page-galleryLastDirection,
+      state.page+galleryLastDirection*2,state.page-galleryLastDirection*2,
+      state.page+galleryLastDirection*3
+    ]:[state.page+1,state.page-1]);""",
+"""const wanted=new Set(isQcf()?[
+      state.page+galleryLastDirection,state.page-galleryLastDirection
+    ]:[state.page+1,state.page-1]);""")
+qcf_apk_patch(
+"""const targets=isQcf()
+         ?[activePage+galleryLastDirection,activePage-galleryLastDirection,
+           activePage+galleryLastDirection*2,activePage-galleryLastDirection*2,
+           activePage+galleryLastDirection*3]
+         :[activePage+1,activePage-1];""",
+"""const targets=isQcf()
+         ?[activePage+galleryLastDirection,activePage-galleryLastDirection]
+         :[activePage+1,activePage-1];""")
+qcf_apk_patch(
+"""const wanted=isQcf()?
+        [current+galleryLastDirection,current-galleryLastDirection,
+         current+galleryLastDirection*2,current-galleryLastDirection*2,
+         current+galleryLastDirection*3]:
+        [current+1,current-1];""",
+"""const wanted=isQcf()?
+        [current+galleryLastDirection,current-galleryLastDirection]:
+        [current+1,current-1];""")
+qcf_apk_patch(
+"""      gallerySchedule();
+      // SVG baseline retains its existing small data prefetch window.
+      if(!isQcf())warmTask=setTimeout(()=>{""",
+"""      gallerySchedule();
+      // APK_QCF_FAST_SWIPE_V147: prefetch only the NEXT forward font at idle.
+      // Never parse/raster another Quran page while the user's finger moves.
+      if(isQcf())warmTask=setTimeout(()=>{
+        if(!root?.isConnected||pointer||galleryBusy||state.page!==current)return;
+        const ahead=current+galleryLastDirection*2;
+        if(ahead>=1&&ahead<=TOTAL)qcfLoad(ahead).catch(()=>{});
+      },260);
+      // SVG baseline retains its existing small data prefetch window.
+      if(!isQcf())warmTask=setTimeout(()=>{""")
+# Move CSS writes into batches instead of 1-2 synchronous layout flushes
+# for EACH Quran line. The numerical fitting formula remains unchanged.
+qcf_apk_patch(
+"""        const sizes=[];
+        for(const line of lines){
+          line.style.setProperty('font-size',startingSize+'px','important');
+          // Measure once per page/viewport/zoom, while the page is staged.
+          const allowed=Math.max(40,Math.min(width-6,line.clientWidth-4));
+          const measured=Math.max(1,line.scrollWidth),fitted=Math.min(startingSize,Math.max(12,startingSize*(allowed-3)/measured));
+          line.style.setProperty('font-size',fitted.toFixed(2)+'px','important');
+          if(line.scrollWidth>allowed+2){
+            const smaller=Math.max(11,fitted*(allowed-3)/line.scrollWidth);
+            line.style.setProperty('font-size',smaller.toFixed(2)+'px','important');
+          }
+          sizes.push(parseFloat(line.style.fontSize));
+        }""",
+"""        // APK_QCF_FAST_SWIPE_V147: batch writes then reads to avoid 30+
+        // repeated forced WebView layout passes for one 15-line QCF page.
+        lines.forEach(line=>line.style.setProperty('font-size',startingSize+'px','important'));
+        const metrics=Array.from(lines,line=>({
+          allowed:Math.max(40,Math.min(width-6,line.clientWidth-4)),
+          measured:Math.max(1,line.scrollWidth)
+        }));
+        const sizes=metrics.map(({allowed,measured},i)=>{
+          const fitted=Math.min(startingSize,Math.max(12,startingSize*(allowed-3)/measured));
+          lines[i].style.setProperty('font-size',fitted.toFixed(2)+'px','important');
+          return fitted;
+        });
+        const adjustedWidths=Array.from(lines,line=>line.scrollWidth);
+        metrics.forEach(({allowed},i)=>{
+          if(adjustedWidths[i]>allowed+2){
+            const smaller=Math.max(11,sizes[i]*(allowed-3)/adjustedWidths[i]);
+            lines[i].style.setProperty('font-size',smaller.toFixed(2)+'px','important');
+          }
+          sizes[i]=parseFloat(lines[i].style.fontSize);
+        });""")
+# Keep any change to the public web reader or the 604 sacred glyph files prohibited.
+if 'APK_QCF_FAST_SWIPE_V147' not in source: raise RuntimeError('Missing fast-swipe verification marker')
+if 'https://verses.quran.foundation/fonts' in source: raise RuntimeError('Remote QCF font unexpectedly reintroduced')
+qcf.write_text(source)
+
 # Include the QCF verse/page manifest explicitly; Gradle copy filters may omit
 # the experiments directory in its base web-asset snapshot.
 qcf_layout=root/'experiments/qcf604-web-verse-layouts.json.gz'
