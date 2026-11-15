@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - owner-tools/v2-ota-preflight-149-20261115
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
