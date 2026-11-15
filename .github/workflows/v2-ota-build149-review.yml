@@ -1,0 +1,83 @@
+name: V2 signed auto-update readiness B149 - offline-only review
+
+on:
+  push:
+    branches:
+      - security/v214-signed-ota-build149-review-20261115
+  pull_request:
+    branches:
+      - security/v213-apk-qcf-uniform-metrics-20261115
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  v2-ota-readiness-without-private-keys:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Prove only offline security review files changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          base="db11b2a7e6cc34736fa654540e397c7350296450"
+          allowed={
+            "security/owner-ota-v2-build149.py",
+            "security/B149-V2-OTA-OWNER-ACCEPTANCE.md",
+            ".github/workflows/v2-ota-build149-review.yml",
+          }
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed and changed.issubset(allowed), "Unexpected project modifications: "+repr(changed-allowed)
+          for path in (
+            "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt",
+            "android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt",
+            "android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt",
+            "android-native/prepare-web-assets.py",
+            "android-native/app/build.gradle",
+            "js/quran-reader.js",
+            "data/prayer-times-offline.json",
+          ):
+            original=subprocess.check_output(["git","show",base+":"+path])
+            from pathlib import Path
+            assert Path(path).read_bytes()==original, path+" unexpectedly altered"
+          print("PASS: original APK, web version, Quran, prayer and update receiver code left unchanged")
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+      - name: Verify approved V2 publisher pin under build-149 gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          script=Path("security/check-signed-updater-trust.py")
+          source=script.read_text()
+          old='assert "versionCode 146" in gradle, "Only the isolated security build 146 can use this key"'
+          assert source.count(old)==1, "Pinned trust guard changed"
+          trial=source.replace(old,
+                'assert "versionCode 149" in gradle, "Expected ONLY reviewed trial B149"')
+          ns={"__file__":str(script.resolve()),"__name__":"_build149_trust_check"}
+          exec(compile(trial,str(script),"exec"),ns)
+          ns["main"]()
+          PY
+          python3 security/test-signed-update-manifest.py
+          python3 -m py_compile security/owner-ota-v2-build149.py
+      - name: Test offline update manifest with disposable keys only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/owner-ota-v2-build149.py --self-test
+          sha256sum security/owner-ota-v2-build149.py
+          echo 'PASS: ONLY a disposable self-test ran; private V2 owner keys never enter CI.'
+      - name: No publication or APK signing
+        run: |
+          echo 'REVIEW ONLY: DO NOT publish an OTA manifest or change main.'
+          echo 'The user must locally sign a no-op update with encrypted OTA V2 PEM,'
+          echo 'then provide only the PUBLIC review ZIP for independent verification.'
