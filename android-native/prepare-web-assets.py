@@ -342,13 +342,13 @@ qcf_apk_patch(
     ]:[state.page+1,state.page-1]);""")
 qcf_apk_patch(
 """const targets=isQcf()
-         ?[activePage+galleryLastDirection,activePage-galleryLastDirection,
-           activePage+galleryLastDirection*2,activePage-galleryLastDirection*2,
-           activePage+galleryLastDirection*3]
-         :[activePage+1,activePage-1];""",
+        ?[activePage+galleryLastDirection,activePage-galleryLastDirection,
+          activePage+galleryLastDirection*2,activePage-galleryLastDirection*2,
+          activePage+galleryLastDirection*3]
+        :[activePage+1,activePage-1];""",
 """const targets=isQcf()
-         ?[activePage+galleryLastDirection,activePage-galleryLastDirection]
-         :[activePage+1,activePage-1];""")
+        ?[activePage+galleryLastDirection,activePage-galleryLastDirection]
+        :[activePage+1,activePage-1];""")
 qcf_apk_patch(
 """const wanted=isQcf()?
         [current+galleryLastDirection,current-galleryLastDirection,
