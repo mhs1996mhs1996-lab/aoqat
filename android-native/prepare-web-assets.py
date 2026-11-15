@@ -475,6 +475,22 @@ qcf_apk_patch(
         return;
       }
       const memo=qcfFitCache.get(fitKey);""")
+
+# Respect the original QCF layout's centered-line flag for shortened endings
+# (notably pages 602–604). The sacred word/verse HTML is unchanged; only
+# the APK layout of the already-rendered rows is corrected.
+qcf_apk_patch(
+  "for(const line of lines)line.style.setProperty('font-size',px,'important');",
+  """const qcfRows=qcfData.get(page).filter(row=>Array.isArray(row.v));
+        for(let i=0;i<lines.length;i++){
+          const line=lines[i];
+          line.style.setProperty('font-size',px,'important');
+          if(qcfRows[i]?.c){
+            line.style.setProperty('justify-content','center','important');
+            line.style.setProperty('gap','.12em','important');
+          }
+        }""")
+
 if "APK_QCF_UNIFORM_LINES_V149" not in source: raise RuntimeError("APK-only uniform font sizes missing")
 
 if "APK_QCF_TURN_LATENCY_V148" not in source: raise RuntimeError("B148 native QCF timing patch missing")
