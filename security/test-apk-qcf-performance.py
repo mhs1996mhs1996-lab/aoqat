@@ -35,8 +35,8 @@ require("const metrics=Array.from(lines,line=>({" in apk and
         "const adjustedWidths=Array.from(lines,line=>line.scrollWidth);" in apk,
         "QCF text fitting not batched")
 require("""const targets=isQcf()
-         ?[activePage+galleryLastDirection,activePage-galleryLastDirection]
-         :[activePage+1,activePage-1];""" in apk,
+        ?[activePage+galleryLastDirection,activePage-galleryLastDirection]
+        :[activePage+1,activePage-1];""" in apk,
         "More than two adjacent QCF DOM pages prepared")
 require("""const wanted=new Set(isQcf()?[
       state.page+galleryLastDirection,state.page-galleryLastDirection
