@@ -152,7 +152,7 @@ if archive.is_file():
                 f"QCF rows exceed page-width bound {largest:.3f}em on page {largest_page}")
         print(f"PASS: all 604 original fonts checked, maximum line {largest:.3f}em, "
               "uniform size fits without per-line WebView reflow")
-        require("2.11.3-qcf-uniform-test" in
+        require("2.12" in
                 (root / "android-native/app/build.gradle").read_text(),
                 "APK performance version missing")
 print("PASS: APK QCF two-page staging, uniform typography, original centered closing lines, idle font lookahead;")

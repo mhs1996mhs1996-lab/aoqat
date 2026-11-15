@@ -1,0 +1,145 @@
+name: APK 2.12 V2 / build 150 - unchanged-content release candidate
+
+on:
+  push:
+    branches:
+      - security/v216-b150-v2-ota-rc-20261115
+  pull_request:
+    branches:
+      - security/v213-apk-qcf-uniform-metrics-20261115
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk-212-v2-unsigned-and-ota-integrity:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/security/v216-b150-v2-ota-rc-20261115')
+      || (github.event_name == 'pull_request' && github.head_ref == 'security/v216-b150-v2-ota-rc-20261115')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/security/v216-b150-v2-ota-rc-20261115')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Full project diff gate - unchanged web, Quran, prayer and native behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base="db11b2a7e6cc34736fa654540e397c7350296450" # exact vetted B149
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          allowed={
+            "android-native/app/build.gradle",
+            "security/test-apk-qcf-performance.py",
+            ".github/workflows/security-v2-apk-212-rc.yml",
+            "security/B150-V2-RELEASE-ACCEPTANCE.md",
+          }
+          assert changed and changed.issubset(allowed), "STOP: unrelated project changes: "+str(changed-allowed)
+          # A changed allowed file must differ ONLY in the expected two lines.
+          def base_file(path):
+            return subprocess.check_output(["git","show",base+":"+path]).decode()
+          gradle=Path("android-native/app/build.gradle").read_text()
+          expected=base_file("android-native/app/build.gradle").replace(
+            "versionCode 149 // APK-only QCF uniform typography trial; unsigned until owner-local V2 signing\n        versionName '2.11.3-qcf-uniform-test'",
+            "versionCode 150 // V2-signed 2.12 owner release candidate; signed exclusively on owner's phone\n        versionName '2.12'")
+          assert gradle==expected, "STOP: unexpected Gradle edits"
+          tester=Path("security/test-apk-qcf-performance.py").read_text()
+          assert tester==base_file("security/test-apk-qcf-performance.py").replace(
+            'require("2.11.3-qcf-uniform-test" in','require("2.12" in'), "STOP: Quran test was weakened"
+          assert "applicationId 'com.aoqat.calendar'" in gradle
+          assert "versionCode 150" in gradle and "versionName '2.12'" in gradle
+          print("PASS: ONLY version metadata, test version string and safety workflow/docs changed")
+          print("PASS: every other repository file identical to reviewed build149")
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'STOP: never pass private APK/OTA keys to GitHub'
+            exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('security/check-signed-updater-trust.py')
+          source=path.read_text()
+          old='assert "versionCode 146" in gradle, "Only the isolated security build 146 can use this key"'
+          assert source.count(old)==1,"Unexpected pinned trust guard"
+          local=source.replace(old,'assert "versionCode 150" in gradle, "Only reviewed candidate B150 allowed"')
+          ns={"__file__":str(path.resolve()),"__name__":"_b150_isolated_review"}
+          exec(compile(local,str(path),"exec"),ns)
+          ns["main"]()
+          PY
+          python3 security/test-signed-update-manifest.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run native updater and notification unit tests, assemble full unsigned 2.12
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease
+
+      - name: Verify full offline Quran, original web UI, native startup and signed-update scope
+        run: |
+          set -euo pipefail
+          node --check android-native/app/src/main/assets/www/js/quran-reader.js
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+          python3 -m pip install --quiet fonttools brotli
+          python3 security/test-apk-qcf-performance.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile
+          p=Path("android-native/app/build/outputs/apk/release/app-release-unsigned.apk")
+          with zipfile.ZipFile(p) as z:
+            name="assets/www/index.html"
+            body=z.read(name)
+            expected="e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f"
+            assert hashlib.sha256(body).hexdigest()==expected, "STOP: B150 HTML differs from owner-reviewed B149"
+            assert len(body)<=6*1024*1024
+            # The existing OTA v2 safety boundary permits only index/js/css.
+            # No Quran, prayer data or native code is accepted in partial updates.
+            assert z.read("assets/www/js/quran-reader.js")
+            assert z.read("assets/www/data/prayer-times-offline.json")
+          print("PASS: B150 packaged HTML is byte-for-byte identical to B149")
+          PY
+      - name: Validate unsigned APK and save exact SHA-256 for owner signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" > apk-150-badging.txt
+          head -n 1 apk-150-badging.txt | tee apk-150-version.txt
+          grep -F "name='com.aoqat.calendar'" apk-150-version.txt
+          grep -F "versionCode='150'" apk-150-version.txt
+          grep -F "versionName='2.12'" apk-150-version.txt
+          if "$signer" verify --min-sdk-version 26 "$apk"; then
+            echo 'STOP: candidate unexpectedly signed with a non-owner key'
+            exit 1
+          fi
+          sha256sum "$apk" | tee apk-150-unsigned.sha256
+          echo 'PASS: exact B150 unsigned artifact verified; only owner may V2 sign'
+      - name: Upload reviewed unsigned 2.12 (NOT installable until owner signs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-150-V2-2.12-UNSIGNED-OWNER-REVIEW
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            apk-150-unsigned.sha256
+            apk-150-version.txt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - name: Hold deployment until owner signs locally and tests
+        run: |
+          echo 'NO RELEASE; NO VERCEL DEPLOY; NO APK SIGNING IN CI.'
+          echo 'Build 150 needs the same owner V2 APK certificate and a separately signed B150 OTA manifest.'

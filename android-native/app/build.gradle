@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 149 // APK-only QCF uniform typography trial; unsigned until owner-local V2 signing
-        versionName '2.11.3-qcf-uniform-test'
+        versionCode 150 // V2-signed 2.12 owner release candidate; signed exclusively on owner's phone
+        versionName '2.12'
     }
 
     compileOptions {
