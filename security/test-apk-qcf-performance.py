@@ -45,6 +45,23 @@ require("""const wanted=new Set(isQcf()?[
 require("state.renderEngine='svg'" not in apk,
         "APK can silently switch to obsolete SVG edition")
 require("qcfLoad(page)" in apk, "Per-page verified offline Quran loading missing")
+# Build 148 responsiveness checks: only installed APK code may change.
+require("APK_QCF_TURN_LATENCY_V148" in apk, "B148 QCF performance marker missing")
+require("const QCF_TEXT_CACHE_LIMIT=24,QCF_FONT_CACHE_LIMIT=20;" in apk,
+        "Recent Quran fonts must be retained for reverse swipes")
+require("commit&&swipeSpeed>=1.1?85:commit&&swipeSpeed>=.65?105" in apk,
+        "Fast QCF swipe settles must not remain in B147 timing")
+require("const ahead=current+galleryLastDirection*2;" in apk and
+        "},85);" in apk,
+        "Next-page font lookahead must begin promptly after settling")
+require("function qcfScheduleNavigationSave()" in apk and
+        "window.addEventListener('pagehide'" in apk,
+        "Debounced page location must flush on leaving app")
+require("if($('aqSheet')&&!$('aqSheet').hidden)closeSheet();" in apk,
+        "QCF swipe must avoid repeated unnecessary focus() and layout")
+require("APK_QCF_TURN_LATENCY_V148" not in web,
+        "QCF performance test leaked into hosted web reader")
+
 
 # The complete word, aya-marker, surah and 604-page DOM content
 # construction code must be exactly unchanged, not even whitespace.
@@ -70,7 +87,7 @@ if archive.is_file():
             item=base+file+(".bin" if file.endswith(".gz") else "")
             require(hashlib.sha256(z.read(item)).hexdigest()==digest,
                     "Sacred offline APK payload hash mismatch: "+file)
-        require("2.11.1-qcf-performance-test" in
+        require("2.11.2-qcf-turn-test" in
                 (root / "android-native/app/build.gradle").read_text(),
                 "APK performance version missing")
 print("PASS: APK QCF two-page staging, batched measurement, idle font lookahead;")
