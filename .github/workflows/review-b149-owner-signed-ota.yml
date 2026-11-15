@@ -1,0 +1,103 @@
+name: Verify exact owner-signed build 149 OTA - review artifact only
+
+on:
+  push:
+    branches:
+      - security/v215-b149-signed-ota-bundle-review-20261115
+  pull_request:
+    branches:
+      - security/v214-signed-ota-build149-review-20261115
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independently-verify-b149-ota:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Guard scope and private-key boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base="d6b96a287065d48a93daac624f9a6a6b3c81e513"
+          allowed={
+            "security/review-b149-ota-owner-signed-manifest.json",
+            ".github/workflows/review-b149-owner-signed-ota.yml",
+          }
+          changed=set(subprocess.check_output(
+            ["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed and changed.issubset(allowed), "Unexpected change: "+repr(changed-allowed)
+          for path in ("android-native/app/build.gradle",
+                       "android-native/prepare-web-assets.py",
+                       "index.html","js/quran-reader.js",
+                       "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt",
+                       "android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt"):
+            assert Path(path).read_bytes()==subprocess.check_output(
+                ["git","show",base+":"+path]),path+" unexpected change"
+          print("PASS: only owner's public manifest and read-only review workflow added")
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Rebuild only unsigned baseline 149 to recover exact packaged HTML
+        run: gradle -p android-native --no-daemon assembleRelease
+      - name: Verify owner's manifest independently and compare every original byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,importlib.util,json,pathlib,shutil,time
+          original=pathlib.Path("security/review-b149-ota-owner-signed-manifest.json")
+          content=pathlib.Path("android-native/app/src/main/assets/www/index.html")
+          manifest=json.loads(original.read_text(encoding="utf-8"))
+          assert original.is_file() and content.is_file()
+          assert hashlib.sha256(original.read_bytes()).hexdigest()==(
+            "80b37cd23332bf47c12a58c9f05d2c13fdcd74e42f081db58318c33b0f027d98"),"Owner manifest changed"
+          assert manifest["nativeBuild"]==149 and manifest["sequence"]==1
+          assert set(manifest["files"])=={"index.html"},"No other files may be updated"
+          assert hashlib.sha256(content.read_bytes()).hexdigest()==(
+            "e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f"),"Packaged B149 HTML mismatch"
+          spec=importlib.util.spec_from_file_location("sig","security/signed-update-manifest.py")
+          mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          pub=pathlib.Path("security/aoqat-update-public-v2.pem")
+          now=int(time.time()*1000)
+          assert now < manifest["expiresAt"] <= now+31*24*3600*1000,"Invalid time range"
+          mod.verify(manifest,pub,expected_build=149,min_sequence=0,now_ms=now)
+          assert manifest["files"]["index.html"]==hashlib.sha256(content.read_bytes()).hexdigest()
+          out=pathlib.Path("review-public-ota-only/android-updates/build-149")
+          (out/"files").mkdir(parents=True)
+          shutil.copyfile(original,out/"manifest.json")
+          shutil.copyfile(content,out/"files/index.html")
+          print("PASS: owner V2 ECDSA signed manifest verified independently")
+          print("PASS: exact packaged B149 HTML byte-for-byte, 0 changed app files")
+          print("PASS: correct build, sequence, expiry, content hash, public signer")
+          PY
+          python3 security/test-signed-update-manifest.py
+          python3 security/owner-ota-v2-build149.py --self-test
+      - name: Upload public owner-reviewed NO-OP OTA bundle - do NOT deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B149-SIGNED-OTA-NOOP-REVIEW-ONLY
+          path: review-public-ota-only/android-updates/build-149
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - name: Prohibit auto publishing
+        run: |
+          echo 'PASS: review artifact only. Nothing published to Vercel or main.'
+          echo 'A separate owner-approved deployment and real-device test are mandatory.'
