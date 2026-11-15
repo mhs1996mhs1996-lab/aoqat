@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 146 // Isolated security trial; NOT published for installation until signing migration
-        versionName '2.11-security-test'
+        versionCode 147 // APK-only QCF performance trial; unsigned until owner-local V2 signing
+        versionName '2.11.1-qcf-performance-test'
     }
 
     compileOptions {

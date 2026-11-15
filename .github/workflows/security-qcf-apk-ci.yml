@@ -1,0 +1,122 @@
+name: Isolated APK QCF swipe performance trial - unsigned only
+
+on:
+  push:
+    branches:
+      - security/v211-apk-qcf-swipe-performance-20261115
+  pull_request:
+    branches:
+      - security/v210-sacred-content-integrity-20261114
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk-qcf-performance-unsigned:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/security/v211-apk-qcf-swipe-performance-20261115')
+      || (github.event_name == 'pull_request' && github.head_ref == 'security/v211-apk-qcf-swipe-performance-20261115')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/security/v211-apk-qcf-swipe-performance-20261115')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a narrowly isolated APK-only diff from reviewed build 146
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          baseline="92d4183418fe3b143047afbacacbc430a395e1ef"
+          allowed={
+            "android-native/prepare-web-assets.py",
+            "android-native/app/build.gradle",
+            "security/test-apk-qcf-performance.py",
+            ".github/workflows/security-qcf-apk-ci.yml"
+          }
+          changed=set(subprocess.check_output(
+            ["git","diff","--name-only",baseline,"HEAD"],text=True).splitlines())
+          if not changed or not changed.issubset(allowed):
+            raise SystemExit("SECURITY HOLD: change outside APK-only QCF scope: "+repr(changed-allowed))
+          for path in ("js/quran-reader.js","css/quran-reader.css",
+                       "assets/quran.json","data/prayer-times.js",
+                       "data/prayer-times-offline.json"):
+            old=subprocess.check_output(["git","show",baseline+":"+path])
+            from pathlib import Path
+            assert Path(path).read_bytes()==old, path+" unexpectedly modified"
+          print("PASS: isolated APK-only QCF optimization; hosted web and sacred sources unchanged")
+          PY
+          python3 security/check-sacred-content.py
+          # Reuse every production trust-chain assertion unchanged except the
+          # exact release version gate: this isolated candidate is build 147.
+          # This does NOT edit or weaken the original security guard on disk.
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path("security/check-signed-updater-trust.py")
+          source=path.read_text()
+          old='assert "versionCode 146" in gradle, "Only the isolated security build 146 can use this key"'
+          assert source.count(old)==1, "Unexpected signing trust guard drift"
+          trial=source.replace(old,
+            'assert "versionCode 147" in gradle, "Only the isolated APK build 147 is allowed"')
+          namespace={"__file__":str(path.resolve()),"__name__":"_trial_v147_guard"}
+          exec(compile(trial,str(path),"exec"),namespace)
+          namespace["main"]()
+          PY
+          python3 security/test-signed-update-manifest.py
+          python3 security/check-no-private-keys.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'SECURITY STOP: private owner signing secrets must NEVER enter GitHub Actions'
+            exit 1
+          fi
+          python3 -m py_compile android-native/prepare-web-assets.py security/test-apk-qcf-performance.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run native unit tests and assemble UNSIGNED performance candidate
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease
+      - name: Check QCF JavaScript syntax and offline Quran regression
+        run: |
+          set -euo pipefail
+          node --check android-native/app/src/main/assets/www/js/quran-reader.js
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+          python3 security/test-apk-qcf-performance.py
+      - name: Verify unsigned build 147 and prevent accidentally publishing a signed file
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" > apk-147-badging.txt
+          head -n 1 apk-147-badging.txt | tee apk-147-version.txt
+          grep -F "name='com.aoqat.calendar'" apk-147-version.txt
+          grep -F "versionCode='147'" apk-147-version.txt
+          grep -F "versionName='2.11.1-qcf-performance-test'" apk-147-version.txt
+          if "$signer" verify --min-sdk-version 26 "$apk"; then
+            echo 'SECURITY STOP: noninstallable candidate was unexpectedly signed'
+            exit 1
+          fi
+          sha256sum "$apk" | tee apk-147-unsigned.sha256
+          echo "PASS: unsigned 147 candidate, not an installable or public APK"
+      - name: Owner-only unsigned review artifact, not a release
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-147-QCF-SWIPE-UNSIGNED-OWNER-REVIEW
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            apk-147-unsigned.sha256
+            apk-147-version.txt
+          retention-days: 3
+          compression-level: 0
+          if-no-files-found: error
+      - name: Prohibit release and deployment
+        run: echo 'UNSIGNED TEST ONLY; no APK installed, signed, merged, or published.'
