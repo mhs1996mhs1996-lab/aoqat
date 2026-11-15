@@ -6,7 +6,7 @@ on:
       - security/v212-apk-qcf-turn-latency-20261115
   pull_request:
     branches:
-      - security/v210-sacred-content-integrity-20261114
+      - security/v211-apk-qcf-swipe-performance-20261115
   workflow_dispatch:
 
 permissions:
