@@ -70,7 +70,11 @@ require("APK_QCF_UNIFORM_LINES_V149" not in web,
         "APK-only uniform font-size fix leaked into web")
 normal = apk.split("      if(page>2){\n        // APK_QCF_UNIFORM_LINES_V149",1)[1].split("      const memo=qcfFitCache",1)[0]
 require("const fullLineEm=17.60;" in normal and
-        "for(const line of lines)line.style.setProperty('font-size',px,'important');" in normal,
+        "const qcfRows=qcfData.get(page).filter(row=>Array.isArray(row.v));" in normal and
+        "line.style.setProperty('font-size',px,'important');" in normal and
+        "if(qcfRows[i]?.c)" in normal and
+        "line.style.setProperty('justify-content','center','important');" in normal and
+        "line.style.setProperty('gap','.12em','important');" in normal,
         "Every normal Mushaf line must receive identical font size")
 require("scrollWidth" not in normal and "clientWidth" not in normal and
         "offsetWidth" not in normal and "getBoundingClientRect" not in normal,
@@ -112,6 +116,13 @@ if archive.is_file():
                 "QCF word layout changed; font bounds need independent re-review")
         page_data=json.loads(gzip.decompress(manifest))["pages"]
         require(len(page_data)==604, "Not all 604 pages present")
+        # Native QCF centering flags already identify short final verses.
+        # Verify the original layouts contain the exact known closing lines.
+        for page, positions in {602:(4,10,14),603:(9,14),604:(3,8,13,14)}.items():
+            rows=page_data[str(page)]["lines"]
+            require(all(rows[i].get("c") is True for i in positions),
+                    f"Missing centered QCF line metadata on page {page}")
+
         aggregate=hashlib.sha256()
         largest=0.0
         largest_page=0
@@ -144,5 +155,5 @@ if archive.is_file():
         require("2.11.3-qcf-uniform-test" in
                 (root / "android-native/app/build.gradle").read_text(),
                 "APK performance version missing")
-print("PASS: APK QCF two-page staging, uniform normal page typography, idle font lookahead;")
+print("PASS: APK QCF two-page staging, uniform typography, original centered closing lines, idle font lookahead;")
 print("PASS: unmodified hosted web/QCF sacred word renderer and 604 offline fonts")
