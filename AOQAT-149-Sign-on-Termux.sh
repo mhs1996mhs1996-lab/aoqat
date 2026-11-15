@@ -4,7 +4,7 @@ set -euo pipefail
 set +x
 umask 077
 
-EXPECTED_APK='1c25a166bc3779b6f9f988d26aaac6196aea2340f14ea1e400b67e1f4a85273e'
+EXPECTED_APK='f1260475f619d03c0045148c781a0fc9defaf1f84791f4c69b86058496bc769c'
 EXPECTED_CERT='9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765'
 DOWNLOADS="$HOME/storage/downloads"
 KEYSTORE="$HOME/aoqat-keys/aoqat-apk-production-v2.p12"
