@@ -5,6 +5,9 @@ import json
 import hashlib
 import zipfile
 import sys
+import io
+import gzip
+from fontTools.ttLib import TTFont
 
 root = Path(__file__).resolve().parent.parent
 web = (root / "js/quran-reader.js").read_text(encoding="utf-8")
@@ -61,6 +64,23 @@ require("if($('aqSheet')&&!$('aqSheet').hidden)closeSheet();" in apk,
         "QCF swipe must avoid repeated unnecessary focus() and layout")
 require("APK_QCF_TURN_LATENCY_V148" not in web,
         "QCF performance test leaked into hosted web reader")
+require("APK_QCF_UNIFORM_LINES_V149" in apk,
+        "No uniform font-size fix for regular Quran pages")
+require("APK_QCF_UNIFORM_LINES_V149" not in web,
+        "APK-only uniform font-size fix leaked into web")
+normal = apk.split("      if(page>2){\n        // APK_QCF_UNIFORM_LINES_V149",1)[1].split("      const memo=qcfFitCache",1)[0]
+require("const fullLineEm=17.60;" in normal and
+        "const qcfRows=qcfData.get(page).filter(row=>Array.isArray(row.v));" in normal and
+        "line.style.setProperty('font-size',px,'important');" in normal and
+        "if(qcfRows[i]?.c)" in normal and
+        "line.style.setProperty('justify-content','center','important');" in normal and
+        "line.style.setProperty('gap','.12em','important');" in normal,
+        "Every normal Mushaf line must receive identical font size")
+require("scrollWidth" not in normal and "clientWidth" not in normal and
+        "offsetWidth" not in normal and "getBoundingClientRect" not in normal,
+        "Normal QCF pages must avoid synchronous DOM measurements")
+require("return;" in normal, "Old per-line QCF layout code is still running")
+
 
 
 # The complete word, aya-marker, surah and 604-page DOM content
@@ -87,8 +107,53 @@ if archive.is_file():
             item=base+file+(".bin" if file.endswith(".gz") else "")
             require(hashlib.sha256(z.read(item)).hexdigest()==digest,
                     "Sacred offline APK payload hash mismatch: "+file)
-        require("2.11.2-qcf-turn-test" in
+        # The precomputed universal bound is grounded in the ACTUAL 604
+        # packaged WOFF2 fonts and original 604-page QCF word layout.
+        # It must include the fixed 1.12em ornament replacing QCF markers.
+        manifest=z.read(base+"experiments/qcf604-web-verse-layouts.json.gz.bin")
+        require(hashlib.sha256(manifest).hexdigest()==
+                "c4bb062c0b0d8e91e8e453274535b36daee22b90d1f39cbe9ba0808dbf65a526",
+                "QCF word layout changed; font bounds need independent re-review")
+        page_data=json.loads(gzip.decompress(manifest))["pages"]
+        require(len(page_data)==604, "Not all 604 pages present")
+        # Native QCF centering flags already identify short final verses.
+        # Verify the original layouts contain the exact known closing lines.
+        for page, positions in {602:(4,10,14),603:(9,14),604:(3,8,13,14)}.items():
+            rows=page_data[str(page)]["lines"]
+            require(all(rows[i].get("c") is True for i in positions),
+                    f"Missing centered QCF line metadata on page {page}")
+
+        aggregate=hashlib.sha256()
+        largest=0.0
+        largest_page=0
+        for number in range(1,605):
+            font_bytes=z.read(base+f"assets/qcf-v2-page-fonts/p{number}.woff2")
+            aggregate.update(font_bytes)
+            font=TTFont(io.BytesIO(font_bytes))
+            cmap=font.getBestCmap()
+            widths=font["hmtx"].metrics
+            units=font["head"].unitsPerEm
+            for row in page_data[str(number)]["lines"]:
+                if not row.get("v"): continue
+                width=0.0
+                for _,glyph,is_marker in row["v"]:
+                    if is_marker: width+=1.12; continue
+                    for char in glyph:
+                        name=cmap.get(ord(char))
+                        width+=(widths[name][0]/units if name else 0.32)
+                if width>largest:
+                    largest=width
+                    largest_page=number
+            font.close()
+        require(aggregate.hexdigest()==
+                "212469cdf692d30a8fe2abe623eda29bcfa4428fdc98de7f139332a0f19f4e0d",
+                "Original offline QCF 604 fonts changed")
+        require(largest<=17.60,
+                f"QCF rows exceed page-width bound {largest:.3f}em on page {largest_page}")
+        print(f"PASS: all 604 original fonts checked, maximum line {largest:.3f}em, "
+              "uniform size fits without per-line WebView reflow")
+        require("2.11.3-qcf-uniform-test" in
                 (root / "android-native/app/build.gradle").read_text(),
                 "APK performance version missing")
-print("PASS: APK QCF two-page staging, batched measurement, idle font lookahead;")
+print("PASS: APK QCF two-page staging, uniform typography, original centered closing lines, idle font lookahead;")
 print("PASS: unmodified hosted web/QCF sacred word renderer and 604 offline fonts")
