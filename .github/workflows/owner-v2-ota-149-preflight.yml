@@ -23,6 +23,8 @@ jobs:
           grep -F 'BUILD = 149' AOQAT-149-OTA-V2-Preflight.py
           grep -F 'EXPECTED_V2_PUBLIC_SHA256 = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d"' AOQAT-149-OTA-V2-Preflight.py
           python3 AOQAT-149-OTA-V2-Preflight.py --self-test
+          python3 -m py_compile AOQAT-149-OTA-Canary-on-Termux.py
+          python3 AOQAT-149-OTA-Canary-on-Termux.py --self-test
           test ! -e aoqat-update-private-v2.pem
           test ! -e aoqat-apk-production-v2.p12
           test ! -e AOQAT_FINAL_KEYS_V2.7z
