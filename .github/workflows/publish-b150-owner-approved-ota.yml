@@ -1,0 +1,151 @@
+name: Publish ONLY verified owner-approved no-op OTA V2 for build 150
+
+# One-time, narrowly scoped pilot authorized by the owner for their
+# two test phones. This workflow lives on a review branch, not main.
+# It writes two new files atomically to main, then verifies Vercel.
+on:
+  push:
+    branches:
+      - security/v219-b150-ota-approved-publish-20261117
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: aoqat-b150-owner-approved-noop-ota
+  cancel-in-progress: false
+
+jobs:
+  publish-b150-signed-ota-only:
+    if: github.ref == 'refs/heads/security/v219-b150-ota-approved-publish-20261117'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify scoped publish instructions against owner-approved review
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          original='32496774d8ff438ead36f34e84f2367f558945a5'
+          expected={'.github/workflows/publish-b150-owner-approved-ota.yml'}
+          changed=set(subprocess.check_output(['git','diff','--name-only',original,'HEAD'],text=True).splitlines())
+          assert changed==expected, 'STOP: owner publish scope changed: '+repr(changed)
+          p=pathlib.Path('security/review-b150-ota-owner-signed-manifest.json')
+          assert hashlib.sha256(p.read_bytes()).hexdigest()==(
+            '3a0d343d6b8c72d3e1d46a431f13a7bcabf2f3ed45773c406b27b5eed6dee416'
+          ),'STOP: signed manifest differs from independently owner-reviewed public file'
+          m=json.loads(p.read_text())
+          assert m['nativeBuild']==150 and m['sequence']==1
+          assert set(m['files'])=={'index.html'}
+          assert m['files']['index.html']=='e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f'
+          print('PASS: only approved deployment workflow added, signed user manifest unchanged')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/signed-update-manifest.py verify \
+            security/review-b150-ota-owner-signed-manifest.json \
+            --public-key security/aoqat-update-public-v2.pem \
+            --build 150 --last-sequence 0
+
+      - name: Download independently verified 2-file public artifact (prior successful review run)
+        uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-NOOP-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44045708451
+          github-token: ${{ github.token }}
+          path: public-b150
+
+      - name: Reverify public content before ANY production write
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          root=pathlib.Path('public-b150')
+          assert root.is_dir()
+          listed={p.relative_to(root).as_posix() for p in root.rglob('*') if p.is_file()}
+          assert listed=={'manifest.json','files/index.html'}, 'STOP: unexpected/missing files'
+          manifest=root/'manifest.json'
+          html=root/'files/index.html'
+          assert manifest.read_bytes()==pathlib.Path('security/review-b150-ota-owner-signed-manifest.json').read_bytes(), 'STOP: different owner signature'
+          assert hashlib.sha256(html.read_bytes()).hexdigest()=='e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f'
+          assert html.stat().st_size==10843
+          print('PASS: exactly 2 owner-signed public files, content unchanged')
+          PY
+          python3 security/signed-update-manifest.py verify public-b150/manifest.json \
+            --public-key security/aoqat-update-public-v2.pem \
+            --build 150 --last-sequence 0
+
+      - name: Publish an atomic TWO-FILE ADDITION to existing main only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          CURRENT_MAIN="$(git rev-parse origin/main)"
+          # The owner's unchanged existing web baseline is pinned. No
+          # unrelated commits are smuggled into production.
+          test "$CURRENT_MAIN" = '66155827ace2118f452fd96be9551e7c525cdaa7' || {
+            echo "STOP: main advanced; review latest changes before publication"
+            exit 1
+          }
+          WORK="$(mktemp -d)"
+          git worktree add --detach "$WORK" "$CURRENT_MAIN"
+          mkdir -p "$WORK/android-updates/build-150/files"
+          test ! -e "$WORK/android-updates/build-150/manifest.json"
+          test ! -e "$WORK/android-updates/build-150/files/index.html"
+          cp public-b150/manifest.json "$WORK/android-updates/build-150/manifest.json"
+          cp public-b150/files/index.html "$WORK/android-updates/build-150/files/index.html"
+          git -C "$WORK" add -- android-updates/build-150/manifest.json android-updates/build-150/files/index.html
+          python3 - "$WORK" <<'PY'
+          import pathlib,subprocess,sys
+          work=sys.argv[1]
+          changed=set(subprocess.check_output(['git','-C',work,'diff','--cached','--name-only'],text=True).splitlines())
+          allowed={
+            'android-updates/build-150/manifest.json',
+            'android-updates/build-150/files/index.html',
+          }
+          assert changed==allowed,'STOP: refusing to publish changed/unrelated site files: '+repr(changed)
+          print('PASS: ONLY 2 new files; existing website, APK and Quran unchanged')
+          PY
+          git -C "$WORK" -c user.name='AOQAT V2 OTA Publisher' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Publish OWNER-approved signed B150 OTA no-op test (two files only) [web-only]'
+          git -C "$WORK" push origin HEAD:refs/heads/main
+          git fetch origin main
+          python3 - "$CURRENT_MAIN" <<'PY'
+          import subprocess,sys
+          old=sys.argv[1]
+          changed=set(subprocess.check_output(['git','diff','--name-only',old,'origin/main'],text=True).splitlines())
+          assert changed=={
+            'android-updates/build-150/manifest.json',
+            'android-updates/build-150/files/index.html',
+          },'Unexpected main modifications'
+          print('PASS: atomic push to main, exactly 2 files changed')
+          PY
+
+      - name: Check published Vercel routes (HTTP 200 and exact SHA256; no redirects)
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://aoqat.vercel.app/android-updates/build-150'
+          VERIFY="$(mktemp -d)"
+          for attempt in $(seq 1 20); do
+            STATUS1="$(curl --silent --show-error --max-time 15 --output "$VERIFY/manifest.json" --write-out '%{http_code}' "$BASE/manifest.json" || true)"
+            STATUS2="$(curl --silent --show-error --max-time 15 --output "$VERIFY/index.html" --write-out '%{http_code}' "$BASE/files/index.html" || true)"
+            if [[ "$STATUS1" = '200' && "$STATUS2" = '200' ]] &&
+              printf '%s  %s\n' '3a0d343d6b8c72d3e1d46a431f13a7bcabf2f3ed45773c406b27b5eed6dee416' "$VERIFY/manifest.json" | sha256sum -c - >/dev/null &&
+              printf '%s  %s\n' 'e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f' "$VERIFY/index.html" | sha256sum -c - >/dev/null; then
+              echo 'PASS: Vercel serves exact 2 signed OTA build-150 files via HTTP 200, no redirects'
+              exit 0
+            fi
+            echo "Vercel not ready / hash mismatch; attempt $attempt of 20; statuses $STATUS1/$STATUS2"
+            sleep 12
+          done
+          echo 'STOP: GitHub files committed but Vercel delivery NOT verified. DO NOT claim phone update worked.'
+          exit 1
