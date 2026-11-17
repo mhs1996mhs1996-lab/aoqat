@@ -1,0 +1,82 @@
+name: B150 OTA V2 profile button seq2 - unsigned review ONLY
+
+on:
+  push:
+    branches:
+      - security/v220-b150-ota-profile-seq2-20261117
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  check-owner-profile-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Exact scope guard and owner secret prohibition
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base="32496774d8ff438ead36f34e84f2367f558945a5"
+          allowed={"security/owner-ota-v2-build150-profile-seq2.py",
+                   ".github/workflows/review-b150-profile-ota-seq2.yml",
+                   "security/B150-OTA-PROFILE-SEQ2-ACCEPTANCE.md"}
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed and changed.issubset(allowed), "STOP: outside profile scope "+str(changed-allowed)
+          for path in ("android-native/app/build.gradle","android-native/prepare-web-assets.py",
+            "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt",
+            "android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt",
+            "index.html","js/web-menu-order.js","js/quran-reader.js",
+            "data/prayer-times-offline.json"):
+            assert Path(path).read_bytes()==subprocess.check_output(["git","show",base+":"+path]),path
+          print("PASS: all native APK, hosted website, Quran and prayer source files unchanged")
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then exit 1; fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-NOOP-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44045708451
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Exact index bytes, profile button and synthetic-signature test
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util,json
+          from pathlib import Path
+          s=importlib.util.spec_from_file_location("pilot","security/owner-ota-v2-build150-profile-seq2.py")
+          m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+          original=Path("baseline/files/index.html").read_bytes()
+          published=json.loads(Path("baseline/manifest.json").read_text())
+          assert published["nativeBuild"]==150 and published["sequence"]==1
+          assert published["files"]=={"index.html":m.sha(original)}
+          assert m.sha(original)==m.ORIGINAL_B150_INDEX_SHA256
+          updated=m.profile_index(original)
+          assert m.sha(updated)=="86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"
+          assert updated==original.replace(b"</body></html>",b"<script>\n"+m.PROFILE_JS.encode()+b"</script>\n</body></html>")
+          assert updated.count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert "الملف الشخصي".encode() in updated
+          assert "list.appendChild(button)" in m.PROFILE_JS
+          assert "nav.sub('الملف الشخصي', panel, 'main')" in m.PROFILE_JS
+          assert "event.stopPropagation()" in m.PROFILE_JS
+          assert len(updated)-len(original)<4096
+          Path("profile-proof.js").write_text(m.PROFILE_JS,encoding="utf8")
+          print("PASS: byte-precise APK-only index overlay, one last-row profile icon and subpage")
+          print("PASS: index SHA256",m.sha(updated))
+          PY
+          node --check profile-proof.js
+          python3 security/owner-ota-v2-build150-profile-seq2.py --self-test
+          sha256sum security/owner-ota-v2-build150-profile-seq2.py
+      - name: Explicit publication hold
+        run: echo "REVIEW ONLY. Private OTA V2 PEM stays on owner's phone. No Vercel deploy."
