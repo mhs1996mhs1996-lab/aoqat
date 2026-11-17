@@ -116,4 +116,5 @@ jobs:
           if-no-files-found: error
 
       - name: Explicit deployment hold
-        run: echo "PASS: reviewed ONLY. Signed files are public, not yet on Vercel or main."
+        run: |
+          echo "PASS: reviewed ONLY. Signed files are public, not yet on Vercel or main."
