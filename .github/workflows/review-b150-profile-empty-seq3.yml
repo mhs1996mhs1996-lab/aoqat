@@ -1,0 +1,112 @@
+name: Review OTA B150 profile blank page seq3 - NO DEPLOY
+
+on:
+  push:
+    branches:
+      - security/v223-b150-ota-profile-empty-seq3-20261117
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  verify-empty-profile-only:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Strict source scope and no private keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,subprocess
+          base="288fe06626c0045c430ec0156623a43904b7ce37"
+          allowed={
+            "security/owner-ota-v2-build150-profile-empty-seq3.py",
+            "security/B150-OTA-PROFILE-EMPTY-SEQ3.md",
+            ".github/workflows/review-b150-profile-empty-seq3.yml",
+          }
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed and changed.issubset(allowed),"STOP: unauthorized source files changed "+str(changed-allowed)
+          for file in ("index.html","js/web-menu-order.js","js/prayer-countdown.js","js/quran-reader.js",
+                       "data/prayer-times-offline.json","android-native/prepare-web-assets.py",
+                       "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt",
+                       "android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt"):
+            assert pathlib.Path(file).read_bytes()==subprocess.check_output(
+              ["git","show",base+":"+file]), "STOP: change to app/web source "+file
+          print("PASS: website, APK, prayer countdown, Quran, all native files preserved")
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo "STOP owner keys disallowed on GitHub Actions"
+            exit 1
+          fi
+      - uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-PROFILE-SEQ2-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44053170367
+          github-token: ${{ github.token }}
+          path: seq2
+      - name: Independently verify exact OLD signed seq2 and remove only page text
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,importlib.util,json
+          def sha(b): return hashlib.sha256(b).hexdigest()
+          p=Path("seq2")
+          files={x.relative_to(p).as_posix() for x in p.rglob("*") if x.is_file()}
+          assert files=={"manifest.json","files/index.html"}, files
+          old_manifest=p/"manifest.json"
+          old_index=p/"files/index.html"
+          assert sha(old_manifest.read_bytes())=="89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233"
+          assert sha(old_index.read_bytes())=="86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"
+          v=importlib.util.spec_from_file_location("verifier","security/signed-update-manifest.py")
+          verifier=importlib.util.module_from_spec(v);v.loader.exec_module(verifier)
+          m=json.loads(old_manifest.read_text("utf-8"))
+          verifier.verify(m,Path("security/aoqat-update-public-v2.pem"),expected_build=150,min_sequence=1)
+          old=old_index.read_bytes()
+          spec=importlib.util.spec_from_file_location(
+            "empty_profile","security/owner-ota-v2-build150-profile-empty-seq3.py")
+          s=importlib.util.module_from_spec(spec);spec.loader.exec_module(s)
+          assert s.SEQ2_INDEX_SHA256==sha(old)
+          assert s.SEQ2_OWNER_ZIP_SHA256=="1ffa80b24840eae399f3c0b432238fddcd5bb714d1290385bfcbc4c75f0429b7"
+          new=s.empty_profile_index(old)
+          assert sha(new)=="9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658"
+          assert new==old.replace(s.CONTENT_TO_REMOVE.encode("utf-8"),b"",1)
+          assert len(new)==len(old)-len(s.CONTENT_TO_REMOVE.encode("utf-8"))
+          assert new.count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert old.count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert "الملف الشخصي".encode() in new
+          assert "تم تفعيل تحديث OTA".encode() not in new
+          assert "هذه صفحة اختبار".encode() not in new
+          assert "nav.sub('الملف الشخصي', panel, 'main');".encode() in new
+          assert "panel.append(heading, description)".encode() not in new
+          assert "list.appendChild(button)".encode() in new
+          assert new.count(b"<script src=")==old.count(b"<script src=")
+          assert s.SEQ2_MANIFEST_SHA256==sha(old_manifest.read_bytes())
+          stage=Path("preview-b150-empty");stage.mkdir()
+          (stage/"index.html").write_bytes(new)
+          script=new.decode("utf-8").split("<script>\n/* AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2:",1)[1].split("\n</script>",1)[0]
+          (stage/"profile-test.js").write_text(
+              "/* AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2:"+script,encoding="utf-8")
+          print("PASS: removed EXACT old 5-line profile description only")
+          print("PASS: same profile icon last in menu, empty body, back navigation intact")
+          print("PASS: all existing app content and scripts are byte-identical")
+          print("PASS: unsigned candidate SHA256:",sha(new))
+          PY
+          node --check preview-b150-empty/profile-test.js
+          python3 -m py_compile security/owner-ota-v2-build150-profile-empty-seq3.py
+          python3 security/owner-ota-v2-build150-profile-empty-seq3.py --self-test
+          sha256sum security/owner-ota-v2-build150-profile-empty-seq3.py
+      - name: Hold unsigned preview, never publish without owner's private OTA V2 signer
+        run: |
+          echo 'PASS: owner-only candidate prepared; NO upload to Vercel or main.'
+          echo 'Requires owner OFFLINE encrypted PEM signing for sequence 3.'
