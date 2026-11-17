@@ -123,5 +123,57 @@ html[data-aoqat-web-colors="fixed"] * {
 
 <script src="js/apk-startup-bundle.js"></script>
 <script src="js/android-ui-fixes.js"></script><script src="js/android-back-navigation.js"></script>
+<script>
+/* AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2: owner-requested isolated visual proof. */
+(function () {
+  'use strict';
+  if (!window.AndroidNative?.configureAdhan) return;
+  const TEST_ID = 'aoqatOtaB150ProfileProof';
+  function insertLast() {
+    const list = document.getElementById('webDrawerMain');
+    const nav = window.AoqatWebSettingsNavigation;
+    if (!list || !nav?.sub) return false;
+    if (document.getElementById(TEST_ID)) return true;
+    const button = document.createElement('button');
+    button.id = TEST_ID;
+    button.type = 'button';
+    button.className = 'web-drawer-row';
+    button.setAttribute('aria-label', 'الملف الشخصي — اختبار التحديث');
+    const icon = document.createElement('span');
+    icon.className = 'ico';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '👤';
+    const label = document.createElement('span');
+    label.className = 'txt';
+    label.textContent = 'الملف الشخصي';
+    button.append(icon, label);
+    button.addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      const panel = document.createElement('section');
+      panel.className = 'web-settings-list';
+      panel.dir = 'rtl';
+      const heading = document.createElement('h3');
+      heading.textContent = 'تم تفعيل تحديث OTA V2 التجريبي';
+      const description = document.createElement('p');
+      description.textContent = 'الإصدار 2.12 — البناء 150 — التحديث رقم 2. هذه صفحة اختبار فقط ولا تطلب بيانات شخصية.';
+      panel.append(heading, description);
+      nav.sub('الملف الشخصي', panel, 'main');
+    });
+    list.appendChild(button);
+    return true;
+  }
+  function start() {
+    if (insertLast()) return;
+    let attempts = 0;
+    const timer = setInterval(function () {
+      if (insertLast() || ++attempts >= 100) clearInterval(timer);
+    }, 150);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, {once: true});
+  } else start();
+})();
+</script>
 </body></html>
 
