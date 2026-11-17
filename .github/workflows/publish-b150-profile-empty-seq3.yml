@@ -1,0 +1,158 @@
+name: Owner approved OTA B150 sequence 3 - empty profile content (two files only)
+
+on:
+  push:
+    branches:
+      - security/v225-b150-profile-empty-seq3-approved-publish-20261117
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: aoqat-owner-approved-b150-seq3-empty-profile
+  cancel-in-progress: false
+
+jobs:
+  publish-only-reviewed-seq3:
+    if: github.ref == 'refs/heads/security/v225-b150-profile-empty-seq3-approved-publish-20261117'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify approved branch scope, prior trusted owner manifest, secret safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json,hashlib,subprocess
+          base="c0b54f6db2791a17dba2d3c254f2cb4a7792cdd4"
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed=={".github/workflows/publish-b150-profile-empty-seq3.yml"},changed
+          manifest=Path("security/review-b150-profile-empty-signed-seq3-manifest.json").read_bytes()
+          assert hashlib.sha256(manifest).hexdigest()=="3c59436d5b4dcb1468f546d831f27535338f181f149878980df61963610da60e"
+          m=json.loads(manifest)
+          assert (m["nativeBuild"],m["sequence"],m["expiresAt"])==(150,3,1796121782015)
+          assert m["files"]=={"index.html":"9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658"}
+          print("PASS: owner signed public seq3 manifest is exact reviewed version")
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/signed-update-manifest.py verify \
+            security/review-b150-profile-empty-signed-seq3-manifest.json \
+            --public-key security/aoqat-update-public-v2.pem \
+            --build 150 --last-sequence 2
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo "STOP: no private owner keys permitted in this job"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-PROFILE-EMPTY-SEQ3-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44068234173
+          github-token: ${{ github.token }}
+          path: staged
+
+      - name: Verify EXACT two signed files from successful independent CI review
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json
+          root=Path("staged")
+          names={p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()}
+          assert names=={"manifest.json","files/index.html"},"STOP: unexpected signed OTA contents: "+repr(names)
+          m=(root/"manifest.json").read_bytes()
+          html=(root/"files/index.html").read_bytes()
+          assert m==Path("security/review-b150-profile-empty-signed-seq3-manifest.json").read_bytes()
+          assert hashlib.sha256(m).hexdigest()=="3c59436d5b4dcb1468f546d831f27535338f181f149878980df61963610da60e"
+          assert hashlib.sha256(html).hexdigest()=="9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658"
+          assert html.count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert "الملف الشخصي".encode("utf-8") in html
+          assert "تم تفعيل تحديث OTA".encode("utf-8") not in html
+          assert "هذه صفحة اختبار".encode("utf-8") not in html
+          print("PASS: only reviewed owner-signed EMPTY profile seq3, no content drift")
+          PY
+          python3 security/signed-update-manifest.py verify staged/manifest.json \
+            --public-key security/aoqat-update-public-v2.pem --build 150 --last-sequence 2
+
+      - name: Atomically publish ONLY the two existing B150 OTA files to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          PINNED_MAIN='d6a8a38667d9b118218f498a9b70f0613d504997'
+          CURRENT_MAIN="$(git rev-parse origin/main)"
+          test "$CURRENT_MAIN" = "$PINNED_MAIN" || {
+            echo "STOP: main branch advanced. Review all newer changes first."
+            exit 1
+          }
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" "$PINNED_MAIN"
+          test -f "$W/android-updates/build-150/manifest.json"
+          test -f "$W/android-updates/build-150/files/index.html"
+          python3 - "$W" <<'PY'
+          from pathlib import Path
+          import hashlib,json,sys
+          root=Path(sys.argv[1])/"android-updates/build-150"
+          m=(root/"manifest.json").read_bytes()
+          html=(root/"files/index.html").read_bytes()
+          assert hashlib.sha256(m).hexdigest()=="89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233"
+          assert hashlib.sha256(html).hexdigest()=="86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"
+          old=json.loads(m)
+          assert old["nativeBuild"]==150 and old["sequence"]==2
+          print("PASS: production is EXACT previous owner-approved seq2; anti-replay monotonic")
+          PY
+          cp staged/manifest.json "$W/android-updates/build-150/manifest.json"
+          cp staged/files/index.html "$W/android-updates/build-150/files/index.html"
+          git -C "$W" add -- android-updates/build-150/manifest.json android-updates/build-150/files/index.html
+          python3 - "$W" <<'PY'
+          import subprocess,sys
+          w=sys.argv[1]
+          changed=set(subprocess.check_output(["git","-C",w,"diff","--cached","--name-only"],text=True).splitlines())
+          assert changed=={
+            "android-updates/build-150/manifest.json",
+            "android-updates/build-150/files/index.html",
+          },"STOP: unauthorized production source changes: "+repr(changed)
+          print("PASS: exactly TWO existing OTA files will be replaced, no website/APK changes")
+          PY
+          git -C "$W" -c user.name='AOQAT V2 OTA Publisher' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Publish owner-approved signed B150 seq3 empty-profile (two OTA files only) [web-only]'
+          git -C "$W" push origin HEAD:refs/heads/main
+          git fetch origin main
+          python3 - "$PINNED_MAIN" <<'PY'
+          import subprocess,sys
+          changed=set(subprocess.check_output(["git","diff","--name-only",sys.argv[1],"origin/main"],text=True).splitlines())
+          assert changed=={
+            "android-updates/build-150/manifest.json",
+            "android-updates/build-150/files/index.html",
+          }
+          print("PASS: main updated with exact TWO build-150 OTA files, all other project files unchanged")
+          PY
+
+      - name: Check live Vercel serves exactly signed seq3 and profile HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://aoqat.vercel.app/android-updates/build-150'
+          OUT="$(mktemp -d)"
+          for attempt in $(seq 1 20); do
+            STATUS1="$(curl -sS --max-time 15 -o "$OUT/manifest.json" -w '%{http_code}' "$BASE/manifest.json" || true)"
+            STATUS2="$(curl -sS --max-time 15 -o "$OUT/index.html" -w '%{http_code}' "$BASE/files/index.html" || true)"
+            if [[ "$STATUS1" = '200' && "$STATUS2" = '200' ]] &&
+              printf '%s  %s\n' '3c59436d5b4dcb1468f546d831f27535338f181f149878980df61963610da60e' "$OUT/manifest.json" | sha256sum -c - >/dev/null &&
+              printf '%s  %s\n' '9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658' "$OUT/index.html" | sha256sum -c - >/dev/null; then
+              echo 'PASS: Vercel returns HTTP 200 signed OTA seq3 and exact empty-profile HTML, no redirects'
+              exit 0
+            fi
+            echo "Vercel stale / unavailable, attempt $attempt/20 HTTP $STATUS1/$STATUS2"
+            sleep 12
+          done
+          echo 'STOP: live delivery unverified despite publish; do not claim on-phone activation'
+          exit 1
