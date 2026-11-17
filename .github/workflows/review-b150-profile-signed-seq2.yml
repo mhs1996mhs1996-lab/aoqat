@@ -1,0 +1,105 @@
+name: Verify owner-signed B150 OTA profile sequence 2 - REVIEW ONLY
+
+on:
+  push:
+    branches:
+      - security/v221-b150-profile-seq2-signed-review-20261117
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  independently-review-signed-profile-ota:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Strict scope and secrets guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base="288fe06626c0045c430ec0156623a43904b7ce37"
+          allowed={
+            "security/review-b150-ota-profile-seq2-signed-manifest.json",
+            ".github/workflows/review-b150-profile-signed-seq2.yml"
+          }
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed==allowed,"STOP: unrelated files changed "+repr(changed)
+          for path in ("index.html", "js/web-menu-order.js", "js/quran-reader.js",
+            "data/prayer-times-offline.json", "android-native/prepare-web-assets.py",
+            "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt",
+            "android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt"):
+            assert Path(path).read_bytes()==subprocess.check_output(["git","show",base+":"+path]),path
+          print("PASS: only public sequence-2 manifest and review workflow added")
+          PY
+          python3 security/check-no-private-keys.py
+      - uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-NOOP-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44045708451
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Independently verify exact owner signature and build-only payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,hashlib,importlib.util,time
+          from pathlib import Path
+          manifest_file=Path("security/review-b150-ota-profile-seq2-signed-manifest.json")
+          assert hashlib.sha256(manifest_file.read_bytes()).hexdigest()==(
+            "89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233"
+          ),"STOP: owner signed manifest bytes changed"
+          m=json.loads(manifest_file.read_text("utf-8"))
+          assert m["nativeBuild"]==150 and m["sequence"]==2
+          assert set(m["files"])=={"index.html"}
+          assert m["expiresAt"]==1796115989559
+          assert int(time.time()*1000)<m["expiresAt"]<int(time.time()*1000)+31*86400000
+          prior=json.loads(Path("baseline/manifest.json").read_text("utf-8"))
+          assert prior["nativeBuild"]==150 and prior["sequence"]==1
+          assert prior["files"]=={
+            "index.html":"e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f"
+          }
+          orig=Path("baseline/files/index.html").read_bytes()
+          assert hashlib.sha256(orig).hexdigest()==prior["files"]["index.html"]
+          s=importlib.util.spec_from_file_location("profile","security/owner-ota-v2-build150-profile-seq2.py")
+          mod=importlib.util.module_from_spec(s);s.loader.exec_module(mod)
+          index=mod.profile_index(orig)
+          digest=hashlib.sha256(index).hexdigest()
+          assert digest=="86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"
+          assert m["files"]=={"index.html":digest}
+          assert index.count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert index.count(b"<script src=")==orig.count(b"<script src=")
+          # Verify with independently implemented production update signature verifier.
+          v=importlib.util.spec_from_file_location("verify","security/signed-update-manifest.py")
+          verifier=importlib.util.module_from_spec(v);v.loader.exec_module(verifier)
+          pub=Path("security/aoqat-update-public-v2.pem")
+          verifier.verify(m,pub,expected_build=150,min_sequence=1)
+          for bad in [dict(m,sequence=3),dict(m,nativeBuild=149),dict(m,expiresAt=m["expiresAt"]+1)]:
+            try: verifier.verify(bad,pub,expected_build=150,min_sequence=1)
+            except ValueError: pass
+            else: raise AssertionError("STOP: tampered signature accepted")
+          out=Path("review-b150-seq2/android-updates/build-150/files")
+          out.mkdir(parents=True)
+          (out/"index.html").write_bytes(index)
+          (out.parent/"manifest.json").write_bytes(manifest_file.read_bytes())
+          print("PASS: independently verified owner-signed P-256 OTA V2 sequence 2, anti-replay and expiry")
+          print("PASS: exactly one last-row profile button, original B150 unchanged elsewhere")
+          print("PASS: public files only, no private secrets, not yet deployed")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-PROFILE-SEQ2-REVIEW-ONLY
+          path: review-b150-seq2/android-updates/build-150/
+          if-no-files-found: error
+          retention-days: 3
+      - name: Hold for owner-authorized scoped publication
+        run: echo "NO MAIN PUSH, NO DEPLOY; READ-ONLY VALIDATION FINISHED."
