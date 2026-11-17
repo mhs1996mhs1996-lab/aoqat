@@ -1,0 +1,149 @@
+name: Publish owner-approved signed B150 profile OTA seq2 (TWO files ONLY)
+
+on:
+  push:
+    branches:
+      - security/v222-b150-profile-seq2-approved-publish-20261117
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: aoqat-owner-b150-profile-seq2
+  cancel-in-progress: false
+
+jobs:
+  publish-verified-owner-ota-seq2:
+    if: github.ref == 'refs/heads/security/v222-b150-profile-seq2-approved-publish-20261117'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fail closed if user-approved profile staging changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, subprocess, json
+          base="e7e54be48f0d8d0df7756961e5bceb0cef1a120c"
+          allowed={".github/workflows/publish-b150-owner-profile-seq2.yml"}
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed==allowed,"STOP: staged project files were modified"
+          p=Path("security/review-b150-ota-profile-seq2-signed-manifest.json")
+          assert hashlib.sha256(p.read_bytes()).hexdigest()=="89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233"
+          m=json.loads(p.read_text())
+          assert m["nativeBuild"]==150 and m["sequence"]==2 and m["expiresAt"]==1796115989559
+          assert m["files"]=={"index.html":"86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"}
+          print("PASS: ONLY owner-approved profile publication workflow added; signed bytes pinned")
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/signed-update-manifest.py verify \
+            security/review-b150-ota-profile-seq2-signed-manifest.json \
+            --public-key security/aoqat-update-public-v2.pem --build 150 --last-sequence 1
+
+      - name: Download pre-reviewed PUBLIC signing artifact, NEVER a private key
+        uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-PROFILE-SEQ2-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44053170367
+          github-token: ${{ github.token }}
+          path: staged
+
+      - name: Verify both signed payload files and original APK-relative patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, importlib.util
+          directory=Path("staged")
+          names={p.relative_to(directory).as_posix() for p in directory.rglob("*") if p.is_file()}
+          assert names=={"manifest.json","files/index.html"},"STOP: unexpected or missing OTA file"
+          manifest=directory/"manifest.json"
+          index=directory/"files/index.html"
+          assert manifest.read_bytes()==Path("security/review-b150-ota-profile-seq2-signed-manifest.json").read_bytes()
+          assert hashlib.sha256(manifest.read_bytes()).hexdigest()=="89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233"
+          assert hashlib.sha256(index.read_bytes()).hexdigest()=="86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"
+          assert index.read_bytes().count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert "الملف الشخصي".encode() in index.read_bytes()
+          print("PASS: exactly two independently reviewed owner-signed OTA bytes, sequence=2")
+          PY
+          python3 security/signed-update-manifest.py verify \
+            staged/manifest.json --public-key security/aoqat-update-public-v2.pem \
+            --build 150 --last-sequence 1
+
+      - name: Atomically update ONLY two existing build-150 OTA files on main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          EXPECTED_MAIN='4cedff4c495c6f0ea5e09ac2c479fe3f5840fad8'
+          CURRENT_MAIN="$(git rev-parse origin/main)"
+          test "$EXPECTED_MAIN" = "$CURRENT_MAIN" || {
+            echo "STOP: production main advanced; requires reviewing changed files first"
+            exit 1
+          }
+          WORK="$(mktemp -d)"
+          git worktree add --detach "$WORK" "$CURRENT_MAIN"
+          test -f "$WORK/android-updates/build-150/manifest.json"
+          test -f "$WORK/android-updates/build-150/files/index.html"
+          python3 - "$WORK" <<'PY'
+          import json,sys,pathlib,hashlib
+          main=pathlib.Path(sys.argv[1])
+          m=main/"android-updates/build-150/manifest.json"
+          h=main/"android-updates/build-150/files/index.html"
+          old=json.loads(m.read_text("utf8"))
+          assert old["nativeBuild"]==150 and old["sequence"]==1
+          assert hashlib.sha256(m.read_bytes()).hexdigest()=="3a0d343d6b8c72d3e1d46a431f13a7bcabf2f3ed45773c406b27b5eed6dee416"
+          assert hashlib.sha256(h.read_bytes()).hexdigest()=="e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f"
+          print("PASS: main currently has ONLY the known prior seq1 OTA release")
+          PY
+          cp staged/manifest.json "$WORK/android-updates/build-150/manifest.json"
+          cp staged/files/index.html "$WORK/android-updates/build-150/files/index.html"
+          git -C "$WORK" add -- android-updates/build-150/manifest.json android-updates/build-150/files/index.html
+          python3 - "$WORK" <<'PY'
+          import subprocess,sys
+          w=sys.argv[1]
+          changed=set(subprocess.check_output(["git","-C",w,"diff","--cached","--name-only"],text=True).splitlines())
+          exact={"android-updates/build-150/manifest.json","android-updates/build-150/files/index.html"}
+          assert changed==exact,"STOP: refusing unrelated website/APK/Quran modifications"
+          print("PASS: atomic change EXACTLY two OTA files on main")
+          PY
+          git -C "$WORK" -c user.name='AOQAT V2 OTA Publisher' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'Publish owner-approved signed B150 profile OTA seq2 ONLY (two files) [web-only]'
+          git -C "$WORK" push origin HEAD:refs/heads/main
+          git fetch origin main
+          python3 - "$EXPECTED_MAIN" <<'PY'
+          import subprocess,sys
+          changed=set(subprocess.check_output(["git","diff","--name-only",sys.argv[1],"origin/main"],text=True).splitlines())
+          assert changed=={"android-updates/build-150/manifest.json","android-updates/build-150/files/index.html"}
+          print("PASS: only exact manifest and HTML under build-150 updated in production")
+          PY
+
+      - name: Verify Vercel actually returns signed seq2 bytes, no redirect
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://aoqat.vercel.app/android-updates/build-150'
+          D="$(mktemp -d)"
+          for attempt in $(seq 1 20); do
+            STATUS1="$(curl -sS --max-time 15 -o "$D/manifest.json" -w '%{http_code}' "$BASE/manifest.json" || true)"
+            STATUS2="$(curl -sS --max-time 15 -o "$D/index.html" -w '%{http_code}' "$BASE/files/index.html" || true)"
+            if [[ "$STATUS1" = '200' && "$STATUS2" = '200' ]] &&
+              printf '%s  %s\n' '89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233' "$D/manifest.json" | sha256sum -c - >/dev/null &&
+              printf '%s  %s\n' '86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a' "$D/index.html" | sha256sum -c - >/dev/null; then
+              echo 'PASS: Vercel serves exact owner-signed profile seq2 and B150 patched HTML via HTTP 200, NO redirects'
+              exit 0
+            fi
+            echo "Vercel not yet serving seq2 / stale hash at attempt $attempt of 20 statuses=$STATUS1/$STATUS2"
+            sleep 12
+          done
+          echo 'STOP: production commit may exist but Vercel profile OTA NOT verified; do not claim device success'
+          exit 1
