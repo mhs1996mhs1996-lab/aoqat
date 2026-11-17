@@ -1,0 +1,119 @@
+name: Independently verify owner-signed B150 empty-profile seq3 (NO DEPLOY)
+
+on:
+  push:
+    branches:
+      - security/v224-b150-profile-empty-seq3-signed-review-20261117
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  review-only:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail closed on out-of-scope project changes or private keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base="8c5ded304d7994c51274066928640fd7731b85df"
+          allowed={
+            "security/review-b150-profile-empty-signed-seq3-manifest.json",
+            ".github/workflows/review-b150-profile-empty-owner-signed-seq3.yml",
+          }
+          changed=set(subprocess.check_output(["git","diff","--name-only",base,"HEAD"],text=True).splitlines())
+          assert changed==allowed,"STOP: review attempted to change project files: "+repr(changed)
+          for path in ("index.html", "js/web-menu-order.js", "js/prayer-countdown.js", "js/quran-reader.js",
+            "data/prayer-times-offline.json", "android-native/prepare-web-assets.py",
+            "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt",
+            "android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt"):
+            assert Path(path).read_bytes()==subprocess.check_output(["git","show",base+":"+path]),path
+          print("PASS: NO web, Android, Quran, iqama or prayer source modified")
+          PY
+          python3 security/check-no-private-keys.py
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' > /dev/null; then
+            echo "STOP: signing secrets cannot be accessed in CI"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-PROFILE-SEQ2-REVIEW-ONLY
+          repository: mhs1996mhs1996-lab/aoqat
+          run-id: 44053170367
+          github-token: ${{ github.token }}
+          path: owner-seq2
+
+      - name: Independently verify current signed seq3 against prior owner signed seq2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib, json, importlib.util, time
+          def sha(b): return hashlib.sha256(b).hexdigest()
+          base=Path("owner-seq2")
+          files={p.relative_to(base).as_posix() for p in base.rglob("*") if p.is_file()}
+          assert files=={"manifest.json","files/index.html"},"STOP: unexpected prior data"
+          prev_m=(base/"manifest.json").read_bytes()
+          prev_index=(base/"files/index.html").read_bytes()
+          assert sha(prev_m)=="89902ded97e8777b0517a1128e8f32067a3cf212437d245f230354e4436a0233"
+          assert sha(prev_index)=="86f2e701ba65a0cf2e0dcebe862ea15d77b64bfe08748136511798463936f75a"
+          previous=json.loads(prev_m)
+          s=importlib.util.spec_from_file_location("verify","security/signed-update-manifest.py")
+          v=importlib.util.module_from_spec(s);s.loader.exec_module(v)
+          public=Path("security/aoqat-update-public-v2.pem")
+          v.verify(previous,public,expected_build=150,min_sequence=1)
+          s=importlib.util.spec_from_file_location("empty","security/owner-ota-v2-build150-profile-empty-seq3.py")
+          helper=importlib.util.module_from_spec(s);s.loader.exec_module(helper)
+          new_html=helper.empty_profile_index(prev_index)
+          assert new_html==prev_index.replace(helper.CONTENT_TO_REMOVE.encode("utf8"),b"",1)
+          assert sha(new_html)=="9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658"
+          assert new_html.count(b"AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2")==1
+          assert "تم تفعيل تحديث OTA".encode("utf8") not in new_html
+          assert "هذه صفحة اختبار".encode("utf8") not in new_html
+          assert "nav.sub('الملف الشخصي', panel, 'main')".encode("utf8") in new_html
+          assert "list.appendChild(button)".encode("utf8") in new_html
+          assert len(new_html)==len(prev_index)-len(helper.CONTENT_TO_REMOVE.encode("utf8"))
+          manifest=Path("security/review-b150-profile-empty-signed-seq3-manifest.json").read_bytes()
+          assert sha(manifest)=="3c59436d5b4dcb1468f546d831f27535338f181f149878980df61963610da60e"
+          m=json.loads(manifest)
+          assert m["nativeBuild"]==150 and m["sequence"]==3
+          assert m["expiresAt"]==1796121782015
+          assert m["files"]=={"index.html":sha(new_html)}
+          assert m["sequence"]==previous["sequence"]+1
+          assert int(time.time()*1000)<m["expiresAt"]<int(time.time()*1000)+31*86400000
+          v.verify(m,public,expected_build=150,min_sequence=2)
+          for bad in (dict(m,sequence=4),dict(m,nativeBuild=149),dict(m,expiresAt=m["expiresAt"]+1000)):
+            try: v.verify(bad,public,expected_build=150,min_sequence=2)
+            except ValueError: pass
+            else: raise ValueError("STOP: altered signed metadata accepted")
+          dest=Path("review-profile-seq3")
+          (dest/"files").mkdir(parents=True)
+          (dest/"manifest.json").write_bytes(manifest)
+          (dest/"files/index.html").write_bytes(new_html)
+          print("PASS: exact owner signed seq3 P-256 certificate, expiry and build, replay rejected")
+          print("PASS: last-row icon and title/back retained; only profile interior test text removed")
+          print("PASS: original B150 and all remaining web/prayer/Quran/native bytes unchanged")
+          print("PASS: public review artifact includes ONLY exact two update files, no signing keys")
+          PY
+          python3 security/owner-ota-v2-build150-profile-empty-seq3.py --self-test
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-OTA-PROFILE-EMPTY-SEQ3-REVIEW-ONLY
+          path: review-profile-seq3/
+          retention-days: 4
+          if-no-files-found: error
+
+      - name: Explicit deployment hold
+        run: echo "PASS: reviewed ONLY. Signed files are public, not yet on Vercel or main."
