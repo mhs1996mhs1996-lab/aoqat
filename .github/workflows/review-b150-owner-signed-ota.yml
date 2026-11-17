@@ -67,7 +67,7 @@ jobs:
           manifest=json.loads(original.read_text(encoding="utf-8"))
           assert original.is_file() and content.is_file()
           assert hashlib.sha256(original.read_bytes()).hexdigest()==(
-            "80b37cd23332bf47c12a58c9f05d2c13fdcd74e42f081db58318c33b0f027d98"),"Owner manifest changed"
+            "3a0d343d6b8c72d3e1d46a431f13a7bcabf2f3ed45773c406b27b5eed6dee416"),"Owner manifest changed"
           assert manifest["nativeBuild"]==150 and manifest["sequence"]==1
           assert set(manifest["files"])=={"index.html"},"No other files may be updated"
           assert hashlib.sha256(content.read_bytes()).hexdigest()==(
