@@ -1,0 +1,91 @@
+name: Owner-only B150 OTA V2 signed pilot - no deployment
+
+on:
+  push:
+    branches:
+      - security/v217-b150-ota-v2-owner-pilot-20261117
+  pull_request:
+    branches:
+      - security/v216-b150-v2-ota-rc-20261115
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-offline-b150-ota-pilot:
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/security/v217-b150-ota-v2-owner-pilot-20261117')
+      || (github.event_name == 'pull_request' && github.head_ref == 'security/v217-b150-ota-v2-owner-pilot-20261117')
+      || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/security/v217-b150-ota-v2-owner-pilot-20261117')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject unrelated changes or owner-key material
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='a1ed561100e7a803a9b240fa9246b60a440cc2cc'
+          allowed={
+            'security/owner-ota-v2-build150.py',
+            '.github/workflows/v2-ota-build150-owner-pilot.yml',
+            'security/B150-OTA-V2-OWNER-PILOT.md',
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          assert changed and changed.issubset(allowed),f'STOP: modified unrelated files: {changed-allowed}'
+          for path in [
+            'android-native/app/build.gradle','android-native/prepare-web-assets.py',
+            'index.html','js/quran-reader.js','data/prayer-times-offline.json',
+            'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt',
+          ]:
+            assert Path(path).read_bytes()==subprocess.check_output(['git','show',base+':'+path]),path
+          s=Path('security/owner-ota-v2-build150.py').read_text()
+          assert 'BUILD = 150' in s and 'BUILD = 149' not in s
+          assert 'aoqat-b150-v2-2.12-signed.apk' in s
+          assert 'eb3d615ed169819294d8e608a166883345be4b80a807a9d72bdff5cf70bf30b5' in s
+          assert '9f981c7e29488599aab146de4aaf6cf305fe30b06fcec31a7a6345783c3ae765' in s
+          assert '8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d' in s
+          print('PASS: website, Quran, prayer data, Android logic and published app unchanged')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+          test ! -e android-native/signing/aoqat-stable-debug.keystore.b64
+          if env | grep -E '^AOQAT_APK_SIGNING_|^AOQAT_UPDATE_KEY_' >/dev/null; then
+            echo 'STOP: owner signing secrets prohibited in CI'
+            exit 1
+          fi
+      - name: Check OTA trust chain for B150 without weakening original security guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('security/check-signed-updater-trust.py')
+          s=path.read_text()
+          old='assert "versionCode 146" in gradle, "Only the isolated security build 146 can use this key"'
+          assert s.count(old)==1,'Unexpected trust policy drift'
+          trial=s.replace(old,'assert "versionCode 150" in gradle, "Only owner-reviewed B150 permitted"')
+          ns={'__file__':str(path.resolve()),'__name__':'_b150_ota_trial'}
+          exec(compile(trial,str(path),'exec'),ns)
+          ns['main']()
+          PY
+          python3 security/test-signed-update-manifest.py
+          python3 -m py_compile security/owner-ota-v2-build150.py
+      - name: Test B150 OTA cryptography with disposable P-256 keys ONLY
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/owner-ota-v2-build150.py --self-test
+          sha256sum security/owner-ota-v2-build150.py
+          echo 'PASS: no owner private key, passphrase, APK signing or deployment in CI'
+      - name: Hold everything until owner provides public signed review ZIP
+        run: |
+          echo 'REVIEW ONLY - NO APK OR OTA PUBLISHED, NO WEBSITE CHANGES'
+          echo 'Owner signs public manifest offline using DIFFERENT OTA V2 PEM in Termux.'
