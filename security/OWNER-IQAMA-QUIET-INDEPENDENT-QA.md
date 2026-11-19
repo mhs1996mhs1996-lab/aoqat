@@ -17,6 +17,14 @@ Fix is restricted to `return start to start+duration*60000L`; maintain the exist
 - No adhan master toggle coupling; no widening of allowed prayer IDs or durations; no change to DND preservation, audio player, lock-screen, Quran or prayer data.
 - Existing Robolectric tests cover DND policy, exact alarm restoration and stale-cycle safety.
 
+## User clarification: defaults are NOT limits
+The owner explicitly requires that the **untouched elapsed-Iqama timer defaults to 10 minutes**, but changing any of the three values should be honored **per prayer**:
+- Remaining before Iqama: its own user-selected time (the pre-existing Fajr default remains 20, other prayers 10 until owner changes it).
+- "مضى على الإقامة": 10-minute untouched default; valid custom values from 1 to 30 minutes must replace the default, not be capped by it.
+- Silent after Iqama: its own selected 0-120 minute value (zero disables that prayer); neither ten-minute defaults nor an edited elapsed timer may shorten or extend it.
+For example, remaining=12m, elapsed=25m, quiet=15m means Iqama zero at +12m, quiet ends +27m, elapsed display ends +37m. These are three independent choices. Existing Android preference fields `iqama_schedule.minutes`, `iqama_schedule.afterMinutes` and `adhan_settings.afterIqamaSilent.minutes` remain separate. No default reset on saved settings or restart.
+The test suite uses five distinct custom triples, plus a saved default untouched elapsed=10 / before=12 / quiet=15 case, to prevent the same bug from returning.
+
 ## Still open
 The **separate** report that `مضى على الإقامة` kept displaying beyond ten minutes has NOT yet been reproduced or repaired. Possible causes include device-side delayed notification expiry, a different native value from web UI localStorage, and system notification refresh lag. Do not claim this issue fixed merely from quiet interval tests. Need verify the on-device native `readIqamaTiming().afterMinutes`, app-side `aoqatAfterIqamaMinutesV1`, actual notification start/end anchors, and Android alarm accuracy with phone diagnostics before touching unrelated display code.
 
