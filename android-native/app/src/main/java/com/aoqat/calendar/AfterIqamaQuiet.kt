@@ -5,6 +5,10 @@ import org.json.JSONObject
 
 /** Uses saved prayer identity and iqama durations, never WebView countdown text. */
 object AfterIqamaQuiet {
+    // The elapsed-Iqama display and the user's post-Iqama quiet duration are
+    // independent clocks. Keep the extra argument for compatible callers but
+    // never cap the owner's selected mute interval to the notification duration.
+    @Suppress("UNUSED_PARAMETER")
     fun window(settings: JSONObject, prayerId: String, prayerAt: Long, iqamaMinutes: Int, elapsedMinutes: Int = 10): Pair<Long, Long>? {
         val quiet=settings.optJSONObject("afterIqamaSilent") ?: return null
         // This feature has its own switch. The adhan audio master switch only
@@ -13,8 +17,10 @@ object AfterIqamaQuiet {
         val duration=quiet.optJSONObject("minutes")?.optInt(prayerId,0)?.coerceIn(0,120) ?: 0
         if (duration==0 || prayerId !in PrayerTimes.ids || prayerAt<=0L) return null
         val start=prayerAt+iqamaMinutes.coerceIn(0,120)*60000L
-        // The silent window must never outlive the displayed "مضى على الإقامة".
-        return start to start+minOf(duration,elapsedMinutes.coerceIn(0,120))*60000L
+        // E.g. displayed "مضى" may end after 10 minutes, but a user-selected
+        // 12-minute quiet period must finish 12 minutes after Iqama's zero.
+        // Audio restoration is scheduled for THIS independent absolute deadline.
+        return start to start+duration*60000L
     }
     /**
      * Independent confirmation from the notification countdown's exact zero point.
