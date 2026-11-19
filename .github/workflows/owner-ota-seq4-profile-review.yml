@@ -1,0 +1,90 @@
+name: AOQAT owner OTA seq4 — UNSIGNED content review, NEVER PUBLISH
+on:
+  push:
+    branches:
+      - feature/b150-owner-ota-seq4-profile-buttons-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    if: github.ref == 'refs/heads/feature/b150-owner-ota-seq4-profile-buttons-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Check change scope against unchanged pilot branch
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          permitted={
+            'security/owner-ota-v2-b150-profile-buttons-seq4.py',
+            'security/OWNER-OTA-SEQ4-PROFILE-BUTTONS.md',
+            '.github/workflows/owner-ota-seq4-profile-review.yml'
+          }
+          base='feature/b150-owner-pilot-release-gate-20261119'
+          subprocess.check_call(['git','fetch','origin',base])
+          changed=set(subprocess.check_output(['git','diff','--name-only','origin/'+base,'HEAD'],text=True).splitlines())
+          assert changed and changed.issubset(permitted),'Unexpected modified app file: '+str(changed-permitted)
+          assert all(not p.startswith('android-updates/') for p in changed)
+          print('PASS: zero production APK, website, OTA or admin changes')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+      - name: Test unsigned profile-only transformation with disposable keys
+        run: |
+          python3 -m py_compile security/owner-ota-v2-b150-profile-buttons-seq4.py
+          python3 security/owner-ota-v2-b150-profile-buttons-seq4.py --self-test
+      - name: Construct exact already-public signed previous seq3 ZIP and preview unsigned seq4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess,zipfile
+          base='2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a'
+          prefix='android-updates/build-150/'
+          names=[prefix+'manifest.json',prefix+'files/index.html']
+          with zipfile.ZipFile('owner-b150-approved-seq3-signed-smoke-test.zip','w',zipfile.ZIP_DEFLATED) as z:
+              for name in names:
+                  z.writestr(name,subprocess.check_output(['git','show',base+':'+name]))
+          PY
+          python3 security/owner-ota-v2-b150-profile-buttons-seq4.py --preview \
+            --source owner-b150-approved-seq3-signed-smoke-test.zip \
+            --public-key security/aoqat-update-public-v2.pem \
+            --output AOQAT-B150-SEQ4-UNSIGNED-NOT-INSTALLABLE.zip
+      - name: Verify exact isolated candidate and intentionally missing publisher signature
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,zipfile
+          f='AOQAT-B150-SEQ4-UNSIGNED-NOT-INSTALLABLE.zip'
+          with zipfile.ZipFile(f) as z:
+              p='android-updates/build-150/'
+              assert set(z.namelist())=={p+'manifest.json',p+'files/index.html'}
+              m=json.loads(z.read(p+'manifest.json'));html=z.read(p+'files/index.html')
+          assert m['sequence']==4 and m['nativeBuild']==150
+          assert 'signature' not in m, 'Do not ship signed OTA via CI!'
+          assert m['files']=={'index.html':hashlib.sha256(html).hexdigest()}
+          assert html.count(b'AOQAT_OWNER_PILOT_SEQ4_PROFILE_BUTTONS_V1')==1
+          assert html.count(b"panel.append(note, group, result)") == 1
+          assert html.count(b"nav.sub('"+'الملف الشخصي'.encode()+b"', panel, 'main');")==1
+          print('PASS: owner-only profile buttons, unsigned (MUST NOT import), no publish')
+          print('REVIEW-CANDIDATE-INDEX-SHA256',hashlib.sha256(html).hexdigest())
+          PY
+          sha256sum AOQAT-B150-SEQ4-UNSIGNED-NOT-INSTALLABLE.zip > AOQAT-B150-SEQ4-UNSIGNED-NOT-INSTALLABLE.zip.sha256
+          cp security/owner-ota-v2-b150-profile-buttons-seq4.py owner-ota-v2-b150-profile-buttons-seq4.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-OWNER-SEQ4-UNSIGNED-CONTENT-AND-LOCAL-SIGNER-ONLY
+          path: |
+            owner-ota-v2-b150-profile-buttons-seq4.py
+            owner-b150-approved-seq3-signed-smoke-test.zip
+            AOQAT-B150-SEQ4-UNSIGNED-NOT-INSTALLABLE.zip
+            AOQAT-B150-SEQ4-UNSIGNED-NOT-INSTALLABLE.zip.sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Explicit halt
+        run: echo 'OWNER ONLY: do not import unsigned archive. Do not deploy. Owner must locally sign then test.'
