@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!-- Launcher display name ONLY for the isolated ownerPilot build.
+         The normal release/debug application labels remain untouched. -->
+    <application
+        android:label="أوقات الصلاة — تجريبي"
+        tools:replace="android:label" />
+</manifest>
