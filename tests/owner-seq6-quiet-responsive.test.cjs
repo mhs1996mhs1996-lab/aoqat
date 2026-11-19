@@ -82,7 +82,7 @@ assert.ok(source.includes('#quietPanel .aq-quiet-minute > span{min-width:0'), 'R
 assert.ok(source.includes('@media(max-width:360px)'), 'Responsive small screen size');
 assert.equal((lastHtml.match(/data-quiet-adjust="1"/g)||[]).length,10,'All 5 rows in each of 2 sections exist');
 
-assert.ok(source.includes('max-height:40px') && source.includes('grid-template-columns:minmax(60px,1fr) minmax(0,max-content)'), 'Safe compact rows');
+assert.ok(source.includes('max-height:38px') && source.includes('grid-template-columns:minmax(60px,1fr) minmax(0,max-content)'), 'Safe compact rows');
 assert.ok(lastHtml.includes('<details class="aq-quiet-help-details">'), 'Long explanations are collapsible');
 assert.ok(!lastHtml.includes('<h3 class="aq-quiet-title">'), 'No duplicate title takes up phone space');
 assert.ok(source.includes('saveTimer=setTimeout(flushSave,1400);'), 'Coalesced long idle save');
