@@ -15,11 +15,35 @@
     if(!s.afterIqamaSilent)s.afterIqamaSilent={enabled:false,minutes:{}};
     return s;
   }
+  // Update visible controls immediately. Coalesce synchronous Android bridge
+  // calls into one save for quick tapping, then flush on background/page leave.
+  let saveTimer=null, lastSaved='';
+  function flushSave(){
+    if(saveTimer!==null){clearTimeout(saveTimer);saveTimer=null;}
+    if(!state)return;
+    const encoded=JSON.stringify(state);
+    if(encoded===lastSaved)return;
+    try{
+      window.AndroidNative.configureAdhan(encoded);
+      lastSaved=encoded;
+      try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
+      const warning=panel?.querySelector('.aq-quiet-save-warning');
+      if(warning){warning.textContent='';warning.hidden=true;}
+    }catch(_){
+      const warning=panel?.querySelector('.aq-quiet-save-warning');
+      if(warning){
+        warning.hidden=false;
+        warning.textContent='تعذر حفظ إعدادات الصامت. تحقق من أذونات الهاتف ثم أعد المحاولة.';
+      }
+    }
+  }
   function store(){
     if(!state)return;
-    window.AndroidNative.configureAdhan(JSON.stringify(state));
-    try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
+    if(saveTimer!==null)clearTimeout(saveTimer);
+    saveTimer=setTimeout(flushSave,180);
   }
+  window.addEventListener('pagehide',flushSave);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave();});
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
   // WebView localizes number controls in Arabic. Text with a numeric keyboard
   // keeps ASCII digits on screen, without changing stored integer minutes.
@@ -79,33 +103,49 @@
   }
   function render(refresh=true){
     if(!panel)return;
+    if(refresh && saveTimer!==null)flushSave();
     if(refresh || !state)state=read();
     panel.innerHTML='<h3 class="aq-quiet-title">🔕 تفعيل وضع الصامت</h3>'+
       section('atAdhanSilent','تفعيل وضع صامت عند الأذان',
         'يبدأ الصامت حسب وقت الأذان المسجّل بقاعدة البيانات، ويستمر للمدة المحددة. إذا كان صوت الأذان مفعّلاً يستمر صوت الأذان نفسه.',10)+
       section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
         'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
-      (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
-    // Detailed diagnostics remain available through native status APIs, but are not displayed in this simple settings page.
+      (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>')+
+      '<p class="aq-quiet-save-warning" role="alert" hidden></p>';
+
+    // Checkbox: only reveal/hide this card's existing controls, never
+    // reconstruct the entire settings page or reset the user's scroll.
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
-      store();render(false);
+      const durations=input.closest('.aq-quiet-card')?.querySelector('.aq-quiet-times');
+      if(durations)durations.hidden=!input.checked;
+      store();
     }));
+    // Manual editing is the ONLY path that needs the numeric keyboard.
     panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
-      const group=state[input.dataset.quietKey];
+      const group=state[input.dataset.quietKey],id=input.dataset.quietPrayer;
       const entered=latinDigits(input.value.trim());
       if(!/^\d{1,3}$/.test(entered)||Number(entered)>120){
-        input.value=String(num(group.minutes[input.dataset.quietPrayer]));return;
+        input.value=String(num(group.minutes[id]));return;
       }
-      group.minutes[input.dataset.quietPrayer]=num(entered);
-      store();render(false);
+      group.minutes[id]=num(entered);
+      input.value=String(group.minutes[id]);
+      store();
     }));
-    panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>button.addEventListener('click',()=>{
-      const group=state[button.dataset.quietKey],id=button.dataset.quietPrayer;
-      group.minutes[id]=num(num(group.minutes[id])+Number(button.dataset.quietAdjust));
-      store();render(false);
-      panel.querySelector('input[data-quiet-key="'+button.dataset.quietKey+'"][data-quiet-prayer="'+id+'"]')?.focus({preventScroll:true});
-    }));
+    panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>{
+      // A +/- tap does not move focus onto the numeric field.
+      button.addEventListener('pointerdown',e=>e.preventDefault());
+      button.addEventListener('click',e=>{
+        e.preventDefault();
+        const group=state[button.dataset.quietKey],id=button.dataset.quietPrayer;
+        const input=button.parentElement?.querySelector('input[data-quiet-prayer]');
+        const current=num(latinDigits(input?.value||''),num(group.minutes[id]));
+        const next=num(current+Number(button.dataset.quietAdjust));
+        group.minutes[id]=next;
+        if(input)input.value=String(next); // First paint; persist asynchronously.
+        store();
+      });
+    });
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
   }
   function create(){
@@ -130,9 +170,9 @@
       #quietPanel .aq-quiet-times{display:grid!important;grid-template-columns:1fr!important;gap:5px!important}
       #quietPanel .aq-quiet-times[hidden]{display:none!important}
       #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
-      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:8px!important;direction:ltr!important;flex:0 0 auto!important;padding:5px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:13px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 4px #1d533b22!important}
-      #quietPanel .aq-quiet-stepper button{width:43px!important;height:45px!important;min-height:45px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:27px!important}
-      #quietPanel .aq-quiet-stepper input{width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
+      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:5px!important;direction:ltr!important;flex:0 1 auto!important;max-width:100%!important;padding:4px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:10px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 3px #1d533b14!important}
+      #quietPanel .aq-quiet-stepper button{width:34px!important;min-width:34px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:7px!important;background:linear-gradient(135deg,#25624c,#3c8066)!important;color:white!important;padding:0!important;margin:0!important;font-size:20px!important;line-height:1!important;touch-action:manipulation!important}
+      #quietPanel .aq-quiet-stepper input{width:45px!important;min-width:42px!important;height:36px!important;min-height:36px!important;border:0!important;border-radius:6px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:19px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
       #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
       #quietPanel .aq-quiet-stepper input{font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important;unicode-bidi:isolate!important}
       #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
@@ -142,10 +182,10 @@
       #quietPanel .aq-quiet-card{background:var(--wt-surface,#fbfdf9)!important;border-color:var(--wt-border,#c4d5c7)!important}
       #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#234037)!important;border-color:var(--wt-border,#cad7c8)!important}
 
-      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:63px!important;margin:4px 0!important;color:#234037!important}
+      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:7px!important;padding:1px 0!important;font-size:15px!important;min-height:45px!important;margin:3px 0!important;color:#234037!important}
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
-      #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}
+      #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important} #quietPanel .aq-quiet-save-warning:not([hidden]){display:block!important;color:#a12c28!important;background:#ffeceb!important;padding:8px!important;border-radius:8px!important;font-size:13px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}
       /* Compact iqama list on phones without hiding any rows or user choices. */
       #webSubBody #iqamaPanel{box-sizing:border-box!important;width:100%!important;padding:10px 12px!important;margin:0!important;border-radius:12px!important;overflow:visible!important}
       #webSubBody #iqamaPanel .iqama-help,#webSubBody #iqamaPanel .iqama-friday-help{margin:0 0 7px!important;line-height:1.5!important;font-size:13px!important}
