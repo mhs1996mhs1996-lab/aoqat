@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 /** Uses saved prayer identity and iqama durations, never WebView countdown text. */
 object AfterIqamaQuiet {
-    fun window(settings: JSONObject, prayerId: String, prayerAt: Long, iqamaMinutes: Int, elapsedMinutes: Int = 10): Pair<Long, Long>? {
+    fun window(settings: JSONObject, prayerId: String, prayerAt: Long, iqamaMinutes: Int): Pair<Long, Long>? {
         val quiet=settings.optJSONObject("afterIqamaSilent") ?: return null
         // This feature has its own switch. The adhan audio master switch only
         // controls playback; it must never prevent the prayer-time quiet window.
@@ -13,8 +13,10 @@ object AfterIqamaQuiet {
         val duration=quiet.optJSONObject("minutes")?.optInt(prayerId,0)?.coerceIn(0,120) ?: 0
         if (duration==0 || prayerId !in PrayerTimes.ids || prayerAt<=0L) return null
         val start=prayerAt+iqamaMinutes.coerceIn(0,120)*60000L
-        // The silent window must never outlive the displayed "مضى على الإقامة".
-        return start to start+minOf(duration,elapsedMinutes.coerceIn(0,120))*60000L
+        // "مضى على الإقامة" is a DISPLAY/notification duration, NOT a
+        // limit on ringtone silence. The owner configures both independently.
+        // Do not truncate a requested 12-minute mute to a 10-minute counter.
+        return start to start+duration*60000L
     }
     /**
      * Independent confirmation from the notification countdown's exact zero point.
@@ -31,8 +33,8 @@ object AfterIqamaQuiet {
 
     fun start(c: Context, prayerId: String, prayerAt: Long) {
         if(FridaySchedule.suppress(c,prayerId,prayerAt))return
-        val countdown=IqamaNativeScheduler.durations(c,prayerId)
-        val times=window(AdhanSchedule.settings(c),prayerId,prayerAt,countdown.beforeMinutes,countdown.afterMinutes) ?: return
+        val iqamaBefore=IqamaNativeScheduler.durations(c,prayerId).beforeMinutes
+        val times=window(AdhanSchedule.settings(c),prayerId,prayerAt,iqamaBefore) ?: return
         val now=System.currentTimeMillis()
         if (now !in times.first until times.second) return
         // A short iqama window must never silence a still-playing adhan.
