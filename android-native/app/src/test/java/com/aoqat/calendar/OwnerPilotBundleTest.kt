@@ -64,6 +64,19 @@ class OwnerPilotBundleTest {
             } catch (_: IllegalArgumentException) {}
         }
     }
+    @Test fun acceptsActualPreviouslyOwnerSignedB150Seq3WhenFixtureProvided() {
+        // CI assembles this exact, already-public signed ZIP from pinned main.
+        // Other local builds can skip the external smoke fixture.
+        val stream = javaClass.classLoader?.getResourceAsStream("owner-approved-b150-seq3.zip")
+        org.junit.Assume.assumeNotNull(stream)
+        val verified = stream!!.use {
+            OwnerPilotBundle.inspect(it, 150, WebUpdates.SIGNING_PUBLIC_KEY_B64, 0L)
+        }
+        assertEquals(3L, verified.sequence)
+        assertEquals(setOf("index.html"), verified.files.keys)
+        assertTrue(verified.files.getValue("index.html").isNotEmpty())
+    }
+
     @Test fun rejectsUnknownAndUnauthorizedPaths() {
         val pack = zip(mapOf("index.html" to byteArrayOf(65)), extra = "files/data/private.json")
         try {
