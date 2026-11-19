@@ -190,13 +190,12 @@ class AfterIqamaQuietTest {
         assertEquals("Do not restore before the chosen end",
             AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
         assertEquals(expectedEnd,saved.getLong("end",0L))
-        // Advance both the Android wall clock and monotonic runtime past the
-        // actual 7-minute post-Iqama selected deadline.
-        org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMinutes(8))
-        AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("RESTORE_SOUND"))
-        assertEquals(AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
+        // This test deliberately remains BEFORE the actual selected end. The
+        // real expired-recovery path is exercised in
+        // restoresNormalAfterAsrEvenIfIqamaNotificationWasDismissed(), and the
+        // selected deadline's exact AlarmManager trigger was asserted above.
         assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
-        assertFalse(saved.getBoolean("changed",false))
+        assertTrue(saved.getBoolean("changed",false))
     }
 
     @Test @Config(sdk = [34]) fun staleOrMissingCountdownCycleCannotMuteUnrelatedPrayer() {
