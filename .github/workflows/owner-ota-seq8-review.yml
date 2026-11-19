@@ -18,10 +18,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin feature/b150-owner-ota-seq8-stepper-balance-20261119
+          git fetch origin feature/b150-owner-ota-seq7-stepper-balance-20261119 feature/b150-owner-ota-seq6-quiet-responsive-20261119
           python3 - <<'PY'
           import subprocess
-          base='origin/feature/b150-owner-ota-seq8-stepper-balance-20261119'
+          base='origin/feature/b150-owner-ota-seq7-stepper-balance-20261119'
           modified=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           authorized={
             'security/owner-ota-b150-seq8-quiet-ui.js',
@@ -42,7 +42,7 @@ jobs:
           node tests/owner-ota-seq8-visual-compact.test.cjs
           node tests/iqama-stepper-responsive.test.cjs
           python3 -m py_compile security/owner-ota-v2-b150-quiet-seq8.py
-      - name: Recreate unchanged signed seq6 index; verify safe seq8 manifest using disposable key
+      - name: Recreate unchanged signed seq7 index; verify safe seq8 manifest using disposable key
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -71,7 +71,7 @@ jobs:
           assert b'SAVE_IDLE_MS=900' in quiet
           assert b'width:44px!important' in quiet
           print('REVIEWED-SEQ8-QUIET-JS-SHA256',sha(quiet))
-          print('UNCHANGED-SEQ6-INDEX-SHA256',sha(html))
+          print('UNCHANGED-SEQ7-INDEX-SHA256',sha(html))
           m=seq8.create_manifest(html,quiet)
           assert m['sequence']==8 and m['nativeBuild']==150
           assert m['files']=={seq8.INDEX:sha(html),seq8.QUIET:sha(quiet)}
@@ -82,11 +82,11 @@ jobs:
               signature=seq8.run('openssl','dgst','-sha256','-sign',str(private),data=seq8.canonical(m))
               m['signature']=base64.b64encode(signature).decode('ascii')
               seq8.verify_signature(m,pub)
-              for corrupted in [{**m,'sequence':6},{**m,'files':{**m['files'],seq8.QUIET:'0'*64}}]:
+              for corrupted in [{**m,'sequence':7},{**m,'files':{**m['files'],seq8.QUIET:'0'*64}}]:
                   try:seq8.verify_signature(corrupted,pub)
                   except ValueError:pass
                   else:raise AssertionError('Forged manifest accepted!')
-          print('PASS: exact seq6 index kept, seq8 layout-only script added, cryptographic tamper tests')
+          print('PASS: exact seq7 index kept, seq8 layout-only script added, cryptographic tamper tests')
           PY
       - name: Export two unsigned files for owner local Termux signing
         shell: bash
