@@ -1,0 +1,54 @@
+name: AOQAT owner-only Iqama quiet 10-12 independence regression — NO DEPLOY
+on:
+  push:
+    branches:
+      - fix/ownerpilot-independent-iqama-quiet-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    if: github.ref == 'refs/heads/fix/ownerpilot-independent-iqama-quiet-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Restrict edits to separate owner pilot native code and tests only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-pilot-release-gate-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/b150-owner-pilot-release-gate-20261119'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt',
+            '.github/workflows/owner-iqama-quiet-independent-qa.yml',
+            'security/OWNER-IQAMA-QUIET-INDEPENDENT-QA.md',
+          }
+          assert changed and changed.issubset(allowed),changed-allowed
+          source=open('android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt').read()
+          assert 'return start to start+duration*60000L' in source
+          assert 'minOf(duration,elapsedMinutes' not in source
+          print('PASS: only owner pilot quiet calculation and tests changed')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run Android unit tests for independent 10min elapsed / 12min quiet
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.AfterIqamaQuietTest' --tests 'com.aoqat.calendar.IqamaCycleTest'
+      - name: Do not build/release production or owner-pilot APK yet
+        run: |
+          echo 'NO SIGNING, NO APK, NO OTA, NO PRODUCTION DEPLOYMENT.'
