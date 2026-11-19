@@ -27,6 +27,7 @@ jobs:
             'android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt',
             '.github/workflows/owner-iqama-quiet-independent-qa.yml',
+            '.github/workflows/owner-iqama-quiet-native-preview.yml',
             'security/OWNER-IQAMA-QUIET-INDEPENDENT-QA.md',
           }
           assert changed and changed.issubset(allowed),changed-allowed
