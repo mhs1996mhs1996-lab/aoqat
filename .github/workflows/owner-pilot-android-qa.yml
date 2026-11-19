@@ -34,6 +34,7 @@ jobs:
             'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/OwnerPilotBundleTest.kt',
             'android-native/app/src/main/AndroidManifest.xml',
+            'android-native/app/src/ownerPilot/AndroidManifest.xml',
             'android-native/app/build.gradle',
           }
           changed=set(subprocess.check_output(['git','diff','--name-only',baseline,'HEAD'],text=True).splitlines())
@@ -66,6 +67,9 @@ jobs:
           test -s "$APK"
           AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
           "$AAPT" dump badging "$APK" | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$AAPT" dump badging "$APK" | grep -F "application-label:'أوقات الصلاة — تجريبي'"
+          # Keep user-facing production display name unmodified.
+          grep -F 'android:label="اوقات الصلاة في الحويجة"' android-native/app/src/main/AndroidManifest.xml
           signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
           if "$signer" verify "$APK"; then echo 'STOP: QA artifact is unexpectedly signed by CI' >&2; exit 1; fi
           cp "$APK" android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-unsigned.apk
