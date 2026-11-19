@@ -21,12 +21,12 @@ class AfterIqamaQuietTest {
         assertEquals(2500000L,times.first);assertEquals(2920000L,times.second)
         assertNull(AfterIqamaQuiet.window(settings(),"maghrib",1000000L,10))
     }
-    @Test fun silentCannotOutliveElapsedIqamaCounter() {
+    @Test fun quietDurationStaysIndependentWhenElapsedCounterEndsEarlier() {
         val s=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":30}}}""")
         val start=1000000L
         val win=AfterIqamaQuiet.window(s,"maghrib",start,10,5)!!
         assertEquals(start+10*60000L,win.first)
-        assertEquals("Elapsed counter ends five minutes after iqama",start+15*60000L,win.second)
+        assertEquals("User selected 30-minute quiet duration",start+40*60000L,win.second)
     }
     @Test fun quietSwitchIsIndependentOfAdhanAudioMaster() {
         val s=settings().put("enabled",false)
@@ -36,16 +36,45 @@ class AfterIqamaQuietTest {
         s.getJSONObject("afterIqamaSilent").put("enabled",false)
         assertNull(AfterIqamaQuiet.window(s,"asr",1000000L,25))
     }
-    @Test fun enabledToggleUsesSavedDurationsAndStopsExactlyAtElapsedCounter() {
+    @Test fun enabledToggleUsesSavedQuietDurationIndependentOfElapsedCounter() {
         val saved=JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":13}}}""")
         val at=2_000_000L
         val win=AfterIqamaQuiet.window(saved,"maghrib",at,5,12)!!
         assertEquals(at+5*60_000L,win.first)
-        assertEquals(at+17*60_000L,win.second)
-        // A longer silent duration can never outlive the displayed 'مضى'.
+        assertEquals(at+18*60_000L,win.second)
+        // The quiet period may outlive the elapsed display, by user choice.
         saved.getJSONObject("afterIqamaSilent").put("enabled",false)
         assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5,12))
     }
+    @Test fun tenMinuteElapsedAndTwelveMinuteQuietHaveIndependentEndPoints() {
+        val prayerAt=1_000_000L
+        val settings=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"asr":12}}}""")
+        val start=prayerAt+10*60000L
+        val quiet=AfterIqamaQuiet.window(settings,"asr",prayerAt,10,10)!!
+        assertEquals("Quiet starts at the Iqama zero point",start,quiet.first)
+        assertEquals("Quiet ends twelve minutes later, not ten",start+12*60000L,quiet.second)
+        val ten=prayerAt+20*60000L
+        assertTrue("Phone must remain quiet after the ten-minute elapsed counter ends",ten<quiet.second)
+        val elapsed=IqamaCycle.Durations(beforeMinutes=10,afterMinutes=10)
+        assertEquals(IqamaCycle.Phase.FINISHED,IqamaCycle.frame(20*60000L,elapsed).phase)
+        assertEquals(IqamaCycle.Phase.ELAPSED,IqamaCycle.frame(19*60000L,elapsed).phase)
+        settings.getJSONObject("afterIqamaSilent").getJSONObject("minutes").put("asr",7)
+        val short=AfterIqamaQuiet.window(settings,"asr",prayerAt,10,10)!!
+        assertEquals(start+7*60000L,short.second)
+    }
+    @Test fun eachPrayerQuietDurationDoesNotChangeElapsedCounter() {
+        for(id in PrayerTimes.ids) {
+            val at=1_000_000L
+            val s=JSONObject().put("afterIqamaSilent",
+                JSONObject().put("enabled",true).put("minutes",JSONObject().put(id,12)))
+            val w=AfterIqamaQuiet.window(s,id,at,10,10)!!
+            assertEquals(at+10*60000L,w.first)
+            assertEquals(at+22*60000L,w.second)
+            assertEquals(IqamaCycle.Phase.FINISHED,
+                IqamaCycle.frame(20*60000L,IqamaCycle.Durations(10,10)).phase)
+        }
+    }
+
     @Test fun zeroMinuteDurationAndUnknownPrayerNeverMutePhone() {
         val s=settings()
         assertNull(AfterIqamaQuiet.window(s,"maghrib",1000000L,5))
