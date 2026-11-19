@@ -1,0 +1,111 @@
+name: AOQAT owner OTA seq7 — stepper frame only, NO PUBLISH
+on:
+  push:
+    branches:
+      - feature/b150-owner-ota-seq7-stepper-balance-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    if: github.ref == 'refs/heads/feature/b150-owner-ota-seq7-stepper-balance-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Confirm exact owner-only file change scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-ota-seq6-quiet-responsive-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/b150-owner-ota-seq6-quiet-responsive-20261119'
+          modified=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          authorized={
+            'security/owner-ota-b150-seq7-quiet-ui.js',
+            'security/owner-ota-v2-b150-quiet-seq7.py',
+            'tests/owner-ota-seq7-stepper-balance.test.cjs',
+            'security/OWNER-OTA-SEQ7-OWNER-INSTRUCTIONS.md',
+            '.github/workflows/owner-ota-seq7-review.yml'
+          }
+          assert modified and modified.issubset(authorized),modified-authorized
+          print('PASS: zero production, APK, prayer, Quran, admin or public OTA files changed')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+      - name: Confirm exact isolated layout-only change plus functional regression
+        run: |
+          set -euo pipefail
+          node --check security/owner-ota-b150-seq7-quiet-ui.js
+          node tests/owner-ota-seq7-stepper-balance.test.cjs
+          node tests/iqama-stepper-responsive.test.cjs
+          python3 -m py_compile security/owner-ota-v2-b150-quiet-seq7.py
+      - name: Recreate unchanged signed seq6 index; verify safe seq7 manifest using disposable key
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,hashlib,importlib.util,subprocess,base64,tempfile
+          path=pathlib.Path
+          sha=lambda b:hashlib.sha256(b).hexdigest()
+          def mod(name,filepath):
+              spec=importlib.util.spec_from_file_location(name,filepath)
+              x=importlib.util.module_from_spec(spec);spec.loader.exec_module(x)
+              return x
+          seq4=mod('seq4','security/owner-ota-v2-b150-profile-buttons-seq4.py')
+          seq7=mod('seq7','security/owner-ota-v2-b150-quiet-seq7.py')
+          old=subprocess.check_output(['git','show','2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a:android-updates/build-150/files/index.html'])
+          assert sha(old)==seq4.OLD_INDEX_SHA256
+          html=seq4.patch_profile(old)
+          assert sha(html)==seq4.EXACT_REVIEWED_SEQ4_INDEX_SHA256
+          marker=b'<script src="js/owner-quiet-seq5.js"></script>\n'
+          assert html.count(b'</body></html>')==1 and marker not in html
+          html=html.replace(b'</body></html>',marker+b'</body></html>')
+          assert sha(html)==seq7.PINNED_INDEX_SHA
+          quiet=path('security/owner-ota-b150-seq7-quiet-ui.js').read_bytes()
+          assert seq7.candidate(html,quiet)==(html,quiet),'Signer must accept ONLY pinned reviewed bytes'
+          try: seq7.candidate(html,quiet+b' modified')
+          except ValueError: pass
+          else: raise AssertionError('Changed JS accepted for local owner signing')
+          assert b'width:max-content!important' in quiet
+          assert b'aq-quiet-unit' in quiet and b'aq-quiet-controls' in quiet
+          assert b'SAVE_IDLE_MS=900' in quiet
+          assert b'width:44px!important' in quiet
+          print('REVIEWED-SEQ7-QUIET-JS-SHA256',sha(quiet))
+          print('UNCHANGED-SEQ6-INDEX-SHA256',sha(html))
+          m=seq7.create_manifest(html,quiet)
+          assert m['sequence']==7 and m['nativeBuild']==150
+          assert m['files']=={seq7.INDEX:sha(html),seq7.QUIET:sha(quiet)}
+          with tempfile.TemporaryDirectory(prefix='aoqat-seq7-qa-') as tmp:
+              folder=path(tmp);private=folder/'private.pem';pub=folder/'pub.pem'
+              seq7.run('openssl','ecparam','-name','prime256v1','-genkey','-noout','-out',str(private))
+              pub.write_bytes(seq7.run('openssl','pkey','-in',str(private),'-pubout'))
+              signature=seq7.run('openssl','dgst','-sha256','-sign',str(private),data=seq7.canonical(m))
+              m['signature']=base64.b64encode(signature).decode('ascii')
+              seq7.verify_signature(m,pub)
+              for corrupted in [{**m,'sequence':6},{**m,'files':{**m['files'],seq7.QUIET:'0'*64}}]:
+                  try:seq7.verify_signature(corrupted,pub)
+                  except ValueError:pass
+                  else:raise AssertionError('Forged manifest accepted!')
+          print('PASS: exact seq6 index kept, seq7 layout-only script added, cryptographic tamper tests')
+          PY
+      - name: Export two unsigned files for owner local Termux signing
+        shell: bash
+        run: |
+          cp security/owner-ota-v2-b150-quiet-seq7.py owner-ota-v2-b150-quiet-seq7.py
+          cp security/owner-ota-b150-seq7-quiet-ui.js owner-ota-b150-seq7-quiet-ui.js
+          sha256sum owner-ota-b150-seq7-quiet-ui.js > owner-ota-b150-seq7-quiet-ui.js.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-SEQ7-ONLY-LOCAL-SIGNER-AND-QUIET-UI-NOT-SIGNED
+          path: |
+            owner-ota-v2-b150-quiet-seq7.py
+            owner-ota-b150-seq7-quiet-ui.js
+            owner-ota-b150-seq7-quiet-ui.js.sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Publication stop
+        run: |
+          echo 'NO OTA publisher key in CI. Do not publish to main or user-facing OTA.'
