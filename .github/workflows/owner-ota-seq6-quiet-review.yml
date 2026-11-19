@@ -64,6 +64,10 @@ jobs:
           index=index.replace(b'</body></html>',b'<script src="js/owner-quiet-seq5.js"></script>\n</body></html>')
           assert sha(index)==seq6.PINNED_INDEX_SHA,'MUST preserve exact seq5 index and profile'
           js=p('security/owner-ota-b150-seq6-quiet-ui.js').read_bytes()
+          assert seq6.candidate(index,js)==(index,js),'Pinned exact reviewed content must be reproducible'
+          try: seq6.candidate(index,js+b' /* modified */')
+          except ValueError: pass
+          else: raise AssertionError('Tampered JS should never be signed')
           print('REVIEWED-SEQ6-QUIET-JS-SHA256',sha(js))
           print('REVIEWED-SEQ5-INDEX-SHA256',sha(index))
           assert b'SAVE_IDLE_MS=900' in js and b'width:44px' in js
