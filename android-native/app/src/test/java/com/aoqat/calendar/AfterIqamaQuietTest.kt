@@ -69,7 +69,7 @@ class AfterIqamaQuietTest {
             at+18*60_000L,win.second)
         // Turning quiet off must not touch the independent "مضى" display.
         saved.getJSONObject("afterIqamaSilent").put("enabled",false)
-        assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5,12))
+        assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5))
     }
     @Test fun zeroMinuteDurationAndUnknownPrayerNeverMutePhone() {
         val s=settings()
