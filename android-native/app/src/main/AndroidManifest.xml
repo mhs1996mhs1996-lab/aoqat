@@ -100,6 +100,8 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/prayer_iqama_widget_info" />
         </receiver>
+        <!-- Private, non-exported owner pilot test screen: no external Intents. -->
+        <activity android:name=".OwnerPilotActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:enableOnBackInvokedCallback="true"
