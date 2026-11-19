@@ -1,0 +1,121 @@
+name: AOQAT owner-only OTA seq5 quiet UI review — NO PUBLISH
+on:
+  push:
+    branches:
+      - feature/b150-owner-ota-seq5-quiet-pilot-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    if: github.ref == 'refs/heads/feature/b150-owner-ota-seq5-quiet-pilot-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Restrict review branch to 100% owner-only files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-ota-seq4-profile-buttons-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/b150-owner-ota-seq4-profile-buttons-20261119'
+          files=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'security/owner-ota-b150-seq5-quiet-ui.js',
+            'security/owner-ota-v2-b150-quiet-seq5.py',
+            'tests/native-quiet-owner-qa-fast-controls.test.cjs',
+            'security/OWNER-OTA-SEQ5-QUIET-OWNER-INSTRUCTIONS.md',
+            '.github/workflows/owner-ota-seq5-quiet-review.yml'
+          }
+          assert files and files.issubset(allowed),'Unexpected changed files: '+repr(files-allowed)
+          print('PASS: no main/production OTA, APK, Quran, prayer, admin or server changes')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+      - name: Test JS syntax, quick checkbox/stepper, native responsiveness
+        run: |
+          set -euo pipefail
+          node --check security/owner-ota-b150-seq5-quiet-ui.js
+          node tests/native-quiet-owner-qa-fast-controls.test.cjs
+          node tests/iqama-stepper-responsive.test.cjs
+          python3 -m py_compile security/owner-ota-v2-b150-quiet-seq5.py
+      - name: Reconstruct EXACT sequence4 reviewed index, preview only unsigned seq5
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,importlib.util,json,pathlib,subprocess,zipfile
+          sha=lambda x:hashlib.sha256(x).hexdigest()
+          script=pathlib.Path('security/owner-ota-v2-b150-quiet-seq5.py')
+          spec=importlib.util.spec_from_file_location('seq5',script)
+          seq5=importlib.util.module_from_spec(spec);spec.loader.exec_module(seq5)
+          m=pathlib.Path('security/owner-ota-v2-b150-profile-buttons-seq4.py')
+          spec=importlib.util.spec_from_file_location('seq4',m)
+          seq4=importlib.util.module_from_spec(spec);spec.loader.exec_module(seq4)
+          base='2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a'
+          previous=subprocess.check_output(['git','show',base+':android-updates/build-150/files/index.html'])
+          assert sha(previous)==seq4.OLD_INDEX_SHA256
+          prior=seq4.patch_profile(previous)
+          assert sha(prior)==seq5.OLD_SEQ4_INDEX_SHA256
+          js=pathlib.Path('security/owner-ota-b150-seq5-quiet-ui.js').read_bytes()
+          assert b'window.AoqatApkQuietSettings={render,read};' in js
+          assert b'const existing=document.getElementById' in js
+          assert b'panel=existing;' in js
+          marker=b'<script src="js/owner-quiet-seq5.js"></script>\n'
+          assert prior.count(seq5.TRAILER)==1 and marker not in prior
+          new=prior.replace(seq5.TRAILER,marker+seq5.TRAILER,1)
+          pinned_html,pinned_js=seq5.candidate(prior,js)
+          assert (pinned_html,pinned_js)==(new,js), 'Pinned, byte-for-byte reviewed release mismatch'
+          try: seq5.candidate(prior,js+b'\\n/* tampered */')
+          except ValueError: pass
+          else: raise AssertionError('Mutated JS was not rejected')
+          assert new.replace(marker,b'',1)==prior
+          assert b'AOQAT_OWNER_PILOT_SEQ4_PROFILE_BUTTONS_V1' in new
+          assert new.count(marker)==1
+          print('REVIEW-QUIET-JS-SHA256',sha(js))
+          print('REVIEW-SEQ5-INDEX-SHA256',sha(new))
+          print('PASS: unchanged owner seq4 profile and one new after-bundle quiet JS')
+          # Validate the MANIFEST format and signature with disposable keys only.
+          import tempfile,base64
+          with tempfile.TemporaryDirectory() as td:
+              from pathlib import Path
+              private=Path(td)/'test-private.pem';pub=Path(td)/'test-public.pem'
+              seq5.cmd('openssl','ecparam','-name','prime256v1','-genkey','-noout','-out',str(private))
+              pub.write_bytes(seq5.cmd('openssl','pkey','-in',str(private),'-pubout'))
+              manifest=seq5.manifest(new,js)
+              sig=seq5.cmd('openssl','dgst','-sha256','-sign',str(private),data=seq5.canonical(manifest))
+              manifest['signature']=base64.b64encode(sig).decode('ascii')
+              seq5.verify_sig(manifest,pub)
+              assert manifest['sequence']==5 and manifest['nativeBuild']==150
+              assert set(manifest['files'])=={'index.html','js/owner-quiet-seq5.js'}
+              for corrupted in ({**manifest,'sequence':4},{**manifest,'nativeBuild':149}):
+                  try: seq5.verify_sig(corrupted,pub)
+                  except ValueError: pass
+                  else: raise AssertionError('Forged OTA metadata accepted')
+              print('PASS: synthetically signed two-file seq5, replay/manipulation rejected')
+          # Only unsigned visual comparison artifact, never installable.
+          out=pathlib.Path('AOQAT-B150-SEQ5-UNSIGNED-NOT-INSTALLABLE.zip')
+          manifest=seq5.manifest(new,js)
+          seq5.write_zip(out,manifest,new,js)
+          assert 'signature' not in manifest
+          PY
+          cp security/owner-ota-v2-b150-quiet-seq5.py owner-ota-v2-b150-quiet-seq5.py
+          cp security/owner-ota-b150-seq5-quiet-ui.js owner-ota-b150-seq5-quiet-ui.js
+          sha256sum AOQAT-B150-SEQ5-UNSIGNED-NOT-INSTALLABLE.zip > AOQAT-B150-SEQ5-UNSIGNED-NOT-INSTALLABLE.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-SEQ5-LOCAL-SIGNER-AND-QUIET-JS-NOT-SIGNED
+          path: |
+            owner-ota-v2-b150-quiet-seq5.py
+            owner-ota-b150-seq5-quiet-ui.js
+            AOQAT-B150-SEQ5-UNSIGNED-NOT-INSTALLABLE.zip
+            AOQAT-B150-SEQ5-UNSIGNED-NOT-INSTALLABLE.zip.sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Stop without publishing
+        run: |
+          echo 'PASS: no production release; owner must sign seq5 with OTA V2 PEM locally'
