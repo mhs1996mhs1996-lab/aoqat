@@ -54,6 +54,28 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Create REAL previously-published owner-signed seq3 fixture for native parser test
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = '2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a'
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,subprocess,zipfile
+          base='android-updates/build-150/'
+          a=subprocess.check_output(['git','show','origin/main:'+base+'manifest.json'])
+          b=subprocess.check_output(['git','show','origin/main:'+base+'files/index.html'])
+          m=json.loads(a)
+          assert m['nativeBuild']==150 and m['sequence']==3
+          assert m['files']=={'index.html':hashlib.sha256(b).hexdigest()}
+          folder=Path('android-native/app/src/test/resources')
+          folder.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(folder/'owner-approved-b150-seq3.zip','w',zipfile.ZIP_DEFLATED) as out:
+              out.writestr(base+'manifest.json',a)
+              out.writestr(base+'files/index.html',b)
+          print('PASS: real owner-signed published seq3 ZIP ready for native import regression')
+          PY
       - name: Run native tests and build separate unsigned pilot app
         shell: bash
         run: |
