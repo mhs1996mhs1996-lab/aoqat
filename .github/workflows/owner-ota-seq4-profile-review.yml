@@ -87,4 +87,5 @@ jobs:
           compression-level: 0
           if-no-files-found: error
       - name: Explicit halt
-        run: echo 'OWNER ONLY: do not import unsigned archive. Do not deploy. Owner must locally sign then test.'
+        run: |
+          echo 'OWNER ONLY: do not import unsigned archive. Do not deploy. Owner must locally sign then test.'
