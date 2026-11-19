@@ -1,0 +1,108 @@
+name: AOQAT owner-only seq6 quiet responsiveness QA — NO PUBLISH
+on:
+  push:
+    branches:
+      - feature/b150-owner-ota-seq6-quiet-responsive-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    if: github.ref == 'refs/heads/feature/b150-owner-ota-seq6-quiet-responsive-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Ensure no production APK, OTA, main, or admin changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-ota-seq5-quiet-pilot-20261119
+          python3 - <<'PY'
+          import subprocess
+          before='origin/feature/b150-owner-ota-seq5-quiet-pilot-20261119'
+          changed=set(subprocess.check_output(['git','diff','--name-only',before,'HEAD'],text=True).splitlines())
+          allowed={
+            'security/owner-ota-b150-seq6-quiet-ui.js',
+            'security/owner-ota-v2-b150-quiet-seq6.py',
+            'tests/owner-ota-quiet-seq6-responsive.test.cjs',
+            '.github/workflows/owner-ota-seq6-quiet-review.yml',
+            'security/OWNER-OTA-SEQ6-QUIET-OWNER-INSTRUCTIONS.md'
+          }
+          assert changed and changed.issubset(allowed),changed-allowed
+          print('PASS: owner-only review; production app and public OTA untouched')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+      - name: Stepper functional, UI safety, and Python syntax
+        run: |
+          set -euo pipefail
+          node --check security/owner-ota-b150-seq6-quiet-ui.js
+          node tests/owner-ota-quiet-seq6-responsive.test.cjs
+          node tests/iqama-stepper-responsive.test.cjs
+          python3 -m py_compile security/owner-ota-v2-b150-quiet-seq6.py
+      - name: Verify index remains exact signed seq5 bytes, SHA and fake signed seq6 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,pathlib,subprocess,importlib.util,tempfile,base64,json
+          sha=lambda x:hashlib.sha256(x).hexdigest()
+          p=pathlib.Path
+          spec=importlib.util.spec_from_file_location('seq4','security/owner-ota-v2-b150-profile-buttons-seq4.py')
+          seq4=importlib.util.module_from_spec(spec);spec.loader.exec_module(seq4)
+          spec=importlib.util.spec_from_file_location('seq6','security/owner-ota-v2-b150-quiet-seq6.py')
+          seq6=importlib.util.module_from_spec(spec);spec.loader.exec_module(seq6)
+          base='2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a'
+          old=subprocess.check_output(['git','show',base+':android-updates/build-150/files/index.html'])
+          assert sha(old)==seq4.OLD_INDEX_SHA256
+          index=seq4.patch_profile(old)
+          assert sha(index)==seq4.EXACT_REVIEWED_SEQ4_INDEX_SHA256
+          assert b'AOQAT_OWNER_PILOT_SEQ4_PROFILE_BUTTONS_V1' in index
+          assert index.count(b'js/owner-quiet-seq5.js')==0
+          index=index.replace(b'</body></html>',b'<script src="js/owner-quiet-seq5.js"></script>\n</body></html>')
+          assert sha(index)==seq6.PINNED_INDEX_SHA,'MUST preserve exact seq5 index and profile'
+          js=p('security/owner-ota-b150-seq6-quiet-ui.js').read_bytes()
+          assert seq6.candidate(index,js)==(index,js),'Pinned exact reviewed content must be reproducible'
+          try: seq6.candidate(index,js+b' /* modified */')
+          except ValueError: pass
+          else: raise AssertionError('Tampered JS should never be signed')
+          print('REVIEWED-SEQ6-QUIET-JS-SHA256',sha(js))
+          print('REVIEWED-SEQ5-INDEX-SHA256',sha(index))
+          assert b'SAVE_IDLE_MS=900' in js and b'width:44px' in js
+          assert b'<details class="aq-quiet-explain">' in js
+          assert b'render(false)' not in js and b'.focus({preventScroll:true})' not in js
+          files={seq6.INDEX:sha(index),seq6.QUIET:sha(js)}
+          m=seq6.create_manifest(index,js)
+          assert m['files']==files and m['sequence']==6 and m['nativeBuild']==150
+          with tempfile.TemporaryDirectory(prefix='seq6-qa-') as tmp:
+              t=p(tmp);private=t/'private.pem';public=t/'public.pem'
+              seq6.run('openssl','ecparam','-name','prime256v1','-genkey','-noout','-out',str(private))
+              public.write_bytes(seq6.run('openssl','pkey','-in',str(private),'-pubout'))
+              sig=seq6.run('openssl','dgst','-sha256','-sign',str(private),data=seq6.canonical(m))
+              m['signature']=base64.b64encode(sig).decode('ascii')
+              seq6.verify_signature(m,public)
+              for name,bad in [('seq',{**m,'sequence':5}),('hash',{**m,'files':{seq6.INDEX:sha(index),seq6.QUIET:'0'*64}})]:
+                  try:seq6.verify_signature(bad,public)
+                  except ValueError:pass
+                  else:raise AssertionError('Tampering accepted: '+name)
+          print('PASS: exact signed seq5 index preserved; new seq6 isolated script and forged-signature rejection')
+          PY
+      - name: Provide owner local signer and JS only (NOT SIGNED)
+        run: |
+          cp security/owner-ota-b150-seq6-quiet-ui.js owner-ota-b150-seq6-quiet-ui.js
+          cp security/owner-ota-v2-b150-quiet-seq6.py owner-ota-v2-b150-quiet-seq6.py
+          sha256sum owner-ota-b150-seq6-quiet-ui.js > owner-ota-b150-seq6-quiet-ui.js.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-SEQ6-LOCAL-SIGNER-AND-JS-ONLY-NOT-SIGNED
+          path: |
+            owner-ota-b150-seq6-quiet-ui.js
+            owner-ota-v2-b150-quiet-seq6.py
+            owner-ota-b150-seq6-quiet-ui.js.sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Explicit publication hold
+        run: echo 'NO OWNER KEY IN CI. NO PRODUCTION DEPLOY. A genuine signed seq5 ZIP and local owner OTA key are mandatory.'
