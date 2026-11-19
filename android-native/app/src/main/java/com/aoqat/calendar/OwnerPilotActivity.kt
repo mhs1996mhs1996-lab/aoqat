@@ -21,6 +21,7 @@ import java.util.zip.ZipException
  */
 class OwnerPilotActivity : Activity() {
     private lateinit var status: TextView
+    private lateinit var pilotState: TextView
     private var working = false
     private val ink = Color.rgb(20, 53, 61)
     private val page = Color.rgb(244, 249, 249)
@@ -62,6 +63,13 @@ class OwnerPilotActivity : Activity() {
             setBackgroundColor(Color.rgb(225, 238, 240))
             setPadding(dp(12), dp(14), dp(12), dp(14))
         }
+        pilotState = TextView(this).apply {
+            textSize = 15f
+            setTextColor(ink)
+            setBackgroundColor(Color.rgb(226, 240, 244))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+        }
+        refreshPilotState()
         val select = Button(this).apply {
             text = "اختيار ZIP موقّع وتجربته"
             setOnClickListener {
@@ -83,7 +91,11 @@ class OwnerPilotActivity : Activity() {
                 finish()
             }
         }
-        listOf(title, instructions, select, status, reopen).forEach {
+        val inspect = Button(this).apply {
+            text = "عرض حالة التحديث التجريبي (بدون أي تغيير)"
+            setOnClickListener { refreshPilotState() }
+        }
+        listOf(title, instructions, pilotState, inspect, select, status, reopen).forEach {
             layout.addView(it, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
@@ -93,6 +105,28 @@ class OwnerPilotActivity : Activity() {
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
+
+    private fun refreshPilotState() {
+        // Read-only, owner QA package-private preferences. No reset, approval,
+        // signature bypass, import or production app access.
+        val prefs = getSharedPreferences("web_updates_v2_owner_qa", MODE_PRIVATE)
+        val last = prefs.getLong("lastSequence", 0L)
+        val pending = prefs.getString("pending", null)
+        val active = prefs.getString("active", null)
+        val trial = prefs.getString("trial", null)
+        val state = when {
+            pending != null -> "توجد حزمة معلّقة؛ افتح التطبيق التجريبي لإكمال تنشيطها."
+            trial != null -> "هناك تشغيل اختباري قيد التحقق."
+            active != null && prefs.getBoolean("trialConfirmed", false) ->
+                "يوجد تحديث مسجّل نشط، ووصلت إشارة بدء التشغيل."
+            active != null -> "يوجد تحديث مسجّل نشط، دون تأكيد بدء تشغيل موثوق."
+            else -> "ماكو تحديث نشط مسجّل حالياً."
+        }
+        pilotState.text = "حالة قناة التجربة — قراءة فقط\n" +
+            "أعلى تسلسل مُفعّل سابقاً: $last\n" +
+            "أي تحديث جديد لازم يحمل تسلسلاً أكبر من $last، وتوقيع المالك الصحيح.\n" +
+            state + "\nهاي الحالة لا تعني اجتياز اختبارات الأذان والتنبيهات أو موافقة النشر."
+    }
 
     private fun updateStatus(text: String, color: Int, background: Int) {
         status.text = text
@@ -146,12 +180,14 @@ class OwnerPilotActivity : Activity() {
                     WebUpdates(this).stageOwnerPilotZip(it)
                 } ?: error("Could not open selected ZIP")
                 runOnUiThread {
+                    refreshPilotState()
                     updateStatus("تمت مراجعة الحزمة وتخزينها للتجربة فقط. المراجعة: " +
                         revision.take(12) + "…\nأعد فتح تطبيق التجربة. لا نشر تلقائي.",
                         successInk, Color.rgb(222, 246, 234))
                 }
             } catch (error: Exception) {
                 runOnUiThread {
+                    refreshPilotState()
                     updateStatus(rejectionMessage(error), errorInk, Color.rgb(255, 234, 233))
                 }
             } finally { runOnUiThread { working = false } }
