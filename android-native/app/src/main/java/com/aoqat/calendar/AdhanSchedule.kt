@@ -75,6 +75,9 @@ object AdhanSchedule {
         // must move the Android recovery alarm as well as updating the UI.
         // The elapsed-Iqama countdown remains independent.
         AfterIqamaQuiet.reconcileOwnedDeadline(c)
+        // A user may also SHORTEN the active quiet window (e.g. 16 -> 7
+        // after 9 minutes). Apply the newly elapsed end immediately.
+        AdhanPlaybackService.restoreRingerIfExpired(c)
         if (!s.optBoolean("enabled") || s.optJSONObject("modes")?.optString(AdhanPlaybackService.activePrayerId)=="silent") c.stopService(Intent(c, AdhanPlaybackService::class.java))
         if (s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true && s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")!=true && s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
         schedule(c)
