@@ -1,0 +1,119 @@
+name: AOQAT owner seq6 quiet compact QA — signed only by owner, never publish
+on:
+  push:
+    branches:
+      - feature/b150-owner-ota-seq6-quiet-compact-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    if: github.ref == 'refs/heads/feature/b150-owner-ota-seq6-quiet-compact-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Strict scope; Quran, prayer schedule, admin and production OTA untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-ota-seq5-quiet-pilot-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/b150-owner-ota-seq5-quiet-pilot-20261119'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'security/owner-ota-b150-seq6-quiet-compact.js',
+            'security/owner-ota-v2-b150-quiet-seq6.py',
+            'tests/owner-seq6-quiet-responsive.test.cjs',
+            'security/OWNER-OTA-SEQ6-QUIET-OWNER-INSTRUCTIONS.md',
+            '.github/workflows/owner-ota-seq6-quiet-review.yml'
+          }
+          assert changed and changed.issubset(allowed),'Scope breach: '+repr(changed-allowed)
+          print('PASS: owner-only isolated files. No production app or OTA publish.')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - name: Simulated WebView DOM responsiveness, touch and safe row sizing
+        run: |
+          set -euo pipefail
+          node --check security/owner-ota-b150-seq6-quiet-compact.js
+          node tests/owner-seq6-quiet-responsive.test.cjs
+          node tests/iqama-stepper-responsive.test.cjs
+          python3 -m py_compile security/owner-ota-v2-b150-quiet-seq6.py
+      - name: Reconstruct pinned previously approved owner seq5 snapshot without secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import importlib.util,hashlib,subprocess,base64,json,tempfile,zipfile
+          def module(name,path):
+              s=importlib.util.spec_from_file_location(name,path)
+              m=importlib.util.module_from_spec(s);s.loader.exec_module(m);return m
+          seq4=module('s4','security/owner-ota-v2-b150-profile-buttons-seq4.py')
+          seq5=module('s5','security/owner-ota-v2-b150-quiet-seq5.py')
+          seq6=module('s6','security/owner-ota-v2-b150-quiet-seq6.py')
+          sha=lambda v:hashlib.sha256(v).hexdigest()
+          original=subprocess.check_output(['git','show','2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a:android-updates/build-150/files/index.html'])
+          seq4_html=seq4.patch_profile(original)
+          seq5_js=Path('security/owner-ota-b150-seq5-quiet-ui.js').read_bytes()
+          seq5_html,_=seq5.candidate(seq4_html,seq5_js)
+          assert sha(seq5_html)==seq6.OLD_HTML_SHA256
+          assert sha(seq5_js)==seq6.OLD_JS_SHA256
+          new_js=Path('security/owner-ota-b150-seq6-quiet-compact.js').read_bytes()
+          new_html=seq5_html.replace(seq6.OLD_TAG,seq6.NEW_TAG,1)
+          assert new_html.replace(seq6.NEW_TAG,seq6.OLD_TAG,1)==seq5_html
+          assert new_html.count(seq6.NEW_TAG)==1 and seq6.OLD_TAG not in new_html
+          assert b'AOQAT_OWNER_PILOT_SEQ4_PROFILE_BUTTONS_V1' in new_html
+          print('REVIEWED-SEQ6-JS-SHA256',sha(new_js))
+          print('REVIEWED-SEQ6-HTML-SHA256',sha(new_html))
+          # Test exact candidate pin when populated; placeholders only for first review.
+          if not seq6.REVIEWED_JS_SHA256.startswith('__'):
+              assert seq6.candidate(seq5_html,seq5_js,new_js)==(new_html,seq5_js,new_js)
+              try:seq6.candidate(seq5_html,seq5_js,new_js+b' altered')
+              except ValueError:pass
+              else:raise AssertionError('A modified script was accepted')
+          manifest=seq6.new_manifest(new_html,seq5_js,new_js)
+          assert manifest['sequence']==6 and manifest['nativeBuild']==150
+          assert set(manifest['files'])=={'index.html','js/owner-quiet-seq5.js','js/owner-quiet-seq6.js'}
+          # Disposable test signing proves new file-list canonical form and tamper check.
+          with tempfile.TemporaryDirectory() as tmp:
+              private=Path(tmp)/'ephemeral.pem'; public=Path(tmp)/'public.pem'
+              seq6.command('openssl','ecparam','-name','prime256v1','-genkey','-noout','-out',str(private))
+              public.write_bytes(seq6.command('openssl','pkey','-in',str(private),'-pubout'))
+              sig=seq6.command('openssl','dgst','-sha256','-sign',str(private),stdin=seq6.canonical(manifest))
+              signed={**manifest,'signature':base64.b64encode(sig).decode()}
+              seq6.verify_signature(signed,public)
+              for change in ({**signed,'sequence':5},{**signed,'nativeBuild':149},
+                             {**signed,'files':{**signed['files'],'js/owner-quiet-seq6.js':'0'*64}}):
+                  try:seq6.verify_signature(change,public)
+                  except ValueError:pass
+                  else:raise AssertionError('Forged/replayed test signature accepted')
+              print('PASS: signed 3-file test with disposable key; forged metadata rejected')
+          unsigned=Path('AOQAT-B150-SEQ6-UNSIGNED-NOT-INSTALLABLE.zip')
+          seq6.write_zip(unsigned,manifest,new_html,seq5_js,new_js)
+          with zipfile.ZipFile(unsigned) as z:
+              assert len(z.namelist())==4
+              assert 'signature' not in json.loads(z.read(seq6.MANIFEST_MEMBER))
+          print('PASS: explicit old seq5 JS included for anti-deletion but not executed')
+          print('PASS: 3 verified files, no production publication')
+          PY
+          cp security/owner-ota-v2-b150-quiet-seq6.py owner-ota-v2-b150-quiet-seq6.py
+          cp security/owner-ota-b150-seq6-quiet-compact.js owner-ota-b150-seq6-quiet-compact.js
+          sha256sum AOQAT-B150-SEQ6-UNSIGNED-NOT-INSTALLABLE.zip > AOQAT-B150-SEQ6-UNSIGNED-NOT-INSTALLABLE.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-B150-SEQ6-LOCAL-SIGNER-AND-COMPACT-JS-UNSIGNED
+          path: |
+            owner-ota-v2-b150-quiet-seq6.py
+            owner-ota-b150-seq6-quiet-compact.js
+            AOQAT-B150-SEQ6-UNSIGNED-NOT-INSTALLABLE.zip
+            AOQAT-B150-SEQ6-UNSIGNED-NOT-INSTALLABLE.zip.sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Explicit stop before publishing
+        run: |
+          echo 'PASS: local owner QA only. No owner private key in CI, and no public rollout.'
