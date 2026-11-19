@@ -29,6 +29,7 @@ SEQUENCE = 4
 DOMAIN = "AOQAT-WEB-UPDATE-SIGNATURE-V1"
 OLD_REVISION = "98554724ebce6ab736e7c5309a136201eb2e6e52fc78085aec6585993e191d8a"
 OLD_INDEX_SHA256 = "9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658"
+EXACT_REVIEWED_SEQ4_INDEX_SHA256 = "d3afaa4d5410f8f1cd958ee7cb710fc4105add27f810d5e779aca54d98977eb5"
 PUBLIC_SPKI_SHA256 = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d"
 ROOT = "android-updates/build-150/"
 MANIFEST_NAME = ROOT + "manifest.json"
@@ -156,6 +157,8 @@ def patch_profile(previous: bytes) -> bytes:
     if previous.count(old) != 1 or MARKER.encode("utf-8") in previous:
         raise ValueError("Profile anchor missing, duplicated or already modified")
     updated = previous.replace(old, new, 1)
+    if sha(updated) != EXACT_REVIEWED_SEQ4_INDEX_SHA256:
+        raise ValueError("New seq4 bytes differ from exactly reviewed candidate")
     if (updated.count(MARKER.encode("utf-8")) != 1 or
             updated.replace(new, old, 1) != previous or
             len(updated) > 6 * 1024 * 1024):
