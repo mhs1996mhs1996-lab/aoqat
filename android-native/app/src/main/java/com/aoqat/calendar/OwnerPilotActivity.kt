@@ -87,7 +87,7 @@ class OwnerPilotActivity : Activity() {
             layout.addView(it, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        scroll.addView(layout, ScrollView.LayoutParams(
+        scroll.addView(layout, android.widget.FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         setContentView(scroll)
     }
