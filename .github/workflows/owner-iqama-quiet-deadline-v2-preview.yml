@@ -1,0 +1,103 @@
+name: AOQAT owner-only fixed Iqama quiet 16min APK preview V2 — NEVER PUBLISH
+on:
+  push:
+    branches:
+      - fix/ownerpilot-iqama-quiet-deadline-v2-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preview:
+    if: github.ref == 'refs/heads/fix/ownerpilot-iqama-quiet-deadline-v2-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Strict owner-only scope and protected source hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin fix/ownerpilot-independent-iqama-quiet-20261119
+          python3 - <<'PY'
+          import subprocess
+          baseline='origin/fix/ownerpilot-independent-iqama-quiet-20261119'
+          permitted={
+            'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/QuietDeadline.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/QuietDeadlineTest.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt',
+            '.github/workflows/owner-iqama-quiet-deadline-v2-qa.yml',
+            '.github/workflows/owner-iqama-quiet-deadline-v2-preview.yml',
+            '.github/workflows/owner-iqama-quiet-native-preview.yml',
+            'security/OWNER-IQAMA-QUIET-DEADLINE-V2-QA.md'
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only',baseline,'HEAD'],text=True).splitlines())
+          assert changed and changed.issubset(permitted),changed-permitted
+          for p in ('index.html','js/prayer-countdown.js','js/adhan-core.js','android-native/app/src/main/java/com/aoqat/calendar/AlarmCore.kt',
+                    'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt','data/prayer-times-offline.json','js/quran-reader.js'):
+              before=subprocess.check_output(['git','rev-parse',baseline+':'+p]).strip()
+              after=subprocess.check_output(['git','rev-parse','HEAD:'+p]).strip()
+              assert before==after,'Protected original source modified: '+p
+          assert 'QuietDeadline.merge(end,p.getLong("end",0L),already)' in open('android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt').read()
+          print('PASS: only independent quiet deadline and regression tests edited')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile and run ALL native unit tests, then unsigned owner-only APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon testDebugUnitTest assembleOwnerPilot
+      - name: Confirm APP ID, no signer and protected content
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find android-native/app/build/outputs/apk/ownerPilot -maxdepth 1 -name '*unsigned.apk' -type f | head -1)"
+          test -s "$apk"
+          aapt="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$aapt" dump badging "$apk" | head -1 | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$aapt" dump badging "$apk" | grep -F "application-label:'أوقات الصلاة — تجريبي'"
+          if "$apksigner" verify "$apk"; then
+            echo 'STOP: unsigned owner APK unexpectedly contains a signature' >&2
+            exit 1
+          fi
+          python3 - "$apk" <<'PY'
+          import sys,zipfile,hashlib,json
+          apk=sys.argv[1]
+          with zipfile.ZipFile(apk) as z:
+              prefix='assets/www/'
+              names=z.namelist()
+              fonts=[n for n in names if n.startswith(prefix+'assets/qcf-v2-page-fonts/p') and n.endswith('.woff2')]
+              assert len(fonts)==604, len(fonts)
+              prayers=json.loads(z.read(prefix+'data/prayer-times-offline.json'))
+              assert len(prayers)==366,len(prayers)
+              protected=json.loads(z.read(prefix+'assets/mushaf-apk-sha256.json'))
+              for n,expected in protected.items():
+                  item=prefix+n+('.bin' if n.endswith('.gz') else '')
+                  assert hashlib.sha256(z.read(item)).hexdigest()==expected,n
+          print('PASS: 604 Quran fonts, 366 days offline and protected Mushaf unchanged')
+          PY
+          cp "$apk" android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-iqama-quiet-16min-v2-unsigned.apk
+          cd android-native/app/build/outputs/apk/ownerPilot
+          sha256sum aoqat-owner-pilot-iqama-quiet-16min-v2-unsigned.apk > aoqat-owner-pilot-iqama-quiet-16min-v2-unsigned.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-IQAMA-QUIET-16MIN-V2-UNSIGNED-PILOT-ONLY
+          path: |
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-iqama-quiet-16min-v2-unsigned.apk
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-iqama-quiet-16min-v2-unsigned.apk.sha256
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Explicitly no deployment or owner-key use
+        run: |
+          echo 'NO OWNER PRIVATE APK KEY IN CI. NO USER OR ADMIN APP CHANGE. THIS IS AN UNSIGNED PILOT ONLY.'
