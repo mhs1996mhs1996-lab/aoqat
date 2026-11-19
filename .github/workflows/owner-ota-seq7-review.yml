@@ -64,6 +64,10 @@ jobs:
           html=html.replace(b'</body></html>',marker+b'</body></html>')
           assert sha(html)==seq7.PINNED_INDEX_SHA
           quiet=path('security/owner-ota-b150-seq7-quiet-ui.js').read_bytes()
+          assert seq7.candidate(html,quiet)==(html,quiet),'Signer must accept ONLY pinned reviewed bytes'
+          try: seq7.candidate(html,quiet+b' modified')
+          except ValueError: pass
+          else: raise AssertionError('Changed JS accepted for local owner signing')
           assert b'width:max-content!important' in quiet
           assert b'aq-quiet-unit' in quiet and b'aq-quiet-controls' in quiet
           assert b'SAVE_IDLE_MS=900' in quiet
