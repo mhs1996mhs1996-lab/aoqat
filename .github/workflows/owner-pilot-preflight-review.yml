@@ -27,6 +27,14 @@ jobs:
             'security/test-owner-ota-preflight.py',
             'security/OWNER-PILOT-RELEASE-GATE.md',
             '.github/workflows/owner-pilot-preflight-review.yml',
+            '.github/workflows/owner-pilot-android-qa.yml',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotBundle.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/OwnerPilotBundleTest.kt',
+            'android-native/app/src/main/AndroidManifest.xml',
+            'android-native/app/build.gradle',
           }
           files=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           assert files and files.issubset(allowed), 'UNEXPECTED changed files: '+repr(files-allowed)
