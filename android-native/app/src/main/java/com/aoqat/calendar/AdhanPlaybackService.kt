@@ -241,6 +241,10 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
         }
         fun restoreRingerIfExpired(c: Context) {
+            // An older RESTORE_SOUND alarm can arrive after the owner edits
+            // their quiet duration. Refresh the deadline from the *saved*
+            // current native setting before deciding whether sound is due.
+            AfterIqamaQuiet.reconcileOwnedDeadline(c)
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
             val end=p.getLong("end",0)
             if(end>0 && end<=System.currentTimeMillis())restoreRinger(c)

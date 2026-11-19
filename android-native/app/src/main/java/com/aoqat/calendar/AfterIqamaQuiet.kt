@@ -23,6 +23,46 @@ object AfterIqamaQuiet {
         return start to start+duration*60000L
     }
     /**
+     * Reconcile a previously scheduled ringtone restore with the *current*
+     * saved quiet selection, even after the elapsed-Iqama notification has
+     * ended. A stale 12-minute restore must not override a 16-minute setting.
+     *
+     * This is only for a quiet interval that THIS app already owns. It never
+     * silences the handset, does not edit the elapsed-Iqama duration, and
+     * preserves the user's separately configured DND policy.
+     */
+    @Synchronized fun reconcileOwnedDeadline(c: Context) {
+        val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        if(!saved.getBoolean("changed",false) || saved.getLong("iqamaEnd",0L)<=0L)return
+        val cycle=c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE)
+        val prayerAt=cycle.getLong("prayerAt",0L)
+        val prayerId=cycle.getString("prayerId","") ?: return
+        if(prayerAt<=0L || prayerId !in PrayerTimes.ids)return
+        val ownerAt=saved.getLong("iqamaPrayerAt",0L)
+        val ownerId=saved.getString("iqamaPrayerId","") ?: ""
+        // Old owner builds did not record identity. The persisted native cycle
+        // can still be used, but never associate a NEW cycle with old ownership.
+        if((ownerAt>0L && ownerAt!=prayerAt) ||
+            (ownerId.isNotEmpty() && ownerId!=prayerId))return
+        val native=IqamaNativeScheduler.durations(c,prayerId)
+        val chosen=window(AdhanSchedule.settings(c),prayerId,prayerAt,
+            native.beforeMinutes,native.afterMinutes) ?: return
+        val now=System.currentTimeMillis()
+        val oldEnd=saved.getLong("end",0L)
+        // Do not resurrect a much older unrelated quiet interval.
+        if(now<chosen.first || now>maxOf(chosen.second,oldEnd)+60_000L)return
+        if(oldEnd==chosen.second && saved.getLong("iqamaEnd",0L)==chosen.second)return
+        if(chosen.second>now) {
+            val alarmManager=c.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+            if(android.os.Build.VERSION.SDK_INT>=31 && !alarmManager.canScheduleExactAlarms())return
+            // Re-arm the exact absolute deadline BEFORE modifying saved state.
+            AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",chosen.second)
+        }
+        saved.edit().putLong("end",chosen.second).putLong("iqamaEnd",chosen.second)
+            .putLong("iqamaPrayerAt",prayerAt).putString("iqamaPrayerId",prayerId).commit()
+    }
+
+    /**
      * Independent confirmation from the notification countdown's exact zero point.
      * The ordinary IQAMA_QUIET alarm remains scheduled even when notifications are
      * turned off; both paths use the same absolute database + iqama deadline.
@@ -50,10 +90,20 @@ object AfterIqamaQuiet {
         }
         // Only change the ringtone, never substitute or overwrite the user's
         // scheduled Do Not Disturb policy (e.g. 23:20–07:00).
-        AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)
+        if (AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)) {
+            val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+            // When the ringtone was already SILENT before our action, do not
+            // claim ownership. Preserve the user's original sound choice.
+            if(saved.getBoolean("changed",false) &&
+                saved.getLong("iqamaEnd",0L)==times.second)
+                saved.edit().putLong("iqamaPrayerAt",prayerAt)
+                    .putString("iqamaPrayerId",prayerId).commit()
+        }
     }
 
     fun onCountdownComplete(c: Context, prayerAt: Long) {
+        // Notification expiry is NOT permission to end a longer saved quiet.
+        reconcileOwnedDeadline(c)
         val state=c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE)
         // Keep this recovery independent of the foreground notification. OEMs
         // can close the service or the user can dismiss it before the boundary.

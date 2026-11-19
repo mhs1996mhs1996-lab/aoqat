@@ -71,6 +71,13 @@ object AdhanSchedule {
         // Keep quiet-mode preferences saved even before the user grants the system permission.
         if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).commit()
         prefs(c).edit().putString("settings", s.toString()).commit()
+        // Changing 12 -> 16 minutes while an Iqama quiet is already active
+        // must move the Android recovery alarm as well as updating the UI.
+        // The elapsed-Iqama countdown remains independent.
+        AfterIqamaQuiet.reconcileOwnedDeadline(c)
+        // A user may also SHORTEN the active quiet window (e.g. 16 -> 7
+        // after 9 minutes). Apply the newly elapsed end immediately.
+        AdhanPlaybackService.restoreRingerIfExpired(c)
         if (!s.optBoolean("enabled") || s.optJSONObject("modes")?.optString(AdhanPlaybackService.activePrayerId)=="silent") c.stopService(Intent(c, AdhanPlaybackService::class.java))
         if (s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true && s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")!=true && s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
         schedule(c)

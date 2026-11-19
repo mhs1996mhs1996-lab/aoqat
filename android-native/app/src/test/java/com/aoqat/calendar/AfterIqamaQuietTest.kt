@@ -183,13 +183,19 @@ class AfterIqamaQuietTest {
                 it.triggerAtTime==expectedEnd &&
                 shadowOf(it.operation).savedIntent.action=="RESTORE_SOUND"
             })
-        // Even if the receiver is delayed, the original end deadline controls
-        // restoration; never add an extra interval from its delivery time.
+        // An old recovery alarm is NOT grounds to unmute during the current
+        // selected interval, even if it has an expired cached native deadline.
         saved.edit().putLong("end",System.currentTimeMillis()-1L).commit()
         AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("RESTORE_SOUND"))
-        assertEquals(AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
+        assertEquals("Do not restore before the chosen end",
+            AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
+        assertEquals(expectedEnd,saved.getLong("end",0L))
+        // This test deliberately remains BEFORE the actual selected end. The
+        // real expired-recovery path is exercised in
+        // restoresNormalAfterAsrEvenIfIqamaNotificationWasDismissed(), and the
+        // selected deadline's exact AlarmManager trigger was asserted above.
         assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
-        assertFalse(saved.getBoolean("changed",false))
+        assertTrue(saved.getBoolean("changed",false))
     }
 
     @Test @Config(sdk = [34]) fun staleOrMissingCountdownCycleCannotMuteUnrelatedPrayer() {
@@ -252,6 +258,109 @@ class AfterIqamaQuietTest {
             .putLong("end",current+600000L).putLong("iqamaEnd",current+600000L).commit()
         AfterIqamaQuiet.onCountdownComplete(c,current-3600000L)
         assertTrue(saved.getBoolean("changed",false))
+    }
+
+
+    @Test @Config(sdk = [34]) fun staleTwelveMinuteRestoreMustWaitForSixteenMinuteSavedChoice() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        val audio=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audio.ringerMode=AudioManager.RINGER_MODE_SILENT
+
+        // Example: Isha 18:21, Iqama +15 = 18:36, elapsed +12 = 18:48,
+        // owner-selected quiet +16 = 18:52. Set now at the stale 12-minute
+        // recovery, where the new exact restore is still FOUR minutes away.
+        val now=System.currentTimeMillis()
+        val prayerAt=now-27*60_000L
+        val expectedEnd=prayerAt+(15+16)*60_000L
+        assertTrue(expectedEnd>now)
+        val state=c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE)
+        state.edit().putLong("prayerAt",prayerAt).putString("prayerId","isha")
+            .putBoolean("active",false).commit()
+        c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit()
+            .putString("minutes","""{"isha":15}""")
+            .putString("afterMinutes","""{"isha":12}""").commit()
+        c.getSharedPreferences("adhan_settings",Context.MODE_PRIVATE).edit()
+            .putString("settings","""{"afterIqamaSilent":{"enabled":true,"minutes":{"isha":16}}}""").commit()
+        val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        saved.edit().putBoolean("changed",true)
+            .putInt("previous",AudioManager.RINGER_MODE_NORMAL)
+            .putLong("iqamaEnd",now-1000L).putLong("end",now-1000L).commit()
+
+        // Simulate a delayed/old RESTORE_SOUND alarm (without opening UI).
+        AdhanPlaybackService.restoreRingerIfExpired(c)
+        assertEquals("Old restore alarm cannot cut 16-minute quiet short",
+            AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
+        assertEquals(expectedEnd,saved.getLong("end",0L))
+        assertEquals(expectedEnd,saved.getLong("iqamaEnd",0L))
+        assertEquals(prayerAt,saved.getLong("iqamaPrayerAt",0L))
+        val am=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        assertTrue("Exact restoration is rescheduled at 18:52 equivalent",
+            shadowOf(am).scheduledAlarms.any {
+                it.triggerAtTime==expectedEnd &&
+                shadowOf(it.operation).savedIntent.action=="RESTORE_SOUND"
+            })
+        // Elapsed notification completing at 12 minutes is NOT a quiet exit.
+        AfterIqamaQuiet.onCountdownComplete(c,prayerAt)
+        assertEquals(AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
+        assertEquals(expectedEnd,saved.getLong("end",0L))
+    }
+
+    @Test @Config(sdk = [34]) fun shorteningActiveQuietDurationRestoresAtNewSelectedDeadline() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        val audio=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audio.ringerMode=AudioManager.RINGER_MODE_SILENT
+
+        val now=System.currentTimeMillis()
+        val prayerAt=now-24*60_000L // 15 minutes remaining + 9 elapsed
+        c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE).edit()
+            .putLong("prayerAt",prayerAt).putString("prayerId","isha")
+            .putBoolean("active",true).commit()
+        c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit()
+            .putString("minutes","""{"isha":15}""")
+            .putString("afterMinutes","""{"isha":12}""").commit()
+        c.getSharedPreferences("adhan_settings",Context.MODE_PRIVATE).edit()
+            .putString("settings","""{"afterIqamaSilent":{"enabled":true,"minutes":{"isha":7}}}""").commit()
+        val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        saved.edit().putBoolean("changed",true)
+            .putInt("previous",AudioManager.RINGER_MODE_NORMAL)
+            .putLong("end",prayerAt+31*60_000L)
+            .putLong("iqamaEnd",prayerAt+31*60_000L)
+            .putLong("iqamaPrayerAt",prayerAt)
+            .putString("iqamaPrayerId","isha").commit()
+        AdhanPlaybackService.restoreRingerIfExpired(c)
+        assertEquals("Owner shortened to 7 minutes; restore must not wait for old 16",
+            AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
+        assertFalse(saved.getBoolean("changed",false))
+    }
+
+    @Test @Config(sdk = [34]) fun unrelatedPrayerMustNotInheritAnotherQuietDeadline() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        val now=System.currentTimeMillis()
+        val prayerAt=now-27*60_000L
+        c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE).edit()
+            .putLong("prayerAt",prayerAt).putString("prayerId","isha").commit()
+        c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit()
+            .putString("minutes","""{"isha":15}""").commit()
+        c.getSharedPreferences("adhan_settings",Context.MODE_PRIVATE).edit()
+            .putString("settings","""{"afterIqamaSilent":{"enabled":true,"minutes":{"isha":16}}}""").commit()
+        val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        saved.edit().putBoolean("changed",true)
+            .putLong("iqamaPrayerAt",prayerAt-86_400_000L)
+            .putString("iqamaPrayerId","isha")
+            .putLong("end",now+60_000L)
+            .putLong("iqamaEnd",now+60_000L).commit()
+        AfterIqamaQuiet.reconcileOwnedDeadline(c)
+        assertEquals("Unrelated cycle cannot extend old ringtone ownership",
+            now+60_000L,saved.getLong("end",0L))
     }
 
 }

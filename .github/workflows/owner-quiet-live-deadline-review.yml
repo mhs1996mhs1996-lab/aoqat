@@ -1,0 +1,77 @@
+name: AOQAT B150 owner-pilot quiet deadline replay QA — NEVER PUBLISH
+on:
+  push:
+    branches: [fix/b150-ownerpilot-quiet-live-deadline-20261119]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/fix/b150-ownerpilot-quiet-live-deadline-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Restrict exact source, tests and nondeploy CI scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin fix/ownerpilot-independent-iqama-quiet-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/fix/ownerpilot-independent-iqama-quiet-20261119'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allow={
+            'android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt',
+            '.github/workflows/owner-quiet-live-deadline-review.yml',
+            'security/OWNER-IQAMA-QUIET-LIVE-DEADLINE-REVIEW.md'
+          }
+          assert changed and changed.issubset(allow),sorted(changed-allow)
+          for path in ('index.html','js/quran-reader.js','js/prayer-countdown.js',
+                       'data/prayer-times-offline.json','android-native/app/build.gradle',
+                       'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+                       'android-native/app/src/main/java/com/aoqat/calendar/IqamaCycle.kt'):
+              before=subprocess.check_output(['git','rev-parse',base+':'+path])
+              after=subprocess.check_output(['git','rev-parse','HEAD:'+path])
+              assert before==after,'Protected file altered: '+path
+          print('PASS: only owner trial quiet deadline/recovery source and tests changed')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: All Android native unit tests and owner-only unsigned APK build
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon testDebugUnitTest assembleOwnerPilot
+      - name: Verify apk package label and MUST be unsigned
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find android-native/app/build/outputs/apk/ownerPilot -maxdepth 1 -name '*unsigned.apk' -type f | head -1)"
+          test -s "$apk"
+          aapt="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)"
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$aapt" dump badging "$apk" | head -1 | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$aapt" dump badging "$apk" | grep -F "application-label:'أوقات الصلاة — تجريبي'"
+          if "$signer" verify "$apk"; then echo 'FAIL: unexpected signed APK' >&2;exit 1;fi
+          cp "$apk" android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-quiet-deadline-replay-unsigned.apk
+          cd android-native/app/build/outputs/apk/ownerPilot
+          sha256sum aoqat-owner-pilot-quiet-deadline-replay-unsigned.apk > aoqat-owner-pilot-quiet-deadline-replay-unsigned.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-QUIET-LIVE-DEADLINE-UNSIGNED-TEST-ONLY
+          path: |
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-quiet-deadline-replay-unsigned.apk
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-quiet-deadline-replay-unsigned.apk.sha256
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+      - name: Never deploy or sign using owner credentials
+        run: echo 'NO PRODUCTION, NO APK SIGNATURE, NO END USER RELEASE. OWNER MUST TEST.'
