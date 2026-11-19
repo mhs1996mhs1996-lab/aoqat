@@ -48,5 +48,35 @@ jobs:
         run: |
           python3 security/test-owner-ota-preflight.py -v
           python3 -m py_compile security/owner-ota-preflight.py
+      - name: Package signed last-approved production seq3 as OWNER-ONLY import smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = '2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a'
+          mkdir -p review-phone-sample/android-updates/build-150/files
+          git show origin/main:android-updates/build-150/manifest.json > review-phone-sample/android-updates/build-150/manifest.json
+          git show origin/main:android-updates/build-150/files/index.html > review-phone-sample/android-updates/build-150/files/index.html
+          python3 security/signed-update-manifest.py verify review-phone-sample/android-updates/build-150/manifest.json --public-key security/aoqat-update-public-v2.pem --build 150 --last-sequence 2
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,zipfile
+          root=Path('review-phone-sample')
+          base=root/'android-updates/build-150'
+          m=json.loads((base/'manifest.json').read_text())
+          assert m['nativeBuild']==150 and m['sequence']==3
+          assert set(m['files'])=={'index.html'}
+          assert hashlib.sha256((base/'files/index.html').read_bytes()).hexdigest()==m['files']['index.html']
+          with zipfile.ZipFile('owner-b150-approved-seq3-signed-smoke-test.zip','x',zipfile.ZIP_DEFLATED) as out:
+              for p in (base/'manifest.json',base/'files/index.html'):
+                  out.write(p,p.relative_to(root).as_posix())
+          print('PASS: exact currently published signed seq3 only; no new update created')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-SIGNED-SEQ3-OWNER-IMPORT-SMOKE-TEST
+          path: owner-b150-approved-seq3-signed-smoke-test.zip
+          retention-days: 7
+          if-no-files-found: error
       - name: Record explicit deployment hold
         run: echo 'NO DEPLOYMENT. NO OWNER PHONE TEST. NO AUTO APPROVAL. NO VERCEL OR MAIN CHANGES.'
