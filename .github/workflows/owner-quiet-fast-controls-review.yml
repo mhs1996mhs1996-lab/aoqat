@@ -1,0 +1,44 @@
+name: AOQAT owner quiet-mode UI smoke — no deployment
+on:
+  push:
+    branches:
+      - fix/b150-ownerpilot-quiet-fast-controls-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    if: github.ref == 'refs/heads/fix/b150-ownerpilot-quiet-fast-controls-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Verify only quiet UI and test were changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-pilot-release-gate-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/b150-owner-pilot-release-gate-20261119'
+          got=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'android-native/apk-overrides/native-quiet-menu.js',
+            'tests/native-quiet-owner-qa-fast-controls.test.cjs',
+            'security/OWNER-QUIET-FAST-CONTROLS-SEQ5-PLAN.md',
+            '.github/workflows/owner-quiet-fast-controls-review.yml'
+          }
+          assert got and got.issubset(allowed),'Unexpected modifications: '+repr(got-allowed)
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - name: Node.js syntax and functional UI regression
+        run: |
+          set -euo pipefail
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          node tests/native-quiet-owner-qa-fast-controls.test.cjs
+          node tests/iqama-stepper-responsive.test.cjs
+      - name: Separate pending update only
+        run: |
+          echo 'PASS: no APK build, no public OTA, no owner signing or user data changes.'
