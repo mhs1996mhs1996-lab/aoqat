@@ -21,12 +21,36 @@ class AfterIqamaQuietTest {
         assertEquals(2500000L,times.first);assertEquals(2920000L,times.second)
         assertNull(AfterIqamaQuiet.window(settings(),"maghrib",1000000L,10))
     }
-    @Test fun silentCannotOutliveElapsedIqamaCounter() {
-        val s=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":30}}}""")
-        val start=1000000L
-        val win=AfterIqamaQuiet.window(s,"maghrib",start,10,5)!!
-        assertEquals(start+10*60000L,win.first)
-        assertEquals("Elapsed counter ends five minutes after iqama",start+15*60000L,win.second)
+    @Test fun quietIsIndependentOfElapsedCounterAndCanOutliveIt() {
+        val s=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":12}}}""")
+        val prayerAt=1_000_000L
+        // The elapsed display can end after 10 minutes; quiet continues
+        // to 12 minutes (both from the SAME actual iqama zero point).
+        val elapsedDisplay=IqamaCycle.Durations(beforeMinutes=10,afterMinutes=10)
+        val window=AfterIqamaQuiet.window(s,"maghrib",prayerAt,elapsedDisplay.beforeMinutes)!!
+        assertEquals(prayerAt+10*60000L,window.first)
+        assertEquals(prayerAt+22*60000L,window.second)
+        assertEquals(prayerAt+20*60000L,prayerAt+elapsedDisplay.totalMs)
+        assertTrue(window.second>prayerAt+elapsedDisplay.totalMs)
+    }
+
+    @Test fun elapsedDisplayCanOutliveQuietWithoutChangingQuietDuration() {
+        val s=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"fajr":8}}}""")
+        val prayerAt=2_000_000L
+        val elapsedDisplay=IqamaCycle.Durations(beforeMinutes=20,afterMinutes=12)
+        val window=AfterIqamaQuiet.window(s,"fajr",prayerAt,elapsedDisplay.beforeMinutes)!!
+        assertEquals(prayerAt+20*60000L,window.first)
+        assertEquals(prayerAt+28*60000L,window.second)
+        assertEquals(prayerAt+32*60000L,prayerAt+elapsedDisplay.totalMs)
+        assertTrue(window.second<prayerAt+elapsedDisplay.totalMs)
+    }
+
+    @Test fun perPrayerZeroQuietDoesNotStopElapsedCounter() {
+        val s=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"dhuhr":0}}}""")
+        assertNull(AfterIqamaQuiet.window(s,"dhuhr",1_000_000L,10))
+        val elapsedDisplay=IqamaCycle.Durations(10,10)
+        assertEquals(IqamaCycle.Phase.ELAPSED,
+            IqamaCycle.frame(10*60000L,elapsedDisplay).phase)
     }
     @Test fun quietSwitchIsIndependentOfAdhanAudioMaster() {
         val s=settings().put("enabled",false)
@@ -39,12 +63,13 @@ class AfterIqamaQuietTest {
     @Test fun enabledToggleUsesSavedDurationsAndStopsExactlyAtElapsedCounter() {
         val saved=JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":13}}}""")
         val at=2_000_000L
-        val win=AfterIqamaQuiet.window(saved,"maghrib",at,5,12)!!
+        val win=AfterIqamaQuiet.window(saved,"maghrib",at,5)!!
         assertEquals(at+5*60_000L,win.first)
-        assertEquals(at+17*60_000L,win.second)
-        // A longer silent duration can never outlive the displayed 'مضى'.
+        assertEquals("Chosen 13-minute quiet must not be capped by elapsed 12",
+            at+18*60_000L,win.second)
+        // Turning quiet off must not touch the independent "مضى" display.
         saved.getJSONObject("afterIqamaSilent").put("enabled",false)
-        assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5,12))
+        assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5))
     }
     @Test fun zeroMinuteDurationAndUnknownPrayerNeverMutePhone() {
         val s=settings()
@@ -98,6 +123,54 @@ class AfterIqamaQuietTest {
         assertEquals(AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
         assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
         assertFalse(saved.getBoolean("changed",false))
+    }
+
+
+    @Test @Config(sdk = [34]) fun twelveMinuteQuietSchedulesExactRestoreEvenWithTenMinuteElapsedCounter() {
+        val c=RuntimeEnvironment.getApplication() as Application
+        val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        shadowOf(nm).setNotificationPolicyAccessGranted(true)
+        org.robolectric.shadows.ShadowAlarmManager.setCanScheduleExactAlarms(true)
+        val audio=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        nm.setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_NONE)
+        audio.ringerMode=AudioManager.RINGER_MODE_NORMAL
+
+        val prayerId="asr"
+        c.getSharedPreferences("iqama_schedule",Context.MODE_PRIVATE).edit()
+            .putBoolean("enabled",true)
+            .putString("minutes","""{"asr":10}""")
+            .putString("afterMinutes","""{"asr":10}""")
+            .commit()
+        c.getSharedPreferences("adhan_settings",Context.MODE_PRIVATE).edit()
+            .putString("settings","""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"asr":12}}}""")
+            .commit()
+
+        val prayerAt=System.currentTimeMillis()-10*60000L-2000L
+        val expectedQuietEnd=prayerAt+22*60000L
+        val expectedElapsedDisplayEnd=prayerAt+20*60000L
+        assertEquals(10,IqamaNativeScheduler.durations(c,prayerId).afterMinutes)
+        val window=AfterIqamaQuiet.window(AdhanSchedule.settings(c),prayerId,prayerAt,10)!!
+        assertEquals(expectedQuietEnd,window.second)
+        assertTrue(expectedQuietEnd>expectedElapsedDisplayEnd)
+
+        AfterIqamaQuiet.start(c,prayerId,prayerAt)
+        assertEquals(AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
+        val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+        assertEquals("A 12-minute quiet period must never end at the 10-minute elapsed cap",
+            expectedQuietEnd,p.getLong("iqamaEnd",0L))
+        assertEquals(expectedQuietEnd,p.getLong("end",0L))
+
+        // The elapsed-countdown service ending must not change the quiet deadline.
+        c.getSharedPreferences("iqama_service_state",Context.MODE_PRIVATE).edit()
+            .putLong("prayerAt",prayerAt).putBoolean("active",false).commit()
+        AfterIqamaQuiet.onCountdownComplete(c,prayerAt)
+        assertEquals(AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
+        assertEquals(expectedQuietEnd,p.getLong("end",0L))
+        val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        assertTrue(shadowOf(alarm).scheduledAlarms.any {
+            it.triggerAtTime==expectedQuietEnd &&
+            shadowOf(it.operation).savedIntent.action=="RESTORE_SOUND"
+        })
     }
 
     @Test @Config(sdk = [34]) fun staleOrMissingCountdownCycleCannotMuteUnrelatedPrayer() {

@@ -1,0 +1,107 @@
+name: AOQAT B150 owner-only iqama/quiet separation QA — NO PUBLISH
+on:
+  push:
+    branches:
+      - fix/b150-independent-iqama-elapsed-quiet-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-qa:
+    if: github.ref == 'refs/heads/fix/b150-independent-iqama-elapsed-quiet-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure no unrelated APK, admin, prayer or OTA content changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-pilot-release-gate-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/b150-owner-pilot-release-gate-20261119'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
+            'security/OWNER-IQAMA-QUIET-INDEPENDENCE-REVIEW.md',
+            '.github/workflows/owner-iqama-quiet-independence-qa.yml'
+          }
+          assert changed and changed.issubset(allowed),'STOP: unrelated files '+repr(changed-allowed)
+          for immutable in (
+              'android-native/app/build.gradle','index.html',
+              'js/prayer-countdown.js','android-native/apk-overrides/native-quiet-menu.js',
+              'data/prayer-times-offline.json','js/quran-reader.js',
+              'android-native/app/src/main/java/com/aoqat/calendar/IqamaCycle.kt',
+              'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
+              'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt'
+          ):
+              a=subprocess.check_output(['git','rev-parse','HEAD:'+immutable]).strip()
+              b=subprocess.check_output(['git','rev-parse',base+':'+immutable]).strip()
+              assert a==b,immutable
+          print('PASS: changes confined to quiet deadline and owner-only native diagnostic')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - name: Set up Java 17 and Gradle 8.9
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Prepare verified ownerPilot seq3 native regression fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = 2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,subprocess,zipfile
+          root='android-updates/build-150/'
+          m=subprocess.check_output(['git','show','origin/main:'+root+'manifest.json'])
+          h=subprocess.check_output(['git','show','origin/main:'+root+'files/index.html'])
+          assert json.loads(m)['files']=={'index.html':hashlib.sha256(h).hexdigest()}
+          target=Path('android-native/app/src/test/resources')
+          target.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(target/'owner-approved-b150-seq3.zip','w',zipfile.ZIP_DEFLATED) as z:
+              z.writestr(root+'manifest.json',m);z.writestr(root+'files/index.html',h)
+          PY
+      - name: Test all native regressions and assemble isolated owner APK (unsigned)
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon testDebugUnitTest assembleOwnerPilot
+      - name: Verify unsigned owner QA identity, leave existing production APK untouched
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find android-native/app/build/outputs/apk/ownerPilot -maxdepth 1 -name '*unsigned.apk' -type f | head -n 1)"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+          "$AAPT" dump badging "$APK" | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$AAPT" dump badging "$APK" | grep -F "application-label:'أوقات الصلاة — تجريبي'"
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
+          if "$signer" verify "$APK"; then echo 'STOP: unexpected CI APK signature' >&2;exit 1;fi
+          cp "$APK" android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-iqama-independent-unsigned.apk
+          cd android-native/app/build/outputs/apk/ownerPilot
+          sha256sum aoqat-owner-pilot-iqama-independent-unsigned.apk > aoqat-owner-pilot-iqama-independent-unsigned.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-OWNER-IQAMA-INDEPENDENT-UNSIGNED-APK-AND-SHA-ONLY
+          path: |
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-iqama-independent-unsigned.apk
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-iqama-independent-unsigned.apk.sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Final hold
+        run: |
+          echo 'NEVER PUBLISH: QA APK is unsigned; owner signs locally with stable APK V2 P12.'
