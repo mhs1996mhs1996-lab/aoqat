@@ -22,6 +22,7 @@ import java.util.zip.ZipException
 class OwnerPilotActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var pilotState: TextView
+    private lateinit var timingState: TextView
     private var working = false
     private val ink = Color.rgb(20, 53, 61)
     private val page = Color.rgb(244, 249, 249)
@@ -70,6 +71,20 @@ class OwnerPilotActivity : Activity() {
             setPadding(dp(12), dp(12), dp(12), dp(12))
         }
         refreshPilotState()
+        timingState = TextView(this).apply {
+            textSize = 14f
+            setTextColor(ink)
+            setBackgroundColor(Color.rgb(235, 244, 238))
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            visibility = View.GONE
+        }
+        val inspectTimes = Button(this).apply {
+            text = "فحص مدد مضى على الإقامة والصامت — قراءة فقط"
+            setOnClickListener {
+                refreshTimingState()
+                timingState.visibility = View.VISIBLE
+            }
+        }
         val select = Button(this).apply {
             text = "اختيار ZIP موقّع وتجربته"
             setOnClickListener {
@@ -95,7 +110,8 @@ class OwnerPilotActivity : Activity() {
             text = "عرض حالة التحديث التجريبي (بدون أي تغيير)"
             setOnClickListener { refreshPilotState() }
         }
-        listOf(title, instructions, pilotState, inspect, select, status, reopen).forEach {
+        listOf(title, instructions, pilotState, inspect, inspectTimes, timingState,
+            select, status, reopen).forEach {
             layout.addView(it, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
@@ -126,6 +142,36 @@ class OwnerPilotActivity : Activity() {
             "أعلى تسلسل مُفعّل سابقاً: $last\n" +
             "أي تحديث جديد لازم يحمل تسلسلاً أكبر من $last، وتوقيع المالك الصحيح.\n" +
             state + "\nهاي الحالة لا تعني اجتياز اختبارات الأذان والتنبيهات أو موافقة النشر."
+    }
+
+    private fun refreshTimingState() {
+        // Owner QA only; never modify preferences or any alarm schedules.
+        val prefs = getSharedPreferences("iqama_schedule", MODE_PRIVATE)
+        val elapsedSaved = try {
+            org.json.JSONObject(prefs.getString("afterMinutes", "{}") ?: "{}")
+        } catch (_: Exception) { org.json.JSONObject() }
+        val quiet = AdhanSchedule.settings(this).optJSONObject("afterIqamaSilent")
+        val quietMinutes = quiet?.optJSONObject("minutes")
+        val quietEnabled = quiet?.optBoolean("enabled") == true
+        val names = listOf(
+            "fajr" to "الفجر", "dhuhr" to "الظهر", "asr" to "العصر",
+            "maghrib" to "المغرب", "isha" to "العشاء")
+        val lines = names.map { (id, label) ->
+            val iqama = IqamaNativeScheduler.durations(this, id)
+            val elapsedOrigin = if (elapsedSaved.has(id)) "محفوظ" else "افتراضي"
+            val silentValue = quietMinutes?.optInt(id, 0)?.coerceIn(0, 120) ?: 0
+            "$label: قبل الإقامة " + iqama.beforeMinutes + " | مضى " +
+                iqama.afterMinutes + " (" + elapsedOrigin + ") | الصامت " +
+                silentValue + " دقيقة"
+        }
+        timingState.text = "قيم أندرويد الفعلية — بدون أي تعديل\n" +
+            "إشعار الإقامة: " +
+            (if (IqamaNativeScheduler.enabled(this)) "مفعّل\n" else "معطّل\n") +
+            "صامت بعد الإقامة: " +
+            (if (quietEnabled) "مفعّل\n" else "معطّل\n") +
+            lines.joinToString("\n") +
+            "\nإذا شاشة مضى تعرض رقماً مختلفاً، فربما توجد قيم قديمة " +
+            "في واجهة الويب تختلف عن إعدادات أندرويد. لا يتغير أي إعداد هنا."
     }
 
     private fun updateStatus(text: String, color: Int, background: Int) {
