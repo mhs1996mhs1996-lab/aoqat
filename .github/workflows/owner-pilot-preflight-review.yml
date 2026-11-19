@@ -1,0 +1,44 @@
+name: Owner pilot preflight — review only, NO PUBLISH
+on:
+  push:
+    branches:
+      - feature/b150-owner-pilot-release-gate-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/feature/b150-owner-pilot-release-gate-20261119'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify changed path scope against owner-approved B150 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          base='security/v225-b150-profile-empty-seq3-approved-publish-20261117'
+          allowed={
+            'security/owner-ota-preflight.py',
+            'security/test-owner-ota-preflight.py',
+            'security/OWNER-PILOT-RELEASE-GATE.md',
+            '.github/workflows/owner-pilot-preflight-review.yml',
+          }
+          files=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          assert files and files.issubset(allowed), 'UNEXPECTED changed files: '+repr(files-allowed)
+          print('PASS: no prayer app code, release manifest or production files changed')
+          PY
+      - name: Check private-key separation and sacred content
+        run: |
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+      - name: Test strict signed-OTA preflight without owner secrets
+        run: |
+          python3 -m unittest discover -s security -p 'test-owner-ota-preflight.py' -v
+          python3 -m py_compile security/owner-ota-preflight.py
+      - name: Record explicit deployment hold
+        run: echo 'NO DEPLOYMENT. NO OWNER PHONE TEST. NO AUTO APPROVAL. NO VERCEL OR MAIN CHANGES.'
