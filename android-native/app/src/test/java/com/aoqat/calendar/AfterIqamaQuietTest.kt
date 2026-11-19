@@ -183,9 +183,16 @@ class AfterIqamaQuietTest {
                 it.triggerAtTime==expectedEnd &&
                 shadowOf(it.operation).savedIntent.action=="RESTORE_SOUND"
             })
-        // Even if the receiver is delayed, the original end deadline controls
-        // restoration; never add an extra interval from its delivery time.
+        // An old recovery alarm is NOT grounds to unmute during the current
+        // selected interval, even if it has an expired cached native deadline.
         saved.edit().putLong("end",System.currentTimeMillis()-1L).commit()
+        AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("RESTORE_SOUND"))
+        assertEquals("Do not restore before the chosen end",
+            AudioManager.RINGER_MODE_SILENT,audio.ringerMode)
+        assertEquals(expectedEnd,saved.getLong("end",0L))
+        // Advance both the Android wall clock and monotonic runtime past the
+        // actual 7-minute post-Iqama selected deadline.
+        org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofMinutes(8))
         AdhanReceiver().onReceive(c,Intent(c,AdhanReceiver::class.java).setAction("RESTORE_SOUND"))
         assertEquals(AudioManager.RINGER_MODE_NORMAL,audio.ringerMode)
         assertEquals(NotificationManager.INTERRUPTION_FILTER_NONE,nm.currentInterruptionFilter)
