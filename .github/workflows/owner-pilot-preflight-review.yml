@@ -21,7 +21,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import subprocess
-          base='security/v225-b150-profile-empty-seq3-approved-publish-20261117'
+          base='dacf35169934b8b0173ee8b5215e0453343f1455'
           allowed={
             'security/owner-ota-preflight.py',
             'security/test-owner-ota-preflight.py',
