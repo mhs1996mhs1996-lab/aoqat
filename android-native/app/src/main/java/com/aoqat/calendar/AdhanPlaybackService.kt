@@ -114,14 +114,11 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             val already=p.getBoolean("changed",false)
             val ringerBefore=am.ringerMode
             val filterBefore=nm.currentInterruptionFilter
-            // Elapsed iqama countdown is a hard cap even if other quiet modes overlap.
-            val iqamaCap=p.getLong("iqamaEnd",0L).takeIf{it>System.currentTimeMillis()}
-            val until=when {
-                preserveUserDnd -> end
-                already && iqamaCap!=null -> minOf(maxOf(end,p.getLong("end",0L)),iqamaCap)
-                already -> maxOf(end,p.getLong("end",0L))
-                else -> end
-            }
+            // The displayed elapsed-Iqama countdown is NEVER a cap on a
+            // separately selected silent duration. A later overlapping quiet
+            // request may extend the deadline, never truncate it to an old
+            // countdown or stale iqamaEnd from a previous activation.
+            val until=QuietDeadline.merge(end,p.getLong("end",0L),already)
             if (until<=System.currentTimeMillis()) {
                 auditQuiet(c,"expired",scheduledStart,end)
                 return false

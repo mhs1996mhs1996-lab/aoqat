@@ -1,0 +1,60 @@
+name: AOQAT owner-only Iqama quiet independent deadline regression V2 — NO DEPLOY
+on:
+  push:
+    branches:
+      - fix/ownerpilot-iqama-quiet-deadline-v2-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qa:
+    if: github.ref == 'refs/heads/fix/ownerpilot-iqama-quiet-deadline-v2-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Restrict edits to separate owner pilot native code and tests only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin fix/ownerpilot-independent-iqama-quiet-20261119
+          python3 - <<'PY'
+          import subprocess
+          base='origin/fix/ownerpilot-independent-iqama-quiet-20261119'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/QuietDeadline.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/QuietDeadlineTest.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt',
+            '.github/workflows/owner-iqama-quiet-deadline-v2-qa.yml',
+            '.github/workflows/owner-iqama-quiet-deadline-v2-preview.yml',
+            'security/OWNER-IQAMA-QUIET-DEADLINE-V2-QA.md',
+          }
+          assert changed and changed.issubset(allowed),changed-allowed
+          source=open('android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt').read()
+          player=open('android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt').read()
+          helper=open('android-native/app/src/main/java/com/aoqat/calendar/QuietDeadline.kt').read()
+          assert 'QuietDeadline.merge(end,p.getLong("end",0L),already)' in player
+          assert 'minOf(maxOf(end,p.getLong("end",0L)),iqamaCap)' not in player
+          assert 'maxOf(requestedEnd, savedEnd)' in helper
+          print('PASS: native overlap never truncates user-selected silent deadline')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run Android unit tests for independent 10min elapsed / 12min quiet
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.AfterIqamaQuietTest' --tests 'com.aoqat.calendar.IqamaCycleTest' --tests 'com.aoqat.calendar.QuietDeadlineTest'
+      - name: Do not build/release production or owner-pilot APK yet
+        run: |
+          echo 'NO SIGNING, NO APK, NO OTA, NO PRODUCTION DEPLOYMENT.'
