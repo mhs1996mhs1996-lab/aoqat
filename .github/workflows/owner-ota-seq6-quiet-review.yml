@@ -58,7 +58,7 @@ jobs:
           old=subprocess.check_output(['git','show',base+':android-updates/build-150/files/index.html'])
           assert sha(old)==seq4.OLD_INDEX_SHA256
           index=seq4.patch_profile(old)
-          assert sha(index)==seq6.PINNED_INDEX_SHA
+          assert sha(index)==seq4.EXACT_REVIEWED_SEQ4_INDEX_SHA256
           assert b'AOQAT_OWNER_PILOT_SEQ4_PROFILE_BUTTONS_V1' in index
           assert index.count(b'js/owner-quiet-seq5.js')==0
           index=index.replace(b'</body></html>',b'<script src="js/owner-quiet-seq5.js"></script>\n</body></html>')
