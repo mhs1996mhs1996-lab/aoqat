@@ -57,9 +57,19 @@ internal object OwnerPilotBundle {
         }
         val manifestBytes = entries.remove("manifest.json") ?: error("Missing signed manifest")
         val manifest = JSONObject(manifestBytes.toString(Charsets.UTF_8))
+        // Distinguish safe diagnostic categories without weakening signature checks.
+        require(manifest.optInt("nativeBuild", -1) == expectedBuild) {
+            "Pilot build mismatch"
+        }
+        require(manifest.optLong("sequence", -1L) > minSequence) {
+            "Pilot sequence not newer"
+        }
+        require(manifest.optLong("expiresAt", 0L) > now) {
+            "Pilot manifest expired"
+        }
         require(SignedWebUpdateManifest.verify(
             manifest, publisherPublicKey, now, expectedBuild, minSequence
-        )) { "Wrong signed publisher, build, sequence, or expiry" }
+        )) { "Publisher signature invalid" }
         val listed = manifest.getJSONObject("files")
         val paths = listed.keys().asSequence().toList()
         require(paths.size in 1..250 && "index.html" in paths &&
