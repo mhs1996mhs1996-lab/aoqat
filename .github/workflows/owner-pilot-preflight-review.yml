@@ -38,7 +38,7 @@ jobs:
           python3 security/check-sacred-content.py
       - name: Test strict signed-OTA preflight without owner secrets
         run: |
-          python3 -m unittest discover -s security -p 'test-owner-ota-preflight.py' -v
+          python3 security/test-owner-ota-preflight.py -v
           python3 -m py_compile security/owner-ota-preflight.py
       - name: Record explicit deployment hold
         run: echo 'NO DEPLOYMENT. NO OWNER PHONE TEST. NO AUTO APPROVAL. NO VERCEL OR MAIN CHANGES.'
