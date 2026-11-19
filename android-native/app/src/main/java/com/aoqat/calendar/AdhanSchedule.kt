@@ -113,7 +113,7 @@ object AdhanSchedule {
             AtAdhanQuiet.window(s,p.id,p.at)?.let { (start,end) ->
                 if(end>now) queue(60700+i,"ADHAN_QUIET",maxOf(start,now+100),p)
             }
-            AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes,IqamaNativeScheduler.durations(c,p.id).afterMinutes)?.let { (start,end) ->
+            AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let { (start,end) ->
                 if (end>now) queue(60500+i,"IQAMA_QUIET",maxOf(start,now+100),p)
             }
             if (!s.optBoolean("enabled", false)) continue
