@@ -65,7 +65,10 @@ jobs:
           assert sha(html)==seq8.PINNED_INDEX_SHA
           quiet=path('security/owner-ota-b150-seq8-quiet-ui.js').read_bytes()
           assert b'34px 34px no-repeat!important' in quiet and b'background:transparent!important' in quiet
-          print('Pre-pinning: candidate verification will run in the next commit')
+          assert seq8.candidate(html,quiet)==(html,quiet), 'Owner signer must accept only PINNED reviewed seq8 bytes'
+          try: seq8.candidate(html,quiet+b' altered')
+          except ValueError: pass
+          else: raise AssertionError('Owner signer accepted modified JS')
           assert b'width:max-content!important' in quiet and b'34px 34px no-repeat!important' in quiet
           assert b'aq-quiet-unit' in quiet and b'aq-quiet-controls' in quiet
           assert b'SAVE_IDLE_MS=900' in quiet
