@@ -103,7 +103,7 @@ class TestOwnerPreflight(unittest.TestCase):
     def test_signature_mutation_blocked(self):
         c = self.make_zip("candidate", 4, {"index.html": b"new"})
         with zipfile.ZipFile(c) as a:
-            members = {x.filename: a.read(x) for x in a.namelist()}
+            members = {x.filename: a.read(x) for x in a.infolist()}
         key = "android-updates/build-150/manifest.json"
         m = json.loads(members[key])
         m["sequence"] = 5
