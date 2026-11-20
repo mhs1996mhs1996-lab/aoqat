@@ -81,7 +81,7 @@ object LockScreenPrayer {
     }
 }
 
-/** Refreshes only the existing lock notification at the saved iqama zero and end. */
+/** Refreshes the ONE existing notification at iqama and Friday phase transitions. */
 class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
     companion object {
         private const val ACTION="com.aoqat.calendar.LOCK_IQAMA_BOUNDARY"
@@ -100,7 +100,7 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
             if(!LockScreenPrayer.enabled(c))return
             val now=System.currentTimeMillis()
             // Schedule prayer start even when the WebView and service are closed.
-            val boundary=LockScreenIqama.nextRefreshAt(c,now)?:return
+            val boundary=LockScreenSupplement.nextRefreshAt(c,now)?:return
             val delay=boundary-now
             if(delay<=0L)return
             val pi=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
