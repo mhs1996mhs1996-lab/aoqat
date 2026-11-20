@@ -33,6 +33,10 @@ jobs:
           changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           allowed={
             '.github/workflows/owner-pilot-lockscreen-phases-check.yml',
+            '.github/workflows/owner-pilot-seq6-presigned-candidate.yml',
+            '.github/workflows/owner-pilot-seq7-presigned-candidate.yml',
+            '.github/workflows/owner-pilot-presigned-seq7-publish.yml',
+            'security/owner-pilot-ota-verify-presigned-seq7.py',
             'js/web-menu-order.js','tests/owner-pilot-profile-seq6-ui.cjs',
             'android-native/app/src/main/res/layout/notification_lock_next.xml',
             'android-native/app/src/main/res/layout/notification_iqama.xml',
