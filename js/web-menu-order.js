@@ -34,7 +34,7 @@
     ["qibla","🧭","اتجاه القبلة"],
     ["profile","👤","الملف الشخصي"],
     // Only this isolated owner-pilot feed receives this JS; production stays unchanged.
-    ...((window.AndroidNative?.readOwnerPilotOtaState && window.AndroidNative.readOwnerPilotOtaState()) ? [["ownerPilotOta","🔄","تحديثات النسخة التجريبية"]] : [])
+    ...(((window.AndroidNative?.readOwnerPilotOtaState && window.AndroidNative.readOwnerPilotOtaState()) || (window.AndroidNative?.configureAdhan && (location.protocol==="file:" || location.hostname==="appassets.androidplatform.net"))) ? [["ownerPilotOta","🔄","تحديثات النسخة التجريبية"]] : [])
   ];
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
@@ -552,8 +552,10 @@
   // remains solely responsible for downloading/verifying/staging OTA updates.
   const PILOT_OTA_BUNDLED_SEQUENCE=6;
   const PILOT_OTA_FEED="https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/manifest.json";
-  const PILOT_OTA_APK=!!window.AndroidNative?.readOwnerPilotOtaState &&
-    !!window.AndroidNative.readOwnerPilotOtaState();
+  const PILOT_OTA_APK=!!(
+    (window.AndroidNative?.readOwnerPilotOtaState && window.AndroidNative.readOwnerPilotOtaState()) ||
+    (window.AndroidNative?.configureAdhan && (location.protocol==="file:"||location.hostname==="appassets.androidplatform.net"))
+  );
   function readPilotState(){
     if(!PILOT_OTA_APK)return {};
     try{return JSON.parse(window.AndroidNative.readOwnerPilotOtaState()||"{}");}
