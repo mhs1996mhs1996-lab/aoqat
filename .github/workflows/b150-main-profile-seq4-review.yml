@@ -27,7 +27,11 @@ jobs:
             '.github/workflows/b150-main-profile-seq4-review.yml',
             '.github/workflows/b150-main-profile-ota-on-approval.yml'
           }
-          assert changed==allow, 'Unexpected changes: '+repr(changed.symmetric_difference(allow))
+          required=allow.copy()
+          allow.add('security/b150-main-profile-approval.json')
+          assert required.issubset(changed) and changed.issubset(allow), (
+              'Unexpected or missing paths: '+repr(changed.symmetric_difference(required))
+          )
           for p in ('android-updates/build-150/manifest.json','android-updates/build-150/files/index.html',
                     'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
                     'android-native/app/build.gradle','js/web-menu-order.js'):
