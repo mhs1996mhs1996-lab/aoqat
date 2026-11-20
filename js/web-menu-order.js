@@ -32,7 +32,8 @@
     ["reminderInbox","🔔","الإشعارات"],
     ["appearance","🎨","شكل التطبيق"],
     ["qibla","🧭","اتجاه القبلة"],
-    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"]
+    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],
+    ["privacyPolicy","🔒","سياسة الخصوصية"]
   ];
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
@@ -280,6 +281,35 @@
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
   }
+  // Self-contained policy copy: readable in the offline APK, no web fetch.
+  const PRIVACY_SECTIONS=[{"title":"ما الذي يحتفظ به التطبيق على الجهاز؟","paragraphs":["يحفظ التطبيق إعدادات العرض والأذان والإقامة والتنبيهات والصامت والمواقيت المختارة، وما تنشئه من تصاميم وتقاويم، وعلامات المصحف المرجعية، في مساحة التخزين المحلية للتطبيق متى كانت الميزة متاحة. لا تحتاج وظائف الصلاة والمصحف الأساسية في نسخة أندرويد المجهزة للعمل دون إنترنت إلى حساب شخصي.","يمكنك مسح البيانات المحلية عبر إعدادات التطبيق في هاتفك أو إزالة التطبيق؛ وقد تُفقد حينها إعداداتك وعلاماتك وملفاتك غير المحفوظة خارج التطبيق."]},{"title":"الموقع والاتجاه إلى القبلة","paragraphs":["قد تطلب ميزة اتجاه القبلة إذن الموقع التقريبي (ACCESS_COARSE_LOCATION) لحساب اتجاه القبلة من موقع الهاتف، وتستخدم حساسات الاتجاه عند توفرها. يُستخدم الموقع لهذه المهمة على الجهاز؛ ولا تتضمن وظيفة القبلة البرمجية الحالية إرسال الإحداثيات إلى خادمنا. يمكنك رفض الإذن أو سحبه من إعدادات الهاتف.","مواقيت الصلاة الأساسية مخصصة لمدينة الحويجة وضواحيها، ولا تحتاج إلى تتبع مستمر لموقعك."]},{"title":"الإنترنت وخدمات الجهات الأخرى","paragraphs":["عند الاتصال بالإنترنت قد يتواصل التطبيق مع خدمة Supabase للحصول على بيانات مواقيت الصلاة وتحديثاتها، وقد يرسل بيانات المواقيت التي تختار حفظها في قاعدة البيانات عند استخدام أمر الحفظ المتاح في الواجهة.","إذا اخترت تشغيل إشعارات الويب الخلفية، قد تُرسل إلى خدمة الاشتراك بيانات اشتراك الإشعارات، ومنها عنوان الاشتراك ومفاتيحه والمنطقة الزمنية، لغرض إيصال الإشعار إلى متصفحك. تستطيع تعطيل الاشتراك من إعدادات التنبيهات.","قد تعالج خدمات الاستضافة والشبكات عنوان IP ومعلومات الاتصال التقنية وسجلات الأمان اللازمة لتقديم الخدمة. وإذا اخترت التواصل عبر واتساب، تُفتح خدمة واتساب الخارجية وتسري عليها سياسة الخصوصية الخاصة بها."]},{"title":"أذونات الهاتف","paragraphs":["قد يطلب التطبيق إذناً للإشعارات والمنبهات الدقيقة وإظهار التنبيه على شاشة القفل، وتشغيل خدمات التنبيه في الخلفية والتحكم بوضع عدم الإزعاج أو الصوت، بحسب الميزة التي تفعّلها. تُستخدم هذه الصلاحيات لتشغيل الأذان والإقامة والتذكيرات ولا تعني وحدها إرسال معلومات شخصية.","قد تُستخدم أدوات اختيار الملفات أو مشاركة الصور عندما تطلب حفظ تصميم أو مشاركته. لا تُرفع ملفاتك الشخصية تلقائياً بمجرد اختيارها."]},{"title":"الاحتفاظ بالبيانات والحماية","paragraphs":["تبقى البيانات المحلية في مساحة التطبيق إلى أن تحذفها أو تمسح بيانات التطبيق، وفق آليات أندرويد والنسخ الاحتياطي المفعّلة على جهازك. بيانات اشتراك الإشعارات المرتبطة بالخدمة تبقى حسب حالة الاشتراك وإجراءات مشغّل الخدمة؛ وعند إلغاء الاشتراك يحاول التطبيق إبلاغ الخادم بحذفه.","تستخدم اتصالات خدماتنا الشبكية المعتمدة HTTPS حيثما تكون الخدمة متاحة. لا يمكن ضمان خلو أي نقل أو تخزين إلكتروني من المخاطر بالكامل. يمكن أن تحتفظ مزودات البنية التحتية بسجلات تقنية لأغراض التشغيل والأمان وفق سياساتها."]},{"title":"خياراتك وطلبات الحذف","paragraphs":["تستطيع تعطيل الأذونات من إعدادات أندرويد، وإيقاف الإشعارات من التطبيق، ومسح إعدادات التطبيق المحلية. إذا رغبت في الاستفسار عن بيانات قد تكون محفوظة لدى الخدمة، أو طلب حذفها، تواصل معنا عبر «تواصل معنا عبر واتساب» الموجود بالتطبيق مع توضيح الطلب، دون إرسال كلمة مرور أو مفتاح توقيع."]},{"title":"التغييرات والتواصل","paragraphs":["قد نعدّل هذه السياسة عند تغيير الوظائف أو الأذونات أو الخدمات المستخدمة، ونحدّث تاريخ المراجعة. راجع هذه الصفحة عند تثبيت إصدار جديد.","اسم التطبيق: أوقات الصلاة في الحويجة وضواحيها. جهة التواصل: خدمة الدعم عبر خيار «تواصل معنا عبر واتساب» داخل التطبيق. تاريخ آخر تحديث: 20 تشرين الثاني 2026."]}];
+  function privacyView(){
+    const wrap=document.createElement("section");wrap.id="aoqatPrivacyPolicy";
+    wrap.dir="rtl";wrap.style.cssText="max-width:720px;margin:0 auto;padding:7px 9px 22px;color:var(--wt-text,#293d37);line-height:1.75";
+    const intro=document.createElement("p");
+    intro.textContent="تطبيق أوقات الصلاة في الحويجة وضواحيها — أندرويد والويب | آخر تحديث: 20 تشرين الثاني 2026";
+    intro.style.cssText="font-size:13px;color:var(--wt-text,#3a504a);margin:0 0 10px";
+    const summary=document.createElement("p");
+    summary.textContent="توضح هذه السياسة المعلومات المحلية والاتصالات الاختيارية والخدمات الخارجية. تختلف الإمكانات باختلاف نسخة التطبيق والجهاز.";
+    summary.style.cssText="margin:0 0 9px;font-size:13px";
+    wrap.append(intro,summary);
+    for(const entry of PRIVACY_SECTIONS){
+      const section=document.createElement("section");section.style.cssText="border:1px solid var(--wt-border,#d7dfd9);border-radius:11px;background:var(--wt-surface,#fff);padding:10px 12px;margin:8px 0";
+      const h=document.createElement("h3");h.textContent=entry.title;h.style.cssText="font-size:15px;margin:0 0 5px;line-height:1.55";
+      section.append(h);
+      for(const passage of entry.paragraphs){
+        const p=document.createElement("p");p.textContent=passage;p.style.cssText="font-size:13px;line-height:1.85;margin:5px 0";
+        section.append(p);
+      }
+      wrap.append(section);
+    }
+    const contact=document.createElement("button");contact.type="button";
+    contact.className="main-action";contact.textContent="💬 الاستفسارات وطلبات الخصوصية";
+    contact.style.cssText="width:100%;min-height:44px;margin-top:7px";
+    contact.onclick=()=>window.AoqatHelpSupport?.openWhatsApp?.();
+    wrap.append(contact);
+    openSub("سياسة الخصوصية",wrap,"main");
+  }
   function guideView(){const api=window.AoqatHelpSupport;if(api)openSub("شرح استخدام التطبيق",api.guide(),"main");}
   function contactView(){window.AoqatHelpSupport?.openWhatsApp?.();}
   // Only this master control governs the requested screen-wake policy for ALL
@@ -420,6 +450,7 @@
       if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
       if(id==="usageGuide"){guideView();return;}
+      if(id==="privacyPolicy"){privacyView();return;}
        if(id==="contactWhatsApp"){contactView();return;}
        if(id==="alertSettings"){alertSettingsView();return;}
        if(id==="calendar"){window.aoqatOpenCalendar?.();return;}

@@ -1,0 +1,41 @@
+name: AOQAT privacy draft checks - NO PUBLISH
+on:
+  push:
+    branches: [feature/privacy-policy-review-20261120]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  privacy-review:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Confirm privacy-only review scope, never production
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/b150-owner-ota-seq8-smaller-stepper-20261119
+          python3 - <<'PY'
+          import subprocess
+          baseline='origin/feature/b150-owner-ota-seq8-smaller-stepper-20261119'
+          paths=set(subprocess.check_output(['git','diff','--name-only',baseline,'HEAD'],text=True).splitlines())
+          allowed={'privacy.html','js/web-menu-order.js',
+                   'tests/privacy-policy-check.cjs','tests/privacy-policy-browser.cjs',
+                   '.github/workflows/privacy-policy-review.yml'}
+          assert paths and paths.issubset(allowed),'Unexpected changes: '+str(paths-allowed)
+          assert 'privacy.html' in paths and 'js/web-menu-order.js' in paths
+          print('PASS: dedicated private review branch; production and native files unchanged')
+          PY
+      - name: Check offline settings script and exact privacy contents
+        run: |
+          node --check js/web-menu-order.js
+          node --test tests/privacy-policy-check.cjs
+      - name: Verify main menu icon and offline policy in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/privacy-policy-browser.cjs
+      - name: Explicit publication hold
+        run: echo 'REVIEW ONLY. NO VERCEL DEPLOY, APK, OTA, OR MERGE.'
