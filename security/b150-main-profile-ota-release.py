@@ -61,7 +61,7 @@ def content() -> tuple[dict, bytes, bytes]:
         raise ValueError("Production signed index file list changed unexpectedly")
     if sha(old) != CURRENT_INDEX_HASH or sha(reviewed) != REVIEW_INDEX_HASH:
         raise ValueError("Reviewed HTML bytes do not match independently tested hashes")
-    original = ("      panel.dir = 'rtl';\\n"
+    original = ("      panel.dir = 'rtl';\n"
                 "      nav.sub('الملف الشخصي', panel, 'main');").encode("utf-8")
     # Verify the test is inside exactly one existing profile handler, byte-for-byte.
     if old.count(original) != 1 or reviewed.count(b"AOQAT_MAIN_PROFILE_OTA_SEQ4_TEST") != 1:
