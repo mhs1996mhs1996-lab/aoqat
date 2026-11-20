@@ -21,7 +21,8 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class WebUpdates(
     private val context: Context,
-    private val encodedPublicKey: String = SIGNING_PUBLIC_KEY_B64,
+    private val encodedPublicKey: String = if (BuildConfig.OWNER_PILOT_ENABLED)
+        PILOT_SIGNING_PUBLIC_KEY_B64 else SIGNING_PUBLIC_KEY_B64,
     private val fetch: (String, Int) -> ByteArray = { path, limit ->
         download(path, limit, context.packageManager.getPackageInfo(context.packageName, 0).versionCode,
             BuildConfig.OWNER_PILOT_ENABLED)
@@ -303,6 +304,10 @@ class WebUpdates(
         const val MIN_CHECK_INTERVAL_MS = 5 * 60 * 1000L
         const val SIGNING_PUBLIC_KEY_B64 =
             "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6W6qe1MBZFNrD2u1NT9AhNaUeO+fUShOkN0udFvkt4CWwnsGCp777mBYd6ckklFqeOjuAbl6N07/hQmmdRJ9ug=="
+        // Pilot-only public key. Its private key is never present in GitHub
+        // source and cannot authorize a production OTA signature.
+        const val PILOT_SIGNING_PUBLIC_KEY_B64 =
+            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMBrs5EkeFaaTtfXiNtcwfrqygumEuU5hXn4kOvZKXy9tFtJbiZhPKZsv4vlLPWpHolg/ZlmPalvFTjzD7Rn3fw=="
         private val REVISION_PATTERN = Regex("[a-f0-9]{64}")
         private val HASH_PATTERN = Regex("[a-f0-9]{64}")
 
@@ -334,7 +339,7 @@ class WebUpdates(
                 .joinToString("") { "%02x".format(it) }
 
         fun baseUrl(build: Int, ownerPilot: Boolean = false): String =
-            if (ownerPilot) "https://aoqat.vercel.app/android-updates/owner-pilot/build-$build/"
+            if (ownerPilot) "https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-$build/"
             else if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"
             else "https://aoqat.vercel.app/android-updates/"
 
