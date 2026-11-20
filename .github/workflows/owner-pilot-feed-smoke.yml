@@ -26,7 +26,14 @@ jobs:
           from pathlib import Path
           m=json.loads(Path('/tmp/owner-pilot-manifest.json').read_text())
           index=Path('/tmp/owner-pilot-index.html').read_bytes()
-          key=Path('security/owner-pilot-ota-public.pem')
+          # Use the APK's public-key pin directly; no new PEM files are
+          # committed to GitHub and no private keys are needed in this job.
+          import re
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          match=re.search(r'const val PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
+          assert match, 'APK pilot key missing'
+          der=base64.b64decode(match.group(1),validate=True)
+          assert hashlib.sha256(der).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
           assert m['channel']=='owner-pilot' and m['nativeBuild']==150
           assert type(m['sequence']) is int and m['sequence']>=1
           assert m['expiresAt']>int(time.time()*1000)
@@ -35,16 +42,17 @@ jobs:
           assert hashlib.sha256(index).hexdigest()==files['index.html']
           canonical='\n'.join(f'{p}:{files[p]}' for p in sorted(files))
           assert hashlib.sha256(canonical.encode()).hexdigest()==m['revision']
-          der=subprocess.check_output(['openssl','pkey','-pubin','-in',str(key),'-outform','DER'])
-          assert hashlib.sha256(der).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
-          assert 'SIGNING_PUBLIC_KEY_B64' in Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          assert 'SIGNING_PUBLIC_KEY_B64' in source
           payload='\n'.join(('AOQAT-WEB-UPDATE-OWNER-PILOT-V1','150',str(m['sequence']),str(m['expiresAt']),m['revision'],canonical)).encode()
           sig=base64.b64decode(m['signature'],validate=True)
           with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)
             (root/'payload').write_bytes(payload)
             (root/'sig').write_bytes(sig)
-            verify=subprocess.run(['openssl','dgst','-sha256','-verify',str(key),'-signature',str(root/'sig'),str(root/'payload')],capture_output=True,text=True)
+            (root/'pub.der').write_bytes(der)
+            public=subprocess.run(['openssl','pkey','-pubin','-inform','DER','-in',str(root/'pub.der'),'-out',str(root/'pub.pem')],capture_output=True,text=True)
+            assert public.returncode==0
+            verify=subprocess.run(['openssl','dgst','-sha256','-verify',str(root/'pub.pem'),'-signature',str(root/'sig'),str(root/'payload')],capture_output=True,text=True)
             assert verify.returncode==0, 'Public OTA manifest signature invalid'
           assert b'js/apk-startup-bundle.js' in index, 'Not Android APK-integrated index'
           print('PASS: public HTTPS ownerPilot feed, pinned ECDSA signature, exact Android index SHA, channel isolated')
