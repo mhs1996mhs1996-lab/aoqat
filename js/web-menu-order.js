@@ -32,9 +32,7 @@
     ["reminderInbox","🔔","الإشعارات"],
     ["appearance","🎨","شكل التطبيق"],
     ["qibla","🧭","اتجاه القبلة"],
-    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],
-    ["profile","👤","الملف الشخصي"],
-    ["privacyPolicy","🔒","سياسة الخصوصية"]
+    ["profile","👤","الملف الشخصي"]
   ];
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
@@ -272,72 +270,261 @@
     screen:'إضاءة الهاتف عند وصول التنبيهات المفعّلة.'
   };
 
-  // Optional local profile data only. No accounts, network calls or profile upload.
-  // Existing prayer times, location selection and notification preferences stay untouched.
+  // Owner-pilot profile: entirely offline, optional data only. No cloud account,
+  // server registration, password, automatic upload or native preference reset.
   const PROFILE_DISPLAY_NAME_KEY="aoqatLocalProfileNameV1";
+  const PROFILE_EMAIL_KEY="aoqatLocalProfileEmailV1";
+  const PROFILE_AVATAR_KEY="aoqatLocalProfileAvatarV1";
+  const PROFILE_BACKUP_KEYS=[
+    PROFILE_DISPLAY_NAME_KEY,PROFILE_EMAIL_KEY,PROFILE_AVATAR_KEY,
+    "aoqatQuranReaderV1","aoqatAdhanV1","aoqatIqamaMinutesV1",
+    "aoqatAfterIqamaMinutesV1","aoqatAzkarRemindersV1",
+    "aoqatFridayRemindersV1","aoqatFastingRemindersV1",
+    "aoqatMonthlyCalendarsV1","aoqatYearGalleryStylesV5",
+    "aoqatWebAppearanceThemeV1","aoqatWebButtonAppearanceV1",
+    "aoqatAlertScreenWakeV1","aoqatWebHelpLiveStyle"
+  ];
   function profileView(){
     const panel=document.createElement("section");panel.id="aoqatPersonalProfile";
     panel.dir="rtl";panel.className="web-settings-list";
-    panel.style.cssText="max-width:560px;margin:0 auto;padding:12px 10px 24px;line-height:1.65";
-    const card=document.createElement("div");card.id="aoqatProfileCard";
-    card.style.cssText="background:var(--wt-surface,#fff);border:1px solid var(--wt-border,#d4e0e5);border-radius:14px;padding:16px 12px;margin-bottom:12px;text-align:center";
-    const avatar=document.createElement("div");avatar.id="aoqatProfileAvatar";
-    avatar.textContent="👤";avatar.setAttribute("aria-hidden","true");
-    avatar.style.cssText="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 8px;background:#e5f2f5;color:#173c50;font-size:30px;font-weight:700";
-    const display=document.createElement("h3");display.id="aoqatProfileDisplayName";
-    display.style.cssText="font-size:19px;margin:4px 0 0;color:var(--wt-text,#173c50)";
-    const location=document.createElement("p");location.textContent="📍 الحويجة وضواحيها — العراق";
-    location.style.cssText="font-size:14px;margin:5px 0;color:var(--wt-text,#324b51)";
-    card.append(avatar,display,location);
-    const info=document.createElement("p");info.textContent="اسم اختياري يظهر هنا فقط، ولا يُنشئ حساباً أو يغيّر مواقيت الصلاة.";
-    info.style.cssText="font-size:13px;margin:0 0 10px;color:var(--wt-text,#324b51)";
-    const label=document.createElement("label");label.htmlFor="aoqatProfileNickname";label.textContent="اسم العرض";
-    label.style.cssText="display:block;font-size:14px;font-weight:700;margin-bottom:5px";
-    const input=document.createElement("input");input.id="aoqatProfileNickname";
-    input.type="text";input.maxLength=40;input.autocomplete="nickname";input.placeholder="اكتب اسمك (اختياري)";
-    input.style.cssText="width:100%;min-height:44px;border:1px solid #a5bbc1;border-radius:10px;padding:9px 12px;font-size:15px;box-sizing:border-box;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50)";
-    let name="";
-    try{name=(localStorage.getItem(PROFILE_DISPLAY_NAME_KEY)||"").slice(0,40);}catch(_){}
-    input.value=name;
-    const status=document.createElement("p");status.id="aoqatProfileSaveStatus";
-    status.setAttribute("role","status");status.style.cssText="font-size:13px;min-height:22px;margin:8px 0";
+    panel.style.cssText="max-width:560px;margin:0 auto;padding:10px 10px 22px;line-height:1.5;color:var(--wt-text,#173c50)";
+    function el(tag,text,css){
+      const node=document.createElement(tag);
+      if(text!==null&&text!==undefined)node.textContent=text;
+      if(css)node.style.cssText=css;
+      return node;
+    }
+    const note=el("p","","font-size:12px;margin:7px 0 0;line-height:1.5;color:var(--wt-text,#324b51)");
+    note.id="aoqatProfileSaveStatus";note.setAttribute("role","status");note.setAttribute("aria-live","polite");
+    function say(t){note.textContent=t;}
+    function get(k){try{return localStorage.getItem(k)||"";}catch(_){return "";}}
+    function put(k,v){if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}
+    const sections=(heading)=>{
+      const title=el("h3",heading,"font-size:13px;font-weight:700;margin:14px 0 6px;padding:0 4px");
+      panel.append(title);
+    };
+    function row(id,title,subtitle,action,icon){
+      const b=el("button",null,"width:100%;display:flex;align-items:center;gap:10px;min-height:49px;border:1px solid var(--wt-border,#c7d8df);border-radius:11px;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50);padding:8px 10px;margin:4px 0;text-align:right;font:inherit;cursor:pointer");
+      b.id=id;b.type="button";b.className="aoqat-profile-row";
+      const glyph=el("span",icon,"font-size:19px;flex:0 0 26px;text-align:center");
+      const detail=el("span",null,"display:flex;flex:1;min-width:0;flex-direction:column;gap:2px");
+      detail.append(el("span",title,"font-size:14px;font-weight:700"));
+      if(subtitle)detail.append(el("small",subtitle,"font-size:11px;opacity:.75;overflow-wrap:anywhere"));
+      b.append(glyph,detail,el("span","‹","font-size:20px;opacity:.6"));
+      b.onclick=action;panel.append(b);return b;
+    }
+    function field(label,id,type,max,placeholder){
+      const wrap=el("label",null,"display:block;font-size:13px;font-weight:700;margin:10px 0 4px");
+      wrap.textContent=label;
+      const input=el("input",null,"width:100%;min-height:43px;padding:8px 11px;margin-top:4px;border:1px solid var(--wt-border,#b5cad0);border-radius:9px;box-sizing:border-box;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50);font-size:15px");
+      input.id=id;input.type=type;input.maxLength=max;input.placeholder=placeholder;
+      wrap.append(input);return {wrap,input};
+    }
+    const card=el("div",null,"border:1px solid var(--wt-border,#c7d8df);border-radius:14px;background:var(--wt-surface,#fff);padding:12px;display:flex;align-items:center;gap:12px");
+    card.id="aoqatProfileCard";
+    const avatar=el("div","👤","width:58px;height:58px;flex:0 0 58px;border-radius:50%;display:grid;place-items:center;background:#e5f2f5;overflow:hidden;font-size:27px");
+    avatar.id="aoqatProfileAvatar";
+    const info=el("div",null,"flex:1;min-width:0;text-align:right");
+    const display=el("strong","","font-size:17px;display:block;overflow-wrap:anywhere");display.id="aoqatProfileDisplayName";
+    const emailText=el("div","","font-size:12px;opacity:.8;overflow-wrap:anywhere");
+    info.append(display,emailText,el("small","الحويجة وضواحيها – العراق · ملف محلي","font-size:11px;opacity:.8"));
+    const editButton=el("button","تعديل","border:1px solid var(--wt-border,#bfd1d7);border-radius:9px;background:transparent;color:inherit;min-height:36px;padding:5px 9px;font-size:12px;cursor:pointer");
+    editButton.type="button";editButton.id="aoqatProfileEdit";
+    card.append(avatar,info,editButton);panel.append(card);
     function refresh(){
-      const shown=name||"مستخدم التطبيق";
-      display.textContent=shown;
-      avatar.textContent=name?Array.from(name)[0]:"👤";
+      const name=get(PROFILE_DISPLAY_NAME_KEY).slice(0,40);
+      const email=get(PROFILE_EMAIL_KEY).slice(0,150);
+      display.textContent=name||"مستخدم التطبيق";
+      emailText.textContent=email||"البريد الإلكتروني غير مضاف";
+      avatar.textContent="";avatar.replaceChildren();
+      const picture=get(PROFILE_AVATAR_KEY);
+      if(/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(picture)&&picture.length<190000){
+        const image=el("img",null,"height:100%;width:100%;object-fit:cover");
+        image.alt="الصورة الشخصية";image.src=picture;avatar.append(image);
+      }else avatar.textContent=name?Array.from(name)[0]:"👤";
     }
     refresh();
-    const controls=document.createElement("div");controls.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px";
-    function button(id,text,action){
-      const b=document.createElement("button");b.id=id;b.type="button";b.className="main-action";
-      b.textContent=text;b.style.cssText="min-height:44px;padding:8px 7px;margin:0;font-size:14px;border-radius:10px";
-      b.onclick=action;return b;
+    const edit=el("div",null,"display:none;border:1px solid var(--wt-border,#c7d8df);border-radius:12px;padding:10px;margin:8px 0;background:var(--wt-surface,#fff)");
+    edit.id="aoqatProfileEditPanel";
+    const nameField=field("اسم العرض","aoqatProfileNickname","text",40,"الاسم (اختياري)");
+    const emailField=field("البريد الإلكتروني","aoqatProfileEmail","email",150,"name@example.com (اختياري)");
+    emailField.input.autocomplete="email";nameField.input.autocomplete="nickname";
+    nameField.input.value=get(PROFILE_DISPLAY_NAME_KEY);
+    emailField.input.value=get(PROFILE_EMAIL_KEY);
+    const photo=field("الصورة الشخصية","aoqatProfilePhoto","file",1,"");
+    photo.input.accept="image/png,image/jpeg,image/webp";photo.input.removeAttribute("maxlength");
+    const buttons=el("div",null,"display:flex;gap:8px;margin:8px 0");
+    function actionButton(id,text,fn){
+      const b=el("button",text,"min-height:40px;flex:1;border:1px solid var(--wt-border,#b5cad0);border-radius:9px;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50);font-size:13px;font-weight:700;padding:6px;cursor:pointer");
+      b.type="button";b.id=id;b.onclick=fn;return b;
     }
-    const save=button("aoqatProfileSave","حفظ الاسم",()=>{
-      const value=input.value.trim().replace(/\s+/g," ").slice(0,40);
-      try{
-        if(value)localStorage.setItem(PROFILE_DISPLAY_NAME_KEY,value);
-        else localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
-        name=value;input.value=value;refresh();status.textContent="تم حفظ اسم العرض على هذا الجهاز.";
-      }catch(_){status.textContent="تعذّر حفظ الاسم في تخزين الجهاز. جرّب لاحقاً.";}
+    const save=actionButton("aoqatProfileSave","حفظ التغييرات",()=>{
+      const name=nameField.input.value.trim().replace(/\s+/g," ").slice(0,40);
+      const email=emailField.input.value.trim().slice(0,150);
+      if(email&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.includes(" "))){
+        say("صيغة البريد الإلكتروني غير صحيحة.");emailField.input.focus();return;
+      }
+      try{put(PROFILE_DISPLAY_NAME_KEY,name);put(PROFILE_EMAIL_KEY,email);
+        refresh();edit.style.display="none";say("حُفظت البيانات على الهاتف فقط. لم يُنشأ حساب إلكتروني.");
+      }catch(_){say("تعذّر حفظ البيانات على الهاتف.");}
     });
-    const clear=button("aoqatProfileClear","مسح الاسم",()=>{
+    const cancel=actionButton("aoqatProfileCancel","إلغاء",()=>{
+      nameField.input.value=get(PROFILE_DISPLAY_NAME_KEY);
+      emailField.input.value=get(PROFILE_EMAIL_KEY);
+      edit.style.display="none";
+    });
+    buttons.append(save,cancel);
+    const clearPhoto=actionButton("aoqatProfileClearPhoto","حذف الصورة",()=>{
+      if(!confirm("حذف الصورة الشخصية من هذا الهاتف فقط؟"))return;
+      try{localStorage.removeItem(PROFILE_AVATAR_KEY);photo.input.value="";refresh();say("تم حذف الصورة الشخصية.");}catch(_){say("تعذّر حذف الصورة.");}
+    });
+    clearPhoto.style.flex="none";clearPhoto.style.width="100%";
+    edit.append(nameField.wrap,emailField.wrap,photo.wrap,buttons,clearPhoto);
+    panel.append(edit);
+    editButton.onclick=()=>{const opening=edit.style.display==="none";edit.style.display=opening?"block":"none";if(opening)nameField.input.focus();};
+    photo.input.onchange=()=>{
+      const file=photo.input.files&&photo.input.files[0];if(!file)return;
+      if(!/^image\/(png|jpeg|webp)$/.test(file.type)||file.size>3*1024*1024){
+        say("اختر صورة PNG أو JPG أو WEBP بحجم أقل من 3 ميغابايت.");photo.input.value="";return;
+      }
+      const reader=new FileReader();
+      reader.onload=()=>{
+        const image=new Image();image.onload=()=>{
+          const canvas=document.createElement("canvas");const side=160;canvas.width=side;canvas.height=side;
+          const context=canvas.getContext("2d");if(!context){say("تعذّر تجهيز الصورة.");return;}
+          const scale=Math.max(side/image.width,side/image.height);
+          context.drawImage(image,(side-image.width*scale)/2,(side-image.height*scale)/2,image.width*scale,image.height*scale);
+          const result=canvas.toDataURL("image/jpeg",.7);
+          try{put(PROFILE_AVATAR_KEY,result);refresh();say("تم حفظ الصورة على الهاتف.");}
+          catch(_){say("تعذّر حفظ الصورة، جرّب صورة أصغر.");}
+          photo.input.value="";
+        };
+        image.onerror=()=>say("الصورة غير صالحة.");
+        image.src=String(reader.result||"");
+      };
+      reader.onerror=()=>say("تعذّر قراءة الصورة.");
+      reader.readAsDataURL(file);
+    };
+    sections("الملف الشخصي");
+    row("aoqatProfileEditRow","الاسم والصورة والبريد الإلكتروني","بيانات اختيارية محفوظة محلياً",()=>editButton.click(),"👤");
+    function quranDetails(){
+      try{const x=JSON.parse(get("aoqatQuranReaderV1")||"{}");
+        const count=Array.isArray(x.bookmarks)?x.bookmarks.length:0;
+        const page=Number(x.page)||1;
+        return {count,page:Math.max(1,Math.min(604,Math.floor(page)))};
+      }catch(_){return {count:0,page:1};}
+    }
+    sections("القرآن ومحفوظاتي");
+    row("aoqatProfileQuranBookmarks","محفوظاتي في المصحف",String(quranDetails().count)+" علامة مرجعية محفوظة",()=>{
+      mainView();document.querySelector('[data-drawer="quran"]')?.click();
+    },"🔖");
+    row("aoqatProfileQuranLastPage","آخر صفحة قرأتها","الصفحة "+quranDetails().page,()=>{
+      mainView();document.querySelector('[data-drawer="quran"]')?.click();
+    },"📖");
+    sections("النسخ الاحتياطي");
+    const backupHint=el("small","نسخة من بيانات الملف والإعدادات والمحفوظات المحلية المتاحة فقط؛ لا تشمل الأذونات أو الملفات الصوتية أو إعدادات أندرويد الداخلية.","display:block;margin:1px 4px 8px;font-size:11px;opacity:.8");
+    panel.append(backupHint);
+    const backupTextArea=el("textarea",null,"width:100%;box-sizing:border-box;min-height:100px;font-size:11px;margin-top:5px;display:none;direction:ltr");
+    backupTextArea.id="aoqatProfileBackupText";backupTextArea.readOnly=true;
+    function backupData(){
+      const data={};let total=0;
+      for(const k of PROFILE_BACKUP_KEYS){const value=get(k);
+        if(!value)continue;
+        if(value.length>500000)throw Error("حجم أحد الإعدادات أكبر من المسموح.");
+        total+=value.length;if(total>1700000)throw Error("البيانات كبيرة جداً لإنشاء نسخة محلية.");
+        data[k]=value;
+      }
+      return {format:"aoqat-local-backup",version:1,exportedAt:new Date().toISOString(),data};
+    }
+    const backupCopy=actionButton("aoqatProfileBackupCopy","نسخ بيانات النسخة",async()=>{
+      backupTextArea.select();
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(backupTextArea.value);}
+        else if(!document.execCommand("copy"))throw Error("copy unsupported");
+        say("تم نسخ البيانات. احفظها بملف نصي آمن خارج التطبيق.");
+      }catch(_){say("حدّد النص الظاهر وانسخه يدوياً واحفظه بمكان آمن.");}
+    });
+    backupCopy.style.display="none";backupCopy.style.width="100%";
+    row("aoqatProfileBackupExport","إنشاء نسخة احتياطية","حفظ بياناتي المحلية خارج التطبيق",async()=>{
+      let value;try{value=JSON.stringify(backupData());}catch(e){say(e.message||"تعذّر إنشاء النسخة.");return;}
+      const filename="AOQAT-backup-"+new Date().toISOString().slice(0,10)+".json";
+      try{
+        const file=new File([value],filename,{type:"application/json"});
+        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+          try{await navigator.share({files:[file],title:"نسخة احتياطية لأوقات الصلاة"});say("تم فتح خيارات مشاركة النسخة الاحتياطية.");return;}
+          catch(e){if(e&&e.name==="AbortError")return;}
+        }
+        // Browser downloads use the browser; Android WebView's blob hook is
+        // for images only, so NEVER route a JSON blob into saveDataUrl().
+        if(!window.AndroidNative?.configureAdhan){
+          const url=URL.createObjectURL(new Blob([value],{type:"application/json"}));
+          const a=document.createElement("a");a.href=url;a.download=filename;
+          document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
+          say("تم طلب تنزيل نسخة JSON.");return;
+        }
+      }catch(_){}
+      backupTextArea.style.display="block";backupCopy.style.display="block";
+      backupTextArea.value=value;say("هذه بيانات النسخة. انسخها واحفظها خارج التطبيق. تحتوي الاسم والبريد إن وجد.");
+    },"💾");
+    panel.append(backupTextArea,backupCopy);
+    const restoreInput=el("input",null,"display:none");restoreInput.type="file";restoreInput.accept=".json,application/json";restoreInput.id="aoqatProfileRestoreFile";
+    const restorePanel=el("div",null,"display:none;border:1px solid var(--wt-border,#c7d8df);border-radius:10px;padding:10px;margin:6px 0;background:var(--wt-surface,#fff)");
+    restorePanel.id="aoqatProfileRestorePanel";
+    const restoreText=el("textarea",null,"min-height:84px;width:100%;box-sizing:border-box;font-size:12px;direction:ltr");
+    restoreText.placeholder="ألصق بيانات النسخة هنا، أو اختر ملف JSON";
+    const choose=actionButton("aoqatProfileChooseRestore","اختيار ملف JSON",()=>restoreInput.click());
+    const restore=actionButton("aoqatProfileRestoreSave","استعادة البيانات",()=>{
+      let parsed;try{parsed=JSON.parse(restoreText.value);}
+      catch(_){say("ملف النسخة غير صالح.");return;}
+      if(!parsed||parsed.format!=="aoqat-local-backup"||parsed.version!==1||!parsed.data||typeof parsed.data!=="object"||Array.isArray(parsed.data)){
+        say("صيغة النسخة الاحتياطية غير مدعومة.");return;
+      }
+      const entries=Object.entries(parsed.data);
+      if(!entries.length||entries.length>PROFILE_BACKUP_KEYS.length||entries.some(([k,v])=>!PROFILE_BACKUP_KEYS.includes(k)||typeof v!=="string"||v.length>500000)||restoreText.value.length>2000000){
+        say("النسخة تحتوي على بيانات غير مسموحة أو حجم كبير.");return;
+      }
+      if(!confirm("استعادة النسخة قد تستبدل إعداداتك ومحفوظاتك المحلية الحالية. هل تريد المتابعة؟"))return;
+      const previous={};try{
+        for(const [k] of entries)previous[k]=localStorage.getItem(k);
+        for(const [k,v] of entries)put(k,v);
+        refresh();say("اكتملت استعادة البيانات المحلية. أغلق التطبيق وافتحه لتظهر الإعدادات.");
+        restorePanel.style.display="none";
+      }catch(_){
+        try{for(const [k,v] of Object.entries(previous))put(k,v);}catch(_){}
+        say("تعذّرت الاستعادة، ولم تُحذف البيانات الأخرى.");
+      }
+    });
+    restorePanel.append(restoreInput,restoreText,choose,restore);
+    restoreInput.onchange=()=>{
+      const f=restoreInput.files&&restoreInput.files[0];if(!f)return;
+      if(f.size>2000000){say("الملف كبير جداً.");return;}
+      const reader=new FileReader();
+      reader.onload=()=>{restoreText.value=String(reader.result||"");say("تم اختيار الملف. اضغط استعادة البيانات للمتابعة.");};
+      reader.onerror=()=>say("تعذّر فتح ملف النسخة.");
+      reader.readAsText(f);restoreInput.value="";
+    };
+    row("aoqatProfileBackupRestore","استعادة نسخة احتياطية","من ملف JSON أو نص محفوظ",()=>{
+      restorePanel.style.display=restorePanel.style.display==="none"?"block":"none";
+    },"📥");
+    panel.append(restorePanel);
+    sections("المساعدة والخصوصية");
+    row("aoqatProfilePrivacy","سياسة الخصوصية","قراءة السياسة داخل التطبيق",()=>privacyView(),"🔒");
+    row("aoqatProfileContact","تواصل معنا عبر واتساب","فتح جهة الدعم",()=>window.AoqatHelpSupport?.openWhatsApp?.(),"💬");
+    row("aoqatProfileAbout","حول التطبيق","أوقات الصلاة في الحويجة وضواحيها · التجريبي 2.12 (بناء 150)",()=>{
+      say("النسخة التجريبية تستقبل تحديثات OTA الموقّعة تلقائياً عند اتصال التطبيق بالإنترنت.");
+    },"ℹ️");
+    sections("إدارة الملف الشخصي");
+    row("aoqatProfileDelete","حذف بيانات الملف الشخصي","الاسم والبريد والصورة فقط، دون إعدادات الصلاة أو المصحف",()=>{
+      if(!confirm("حذف الاسم والبريد والصورة من الهاتف؟ لا يوجد حساب إلكتروني لحذفه."))return;
       try{
         localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
-        name="";input.value="";refresh();status.textContent="تم مسح اسم العرض فقط.";
-      }catch(_){status.textContent="تعذّر مسح الاسم في تخزين الجهاز.";}
-    });
-    controls.append(save,clear);
-    const divider=document.createElement("p");
-    divider.textContent="التطبيق: أوقات الصلاة في الحويجة وضواحيها | الإصدار التجريبي 2.12 (بناء 150)";
-    divider.style.cssText="border-top:1px solid var(--wt-border,#d4e0e5);padding-top:12px;margin-top:12px;font-size:13px";
-    const privacy=button("aoqatProfilePrivacy","🔒 سياسة الخصوصية",()=>privacyView());
-    privacy.style.width="100%";
-    const contact=button("aoqatProfileContact","💬 تواصل معنا",()=>window.AoqatHelpSupport?.openWhatsApp?.());
-    contact.style.width="100%";
-    const foot=document.createElement("p");foot.textContent="بيانات الاسم محلية على هاتفك؛ لا تُرسل لخادم ولا تُستخدم لتسجيل الدخول.";
-    foot.style.cssText="font-size:12px;margin:10px 0 0";
-    panel.append(card,info,label,input,controls,status,divider,privacy,contact,foot);
+        localStorage.removeItem(PROFILE_EMAIL_KEY);
+        localStorage.removeItem(PROFILE_AVATAR_KEY);
+        nameField.input.value="";emailField.input.value="";refresh();
+        edit.style.display="none";say("تم حذف بيانات الملف الشخصي فقط.");
+      }catch(_){say("تعذّر حذف بيانات الملف الشخصي.");}
+    },"🗑️");
+    panel.append(note);
     openSub("الملف الشخصي",panel,"main");
   }
   function settingsView(){
@@ -377,7 +564,7 @@
     contact.style.cssText="width:100%;min-height:44px;margin-top:7px";
     contact.onclick=()=>window.AoqatHelpSupport?.openWhatsApp?.();
     wrap.append(contact);
-    openSub("سياسة الخصوصية",wrap,"main");
+    openSub("سياسة الخصوصية",wrap,"profile");
   }
   function guideView(){const api=window.AoqatHelpSupport;if(api)openSub("شرح استخدام التطبيق",api.guide(),"main");}
   function contactView(){window.AoqatHelpSupport?.openWhatsApp?.();}
@@ -508,7 +695,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(["quran","qibla","azkar"].includes(id)){
