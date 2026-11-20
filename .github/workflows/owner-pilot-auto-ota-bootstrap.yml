@@ -63,9 +63,9 @@ jobs:
           right=modified_web.index(end,left)
           stripped=modified_web[:left]+modified_web[right:]
           injected='''    const profile=document.createElement("button");profile.type="button";profile.id="aoqatOwnerProfileOpen";
-    profile.className="main-action";profile.textContent="👤 الملف الشخصي";
-    profile.onclick=profileView;wrap.append(profile);
-'''
+              profile.className="main-action";profile.textContent="👤 الملف الشخصي";
+              profile.onclick=profileView;wrap.append(profile);
+          '''
           assert stripped.count(injected)==1
           assert stripped.replace(injected,'',1)==original,'Unexpected web code change beyond owner profile restoration'
           assert not list(Path('android-updates/owner-pilot').rglob('manifest.json')) if Path('android-updates/owner-pilot').exists() else True
