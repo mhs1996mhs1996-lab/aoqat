@@ -18,8 +18,9 @@
   `raw.githubusercontent.com`. **Neither `main` nor Vercel production is
   changed**. This is an explicit requested publish, not every source push.
 - A fresh update is checked when the pilot app opens/resumes with network
-  access (five-minute throttle). It is staged then activated **on the next
-  launch**. No real-time push to a closed phone or silent APK upgrades.
+  access, and every five minutes while **the pilot app remains in the foreground**.
+  The download is staged and activated **on the next launch**. No real-time
+  push to a closed phone or silent APK upgrades.
 - **One-time setup required**: owner installs the reviewed/signed pilot
   bootstrap APK once; in GitHub repository Settings → Environments creates
   `owner-pilot-publish`, restricts it to this trusted pilot branch, adds
