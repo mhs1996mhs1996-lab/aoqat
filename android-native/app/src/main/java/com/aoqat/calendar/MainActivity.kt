@@ -375,8 +375,8 @@ class MainActivity : Activity() {
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
         if (BuildConfig.OWNER_PILOT_ENABLED) {
             val ownerTestButton = android.widget.Button(this).apply {
-                text = "اختبار تحديث المالك فقط — ZIP"
-                textSize = 12f
+                text = "حالة OTA التجريبية"
+                textSize = 11f
                 setOnClickListener {
                     startActivity(Intent(this@MainActivity, OwnerPilotActivity::class.java))
                 }
