@@ -1,0 +1,8 @@
+{
+  "channel": "owner-pilot",
+  "build": 150,
+  "sequence": 2,
+  "source_head": "a30db62068ad5a1b761422ce131c518daa982212",
+  "release": true,
+  "reason": "Publish tested privacy policy main-menu icon and retained owner profile controls to isolated pilot OTA only"
+}
