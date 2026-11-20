@@ -239,8 +239,12 @@ object IqamaNotificationRenderer {
         view.setTextViewText(R.id.iqama_state, title)
         view.setChronometerCountDown(R.id.iqama_chronometer, display.countDown)
         view.setChronometer(R.id.iqama_chronometer, display.baseRealtime, null, true)
+        if (BuildConfig.OWNER_PILOT_ENABLED) {
+            view.setViewVisibility(R.id.iqama_state_icon,android.view.View.VISIBLE)
+            view.setImageViewResource(R.id.iqama_state_icon,PilotNotificationIcons.coloredPhase(display.countDown))
+        } else view.setViewVisibility(R.id.iqama_state_icon,android.view.View.GONE)
         fun builder() = NotificationCompat.Builder(context, IqamaPersistentNotification.CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(display.countDown) else android.R.drawable.ic_lock_idle_alarm)
             .setCustomContentView(view).setCustomBigContentView(view).setCustomHeadsUpContentView(view)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setColor(if (appearance.first == Color.TRANSPARENT) Color.rgb(23,55,71) else appearance.first)
@@ -249,7 +253,9 @@ object IqamaNotificationRenderer {
             .setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true).setShowWhen(false)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE).apply {
+                if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.large(context,PilotNotificationIcons.coloredPhase(display.countDown))?.let{setLargeIcon(it)}
+            }
         // Explicit public version: lock-screen hosts receive the same running clock,
         // never a separately formatted/cached numeric fallback.
         val n = builder().setPublicVersion(builder().build()).build()
