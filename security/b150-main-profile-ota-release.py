@@ -23,7 +23,9 @@ MAIN_ROOT = Path("android-updates/build-150")
 CURRENT_MANIFEST = ROOT / MAIN_ROOT / "manifest.json"
 CURRENT_HTML = ROOT / MAIN_ROOT / "files/index.html"
 REVIEW_HTML = ROOT / "security/review-b150-main-profile-seq4-index.html"
-ANDROID_SOURCE = ROOT / "android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt"
+# Public verifier embedded in the installed B150/2.12 V2 updater.
+# Main's historical V1 native source is not the correct verifier.
+PUBLIC_SPKI_B64 = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6W6qe1MBZFNrD2u1NT9AhNaUeO+fUShOkN0udFvkt4CWwnsGCp777mBYd6ckklFqeOjuAbl6N07/hQmmdRJ9ug=="
 PUBLIC_SPKI_PIN = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d"
 CURRENT_REVISION = "98554724ebce6ab736e7c5309a136201eb2e6e52fc78085aec6585993e191d8a"
 CURRENT_INDEX_HASH = "9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658"
@@ -39,11 +41,7 @@ def sha(data: bytes) -> str:
 
 
 def checked_public_key() -> bytes:
-    kotlin = ANDROID_SOURCE.read_text(encoding="utf-8")
-    match = re.search(r'const val SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"', kotlin)
-    if not match:
-        raise ValueError("Production app OTA signing public key missing")
-    der = base64.b64decode(match.group(1), validate=True)
+    der = base64.b64decode(PUBLIC_SPKI_B64, validate=True)
     if sha(der) != PUBLIC_SPKI_PIN:
         raise ValueError("Production OTA signing public key was rotated unexpectedly")
     return der
