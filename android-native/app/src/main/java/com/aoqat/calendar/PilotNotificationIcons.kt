@@ -17,12 +17,14 @@ internal object PilotNotificationIcons {
         if(countDown) R.drawable.pilot_notify_wait else R.drawable.pilot_notify_elapsed
     fun coloredAdhan(): Int = R.drawable.pilot_notify_adhan
 
-    fun large(context: Context, drawableId: Int): Bitmap? = try {
+    fun large(context: Context, drawableId: Int): Bitmap? {
+        return try {
         val d = context.getDrawable(drawableId) ?: return null
         val bmp = Bitmap.createBitmap(96,76,Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bmp)
         d.setBounds(0,0,96,76)
         d.draw(canvas)
         bmp
-    }catch(_:Exception){null}
+        }catch(_:Exception){null}
+    }
 }
