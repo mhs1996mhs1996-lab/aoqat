@@ -29,13 +29,15 @@ test('Every policy section and paragraph matches offline app copy',()=>{
       assert.ok(page.includes('<p>'+escape(paragraph)+'</p>'),section.title+' text');
   }
 });
-test('Privacy is a real main menu icon and opens its full offline contents',()=>{
+test('Privacy and WhatsApp appear ONLY inside local profile, not duplicated in main menu',()=>{
   assert.match(app,/function privacyView\(\)/);
-  assert.match(app,/\["privacyPolicy","🔒","سياسة الخصوصية"\]/);
-  assert.match(app,/if\(id==="privacyPolicy"\)\{privacyView\(\);return;\}/);
-  assert.match(app,/openSub\("سياسة الخصوصية",wrap,"main"\)/);
-  assert.ok(!app.includes('id="aoqatPrivacySettings"'),'avoid duplicate settings button');
-  assert.ok(!app.includes('id="aoqatAboutApp"'),'privacy is one menu option');
+  const main=app.match(/const MENU_ROWS=\[([\s\S]*?)\];/);
+  assert.ok(main,'main menu exists');
+  assert.doesNotMatch(main[1],/contactWhatsApp|privacyPolicy/);
+  assert.match(main[1],/\["profile","👤","الملف الشخصي"\]/);
+  assert.match(app,/row\("aoqatProfilePrivacy","سياسة الخصوصية"/);
+  assert.match(app,/row\("aoqatProfileContact","تواصل معنا عبر واتساب"/);
+  assert.match(app,/openSub\("سياسة الخصوصية",wrap,"profile"\)/);
   assert.ok(!/fetch\(.+privacy/i.test(app));
 });
 test('Policy acknowledges actual permissions and network operations',()=>{
