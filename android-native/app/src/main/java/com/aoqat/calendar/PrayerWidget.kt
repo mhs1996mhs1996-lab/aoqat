@@ -300,6 +300,19 @@ class NextPrayerService:Service(){
             val views=RemoteViews(c.packageName,R.layout.notification_lock_next)
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
+            if(BuildConfig.OWNER_PILOT_ENABLED){
+                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
+                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_adhan)
+                views.setViewVisibility(R.id.lock_iqama_state_icon,
+                    if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
+                if(extra!=null){
+                    views.setImageViewResource(R.id.lock_iqama_state_icon,
+                        if(extra.countDown)R.drawable.pilot_notify_wait else R.drawable.pilot_notify_elapsed)
+                }
+            }else{
+                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
+                views.setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
+            }
             views.setViewVisibility(R.id.lock_iqama_row,
                 if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
             if(extra!=null){
