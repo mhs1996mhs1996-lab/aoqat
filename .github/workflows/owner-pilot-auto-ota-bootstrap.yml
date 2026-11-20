@@ -49,6 +49,7 @@ jobs:
             '.github/workflows/owner-pilot-seq4-presigned-candidate.yml',
             '.github/workflows/owner-pilot-presigned-seq4-publish.yml',
             'security/owner-pilot-ota-verify-presigned-seq4.py',
+            'security/owner-pilot-seq4-signed-public.json',
             'js/web-menu-order.js',
             'tests/owner-profile-retention-browser.cjs'
           }
