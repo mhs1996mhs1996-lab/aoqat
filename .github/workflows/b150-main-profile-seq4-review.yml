@@ -1,0 +1,50 @@
+name: AOQAT B150 main profile OTA seq4 test — REVIEW ONLY
+on:
+  push:
+    branches: [feature/b150-main-profile-ota-seq4-test-20261120]
+permissions:
+  contents: read
+jobs:
+  profile-test:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Ensure public B150 production and app contents remain unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          python3 - <<'PY'
+          import subprocess
+          changed=set(subprocess.check_output(['git','diff','--name-only','origin/main','HEAD'],text=True).splitlines())
+          allow={
+            'security/review-b150-main-profile-seq4-index.html',
+            'tests/main-b150-profile-seq4-review.cjs',
+            '.github/workflows/b150-main-profile-seq4-review.yml'
+          }
+          assert changed==allow, 'Unexpected changes: '+repr(changed.symmetric_difference(allow))
+          for p in ('android-updates/build-150/manifest.json','android-updates/build-150/files/index.html',
+                    'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+                    'android-native/app/build.gradle','js/web-menu-order.js'):
+            a=subprocess.check_output(['git','rev-parse','HEAD:'+p])
+            b=subprocess.check_output(['git','rev-parse','origin/main:'+p])
+            assert a==b,p
+          print('PASS: untouched signed production sequence 3, native app and web assets')
+          PY
+      - name: Test actual owner profile open and test button click with DOM harness
+        run: |
+          node --check tests/main-b150-profile-seq4-review.cjs
+          node tests/main-b150-profile-seq4-review.cjs
+      - name: Upload unsigned candidate for review only
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-PROFILE-SEQ4-UNSIGNED-REVIEW-ONLY
+          path: review-profile-seq4/*
+          retention-days: 7
+          if-no-files-found: error
+      - name: Explicit distribution block
+        run: |
+          echo 'NO production change. NO signing key, no OTA publish, no APK or Vercel deployment.'
