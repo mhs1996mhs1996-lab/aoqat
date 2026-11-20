@@ -67,8 +67,10 @@ internal object OwnerPilotBundle {
         require(manifest.optLong("expiresAt", 0L) > now) {
             "Pilot manifest expired"
         }
+        val signedChannel = if (manifest.optString("channel") == "owner-pilot")
+            "owner-pilot" else "production"
         require(SignedWebUpdateManifest.verify(
-            manifest, publisherPublicKey, now, expectedBuild, minSequence
+            manifest, publisherPublicKey, now, expectedBuild, minSequence, signedChannel
         )) { "Publisher signature invalid" }
         val listed = manifest.getJSONObject("files")
         val paths = listed.keys().asSequence().toList()
