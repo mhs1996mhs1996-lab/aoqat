@@ -23,7 +23,8 @@ class WebUpdates(
     private val context: Context,
     private val encodedPublicKey: String = SIGNING_PUBLIC_KEY_B64,
     private val fetch: (String, Int) -> ByteArray = { path, limit ->
-        download(path, limit, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
+        download(path, limit, context.packageManager.getPackageInfo(context.packageName, 0).versionCode,
+            BuildConfig.OWNER_PILOT_ENABLED)
     }
 ) {
     // QA uses a distinct Android package ID and its own update snapshot namespace.
@@ -142,8 +143,11 @@ class WebUpdates(
             // This does NOT allow installation of an expired NEW manifest.
             val expiresAt = manifest.getLong("expiresAt")
             require(expiresAt > 1L)
+            val signedChannel = if (BuildConfig.OWNER_PILOT_ENABLED &&
+                manifest.optString("channel") == "owner-pilot") "owner-pilot"
+                else "production"
             require(SignedWebUpdateManifest.verify(manifest, encodedPublicKey,
-                expiresAt - 1L, nativeBuild, 0L))
+                expiresAt - 1L, nativeBuild, 0L, signedChannel))
             val files = manifest.getJSONObject("files")
             val paths = files.keys().asSequence().toList()
             require(paths.size in 1..250 && paths.all { allowed(it) })
@@ -204,8 +208,8 @@ class WebUpdates(
     }
 
     fun check() {
-        // Owner QA never pulls the public production OTA channel.
-        if (BuildConfig.OWNER_PILOT_ENABLED) return
+        // Both builds can check on app open, but their update channels and
+        // stored snapshots are strictly independent.
         val now = System.currentTimeMillis()
         val last = maxOf(prefs.getLong("checked", 0), prefs.getLong("attempt", 0))
         if (!due(now, last) || !checking.compareAndSet(false, true)) return
@@ -236,9 +240,10 @@ class WebUpdates(
                 sequence == prefs.getLong("pendingSequence", -1L)
             if (sequence <= lastSeq && !sameActive) return
             val threshold = if (sameActive || samePending) sequence - 1L else lastSeq
+            val channel = if (BuildConfig.OWNER_PILOT_ENABLED) "owner-pilot" else "production"
             require(SignedWebUpdateManifest.verify(
                 manifest, encodedPublicKey, System.currentTimeMillis(),
-                nativeBuild, threshold
+                nativeBuild, threshold, channel
             ))
             if (sameActive || (samePending && validSnapshot(revision) != null)) {
                 prefs.edit().putLong("checked", System.currentTimeMillis()).apply()
@@ -325,12 +330,15 @@ class WebUpdates(
             MessageDigest.getInstance("SHA-256").digest(bytes)
                 .joinToString("") { "%02x".format(it) }
 
-        fun baseUrl(build: Int): String =
-            if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"
+        fun baseUrl(build: Int, ownerPilot: Boolean = false): String =
+            if (ownerPilot) "https://aoqat.vercel.app/android-updates/owner-pilot/build-$build/"
+            else if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"
             else "https://aoqat.vercel.app/android-updates/"
 
-        private fun download(path: String, limit: Int, build: Int): ByteArray {
-            val connection = URL(baseUrl(build) + path).openConnection() as HttpURLConnection
+        private fun download(path: String, limit: Int, build: Int,
+            ownerPilot: Boolean): ByteArray {
+            val connection = URL(baseUrl(build, ownerPilot) + path)
+                .openConnection() as HttpURLConnection
             connection.connectTimeout = 15000
             connection.readTimeout = 20000
             connection.instanceFollowRedirects = false
