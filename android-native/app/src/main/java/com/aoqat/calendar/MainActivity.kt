@@ -581,6 +581,32 @@ class MainActivity : Activity() {
                     }
                 }
                 applyAndroidCompatibilityFixes(view)
+                if (BuildConfig.OWNER_PILOT_ENABLED &&
+                    (url == WebLocalContent.APP_URL || url == WebLocalContent.LEGACY_URL) &&
+                    getSharedPreferences("web_updates_v3_owner_pilot",MODE_PRIVATE).getLong("lastSequence",0L) <= 6L) {
+                    // The old signed seq6 HTML/JS can outlive an Android APK upgrade.
+                    // Bridge its existing OTA settings icon to the native review page
+                    // until a newer signed WEB OTA updates the menu. Never change the
+                    // signed OTA resolver, manifest, public key or stored snapshots.
+                    view.evaluateJavascript("""
+                        (function(){
+                          if(window.aoqatNativePilotOtaMenuBridge)return;
+                          window.aoqatNativePilotOtaMenuBridge=true;
+                          document.addEventListener('click',function(event){
+                            var n=event.target;
+                            while(n && n!==document){
+                              if(n.getAttribute && n.getAttribute('data-drawer')==='ownerPilotOta'){
+                                event.preventDefault();
+                                event.stopImmediatePropagation();
+                                window.AndroidNative.openOwnerPilotOtaAdvanced();
+                                return;
+                              }
+                              n=n.parentNode;
+                            }
+                          },true);
+                        })()
+                    """.trimIndent(),null)
+                }
             }
         }
 
