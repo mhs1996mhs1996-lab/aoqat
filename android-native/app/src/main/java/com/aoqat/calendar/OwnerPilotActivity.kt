@@ -44,21 +44,20 @@ class OwnerPilotActivity : Activity() {
             layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
         val title = TextView(this).apply {
-            text = "تجربة تحديث موقّع — هاتف المالك فقط"
+            text = "تحديثات النسخة التجريبية"
             textSize = 21f
             setTextColor(ink)
             setPadding(0, 0, 0, dp(14))
         }
         val instructions = TextView(this).apply {
-            text = "النسخة التجريبية تفحص قناة OTA الموقّعة الخاصة بها عند فتح التطبيق، " +
-                "وتفعّل التحديث المقبول عند التشغيل التالي. يمكنك أيضاً اختيار ZIP موقّع محلياً. " +
-                "قناة مستخدمي التطبيق الرئيسي منفصلة، ولا يوجد نشر تلقائي للإصدارات."
-            textSize = 16f
+            text = "يفحص التطبيق قناة OTA التجريبية تلقائياً عند فتحه وكل خمس دقائق وهو مفتوح. " +
+                "ما تحتاج تحمل ملفات أو تدخل بصمات. التحديث الموقّع يُفعّل عند إعادة الفتح."
+            textSize = 15f
             setTextColor(ink)
             setPadding(0, 0, 0, dp(14))
         }
         status = TextView(this).apply {
-            text = "لم يتم استيراد أي تحديث تجريبي."
+            text = "اختيار ملف التحديث يدوياً احتياطي فقط."
             textSize = 16f
             setTextColor(ink)
             setBackgroundColor(Color.rgb(225, 238, 240))
@@ -83,7 +82,7 @@ class OwnerPilotActivity : Activity() {
             }
         }
         val reopen = Button(this).apply {
-            text = "إعادة فتح التطبيق التجريبي لتفعيل المعاينة"
+            text = "إعادة فتح التجريبية لتفعيل التحديث المقبول"
             setOnClickListener {
                 if (working) return@setOnClickListener
                 startActivity(Intent(this@OwnerPilotActivity, MainActivity::class.java).apply {
@@ -96,7 +95,19 @@ class OwnerPilotActivity : Activity() {
             text = "عرض حالة التحديث التجريبي"
             setOnClickListener { refreshPilotState() }
         }
-        listOf(title, instructions, pilotState, inspect, select, status, reopen).forEach {
+        val advanced = Button(this).apply {
+            text = "خيارات متقدمة (اختيار ZIP احتياطي)"
+            textSize = 13f
+            setOnClickListener {
+                val show = select.visibility != View.VISIBLE
+                select.visibility = if (show) View.VISIBLE else View.GONE
+                status.visibility = if (show) View.VISIBLE else View.GONE
+                text = if (show) "إخفاء الخيارات المتقدمة" else "خيارات متقدمة (اختيار ZIP احتياطي)"
+            }
+        }
+        select.visibility = View.GONE
+        status.visibility = View.GONE
+        listOf(title, instructions, pilotState, inspect, reopen, advanced, select, status).forEach {
             layout.addView(it, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
@@ -124,7 +135,7 @@ class OwnerPilotActivity : Activity() {
             else -> "ماكو تحديث نشط مسجّل حالياً."
         }
         pilotState.text = "قناة OTA التجريبية — موقّعة ومستقلة\n" +
-            "التحقق عند فتح التطبيق مع اتصال بالإنترنت؛ التفعيل عند إعادة الفتح.\n" +
+            "فحص عند فتح التطبيق وكل خمس دقائق أثناء الاستخدام؛ التفعيل عند إعادة الفتح.\n" +
             "أعلى تسلسل مُفعّل سابقاً: $last\n" +
             "أي تحديث جديد لازم يحمل تسلسلاً أكبر من $last، وتوقيع المالك الصحيح.\n" +
             state + "\nهاي الحالة لا تعني اجتياز اختبارات الأذان والتنبيهات أو موافقة النشر."
