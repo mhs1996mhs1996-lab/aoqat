@@ -215,10 +215,12 @@ class WebUpdatesTest {
         assertTrue(WebUpdates.due(1800000L,1500000L))
         assertEquals("https://aoqat.vercel.app/android-updates/",WebUpdates.baseUrl(144))
         assertEquals("https://aoqat.vercel.app/android-updates/build-146/",WebUpdates.baseUrl(146))
-        assertEquals("https://aoqat.vercel.app/android-updates/owner-pilot/build-150/",
+        assertEquals("https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/",
             WebUpdates.baseUrl(150, true))
         assertEquals("https://aoqat.vercel.app/android-updates/build-150/",
             WebUpdates.baseUrl(150, false))
         assertNotEquals(WebUpdates.baseUrl(150, true),WebUpdates.baseUrl(150, false))
+        assertNotEquals(WebUpdates.SIGNING_PUBLIC_KEY_B64,
+            WebUpdates.PILOT_SIGNING_PUBLIC_KEY_B64)
     }
 }
