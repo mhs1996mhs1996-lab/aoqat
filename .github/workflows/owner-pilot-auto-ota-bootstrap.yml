@@ -55,8 +55,9 @@ jobs:
             lhs=subprocess.check_output(['git','rev-parse','HEAD:'+path])
             rhs=subprocess.check_output(['git','rev-parse',base+':'+path])
             assert lhs==rhs, 'Protected file changed: '+path
-          # The *only* allowed shared JS change restores the owner's exact
-          # sequence-4 local profile controls; reject every unrelated edit.
+          # Only restore the pre-existing owner profile to the main menu.
+          # The full seq4 QA panel is unchanged; the only other existing
+          # menu addition remains the already approved privacy policy.
           original=subprocess.check_output(['git','show',base+':js/web-menu-order.js'],text=True)
           modified_web=Path('js/web-menu-order.js').read_text()
           anchor="  // Keep the owner's already-used sequence-4 profile test controls"
@@ -64,13 +65,22 @@ jobs:
           assert modified_web.count(anchor)==1 and modified_web.count(end)==1
           left=modified_web.index(anchor)
           right=modified_web.index(end,left)
+          profile_code=modified_web[left:right]
+          assert profile_code.count("aoqatOwnerSeq4Buttons")==1
+          assert profile_code.count("فحص وصول التحديث رقم 4")==1
+          assert profile_code.count("زيادة عداد الاختبار")==1
+          assert profile_code.count("تصفير عداد الاختبار")==1
+          assert 'openSub("الملف الشخصي",panel,"main")' in profile_code
           stripped=modified_web[:left]+modified_web[right:]
-          injected='''    const profile=document.createElement("button");profile.type="button";profile.id="aoqatOwnerProfileOpen";
-              profile.className="main-action";profile.textContent="👤 الملف الشخصي";
-              profile.onclick=profileView;wrap.append(profile);
-          '''
-          assert stripped.count(injected)==1
-          assert stripped.replace(injected,'',1)==original,'Unexpected web code change beyond owner profile restoration'
+          old_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
+          new_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\\n    ["profile","👤","الملف الشخصي"],\\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
+          old_route='      if(id==="usageGuide"){guideView();return;}\\n      if(id==="privacyPolicy"){privacyView();return;}'
+          new_route='      if(id==="usageGuide"){guideView();return;}\\n      if(id==="profile"){profileView();return;}\\n      if(id==="privacyPolicy"){privacyView();return;}'
+          assert original.count(old_menu)==1 and original.count(old_route)==1
+          expected=original.replace(old_menu,new_menu,1).replace(old_route,new_route,1)
+          assert stripped==expected,'Unauthorized change beyond restoring main-menu owner profile'
+          assert 'aoqatOwnerProfileOpen' not in modified_web
+          assert '["profile","👤","الملف الشخصي"]' in modified_web
           assert not list(Path('android-updates/owner-pilot').rglob('manifest.json')) if Path('android-updates/owner-pilot').exists() else True
           print('PASS: isolated owner-pilot route only, production and prayer contents unchanged')
           PY
