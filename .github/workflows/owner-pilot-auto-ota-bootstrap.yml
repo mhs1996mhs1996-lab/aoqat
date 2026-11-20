@@ -41,15 +41,33 @@ jobs:
             'security/owner-pilot-auto-ota-sign.py',
             'security/OWNER-PILOT-AUTO-OTA-CHANNEL.md',
             '.github/workflows/owner-pilot-auto-ota-bootstrap.yml',
-            '.github/workflows/owner-pilot-feed-smoke.yml'
+            '.github/workflows/owner-pilot-feed-smoke.yml',
+            'js/web-menu-order.js',
+            'tests/owner-profile-retention-browser.cjs'
           }
           assert modified and modified.issubset(allow),'Unexpected files: '+repr(modified-allow)
           for path in ('index.html','js/quran-reader.js','data/prayer-times-offline.json',
                        'android-native/app/build.gradle','android-native/app/src/main/AndroidManifest.xml',
-                       'js/web-menu-order.js'):
+                       ):
             lhs=subprocess.check_output(['git','rev-parse','HEAD:'+path])
             rhs=subprocess.check_output(['git','rev-parse',base+':'+path])
             assert lhs==rhs, 'Protected file changed: '+path
+          # The *only* allowed shared JS change restores the owner's exact
+          # sequence-4 local profile controls; reject every unrelated edit.
+          original=subprocess.check_output(['git','show',base+':js/web-menu-order.js'],text=True)
+          modified_web=Path('js/web-menu-order.js').read_text()
+          anchor="  // Keep the owner's already-used sequence-4 profile test controls"
+          end="  function settingsView(){"
+          assert modified_web.count(anchor)==1 and modified_web.count(end)==1
+          left=modified_web.index(anchor)
+          right=modified_web.index(end,left)
+          stripped=modified_web[:left]+modified_web[right:]
+          injected='''    const profile=document.createElement("button");profile.type="button";profile.id="aoqatOwnerProfileOpen";
+    profile.className="main-action";profile.textContent="👤 الملف الشخصي";
+    profile.onclick=profileView;wrap.append(profile);
+'''
+          assert stripped.count(injected)==1
+          assert stripped.replace(injected,'',1)==original,'Unexpected web code change beyond owner profile restoration'
           assert not list(Path('android-updates/owner-pilot').rglob('manifest.json')) if Path('android-updates/owner-pilot').exists() else True
           print('PASS: isolated owner-pilot route only, production and prayer contents unchanged')
           PY
@@ -59,6 +77,10 @@ jobs:
         run: |
           python3 -m py_compile security/owner-pilot-auto-ota-sign.py
           python3 security/owner-pilot-auto-ota-sign.py --self-test
+      - name: Verify retained profile buttons and privacy policy in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/owner-profile-retention-browser.cjs
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
@@ -105,6 +127,7 @@ jobs:
           with ZipFile(output,'w',ZIP_DEFLATED) as result:
             for path,data in payloads.items():result.writestr(path,data)
           assert b'privacyPolicy' in payloads['js/apk-startup-bundle.js']
+          assert b'aoqatOwnerSeq4Buttons' in payloads['js/apk-startup-bundle.js']
           print('PASS: unsigned review ZIP exactly reflects packaged Android startup JS; NOT deployed')
           PY
           sha256sum review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip > review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip.sha256
