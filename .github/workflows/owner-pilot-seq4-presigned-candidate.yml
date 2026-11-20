@@ -83,6 +83,27 @@ jobs:
           print('CANDIDATE_SHA256='+hashlib.sha256(path.read_bytes()).hexdigest())
           PY
           cp security/owner-pilot-auto-ota-sign.py pilot-seq4-to-sign/owner-pilot-auto-ota-sign.py
+          python3 - <<'PY'
+          import base64,hashlib,re,subprocess
+          from pathlib import Path
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          matched=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"',source)
+          assert matched, 'Owner pilot key is not pinned'
+          data=base64.b64decode(matched.group(1),validate=True)
+          assert hashlib.sha256(data).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          pem=subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=data)
+          out=Path('pilot-seq4-to-sign')
+          (out/'owner-pilot-public.pem').write_bytes(pem)
+          (out/'HOW-TO-SIGN-LOCALLY.txt').write_text(
+              'This is an UNSIGNED snapshot. It cannot be installed or published until signed by the ORIGINAL PILOT private key.\\n'
+              'Copy the unsigned ZIP and sign script onto the device with that key. Never give anyone the private key.\\n\\n'
+              'python3 owner-pilot-auto-ota-sign.py --candidate AOQAT-PILOT-OTA-SEQ4-UNSIGNED-CANDIDATE.zip --sequence 4 --private-key /path/to/original-pilot-private.pem --public-key owner-pilot-public.pem --output AOQAT-PILOT-OTA-SEQ4-SIGNED.zip\\n\\n'
+              'Then extract ONLY the public manifest from the signed ZIP:\\n'
+              'unzip -p AOQAT-PILOT-OTA-SEQ4-SIGNED.zip android-updates/owner-pilot/build-150/manifest.json > owner-pilot-seq4-signed-public.json\\n'
+              'The separate pre-signed publishing workflow will accept only that signature and the exact 88 APK-integrated assets.\\n'
+          )
+          print('PASS: pinned PILOT public key and offline signing instructions included, NO secret key')
+          PY
       - name: Provide verifiable unsigned signing candidate, NOT an OTA release
         uses: actions/upload-artifact@v4
         with:
