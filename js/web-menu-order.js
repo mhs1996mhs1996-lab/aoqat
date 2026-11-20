@@ -33,6 +33,7 @@
     ["appearance","🎨","شكل التطبيق"],
     ["qibla","🧭","اتجاه القبلة"],
     ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],
+    ["profile","👤","الملف الشخصي"],
     ["privacyPolicy","🔒","سياسة الخصوصية"]
   ];
   let returnMode="main",bagSection="",inboxId=null;
@@ -271,6 +272,74 @@
     screen:'إضاءة الهاتف عند وصول التنبيهات المفعّلة.'
   };
 
+  // Optional local profile data only. No accounts, network calls or profile upload.
+  // Existing prayer times, location selection and notification preferences stay untouched.
+  const PROFILE_DISPLAY_NAME_KEY="aoqatLocalProfileNameV1";
+  function profileView(){
+    const panel=document.createElement("section");panel.id="aoqatPersonalProfile";
+    panel.dir="rtl";panel.className="web-settings-list";
+    panel.style.cssText="max-width:560px;margin:0 auto;padding:12px 10px 24px;line-height:1.65";
+    const card=document.createElement("div");card.id="aoqatProfileCard";
+    card.style.cssText="background:var(--wt-surface,#fff);border:1px solid var(--wt-border,#d4e0e5);border-radius:14px;padding:16px 12px;margin-bottom:12px;text-align:center";
+    const avatar=document.createElement("div");avatar.id="aoqatProfileAvatar";
+    avatar.textContent="👤";avatar.setAttribute("aria-hidden","true");
+    avatar.style.cssText="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 8px;background:#e5f2f5;color:#173c50;font-size:30px;font-weight:700";
+    const display=document.createElement("h3");display.id="aoqatProfileDisplayName";
+    display.style.cssText="font-size:19px;margin:4px 0 0;color:var(--wt-text,#173c50)";
+    const location=document.createElement("p");location.textContent="📍 الحويجة وضواحيها — العراق";
+    location.style.cssText="font-size:14px;margin:5px 0;color:var(--wt-text,#324b51)";
+    card.append(avatar,display,location);
+    const info=document.createElement("p");info.textContent="اسم اختياري يظهر هنا فقط، ولا يُنشئ حساباً أو يغيّر مواقيت الصلاة.";
+    info.style.cssText="font-size:13px;margin:0 0 10px;color:var(--wt-text,#324b51)";
+    const label=document.createElement("label");label.htmlFor="aoqatProfileNickname";label.textContent="اسم العرض";
+    label.style.cssText="display:block;font-size:14px;font-weight:700;margin-bottom:5px";
+    const input=document.createElement("input");input.id="aoqatProfileNickname";
+    input.type="text";input.maxLength=40;input.autocomplete="nickname";input.placeholder="اكتب اسمك (اختياري)";
+    input.style.cssText="width:100%;min-height:44px;border:1px solid #a5bbc1;border-radius:10px;padding:9px 12px;font-size:15px;box-sizing:border-box;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50)";
+    let name="";
+    try{name=(localStorage.getItem(PROFILE_DISPLAY_NAME_KEY)||"").slice(0,40);}catch(_){}
+    input.value=name;
+    const status=document.createElement("p");status.id="aoqatProfileSaveStatus";
+    status.setAttribute("role","status");status.style.cssText="font-size:13px;min-height:22px;margin:8px 0";
+    function refresh(){
+      const shown=name||"مستخدم التطبيق";
+      display.textContent=shown;
+      avatar.textContent=name?Array.from(name)[0]:"👤";
+    }
+    refresh();
+    const controls=document.createElement("div");controls.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px";
+    function button(id,text,action){
+      const b=document.createElement("button");b.id=id;b.type="button";b.className="main-action";
+      b.textContent=text;b.style.cssText="min-height:44px;padding:8px 7px;margin:0;font-size:14px;border-radius:10px";
+      b.onclick=action;return b;
+    }
+    const save=button("aoqatProfileSave","حفظ الاسم",()=>{
+      const value=input.value.trim().replace(/\s+/g," ").slice(0,40);
+      try{
+        if(value)localStorage.setItem(PROFILE_DISPLAY_NAME_KEY,value);
+        else localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
+        name=value;input.value=value;refresh();status.textContent="تم حفظ اسم العرض على هذا الجهاز.";
+      }catch(_){status.textContent="تعذّر حفظ الاسم في تخزين الجهاز. جرّب لاحقاً.";}
+    });
+    const clear=button("aoqatProfileClear","مسح الاسم",()=>{
+      try{
+        localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
+        name="";input.value="";refresh();status.textContent="تم مسح اسم العرض فقط.";
+      }catch(_){status.textContent="تعذّر مسح الاسم في تخزين الجهاز.";}
+    });
+    controls.append(save,clear);
+    const divider=document.createElement("p");
+    divider.textContent="التطبيق: أوقات الصلاة في الحويجة وضواحيها | الإصدار التجريبي 2.12 (بناء 150)";
+    divider.style.cssText="border-top:1px solid var(--wt-border,#d4e0e5);padding-top:12px;margin-top:12px;font-size:13px";
+    const privacy=button("aoqatProfilePrivacy","🔒 سياسة الخصوصية",()=>privacyView());
+    privacy.style.width="100%";
+    const contact=button("aoqatProfileContact","💬 تواصل معنا",()=>window.AoqatHelpSupport?.openWhatsApp?.());
+    contact.style.width="100%";
+    const foot=document.createElement("p");foot.textContent="بيانات الاسم محلية على هاتفك؛ لا تُرسل لخادم ولا تُستخدم لتسجيل الدخول.";
+    foot.style.cssText="font-size:12px;margin:10px 0 0";
+    panel.append(card,info,label,input,controls,status,divider,privacy,contact,foot);
+    openSub("الملف الشخصي",panel,"main");
+  }
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
@@ -450,6 +519,7 @@
       if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
       if(id==="usageGuide"){guideView();return;}
+      if(id==="profile"){profileView();return;}
       if(id==="privacyPolicy"){privacyView();return;}
        if(id==="contactWhatsApp"){contactView();return;}
        if(id==="alertSettings"){alertSettingsView();return;}
