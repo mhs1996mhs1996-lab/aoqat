@@ -29,13 +29,13 @@ test('Every policy section and paragraph matches offline app copy',()=>{
       assert.ok(page.includes('<p>'+escape(paragraph)+'</p>'),section.title+' text');
   }
 });
-test('Privacy is inside About/settings and offline, not duplicated as a home icon',()=>{
+test('Privacy is a real main menu icon and opens its full offline contents',()=>{
   assert.match(app,/function privacyView\(\)/);
-  assert.match(app,/id="aoqatAboutApp"/);
-  assert.match(app,/id="aoqatPrivacySettings"/);
-  assert.match(app,/policy\.onclick=privacyView/);
-  assert.match(app,/openSub\("سياسة الخصوصية",wrap,"settings"\)/);
-  assert.ok(!app.includes('["privacy",'));
+  assert.match(app,/\["privacyPolicy","🔒","سياسة الخصوصية"\]/);
+  assert.match(app,/if\(id==="privacyPolicy"\)\{privacyView\(\);return;\}/);
+  assert.match(app,/openSub\("سياسة الخصوصية",wrap,"main"\)/);
+  assert.ok(!app.includes('id="aoqatPrivacySettings"'),'avoid duplicate settings button');
+  assert.ok(!app.includes('id="aoqatAboutApp"'),'privacy is one menu option');
   assert.ok(!/fetch\(.+privacy/i.test(app));
 });
 test('Policy acknowledges actual permissions and network operations',()=>{
