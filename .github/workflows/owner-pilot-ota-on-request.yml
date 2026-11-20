@@ -89,7 +89,8 @@ jobs:
           # A published web index must NEVER replace the APK's integrated one.
           grep -F 'js/apk-startup-bundle.js' android-native/app/src/main/assets/www/index.html
           grep -F 'privacyPolicy' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
-          grep -F 'aoqatOwnerSeq4Buttons' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
+          grep -F 'aoqatPersonalProfile' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
+          ! grep -F 'aoqatOwnerSeq4Buttons' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
           node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
           python3 security/test-owner-pilot-auto-publish.py
       - name: Sign candidate with isolated pilot environment secret
