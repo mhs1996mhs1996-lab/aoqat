@@ -95,11 +95,16 @@ jobs:
           from zipfile import ZipFile,ZIP_DEFLATED
           apk=next(Path('review').glob('*.apk'))
           with ZipFile(apk) as source:
-            payloads={name:source.read('assets/www/'+name) for name in ('index.html','js/web-menu-order.js')}
+            # APK loads the COMBINED startup bundle, not web-menu-order.js
+            # standalone. The review ZIP must preserve exact APK behavior.
+            payloads={name:source.read('assets/www/'+name) for name in (
+              'index.html','js/apk-startup-bundle.js',
+              'js/android-ui-fixes.js','js/android-back-navigation.js')}
           output=Path('review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip')
           with ZipFile(output,'w',ZIP_DEFLATED) as result:
             for path,data in payloads.items():result.writestr(path,data)
-          print('PASS: review candidate is unsigned and contains only packaged HTML and privacy JS; NOT deployed')
+          assert b'privacyPolicy' in payloads['js/apk-startup-bundle.js']
+          print('PASS: unsigned review ZIP exactly reflects packaged Android startup JS; NOT deployed')
           PY
           sha256sum review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip > review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip.sha256
       - name: Upload owner-only unsigned review artifacts (never deployed)
