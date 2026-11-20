@@ -272,30 +272,72 @@
     screen:'إضاءة الهاتف عند وصول التنبيهات المفعّلة.'
   };
 
-  // Keep the owner's already-used sequence-4 profile test controls when the
-  // isolated pilot moves from the old signed V2 snapshot to its V3 channel.
-  // These three controls are local visual QA only, with no persistent data.
+  // Optional local profile data only. No accounts, network calls or profile upload.
+  // Existing prayer times, location selection and notification preferences stay untouched.
+  const PROFILE_DISPLAY_NAME_KEY="aoqatLocalProfileNameV1";
   function profileView(){
-    const panel=document.createElement("section");panel.id="aoqatOwnerProfileTests";
+    const panel=document.createElement("section");panel.id="aoqatPersonalProfile";
     panel.dir="rtl";panel.className="web-settings-list";
-    panel.style.cssText="padding:8px 10px;max-width:540px;margin:0 auto";
-    const note=document.createElement("p");note.textContent="اختبار وصول OTA رقم 4 — للمالك فقط؛ لا يجمع بيانات.";
-    note.style.cssText="font-size:14px;line-height:1.8;margin:2px 0 12px";
-    const controls=document.createElement("div");controls.id="aoqatOwnerSeq4Buttons";
-    controls.style.cssText="display:grid;gap:7px;max-width:460px";
-    const result=document.createElement("p");result.id="aoqatOwnerSeq4Result";
-    result.setAttribute("role","status");result.textContent="لم تضغط أي زر اختبار بعد.";
-    result.style.cssText="margin-top:12px;padding:10px;border:1px solid var(--wt-border,#8ca6a0);border-radius:9px";
-    let count=0;
-    function addButton(label,click){
-      const button=document.createElement("button");button.type="button";button.className="main-action";
-      button.style.cssText="min-height:42px;max-width:100%;margin:0;padding:7px 10px;text-align:center;font-size:14px";
-      button.textContent=label;button.onclick=click;controls.append(button);
+    panel.style.cssText="max-width:560px;margin:0 auto;padding:12px 10px 24px;line-height:1.65";
+    const card=document.createElement("div");card.id="aoqatProfileCard";
+    card.style.cssText="background:var(--wt-surface,#fff);border:1px solid var(--wt-border,#d4e0e5);border-radius:14px;padding:16px 12px;margin-bottom:12px;text-align:center";
+    const avatar=document.createElement("div");avatar.id="aoqatProfileAvatar";
+    avatar.textContent="👤";avatar.setAttribute("aria-hidden","true");
+    avatar.style.cssText="width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 8px;background:#e5f2f5;color:#173c50;font-size:30px;font-weight:700";
+    const display=document.createElement("h3");display.id="aoqatProfileDisplayName";
+    display.style.cssText="font-size:19px;margin:4px 0 0;color:var(--wt-text,#173c50)";
+    const location=document.createElement("p");location.textContent="📍 الحويجة وضواحيها — العراق";
+    location.style.cssText="font-size:14px;margin:5px 0;color:var(--wt-text,#324b51)";
+    card.append(avatar,display,location);
+    const info=document.createElement("p");info.textContent="اسم اختياري يظهر هنا فقط، ولا يُنشئ حساباً أو يغيّر مواقيت الصلاة.";
+    info.style.cssText="font-size:13px;margin:0 0 10px;color:var(--wt-text,#324b51)";
+    const label=document.createElement("label");label.htmlFor="aoqatProfileNickname";label.textContent="اسم العرض";
+    label.style.cssText="display:block;font-size:14px;font-weight:700;margin-bottom:5px";
+    const input=document.createElement("input");input.id="aoqatProfileNickname";
+    input.type="text";input.maxLength=40;input.autocomplete="nickname";input.placeholder="اكتب اسمك (اختياري)";
+    input.style.cssText="width:100%;min-height:44px;border:1px solid #a5bbc1;border-radius:10px;padding:9px 12px;font-size:15px;box-sizing:border-box;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50)";
+    let name="";
+    try{name=(localStorage.getItem(PROFILE_DISPLAY_NAME_KEY)||"").slice(0,40);}catch(_){}
+    input.value=name;
+    const status=document.createElement("p");status.id="aoqatProfileSaveStatus";
+    status.setAttribute("role","status");status.style.cssText="font-size:13px;min-height:22px;margin:8px 0";
+    function refresh(){
+      const shown=name||"مستخدم التطبيق";
+      display.textContent=shown;
+      avatar.textContent=name?Array.from(name)[0]:"👤";
     }
-    addButton("✓ فحص وصول التحديث رقم 4",()=>{result.textContent="نجح ظهور تحديث الاختبار رقم 4 على هذا الهاتف.";});
-    addButton("+ زيادة عداد الاختبار",()=>{count++;result.textContent="عداد الاختبار فقط: "+count;});
-    addButton("↺ تصفير عداد الاختبار",()=>{count=0;result.textContent="عداد الاختبار فقط: 0";});
-    panel.append(note,controls,result);
+    refresh();
+    const controls=document.createElement("div");controls.style.cssText="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px";
+    function button(id,text,action){
+      const b=document.createElement("button");b.id=id;b.type="button";b.className="main-action";
+      b.textContent=text;b.style.cssText="min-height:44px;padding:8px 7px;margin:0;font-size:14px;border-radius:10px";
+      b.onclick=action;return b;
+    }
+    const save=button("aoqatProfileSave","حفظ الاسم",()=>{
+      const value=input.value.trim().replace(/\\s+/g," ").slice(0,40);
+      try{
+        if(value)localStorage.setItem(PROFILE_DISPLAY_NAME_KEY,value);
+        else localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
+        name=value;input.value=value;refresh();status.textContent="تم حفظ اسم العرض على هذا الجهاز.";
+      }catch(_){status.textContent="تعذّر حفظ الاسم في تخزين الجهاز. جرّب لاحقاً.";}
+    });
+    const clear=button("aoqatProfileClear","مسح الاسم",()=>{
+      try{
+        localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
+        name="";input.value="";refresh();status.textContent="تم مسح اسم العرض فقط.";
+      }catch(_){status.textContent="تعذّر مسح الاسم في تخزين الجهاز.";}
+    });
+    controls.append(save,clear);
+    const divider=document.createElement("p");
+    divider.textContent="التطبيق: أوقات الصلاة في الحويجة وضواحيها | الإصدار التجريبي 2.12 (بناء 150)";
+    divider.style.cssText="border-top:1px solid var(--wt-border,#d4e0e5);padding-top:12px;margin-top:12px;font-size:13px";
+    const privacy=button("aoqatProfilePrivacy","🔒 سياسة الخصوصية",()=>privacyView());
+    privacy.style.width="100%";
+    const contact=button("aoqatProfileContact","💬 تواصل معنا",()=>window.AoqatHelpSupport?.openWhatsApp?.());
+    contact.style.width="100%";
+    const foot=document.createElement("p");foot.textContent="بيانات الاسم محلية على هاتفك؛ لا تُرسل لخادم ولا تُستخدم لتسجيل الدخول.";
+    foot.style.cssText="font-size:12px;margin:10px 0 0";
+    panel.append(card,info,label,input,controls,status,divider,privacy,contact,foot);
     openSub("الملف الشخصي",panel,"main");
   }
   function settingsView(){
