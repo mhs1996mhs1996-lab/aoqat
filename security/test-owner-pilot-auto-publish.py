@@ -11,6 +11,7 @@ import importlib.util
 import json
 import re
 import tempfile
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -76,6 +77,22 @@ def main():
             assert len(content) <= signer.MAX_FILE
             total += len(content)
         assert total <= signer.MAX_TOTAL
+        # The generated signing payload must EXACTLY match the APK-specific
+        # staged bytes. A raw web file would remove Android's startup bundle.
+        stage = publisher.APK_WEB_ASSETS
+        assert (stage / "index.html").read_bytes() == (root / "files/index.html").read_bytes()
+        assert b'js/apk-startup-bundle.js' in (root / "files/index.html").read_bytes()
+        assert b'privacyPolicy' in (root / "files/js/apk-startup-bundle.js").read_bytes()
+        for name in manifest["files"]:
+            assert (stage / name).read_bytes() == (root / "files" / name).read_bytes(), name
+        # In the build job, check the very same bytes inside the unsigned
+        # ownerPilot APK artifact, not only an intermediate folder.
+        apks = list((ROOT / "android-native/app/build/outputs/apk/ownerPilot").glob("*unsigned.apk"))
+        if apks:
+            with zipfile.ZipFile(apks[0]) as apk:
+                for name in manifest["files"]:
+                    assert apk.read("assets/www/" + name) == (root / "files" / name).read_bytes(), name
+            print("PASS: signed payload matches every packaged ownerPilot APK override")
         assert set(p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file()) == {
             "manifest.json", *(f"files/{p}" for p in manifest["files"])
         }
