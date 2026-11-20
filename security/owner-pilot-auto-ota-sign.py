@@ -26,7 +26,7 @@ BUILD = 150
 DOMAIN = "AOQAT-WEB-UPDATE-OWNER-PILOT-V1"
 CHANNEL = "owner-pilot"
 ROOT = "android-updates/owner-pilot/build-150/"
-PINNED_PUBLIC_KEY_SPKI = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d"
+PINNED_PUBLIC_KEY_SPKI = "a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea"
 DAY_MS = 86400 * 1000
 MAX_FILE = 6 * 1024 * 1024
 MAX_TOTAL = 24 * 1024 * 1024
@@ -196,9 +196,9 @@ def main() -> None:
     parser.add_argument("--candidate", type=Path, help="ZIP with index.html and all active JS/CSS overrides")
     parser.add_argument("--sequence", type=int)
     parser.add_argument("--private-key", type=Path,
-                        default=Path.home() / "aoqat-keys/aoqat-update-private-v2.pem")
+                        default=Path.home() / "aoqat-keys/aoqat-pilot-ota-private.pem")
     parser.add_argument("--public-key", type=Path,
-                        default=Path.home() / "aoqat-keys/aoqat-update-public-v2.pem")
+                        default=Path.home() / "aoqat-keys/aoqat-pilot-ota-public.pem")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.self_test:
@@ -208,7 +208,7 @@ def main() -> None:
         parser.error("--candidate, --sequence and --output are required")
     if args.output.resolve() == args.candidate.resolve():
         parser.error("Input and output paths must differ")
-    password = getpass.getpass("Owner OTA V2 key password (hidden): ")
+    password = getpass.getpass("Pilot-only OTA key password (blank if unencrypted): ") or None
     report = sign_candidate(args.candidate, args.private_key, args.public_key,
                             args.sequence, args.output, password)
     print("PASS: owner-pilot signed ZIP verified, NOT PUBLISHED")
