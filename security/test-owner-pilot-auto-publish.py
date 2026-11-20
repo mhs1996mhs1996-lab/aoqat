@@ -38,6 +38,28 @@ def main():
     assert prod_pub and native_pub != base64.b64decode(prod_pub.group(1), validate=True)
     print("PASS: pilot pin matches APK; production key is different")
 
+    # Regression guard: never silently disable the pilot's automatic polling.
+    begin = source.index("    fun check() {")
+    end = source.index("    internal fun checkNow()", begin)
+    check_body = source[begin:end]
+    assert "if (BuildConfig.OWNER_PILOT_ENABLED) return" not in check_body, (
+        "Owner-pilot auto OTA was disabled in WebUpdates.check()"
+    )
+    assert "Thread {" in check_body and "checkNow()" in check_body
+    assert 'if (BuildConfig.OWNER_PILOT_ENABLED) "owner-pilot" else "production"' in source
+    assert "raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/" in source
+    assert 'else if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"' in source
+    main = (ROOT / "android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt").read_text()
+    assert "if (::webUpdates.isInitialized) webUpdates.check()" in main
+    assert "ownerPilotOtaHandler.postDelayed(ownerPilotOtaPoll, WebUpdates.MIN_CHECK_INTERVAL_MS)" in main
+    assert "if (::webUpdates.isInitialized) webUpdates.check()" in main[
+        main.index("private val ownerPilotOtaPoll"):main.index("private lateinit var webView")
+    ]
+    assert "webUpdates.check()" in main[
+        main.index("private fun configureWebView()"):main.index("webView.webViewClient")
+    ]
+    print("PASS: owner pilot checks on startup/resume and repeatedly in foreground; production URL unchanged")
+
     with tempfile.TemporaryDirectory(prefix="pilot-ota-e2e-no-secret-") as folder:
         tmp = Path(folder)
         private = tmp / "DISPOSABLE-private.pem"
