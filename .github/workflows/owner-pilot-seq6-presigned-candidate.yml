@@ -1,0 +1,119 @@
+name: Owner pilot OTA seq6 - export safe unsigned candidate (pre-signed path)
+on:
+  push:
+    branches: [feature/owner-pilot-profile-backup-seq6-20261120]
+    paths:
+      - .github/workflows/owner-pilot-seq6-presigned-candidate.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-profile-backup-seq6-20261120'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Protect the rest of the app and check approved profile-only content
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          node --check js/web-menu-order.js
+          node --test tests/privacy-policy-check.cjs tests/owner-pilot-profile-seq6-ui.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Generate exact web assets integrated into the owner-pilot APK
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:syncWebAssets
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+          python3 security/test-owner-pilot-auto-publish.py
+      - name: Build and verify complete seq6 signing candidate with previous seq5 integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota
+          mkdir -p pilot-seq6-to-sign
+          git show FETCH_HEAD:android-updates/owner-pilot/build-150/manifest.json > pilot-seq6-to-sign/previous-seq5-manifest.json
+          python3 - <<'PY'
+          import hashlib,json,zipfile,subprocess
+          from pathlib import Path
+          root=Path('android-native/app/src/main/assets/www')
+          out=Path('pilot-seq6-to-sign')
+          old=json.loads((out/'previous-seq5-manifest.json').read_text())
+          assert old['nativeBuild']==150 and old['sequence']==4 and old['channel']=='owner-pilot'
+          assets={'index.html':(root/'index.html').read_bytes()}
+          for folder,ext in [('js','.js'),('css','.css')]:
+              for f in sorted((root/folder).rglob('*')):
+                  if f.is_file() and f.suffix==ext:
+                      assets[f.relative_to(root).as_posix()]=f.read_bytes()
+          assert set(assets)==set(old['files']) and len(assets)==88,'Cannot add/remove or lose a previous web override'
+          newhash={name:hashlib.sha256(body).hexdigest() for name,body in assets.items()}
+          changed={name for name,digest in newhash.items() if digest!=old['files'][name]}
+          assert changed=={'js/web-menu-order.js','js/apk-startup-bundle.js'},f'Unexpected app changes: {changed}'
+          bundle=assets['js/apk-startup-bundle.js']
+          menu=assets['js/web-menu-order.js']
+          assert b'aoqatPersonalProfile' in bundle and b'aoqatPersonalProfile' in menu
+          assert b'privacyPolicy' in bundle and b'privacyPolicy' in menu
+          assert b'aoqatOwnerSeq4Buttons' not in bundle and b'aoqatOwnerSeq4Buttons' not in menu
+          assert b'aoqatProfileBackupExport' in bundle and b'aoqatProfileBackupRestore' in bundle
+          assert b'aoqatProfilePrivacy' in bundle and b'aoqatProfileContact' in bundle
+          assert b'aoqatLocalProfileEmailV1' in bundle and b'aoqatLocalProfileAvatarV1' in bundle
+          assert b'PILOT_OTA_BUNDLED_SEQUENCE=6' in bundle and b'PILOT_OTA_BUNDLED_SEQUENCE=6' in menu
+          assert b'aoqatPilotOtaPanel' in bundle and b'aoqatPilotOtaPanel' in menu
+          assert b'aoqatPilotProfileCompactV6' in bundle and b'aoqatPilotProfileCompactV6' in menu
+          assert 'الملف الشخصي'.encode() in menu
+          assert b'js/apk-startup-bundle.js' in assets['index.html']
+          assert sum(map(len,assets.values()))<24*1024*1024
+          path=out/'AOQAT-PILOT-OTA-SEQ6-UNSIGNED-CANDIDATE.zip'
+          with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as z:
+              for name,body in sorted(assets.items()):
+                  z.writestr(name,body)
+          with zipfile.ZipFile(path) as z:
+              assert set(z.namelist())==set(assets)
+              assert all(z.read(name)==body for name,body in assets.items())
+          (out/'AOQAT-PILOT-OTA-SEQ6-UNSIGNED-CANDIDATE.zip.sha256').write_text(hashlib.sha256(path.read_bytes()).hexdigest()+'  '+path.name+'\n')
+          (out/'source-commit.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
+          print('PASS: signed seq5 remains immutable; ONLY the two profile JS assets change in seq6')
+          print('PASS: 88 exact APK-integrated assets packaged for OFFLINE owner-key signing; NOT INSTALLABLE or PUBLISHED')
+          print('CANDIDATE_SHA256='+hashlib.sha256(path.read_bytes()).hexdigest())
+          PY
+          cp security/owner-pilot-auto-ota-sign.py pilot-seq6-to-sign/owner-pilot-auto-ota-sign.py
+          python3 - <<'PY'
+          import base64,hashlib,re,subprocess
+          from pathlib import Path
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          matched=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
+          assert matched, 'Owner pilot key is not pinned'
+          data=base64.b64decode(matched.group(1),validate=True)
+          assert hashlib.sha256(data).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          pem=subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=data)
+          out=Path('pilot-seq6-to-sign')
+          (out/'owner-pilot-public.pem').write_bytes(pem)
+          (out/'HOW-TO-SIGN-LOCALLY.txt').write_text(
+              'This is an UNSIGNED snapshot. It cannot be installed or published until signed by the ORIGINAL PILOT private key.\n'
+              'Copy the unsigned ZIP and sign script onto the device with that key. Never give anyone the private key.\n\n'
+              'python3 owner-pilot-auto-ota-sign.py --candidate AOQAT-PILOT-OTA-SEQ6-UNSIGNED-CANDIDATE.zip --sequence 6 --private-key /path/to/original-pilot-private.pem --public-key owner-pilot-public.pem --output AOQAT-PILOT-OTA-SEQ6-SIGNED.zip\n\n'
+              'Then extract ONLY the public manifest from the signed ZIP:\n'
+              'unzip -p AOQAT-PILOT-OTA-SEQ6-SIGNED.zip android-updates/owner-pilot/build-150/manifest.json > owner-pilot-seq6-signed-public.json\n'
+              'The separate pre-signed publishing workflow will accept only that signature and the exact 88 APK-integrated assets.\n'
+          )
+          print('PASS: pinned PILOT public key and offline signing instructions included, NO secret key')
+          PY
+      - name: Provide verifiable unsigned signing candidate, NOT an OTA release
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-PILOT-SEQ6-UNSIGNED-CANDIDATE-ONLY
+          path: pilot-seq6-to-sign/
+          retention-days: 7
+          if-no-files-found: error
