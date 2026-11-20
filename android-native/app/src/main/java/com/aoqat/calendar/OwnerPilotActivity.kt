@@ -50,8 +50,9 @@ class OwnerPilotActivity : Activity() {
             setPadding(0, 0, 0, dp(14))
         }
         val instructions = TextView(this).apply {
-            text = "اختر حزمة ZIP الموقّعة من المالك بعد اجتياز الفحص. لا يوجد تنزيل تلقائي أو نشر للمستخدمين. " +
-                "تطبيق التجربة مستقل عن أوقات الصلاة المثبّت أصلاً. بعد الاستيراد افتح النسخة التجريبية من جديد."
+            text = "النسخة التجريبية تفحص قناة OTA الموقّعة الخاصة بها عند فتح التطبيق، " +
+                "وتفعّل التحديث المقبول عند التشغيل التالي. يمكنك أيضاً اختيار ZIP موقّع محلياً. " +
+                "قناة مستخدمي التطبيق الرئيسي منفصلة، ولا يوجد نشر تلقائي للإصدارات."
             textSize = 16f
             setTextColor(ink)
             setPadding(0, 0, 0, dp(14))
@@ -71,7 +72,7 @@ class OwnerPilotActivity : Activity() {
         }
         refreshPilotState()
         val select = Button(this).apply {
-            text = "اختيار ZIP موقّع وتجربته"
+            text = "اختيار ZIP موقّع يدوياً (اختياري)"
             setOnClickListener {
                 if (working) return@setOnClickListener
                 val request = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -92,7 +93,7 @@ class OwnerPilotActivity : Activity() {
             }
         }
         val inspect = Button(this).apply {
-            text = "عرض حالة التحديث التجريبي (بدون أي تغيير)"
+            text = "عرض حالة التحديث التجريبي"
             setOnClickListener { refreshPilotState() }
         }
         listOf(title, instructions, pilotState, inspect, select, status, reopen).forEach {
@@ -122,7 +123,8 @@ class OwnerPilotActivity : Activity() {
             active != null -> "يوجد تحديث مسجّل نشط، دون تأكيد بدء تشغيل موثوق."
             else -> "ماكو تحديث نشط مسجّل حالياً."
         }
-        pilotState.text = "حالة قناة التجربة — قراءة فقط\n" +
+        pilotState.text = "قناة OTA التجريبية — موقّعة ومستقلة\n" +
+            "التحقق عند فتح التطبيق مع اتصال بالإنترنت؛ التفعيل عند إعادة الفتح.\n" +
             "أعلى تسلسل مُفعّل سابقاً: $last\n" +
             "أي تحديث جديد لازم يحمل تسلسلاً أكبر من $last، وتوقيع المالك الصحيح.\n" +
             state + "\nهاي الحالة لا تعني اجتياز اختبارات الأذان والتنبيهات أو موافقة النشر."
