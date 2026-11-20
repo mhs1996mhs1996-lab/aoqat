@@ -1,0 +1,115 @@
+name: Owner-requested PILOT OTA publish (no production)
+on:
+  push:
+    branches: [feature/owner-pilot-auto-ota-bootstrap-20261120]
+    paths:
+      - security/owner-pilot-ota-request.json
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-auto-ota-bootstrap-20261120'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    environment: owner-pilot-publish
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a separate explicit owner release request
+        id: request
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD | sort)" = "security/owner-pilot-ota-request.json"
+          python3 - <<'PY'
+          import json,os,subprocess
+          with open('security/owner-pilot-ota-request.json',encoding='utf-8') as f: r=json.load(f)
+          assert set(r)=={'channel','build','sequence','source_head','release','reason'}
+          assert r['channel']=='owner-pilot' and type(r['build']) is int and r['build']==150
+          assert type(r['sequence']) is int and 0<r['sequence']<2147483648
+          assert r['release'] is True and type(r['reason']) is str and 5<=len(r['reason'])<=120
+          assert r['source_head']==subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+            out.write('sequence='+str(r['sequence'])+'\n')
+          print('PASS: a single owner release request is the ONLY trigger; source commit pinned')
+          PY
+      - name: Check strict isolation, content and private-key safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          node --check js/web-menu-order.js
+          node --test tests/privacy-policy-check.cjs
+          python3 -m py_compile security/owner-pilot-ota-publish.py
+          grep -F '"owner-pilot"' android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt
+          grep -F 'a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea' security/owner-pilot-auto-ota-sign.py
+      - name: Enforce monotonic pilot sequence and forbid deleting active overrides
+        shell: bash
+        env:
+          PILOT_SEQUENCE: ${{ steps.request.outputs.sequence }}
+        run: |
+          set -euo pipefail
+          if git ls-remote --exit-code --heads origin owner-pilot-ota >/dev/null 2>&1; then
+            git fetch origin owner-pilot-ota
+            git show FETCH_HEAD:android-updates/owner-pilot/build-150/manifest.json > "$RUNNER_TEMP/previous-pilot.json"
+            python3 - <<'PY'
+          import json,os
+          prev=json.load(open(os.environ['RUNNER_TEMP']+'/previous-pilot.json'))
+          assert prev['channel']=='owner-pilot' and prev['nativeBuild']==150
+          assert int(os.environ['PILOT_SEQUENCE'])>prev['sequence'],'Pilot OTA sequence must increase'
+          from pathlib import Path
+          paths={'index.html'}|{p.relative_to(Path('.')).as_posix() for folder,extension in [('js','.js'),('css','.css')] for p in Path(folder).rglob('*') if p.is_file() and p.suffix==extension}
+          assert set(prev['files'])<=paths,'Cannot delete a previously active OTA override via partial OTA'
+          print('PASS: new pilot sequence, no deleted active overrides')
+          PY
+          else
+            test "$PILOT_SEQUENCE" -eq 1
+            echo 'PASS: first owner-pilot OTA sequence'
+          fi
+      - name: Sign candidate with isolated pilot environment secret
+        shell: bash
+        env:
+          PILOT_SIGNING_PEM: ${{ secrets.AOQAT_PILOT_OTA_SIGNING_PEM }}
+          PILOT_SEQUENCE: ${{ steps.request.outputs.sequence }}
+        run: |
+          set -euo pipefail
+          test -n "$PILOT_SIGNING_PEM" || { echo 'Owner pilot signing secret has not been configured'; exit 1; }
+          umask 077
+          KEY="$RUNNER_TEMP/owner-pilot-signing.pem"
+          trap 'rm -f "$KEY"' EXIT
+          printf '%s\n' "$PILOT_SIGNING_PEM" > "$KEY"
+          python3 security/owner-pilot-ota-publish.py --secret-key "$KEY" --sequence "$PILOT_SEQUENCE" --output-dir "$RUNNER_TEMP/owner-pilot-signed-feed"
+      - name: Publish ONLY signed pilot feed branch (never main/Vercel)
+        shell: bash
+        env:
+          PILOT_SEQUENCE: ${{ steps.request.outputs.sequence }}
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          test -s "$RUNNER_TEMP/owner-pilot-signed-feed/$ROOT/manifest.json"
+          if git ls-remote --exit-code --heads origin owner-pilot-ota >/dev/null 2>&1; then
+            git fetch origin owner-pilot-ota
+            git switch --detach FETCH_HEAD
+          else
+            git switch --orphan owner-pilot-ota-feed
+            git rm -rf --cached . >/dev/null
+          fi
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT"
+          cp -a "$RUNNER_TEMP/owner-pilot-signed-feed/$ROOT/." "$ROOT/"
+          git add -A
+          python3 - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert paths and all(x.startswith('android-updates/owner-pilot/build-150/') for x in paths), 'Production files would be changed'
+          print('PASS: only owner-pilot feed files staged')
+          PY
+          git -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -c user.name="github-actions[bot]" commit -m "owner-pilot OTA signed sequence $PILOT_SEQUENCE" >/dev/null
+          git push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PASS: signed pilot feed published. No production or main branch write.'
