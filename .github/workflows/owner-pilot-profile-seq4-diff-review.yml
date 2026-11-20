@@ -1,0 +1,81 @@
+name: AOQAT pilot profile seq4 only — diff-safe review NO PUBLISH
+on:
+  push:
+    branches: [feature/owner-pilot-auto-ota-bootstrap-20261120]
+permissions:
+  contents: read
+jobs:
+  check-pilot-profile:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Rebuild exact Android web assets
+        run: gradle -p android-native --no-daemon :app:syncWebAssets
+      - name: Compare against currently signed seq3; abort if any other asset would change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota
+          python3 - <<'PY'
+          import hashlib,json,subprocess
+          from pathlib import Path
+          feed='android-updates/owner-pilot/build-150/'
+          def git_read(path):
+              return subprocess.check_output(['git','show','FETCH_HEAD:'+path])
+          m=json.loads(git_read(feed+'manifest.json'))
+          assert m['channel']=='owner-pilot' and m['nativeBuild']==150 and m['sequence'] in (3,4)
+          root=Path('android-native/app/src/main/assets/www')
+          actual={}
+          differences=[]
+          for path,digest in sorted(m['files'].items()):
+              prior=git_read(feed+'files/'+path)
+              assert hashlib.sha256(prior).hexdigest()==digest,'Published pilot file hash failed: '+path
+              newest=(root/path).read_bytes()
+              assert len(newest)<=6*1024*1024
+              actual[path]=newest
+              if newest!=prior:
+                  differences.append(path)
+          staged={'index.html'}|{p.relative_to(root).as_posix() for d in ('js','css') for p in (root/d).rglob('*') if p.is_file() and p.suffix in ('.js','.css')}
+          assert staged==set(m['files']),'Attempt to remove or add unsigned assets: '+repr(staged.symmetric_difference(m['files'].keys()))
+          allowed={'js/apk-startup-bundle.js','js/web-menu-order.js'}
+          before=git_read(feed+'files/js/apk-startup-bundle.js').decode('utf-8')
+          after=actual['js/apk-startup-bundle.js'].decode('utf-8')
+          old_marker="  // Keep the owner's already-used sequence-4 profile test controls"
+          new_marker="  // Optional local profile data only."
+          end_marker="  function settingsView(){"
+          assert after.count(new_marker)==1
+          def without_profile(s,marker):
+              a=s.index(marker)
+              b=s.index(end_marker,a)
+              return s[:a]+s[b:]
+          if m['sequence']==3:
+              assert set(differences)==allowed,'Unexpected changes outside profile: '+repr(differences)
+              assert before.count(old_marker)==1
+              assert without_profile(before,old_marker)==without_profile(after,new_marker), 'APK startup bundle changed outside ONLY profile'
+          else:
+              # After publication, the rebuilt assets MUST be byte-for-byte identical to signed seq4.
+              assert not differences,'Published seq4 differs from APK-integrated assets: '+repr(differences)
+              assert before==after
+          profile=after[after.index(new_marker):after.index(end_marker,after.index(new_marker))]
+          assert 'aoqatPersonalProfile' in profile and 'aoqatProfileSave' in profile
+          assert 'aoqatOwnerSeq4Buttons' not in profile
+          assert 'localStorage' in profile and 'fetch(' not in profile and 'XMLHttpRequest' not in profile
+          assert 'openSub("الملف الشخصي",panel,"main")' in profile
+          assert 'privacyPolicy' in after and 'aoqatOwnerSeq4Buttons' not in after
+          assert sum(map(len,actual.values()))<=24*1024*1024
+          print('PASS: signed pilot feed seq'+str(m['sequence'])+' verified against rebuilt APK assets')
+          print('DIFFERENCES_FROM_FEED:',','.join(differences) if differences else 'none')
+          print('PASS: compiled APK profile-only patch; all prayer, Quran, CSS and navigation outside profile unchanged')
+          PY
+      - name: No release without real pinned signing key and explicit request
+        run: echo 'QA only, no feed publication, no key transfer and no production change'

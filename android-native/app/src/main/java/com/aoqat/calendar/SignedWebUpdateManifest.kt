@@ -16,6 +16,9 @@ import java.util.Base64
  */
 internal object SignedWebUpdateManifest {
     private const val DOMAIN = "AOQAT-WEB-UPDATE-SIGNATURE-V1"
+    // A different signed domain protects the pilot channel from accidentally
+    // accepting a manifest signed for the production updater.
+    private const val PILOT_DOMAIN = "AOQAT-WEB-UPDATE-OWNER-PILOT-V1"
     private val HASH_PATTERN = Regex("[a-f0-9]{64}")
 
     fun payload(manifest: JSONObject): ByteArray {
@@ -36,7 +39,12 @@ internal object SignedWebUpdateManifest {
         val expectedRevision = WebUpdates.digest(canonical.toByteArray(Charsets.UTF_8))
         val revision = manifest.getString("revision")
         require(HASH_PATTERN.matches(revision) && expectedRevision == revision)
-        return listOf(DOMAIN, build.toString(), sequence.toString(), expiresAt.toString(),
+        val domain = when {
+            !manifest.has("channel") -> DOMAIN
+            manifest.optString("channel") == "owner-pilot" -> PILOT_DOMAIN
+            else -> throw IllegalArgumentException("Unsupported update channel")
+        }
+        return listOf(domain, build.toString(), sequence.toString(), expiresAt.toString(),
             revision, canonical).joinToString("\n").toByteArray(Charsets.UTF_8)
     }
 
@@ -45,12 +53,19 @@ internal object SignedWebUpdateManifest {
         encodedPublicKey: String,
         nowMillis: Long,
         expectedNativeBuild: Int,
-        lastAcceptedSequence: Long
+        lastAcceptedSequence: Long,
+        expectedChannel: String = "production"
     ): Boolean {
         return try {
             // Caller pins the public key in the APK; reject other builds,
             // replayed or stale sequence numbers and expired manifests.
             if (expectedNativeBuild <= 0 || lastAcceptedSequence < 0) return false
+            // The channel is part of the signed payload domain, never an
+            // untrusted extra JSON flag. Legacy ZIPs remain production-signed.
+            if (expectedChannel != "production" && expectedChannel != "owner-pilot") return false
+            if (expectedChannel == "production" && manifest.has("channel")) return false
+            if (expectedChannel == "owner-pilot" &&
+                manifest.optString("channel") != "owner-pilot") return false
             if (manifest.getInt("nativeBuild") != expectedNativeBuild) return false
             if (manifest.getLong("sequence") <= lastAcceptedSequence) return false
             if (nowMillis <= 0 || nowMillis >= manifest.getLong("expiresAt")) return false

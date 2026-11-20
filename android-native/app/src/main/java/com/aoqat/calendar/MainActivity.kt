@@ -329,6 +329,16 @@ class MainActivity : Activity() {
     private var startupDismissRequested = false
 
     private var firstResume = true
+    // Owner-only: while the pilot app remains open, keep checking for signed
+    // OTA updates at the existing 5-minute limit. Production is unaffected.
+    private val ownerPilotOtaHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val ownerPilotOtaPoll = object : Runnable {
+        override fun run() {
+            if (!BuildConfig.OWNER_PILOT_ENABLED || isFinishing || isDestroyed) return
+            if (::webUpdates.isInitialized) webUpdates.check()
+            ownerPilotOtaHandler.postDelayed(this, WebUpdates.MIN_CHECK_INTERVAL_MS)
+        }
+    }
     private lateinit var webView: WebView
     private var capturingLegacyWebStorage = false
     private lateinit var localWebContent: WebLocalContent
@@ -365,8 +375,8 @@ class MainActivity : Activity() {
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
         if (BuildConfig.OWNER_PILOT_ENABLED) {
             val ownerTestButton = android.widget.Button(this).apply {
-                text = "اختبار تحديث المالك فقط — ZIP"
-                textSize = 12f
+                text = "حالة OTA التجريبية"
+                textSize = 11f
                 setOnClickListener {
                     startActivity(Intent(this@MainActivity, OwnerPilotActivity::class.java))
                 }
@@ -417,6 +427,10 @@ class MainActivity : Activity() {
         super.onResume()
         // Recheck at each foreground entry, subject to the five-minute throttle.
         if (::webUpdates.isInitialized) webUpdates.check()
+        if (BuildConfig.OWNER_PILOT_ENABLED) {
+            ownerPilotOtaHandler.removeCallbacks(ownerPilotOtaPoll)
+            ownerPilotOtaHandler.postDelayed(ownerPilotOtaPoll, WebUpdates.MIN_CHECK_INTERVAL_MS)
+        }
         if(::webView.isInitialized)webView.evaluateJavascript("window.aoqatRefreshNativeReminders?.()",null)
         if (::webView.isInitialized) { protectDisplayColors(); webView.evaluateJavascript("window.aoqatRefreshNativePrayerRows?.()", null) }
         if (!PrayerAlarmAudio.running) PrayerAlarmAudio.restore(this)
@@ -1225,7 +1239,13 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onPause() {
+        if (BuildConfig.OWNER_PILOT_ENABLED) ownerPilotOtaHandler.removeCallbacks(ownerPilotOtaPoll)
+        super.onPause()
+    }
+
     override fun onDestroy() {
+        if (BuildConfig.OWNER_PILOT_ENABLED) ownerPilotOtaHandler.removeCallbacks(ownerPilotOtaPoll)
         if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.unregisterOnBackInvokedCallback(phoneBackCallback)
         super.onDestroy()
     }

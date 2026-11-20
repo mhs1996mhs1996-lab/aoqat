@@ -61,6 +61,31 @@ class SignedWebUpdateManifestTest {
         assertFalse("content altered", SignedWebUpdateManifest.verify(m, pub, 1800000000000L, 146, 0L))
     }
 
+    @Test fun ownerPilotManifestIsSignedForOnlyThePilotChannel() {
+        val pair = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
+        val pub = Base64.getEncoder().encodeToString(pair.public.encoded)
+        val pilot = manifest().put("channel", "owner-pilot")
+        sign(pilot, pair.private)
+        assertTrue(SignedWebUpdateManifest.verify(pilot, pub, 1800000000000L,
+            146, 0L, "owner-pilot"))
+        assertFalse("pilot cannot enter production", SignedWebUpdateManifest.verify(
+            pilot, pub, 1800000000000L, 146, 0L, "production"))
+        val copied = JSONObject(pilot.toString())
+        copied.remove("channel")
+        assertFalse("pilot signature cannot be relabeled as production",
+            SignedWebUpdateManifest.verify(copied, pub, 1800000000000L, 146, 0L))
+        val legacy = manifest()
+        sign(legacy, pair.private)
+        assertTrue(SignedWebUpdateManifest.verify(legacy, pub, 1800000000000L, 146, 0L))
+        assertFalse("production signature cannot enter automatic owner pilot",
+            SignedWebUpdateManifest.verify(legacy, pub, 1800000000000L, 146, 0L, "owner-pilot"))
+        legacy.put("channel", "owner-pilot")
+        assertFalse("adding channel label cannot change signed domain",
+            SignedWebUpdateManifest.verify(legacy, pub, 1800000000000L, 146, 0L, "owner-pilot"))
+        assertFalse("unknown channel denied",
+            SignedWebUpdateManifest.verify(pilot, pub, 1800000000000L, 146, 0L, "unknown"))
+    }
+
     @Test fun rejectUnsanctionedPathsAndForgedRevision() {
         val m = manifest()
         m.getJSONObject("files").put("data/prayer-times-offline.json", "0".repeat(64))

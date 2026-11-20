@@ -1,0 +1,163 @@
+name: AOQAT owner pilot auto-OTA bootstrap QA - NEVER PUBLISH
+on:
+  push:
+    branches: [feature/owner-pilot-auto-ota-bootstrap-20261120]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  bootstrap-qa:
+    if: github.ref == 'refs/heads/feature/owner-pilot-auto-ota-bootstrap-20261120'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Freeze private key, production and application scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/privacy-policy-review-20261120
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          base='origin/feature/privacy-policy-review-20261120'
+          modified=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allow={
+            'android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotBundle.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/SignedWebUpdateManifestTest.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/WebUpdatesTest.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/OwnerPilotBundleTest.kt',
+            'security/owner-pilot-ota-public.pem',
+            'security/owner-pilot-ota-publish.py',
+            'security/test-owner-pilot-auto-publish.py',
+            'security/owner-pilot-ota-request.json',
+            'security/owner-pilot-ota-presigned-seq2.json',
+            'security/owner-pilot-presigned-verify-stage.py',
+            '.github/workflows/owner-pilot-presigned-seq2-publish.yml',
+            '.github/workflows/owner-pilot-ota-on-request.yml',
+            'security/owner-pilot-auto-ota-sign.py',
+            'security/OWNER-PILOT-AUTO-OTA-CHANNEL.md',
+            '.github/workflows/owner-pilot-auto-ota-bootstrap.yml',
+            '.github/workflows/owner-pilot-feed-smoke.yml',
+            '.github/workflows/owner-pilot-profile-seq4-diff-review.yml',
+            '.github/workflows/owner-pilot-seq4-presigned-candidate.yml',
+            '.github/workflows/owner-pilot-presigned-seq4-publish.yml',
+            'security/owner-pilot-ota-verify-presigned-seq4.py',
+            'security/owner-pilot-seq4-signed-public.json',
+            'js/web-menu-order.js',
+            'tests/owner-profile-retention-browser.cjs'
+          }
+          assert modified and modified.issubset(allow),'Unexpected files: '+repr(modified-allow)
+          for path in ('index.html','js/quran-reader.js','data/prayer-times-offline.json',
+                       'android-native/app/build.gradle','android-native/app/src/main/AndroidManifest.xml',
+                       ):
+            lhs=subprocess.check_output(['git','rev-parse','HEAD:'+path])
+            rhs=subprocess.check_output(['git','rev-parse',base+':'+path])
+            assert lhs==rhs, 'Protected file changed: '+path
+          # Keep the real profile on the main menu; no test controls.
+          # Existing privacy policy and unrelated web content remain unchanged.
+          # The difference outside the single profile handler is unchanged.
+          original=subprocess.check_output(['git','show',base+':js/web-menu-order.js'],text=True)
+          modified_web=Path('js/web-menu-order.js').read_text()
+          anchor="  // Optional local profile data only."
+          end="  function settingsView(){"
+          assert modified_web.count(anchor)==1 and modified_web.count(end)==1
+          left=modified_web.index(anchor)
+          right=modified_web.index(end,left)
+          profile_code=modified_web[left:right]
+          assert profile_code.count("aoqatPersonalProfile")==1
+          assert profile_code.count('button("aoqatProfileSave"')==1
+          assert profile_code.count("aoqatProfileClear")==1
+          assert "aoqatOwnerSeq4Buttons" not in profile_code
+          assert 'openSub("الملف الشخصي",panel,"main")' in profile_code
+          stripped=modified_web[:left]+modified_web[right:]
+          old_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
+          new_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\n    ["profile","👤","الملف الشخصي"],\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
+          old_route='      if(id==="usageGuide"){guideView();return;}\n      if(id==="privacyPolicy"){privacyView();return;}'
+          new_route='      if(id==="usageGuide"){guideView();return;}\n      if(id==="profile"){profileView();return;}\n      if(id==="privacyPolicy"){privacyView();return;}'
+          assert original.count(old_menu)==1 and original.count(old_route)==1
+          expected=original.replace(old_menu,new_menu,1).replace(old_route,new_route,1)
+          assert stripped==expected,'Unauthorized change beyond restoring main-menu owner profile'
+          assert 'aoqatOwnerProfileOpen' not in modified_web
+          assert '["profile","👤","الملف الشخصي"]' in modified_web
+          assert not list(Path('android-updates/owner-pilot').rglob('manifest.json')) if Path('android-updates/owner-pilot').exists() else True
+          print('PASS: isolated owner-pilot route only, production and prayer contents unchanged')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - name: Python local-signing self-test with throwaway key
+        run: |
+          python3 -m py_compile security/owner-pilot-auto-ota-sign.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+      - name: Verify local profile and privacy policy in Chrome
+        run: |
+          npm install --no-save --package-lock=false playwright
+          node tests/owner-profile-retention-browser.cjs
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Run native regression and build ONLY isolated unsigned owner-pilot APK
+        run: |
+          gradle -p android-native --no-daemon testDebugUnitTest assembleOwnerPilot
+          # Test AFTER APK integration, using exact staged assets and unsigned
+          # APK bytes; hosted web JS differs from the local Android bundle.
+          python3 security/test-owner-pilot-auto-publish.py
+      - name: Confirm separate app ID, no CI signing, export owner-only files
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find android-native/app/build/outputs/apk/ownerPilot -maxdepth 1 -name '*unsigned.apk' -type f | head -n 1)"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+          "$AAPT" dump badging "$APK" | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$AAPT" dump badging "$APK" | grep -F "application-label:'أوقات الصلاة — تجريبي'"
+          SIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
+          if "$SIGNER" verify "$APK"; then
+            echo 'STOP: unexpectedly signed owner-pilot APK' >&2
+            exit 1
+          fi
+          mkdir -p review
+          cp "$APK" review/AOQAT-OWNER-PILOT-AUTO-OTA-BOOTSTRAP-UNSIGNED.apk
+          sha256sum review/*.apk > review/AOQAT-OWNER-PILOT-AUTO-OTA-BOOTSTRAP-UNSIGNED.apk.sha256
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile,ZIP_DEFLATED
+          apk=next(Path('review').glob('*.apk'))
+          with ZipFile(apk) as source:
+            # APK loads the COMBINED startup bundle, not web-menu-order.js
+            # standalone. The review ZIP must preserve exact APK behavior.
+            payloads={name:source.read('assets/www/'+name) for name in (
+              'index.html','js/apk-startup-bundle.js',
+              'js/android-ui-fixes.js','js/android-back-navigation.js')}
+          output=Path('review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip')
+          with ZipFile(output,'w',ZIP_DEFLATED) as result:
+            for path,data in payloads.items():result.writestr(path,data)
+          assert b'privacyPolicy' in payloads['js/apk-startup-bundle.js']
+          assert b'aoqatPersonalProfile' in payloads['js/apk-startup-bundle.js']
+          assert b'aoqatOwnerSeq4Buttons' not in payloads['js/apk-startup-bundle.js']
+          print('PASS: unsigned review ZIP exactly reflects packaged Android startup JS; NOT deployed')
+          PY
+          sha256sum review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip > review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip.sha256
+      - name: Upload owner-only unsigned review artifacts (never deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-AUTO-OTA-REVIEW-ONLY
+          path: review/*
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Non-publish assertion
+        run: |
+          echo 'PASS: owner-private signature is absent; no Vercel, Play, OTA, production or GitHub Release publish'

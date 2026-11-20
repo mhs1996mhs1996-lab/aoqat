@@ -1,0 +1,86 @@
+name: AOQAT owner-pilot pre-signed OTA seq2 (NO PRIVATE KEYS)
+on:
+  push:
+    branches: [feature/owner-pilot-auto-ota-bootstrap-20261120]
+    paths:
+      - security/owner-pilot-ota-presigned-seq2.json
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  presigned-pilot-only:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-auto-ota-bootstrap-20261120'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Only one explicitly approved signed payload may trigger this publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-ota-presigned-seq2.json"
+          python3 - <<'PY'
+          import json,subprocess
+          a=json.load(open('security/owner-pilot-ota-presigned-seq2.json',encoding='utf-8'))
+          assert a['source_head']==subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()
+          assert a['channel']=='owner-pilot' and a['sequence']==2 and a['approved'] is True
+          print('PASS: explicit pilot-only release request with exact source commit')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 -m py_compile security/owner-pilot-presigned-verify-stage.py
+          node --check js/web-menu-order.js
+          node --test tests/privacy-policy-check.cjs
+      - name: Java and Gradle for exact APK web assets
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Stage exactly packaged Android-only HTML, JS and CSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:syncWebAssets
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+          grep -F 'aoqatOwnerSeq4Buttons' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
+          grep -F 'privacyPolicy' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
+          git fetch origin owner-pilot-ota
+          git show FETCH_HEAD:android-updates/owner-pilot/build-150/manifest.json > "$RUNNER_TEMP/previous-pilot.json"
+          python3 security/owner-pilot-presigned-verify-stage.py \
+            --attestation security/owner-pilot-ota-presigned-seq2.json \
+            --previous "$RUNNER_TEMP/previous-pilot.json" \
+            --output "$RUNNER_TEMP/signed-pilot"
+      - name: Publish ONLY byte-for-byte verified pilot feed, no production changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          test -s "$RUNNER_TEMP/signed-pilot/$ROOT/manifest.json"
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          a=json.load(open('security/owner-pilot-ota-presigned-seq2.json'))
+          data=(pathlib.Path(os.environ['RUNNER_TEMP'])/'signed-pilot/android-updates/owner-pilot/build-150/manifest.json').read_bytes()
+          assert hashlib.sha256(data).hexdigest()==a['manifest_sha256']
+          print('PASS: exact reviewed signature and manifest bytes before publication')
+          PY
+          git switch --detach FETCH_HEAD
+          rm -rf "$ROOT"
+          mkdir -p "$ROOT"
+          cp -a "$RUNNER_TEMP/signed-pilot/$ROOT/." "$ROOT/"
+          git add -A "$ROOT"
+          python3 - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert paths and all(p.startswith('android-updates/owner-pilot/build-150/') for p in paths)
+          print('PASS: only owner-pilot-ota branch feed files staged')
+          PY
+          git -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -c user.name="github-actions[bot]" commit -m "pilot: pre-signed privacy policy OTA sequence 2" >/dev/null
+          git push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'SUCCESS: signed OTA seq2 published to owner-pilot-ota ONLY.'

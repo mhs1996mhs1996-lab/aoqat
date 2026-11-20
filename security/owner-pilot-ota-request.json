@@ -1,0 +1,8 @@
+{
+  "channel": "owner-pilot",
+  "build": 150,
+  "sequence": 4,
+  "source_head": "6f5122e540dcd544a89df14e7bb31a0dc6a852e9",
+  "release": true,
+  "reason": "Local profile replaces temporary test buttons in pilot OTA seq4"
+}

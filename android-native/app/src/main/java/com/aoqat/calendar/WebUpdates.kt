@@ -21,14 +21,19 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class WebUpdates(
     private val context: Context,
-    private val encodedPublicKey: String = SIGNING_PUBLIC_KEY_B64,
+    private val encodedPublicKey: String = if (BuildConfig.OWNER_PILOT_ENABLED)
+        PILOT_SIGNING_PUBLIC_KEY_B64 else SIGNING_PUBLIC_KEY_B64,
     private val fetch: (String, Int) -> ByteArray = { path, limit ->
-        download(path, limit, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
+        download(path, limit, context.packageManager.getPackageInfo(context.packageName, 0).versionCode,
+            BuildConfig.OWNER_PILOT_ENABLED)
     }
 ) {
     // QA uses a distinct Android package ID and its own update snapshot namespace.
-    private val root = File(context.filesDir, if (BuildConfig.OWNER_PILOT_ENABLED) "web-updates-v2-owner-qa" else "web-updates-v2-signed")
-    private val prefs = context.getSharedPreferences(if (BuildConfig.OWNER_PILOT_ENABLED) "web_updates_v2_owner_qa" else "web_updates_v2_signed", Context.MODE_PRIVATE)
+    // Separate pilot V3 namespace: older owner QA builds used the production
+    // V2 key and may already have sequence 4+, which must not block pilot
+    // sequence 1. Preserve old snapshots/settings on disk; never trust them.
+    private val root = File(context.filesDir, if (BuildConfig.OWNER_PILOT_ENABLED) "web-updates-v3-owner-pilot" else "web-updates-v2-signed")
+    private val prefs = context.getSharedPreferences(if (BuildConfig.OWNER_PILOT_ENABLED) "web_updates_v3_owner_pilot" else "web_updates_v2_signed", Context.MODE_PRIVATE)
     private val nativeBuild = context.packageManager.getPackageInfo(context.packageName, 0).versionCode
     private val checking = AtomicBoolean(false)
 
@@ -142,8 +147,11 @@ class WebUpdates(
             // This does NOT allow installation of an expired NEW manifest.
             val expiresAt = manifest.getLong("expiresAt")
             require(expiresAt > 1L)
+            val signedChannel = if (BuildConfig.OWNER_PILOT_ENABLED &&
+                manifest.optString("channel") == "owner-pilot") "owner-pilot"
+                else "production"
             require(SignedWebUpdateManifest.verify(manifest, encodedPublicKey,
-                expiresAt - 1L, nativeBuild, 0L))
+                expiresAt - 1L, nativeBuild, 0L, signedChannel))
             val files = manifest.getJSONObject("files")
             val paths = files.keys().asSequence().toList()
             require(paths.size in 1..250 && paths.all { allowed(it) })
@@ -204,8 +212,8 @@ class WebUpdates(
     }
 
     fun check() {
-        // Owner QA never pulls the public production OTA channel.
-        if (BuildConfig.OWNER_PILOT_ENABLED) return
+        // Both builds can check on app open, but their update channels and
+        // stored snapshots are strictly independent.
         val now = System.currentTimeMillis()
         val last = maxOf(prefs.getLong("checked", 0), prefs.getLong("attempt", 0))
         if (!due(now, last) || !checking.compareAndSet(false, true)) return
@@ -231,14 +239,18 @@ class WebUpdates(
                     JSONObject(File(it, "verified-manifest.json").readText()).getLong("sequence")
                 } ?: -1L
             } else -1L
+            // Do not overwrite an already verified pending trial (including an
+            // owner's manually imported ZIP) before it has been launched.
+            if (pending != null && pending != revision) return
             val sameActive = revision == current && sequence == currentSeq
             val samePending = revision == pending &&
                 sequence == prefs.getLong("pendingSequence", -1L)
             if (sequence <= lastSeq && !sameActive) return
             val threshold = if (sameActive || samePending) sequence - 1L else lastSeq
+            val channel = if (BuildConfig.OWNER_PILOT_ENABLED) "owner-pilot" else "production"
             require(SignedWebUpdateManifest.verify(
                 manifest, encodedPublicKey, System.currentTimeMillis(),
-                nativeBuild, threshold
+                nativeBuild, threshold, channel
             ))
             if (sameActive || (samePending && validSnapshot(revision) != null)) {
                 prefs.edit().putLong("checked", System.currentTimeMillis()).apply()
@@ -295,6 +307,10 @@ class WebUpdates(
         const val MIN_CHECK_INTERVAL_MS = 5 * 60 * 1000L
         const val SIGNING_PUBLIC_KEY_B64 =
             "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6W6qe1MBZFNrD2u1NT9AhNaUeO+fUShOkN0udFvkt4CWwnsGCp777mBYd6ckklFqeOjuAbl6N07/hQmmdRJ9ug=="
+        // Pilot-only public key. Its private key is never present in GitHub
+        // source and cannot authorize a production OTA signature.
+        const val PILOT_SIGNING_PUBLIC_KEY_B64 =
+            "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEMBrs5EkeFaaTtfXiNtcwfrqygumEuU5hXn4kOvZKXy9tFtJbiZhPKZsv4vlLPWpHolg/ZlmPalvFTjzD7Rn3fw=="
         private val REVISION_PATTERN = Regex("[a-f0-9]{64}")
         private val HASH_PATTERN = Regex("[a-f0-9]{64}")
 
@@ -325,12 +341,15 @@ class WebUpdates(
             MessageDigest.getInstance("SHA-256").digest(bytes)
                 .joinToString("") { "%02x".format(it) }
 
-        fun baseUrl(build: Int): String =
-            if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"
+        fun baseUrl(build: Int, ownerPilot: Boolean = false): String =
+            if (ownerPilot) "https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-$build/"
+            else if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"
             else "https://aoqat.vercel.app/android-updates/"
 
-        private fun download(path: String, limit: Int, build: Int): ByteArray {
-            val connection = URL(baseUrl(build) + path).openConnection() as HttpURLConnection
+        private fun download(path: String, limit: Int, build: Int,
+            ownerPilot: Boolean): ByteArray {
+            val connection = URL(baseUrl(build, ownerPilot) + path)
+                .openConnection() as HttpURLConnection
             connection.connectTimeout = 15000
             connection.readTimeout = 20000
             connection.instanceFollowRedirects = false

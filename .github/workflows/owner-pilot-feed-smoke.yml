@@ -1,0 +1,72 @@
+name: AOQAT owner-pilot OTA HTTPS feed smoke - READ ONLY
+on:
+  push:
+    branches: [feature/owner-pilot-auto-ota-bootstrap-20261120]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  signed-feed:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch public PILOT feed over actual Android endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150"
+          curl --fail --show-error --location --retry 6 --retry-delay 5 --retry-all-errors --max-time 35 "$BASE/manifest.json" -o /tmp/owner-pilot-manifest.json
+          curl --fail --show-error --location --retry 6 --retry-delay 5 --retry-all-errors --max-time 35 "$BASE/files/index.html" -o /tmp/owner-pilot-index.html
+          curl --fail --show-error --location --retry 6 --retry-delay 5 --retry-all-errors --max-time 35 "$BASE/files/js/apk-startup-bundle.js" -o /tmp/owner-pilot-bundle.js
+      - name: Verify signed manifest, index hash, publisher pin and separate channel
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, subprocess, tempfile, time
+          from pathlib import Path
+          m=json.loads(Path('/tmp/owner-pilot-manifest.json').read_text())
+          index=Path('/tmp/owner-pilot-index.html').read_bytes()
+          # Use the APK's public-key pin directly; no new PEM files are
+          # committed to GitHub and no private keys are needed in this job.
+          import re
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          match=re.search(r'const val PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
+          assert match, 'APK pilot key missing'
+          der=base64.b64decode(match.group(1),validate=True)
+          assert hashlib.sha256(der).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          assert m['channel']=='owner-pilot' and m['nativeBuild']==150
+          assert type(m['sequence']) is int and m['sequence']==3, 'Expected deployed owner profile fix seq3'
+          assert m['revision']=='0a0e452910879b26682a8f74e0319935361262169948e4512373a5c13d68af41'
+          assert m['expiresAt']>int(time.time()*1000)
+          files=m['files']
+          assert 'index.html' in files and 1<=len(files)<=250
+          assert hashlib.sha256(index).hexdigest()==files['index.html']
+          bundle=Path('/tmp/owner-pilot-bundle.js').read_bytes()
+          assert hashlib.sha256(bundle).hexdigest()==files['js/apk-startup-bundle.js']
+          assert hashlib.sha256(bundle).hexdigest()=='f92404961e6f0a70f0227f0f16cb01112cd4d9ea7b0c18a456777b02138a0ced'
+          assert '["profile","👤","الملف الشخصي"]' in bundle.decode('utf-8')
+          assert '["privacyPolicy","🔒","سياسة الخصوصية"]' in bundle.decode('utf-8')
+          assert b'aoqatOwnerSeq4Buttons' in bundle
+          assert b'aoqatOwnerProfileOpen' not in bundle
+          canonical='\n'.join(f'{p}:{files[p]}' for p in sorted(files))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==m['revision']
+          assert 'SIGNING_PUBLIC_KEY_B64' in source
+          payload='\n'.join(('AOQAT-WEB-UPDATE-OWNER-PILOT-V1','150',str(m['sequence']),str(m['expiresAt']),m['revision'],canonical)).encode()
+          sig=base64.b64decode(m['signature'],validate=True)
+          with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'payload').write_bytes(payload)
+            (root/'sig').write_bytes(sig)
+            (root/'pub.der').write_bytes(der)
+            public=subprocess.run(['openssl','pkey','-pubin','-inform','DER','-in',str(root/'pub.der'),'-out',str(root/'pub.pem')],capture_output=True,text=True)
+            assert public.returncode==0
+            verify=subprocess.run(['openssl','dgst','-sha256','-verify',str(root/'pub.pem'),'-signature',str(root/'sig'),str(root/'payload')],capture_output=True,text=True)
+            assert verify.returncode==0, 'Public OTA manifest signature invalid'
+          assert b'js/apk-startup-bundle.js' in index, 'Not Android APK-integrated index'
+          print('PASS: public HTTPS ownerPilot feed, pinned ECDSA signature, exact Android index SHA, channel isolated')
+          print('sequence',m['sequence'],'revision',m['revision'])
+          PY
+      - name: No publication or production change
+        run: |
+          echo 'READ ONLY; no GitHub write, release, Vercel or production app deployment.'
