@@ -25,15 +25,23 @@ internal object OwnerPilotBundle {
         now: Long = System.currentTimeMillis()
     ): Verified {
         require(expectedBuild > 0 && minSequence >= 0L)
-        val root = "android-updates/build-$expectedBuild/"
+        val legacyRoot = "android-updates/build-$expectedBuild/"
+        val pilotRoot = "android-updates/owner-pilot/build-$expectedBuild/"
+        var selectedRoot: String? = null
         val entries = mutableMapOf<String, ByteArray>()
         var total = 0L
         ZipInputStream(stream).use { archive ->
             while (true) {
                 val entry = archive.nextEntry ?: break
-                require(entry.name.startsWith(root)) { "ZIP belongs to another build" }
+                val candidateRoot = when {
+                    entry.name.startsWith(pilotRoot) -> pilotRoot
+                    entry.name.startsWith(legacyRoot) -> legacyRoot
+                    else -> throw IllegalArgumentException("ZIP belongs to another build")
+                }
+                if (selectedRoot == null) selectedRoot = candidateRoot
+                require(selectedRoot == candidateRoot) { "ZIP belongs to another build" }
                 if (entry.isDirectory) { archive.closeEntry(); continue }
-                val name = entry.name.removePrefix(root)
+                val name = entry.name.removePrefix(candidateRoot)
                 require(name == "manifest.json" ||
                     (name.startsWith("files/") && WebUpdates.allowed(name.removePrefix("files/")))) {
                     "Forbidden OTA member"
@@ -67,8 +75,12 @@ internal object OwnerPilotBundle {
         require(manifest.optLong("expiresAt", 0L) > now) {
             "Pilot manifest expired"
         }
-        val signedChannel = if (manifest.optString("channel") == "owner-pilot")
-            "owner-pilot" else "production"
+        // A ZIP under the isolated pilot path MUST carry a pilot-domain
+        // signature. Legacy local review ZIPs keep their original path/domain.
+        val signedChannel = if (selectedRoot == pilotRoot) "owner-pilot" else "production"
+        require(if (signedChannel == "owner-pilot")
+                manifest.optString("channel") == "owner-pilot"
+            else !manifest.has("channel")) { "Publisher signature invalid" }
         require(SignedWebUpdateManifest.verify(
             manifest, publisherPublicKey, now, expectedBuild, minSequence, signedChannel
         )) { "Publisher signature invalid" }
