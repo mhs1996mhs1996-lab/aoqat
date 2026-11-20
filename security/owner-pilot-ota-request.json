@@ -1,8 +1,8 @@
 {
   "channel": "owner-pilot",
   "build": 150,
-  "sequence": 2,
-  "source_head": "a30db62068ad5a1b761422ce131c518daa982212",
+  "sequence": 4,
+  "source_head": "75a5fc969c0398f675f843ebacd54365f023b62f",
   "release": true,
-  "reason": "Publish tested privacy policy main-menu icon and retained owner profile controls to isolated pilot OTA only"
+  "reason": "Owner approved replacement of temporary profile test buttons with safe local personal profile; only pilot OTA seq4"
 }
