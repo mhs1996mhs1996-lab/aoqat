@@ -25,7 +25,8 @@ jobs:
             'tests/main-b150-profile-seq4-review.cjs',
             'security/b150-main-profile-ota-release.py',
             '.github/workflows/b150-main-profile-seq4-review.yml',
-            '.github/workflows/b150-main-profile-ota-on-approval.yml'
+            '.github/workflows/b150-main-profile-ota-on-approval.yml',
+            '.github/workflows/b150-main-live-ota-readonly.yml'
           }
           required=allow.copy()
           allow.add('security/b150-main-profile-approval.json')
