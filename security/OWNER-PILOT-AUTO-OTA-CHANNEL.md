@@ -1,5 +1,36 @@
 # Owner pilot automatic OTA channel (B150) — not yet published
 
+## Automatic updates on explicit owner request
+- The owner says "حدّث التجريبية OTA". The maintainer reviews code/tests and
+  updates **only** `security/owner-pilot-ota-request.json` on
+  `feature/owner-pilot-auto-ota-bootstrap-20261120`. The request pins its
+  parent source commit, native build 150 and next monotonically increasing
+  sequence.
+- GitHub Actions `.github/workflows/owner-pilot-ota-on-request.yml` verifies
+  this isolated release request, sacred-content and privacy policy checks;
+  signs a **complete snapshot** of the approved `index.html` + all safe
+  `js/*.js`, `css/*.css` with a **separate pilot-only P-256 key** stored
+  as the environment secret `AOQAT_PILOT_OTA_SIGNING_PEM` under the
+  `owner-pilot-publish` environment. No signatures are bypassed and no key
+  is uploaded or typed on each update.
+- The workflow pushes ONLY verified, signed public bytes into the
+  `owner-pilot-ota` GitHub branch. The ownerPilot APK fetches them from
+  `raw.githubusercontent.com`. **Neither `main` nor Vercel production is
+  changed**. This is an explicit requested publish, not every source push.
+- A fresh update is checked when the pilot app opens/resumes with network
+  access (five-minute throttle). It is staged then activated **on the next
+  launch**. No real-time push to a closed phone or silent APK upgrades.
+- **One-time setup required**: owner installs the reviewed/signed pilot
+  bootstrap APK once; in GitHub repository Settings → Environments creates
+  `owner-pilot-publish`, restricts it to this trusted pilot branch, adds
+  the **separate pilot** PEM in secret `AOQAT_PILOT_OTA_SIGNING_PEM`, and
+  enables GitHub Actions `GITHUB_TOKEN` write permission for the isolated
+  feed branch. This key has no permission to sign production updates.
+  Do not use the normal APK P12 or production V2 OTA private PEM.
+- This workflow does not auto-deploy until bootstrap, environment secret,
+  and real-device QA pass. Do not run a release request earlier.
+
+
 ## What is implemented
 - The Android **ownerPilot** APK (`com.aoqat.calendar.ownerpilot`) now checks:
   `https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/manifest.json`
