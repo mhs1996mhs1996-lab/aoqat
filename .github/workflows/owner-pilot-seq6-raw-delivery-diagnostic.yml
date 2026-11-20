@@ -1,0 +1,44 @@
+name: Diagnose owner-pilot OTA seq6 raw delivery (read-only)
+on:
+  push:
+    branches: [feature/owner-pilot-ota-seq6-ui-compact-20261120]
+    paths:
+      - .github/workflows/owner-pilot-seq6-raw-delivery-diagnostic.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect real GitHub raw delivery and signatures, without modifying feed or app
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64,hashlib,json,subprocess,tempfile,urllib.request,time
+          from pathlib import Path
+          url='https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/'
+          def fetch(path,cb=False):
+              target=url+path+('?owner-pilot-seq6-diag='+str(int(time.time())) if cb else '')
+              req=urllib.request.Request(target,headers={'User-Agent':'aoqat-owner-pilot-ota-diag','Cache-Control':'no-cache' if cb else 'max-age=0'})
+              with urllib.request.urlopen(req,timeout=25) as res:
+                  data=res.read()
+                  print('FETCH',path,'cachebust',cb,'HTTP',res.status,'length',len(data),'age',res.headers.get('Age'),'cache-control',res.headers.get('Cache-Control'),'x-cache',res.headers.get('X-Cache'))
+                  return data
+          m=json.loads(fetch('manifest.json'))
+          assert m['nativeBuild']==150 and m['sequence']==6 and m['channel']=='owner-pilot', 'Unexpected live manifest'
+          for path in ['js/web-menu-order.js','js/apk-startup-bundle.js']:
+              original=fetch('files/'+path)
+              actual=hashlib.sha256(original).hexdigest()
+              expected=m['files'][path]
+              print('HASH',path,'expected',expected,'actual',actual,'match',expected==actual)
+              if expected!=actual:
+                  fresh=fetch('files/'+path,True)
+                  cache_hash=hashlib.sha256(fresh).hexdigest()
+                  print('FRESH HASH',path,cache_hash,'match',cache_hash==expected)
+                  raise AssertionError('Original raw URL delivered stale or incorrect assets for '+path)
+          print('PASS: raw files at installed APK URLs match signed seq6 manifest')
+          PY
