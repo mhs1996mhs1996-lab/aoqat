@@ -67,7 +67,7 @@ jobs:
           right=modified_web.index(end,left)
           profile_code=modified_web[left:right]
           assert profile_code.count("aoqatPersonalProfile")==1
-          assert profile_code.count("aoqatProfileSave")==1
+          assert profile_code.count('button("aoqatProfileSave"')==1
           assert profile_code.count("aoqatProfileClear")==1
           assert "aoqatOwnerSeq4Buttons" not in profile_code
           assert 'openSub("الملف الشخصي",panel,"main")' in profile_code
