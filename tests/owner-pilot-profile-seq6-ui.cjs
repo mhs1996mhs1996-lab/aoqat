@@ -36,6 +36,6 @@ test('existing local profile, privacy, backup and Quran links persist',()=>{
 test('pilot native status, activation and advanced ZIP remain behind settings icon',()=>{
   for(const action of ['readOwnerPilotOtaState','reopenOwnerPilotForUpdate','openOwnerPilotOtaAdvanced'])
     assert.ok(js.includes(action),action);
-  assert.match(js,/status\.textContent="التحديث المفعّل:/);
+  assert.match(js,/installed\.textContent="التحديث المفعّل:/);
   assert.match(js,/saved\.pending/);
 });
