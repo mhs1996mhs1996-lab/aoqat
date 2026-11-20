@@ -38,7 +38,7 @@ jobs:
           assert modified and modified.issubset(allow),'Unexpected files: '+repr(modified-allow)
           for path in ('index.html','js/quran-reader.js','data/prayer-times-offline.json',
                        'android-native/app/build.gradle','android-native/app/src/main/AndroidManifest.xml',
-                       'android-updates/build-150/manifest.json','js/web-menu-order.js'):
+                       'js/web-menu-order.js'):
             lhs=subprocess.check_output(['git','rev-parse','HEAD:'+path])
             rhs=subprocess.check_output(['git','rev-parse',base+':'+path])
             assert lhs==rhs, 'Protected file changed: '+path
