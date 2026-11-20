@@ -14,9 +14,18 @@ const {chromium}=require('playwright');
     await page.goto('http://127.0.0.1:8803/index.html',{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>window.aoqatUIReady,{timeout:30000});
     await page.locator('#designSideMenuBtn').click();
+    const menu=page.locator('#webDrawerMain');
+    const order=await menu.locator('[data-drawer]').evaluateAll(nodes=>nodes.map(node=>node.dataset.drawer));
+    assert.deepEqual(order.slice(-3),['contactWhatsApp','profile','privacyPolicy'],
+      'Privacy is appended after the existing profile; neither item is relocated into design settings');
+    assert.equal(await menu.locator('[data-drawer="profile"]').count(),1);
+    assert.equal(await menu.locator('[data-drawer="privacyPolicy"]').count(),1);
     await page.locator('[data-drawer="settings"]').click();
-    const open=page.locator('#aoqatOwnerProfileOpen');
-    assert.equal(await open.count(),1,'one profile entry in settings');
+    assert.equal(await page.locator('#aoqatOwnerProfileOpen').count(),0,
+      'Profile must not be moved inside design settings');
+    await page.locator('#webDrawerSub .web-back').click();
+    const open=page.locator('[data-drawer="profile"]');
+    assert.ok(await open.isVisible(),'Profile remains a main menu item');
     await open.click();
     assert.equal(await page.locator('#webSubTitle').innerText(),'الملف الشخصي');
     assert.match(await page.locator('#aoqatOwnerSeq4Result').innerText(),/لم تضغط/);
@@ -30,15 +39,15 @@ const {chromium}=require('playwright');
     await profile.getByRole('button',{name:/تصفير عداد الاختبار/}).click();
     assert.match(await page.locator('#aoqatOwnerSeq4Result').innerText(),/عداد الاختبار فقط: 0/);
     await page.locator('#webDrawerSub .web-back').click();
-    assert.equal(await page.locator('#webSubTitle').innerText(),'إعدادات التصميم');
-    await page.locator('#webDrawerSub .web-back').click();
+    assert.ok(await page.locator('[data-drawer="profile"]').isVisible(),
+      'Back from profile must return to the main menu');
     const privacy=page.locator('[data-drawer="privacyPolicy"]');
     assert.equal(await privacy.count(),1);
     await context.setOffline(true);
     await privacy.click();
     assert.ok(await page.locator('#aoqatPrivacyPolicy').isVisible());
     assert.equal(await page.locator('#aoqatPrivacyPolicy section').count(),7);
-    console.log('PASS: old profile controls retained and functional, privacy icon opens offline');
+    console.log('PASS: profile restored after WhatsApp in main menu; all 3 old test buttons and offline privacy preserved');
   }finally{
     if(browser)await browser.close();
     server.kill('SIGTERM');
