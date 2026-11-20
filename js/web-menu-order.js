@@ -314,7 +314,7 @@
       b.onclick=action;return b;
     }
     const save=button("aoqatProfileSave","حفظ الاسم",()=>{
-      const value=input.value.trim().replace(/\\s+/g," ").slice(0,40);
+      const value=input.value.trim().replace(/\s+/g," ").slice(0,40);
       try{
         if(value)localStorage.setItem(PROFILE_DISPLAY_NAME_KEY,value);
         else localStorage.removeItem(PROFILE_DISPLAY_NAME_KEY);
