@@ -25,7 +25,9 @@ object LockScreenPrayer {
 
     fun notificationsAllowed(c:Context):Boolean {
         val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channel=manager.getNotificationChannel(NextPrayerService.LOCK_CHANNEL)
         return manager.areNotificationsEnabled() &&
+            (channel==null || channel.importance!=NotificationManager.IMPORTANCE_NONE) &&
             (Build.VERSION.SDK_INT<33 ||
                 c.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED)
     }
@@ -85,15 +87,44 @@ object LockScreenPrayer {
 class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
     companion object {
         private const val ACTION="com.aoqat.calendar.LOCK_IQAMA_BOUNDARY"
+        private const val DISMISSED="com.aoqat.calendar.LOCK_DISMISSED"
+        private const val REPOST="com.aoqat.calendar.LOCK_REPOST"
         private const val REQUEST=60533
+        private const val DISMISS_REQUEST=60534
+        private const val REPOST_REQUEST=60535
         private fun pending(c:Context,flags:Int):PendingIntent?=
             PendingIntent.getBroadcast(c,REQUEST,
                 Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(ACTION),
                 flags or PendingIntent.FLAG_IMMUTABLE)
+        fun deleteIntent(c:Context):PendingIntent =
+            PendingIntent.getBroadcast(c,DISMISS_REQUEST,
+                Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(DISMISSED),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+        private fun repostIntent(c:Context,flags:Int):PendingIntent? =
+            PendingIntent.getBroadcast(c,REPOST_REQUEST,
+                Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(REPOST),
+                flags or PendingIntent.FLAG_IMMUTABLE)
+
         fun cancel(c:Context){
-            val pi=pending(c,PendingIntent.FLAG_NO_CREATE)?:return
-            (c.getSystemService(Context.ALARM_SERVICE) as AlarmManager).cancel(pi)
-            pi.cancel()
+            val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            pending(c,PendingIntent.FLAG_NO_CREATE)?.let { alarm.cancel(it);it.cancel() }
+            repostIntent(c,PendingIntent.FLAG_NO_CREATE)?.let { alarm.cancel(it);it.cancel() }
+        }
+
+        // Android 14+ allows a user to dismiss even ongoing notifications.
+        // For the explicitly opt-in lock-screen card, a dismissal requests a
+        // delayed republish. Respect phone-level permission and channel blocks.
+        private fun scheduleAfterSwipe(c:Context){
+            if(!LockScreenPrayer.enabled(c) || !LockScreenPrayer.notificationsAllowed(c))return
+            val pref=c.getSharedPreferences("lockscreen_prayer_v1",Context.MODE_PRIVATE)
+            val now=System.currentTimeMillis()
+            if(now-pref.getLong("lastSwipeRepost",0L) in 0L..14999L)return
+            pref.edit().putLong("lastSwipeRepost",now).apply()
+            val pi=repostIntent(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
+            val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            alarm.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                SystemClock.elapsedRealtime()+8_000L,pi)
         }
         fun schedule(c:Context){
             cancel(c)
@@ -112,7 +143,10 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
         }
     }
     override fun onReceive(c:Context,intent:Intent?){
-        if(intent?.action==ACTION && LockScreenPrayer.enabled(c))
-            LockScreenPrayer.showNow(c)
+        when(intent?.action){
+            ACTION,REPOST -> if(LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c))
+                LockScreenPrayer.showNow(c)
+            DISMISSED -> scheduleAfterSwipe(c)
+        }
     }
 }
