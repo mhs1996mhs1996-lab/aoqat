@@ -28,16 +28,28 @@ const {chromium}=require('playwright');
     assert.ok(await open.isVisible(),'Profile remains a main menu item');
     await open.click();
     assert.equal(await page.locator('#webSubTitle').innerText(),'الملف الشخصي');
-    assert.match(await page.locator('#aoqatOwnerSeq4Result').innerText(),/لم تضغط/);
-    const profile=page.locator('#aoqatOwnerSeq4Buttons');
-    assert.equal(await profile.locator('button').count(),3);
-    await profile.getByRole('button',{name:'✓ فحص وصول التحديث رقم 4'}).click();
-    assert.match(await page.locator('#aoqatOwnerSeq4Result').innerText(),/نجح ظهور/);
-    await profile.getByRole('button',{name:'+ زيادة عداد الاختبار'}).click();
-    await profile.getByRole('button',{name:'+ زيادة عداد الاختبار'}).click();
-    assert.match(await page.locator('#aoqatOwnerSeq4Result').innerText(),/عداد الاختبار فقط: 2/);
-    await profile.getByRole('button',{name:/تصفير عداد الاختبار/}).click();
-    assert.match(await page.locator('#aoqatOwnerSeq4Result').innerText(),/عداد الاختبار فقط: 0/);
+    assert.equal(await page.locator('#aoqatOwnerSeq4Buttons').count(),0,
+      'Old three OTA test buttons must be removed');
+    assert.equal(await page.locator('#aoqatPersonalProfile').count(),1);
+    assert.ok(await page.locator('#aoqatProfileDisplayName').isVisible());
+    assert.match(await page.locator('#aoqatProfileDisplayName').innerText(),/مستخدم التطبيق/);
+    assert.ok((await page.locator('#aoqatProfileCard').innerText()).includes('الحويجة وضواحيها'));
+    const input=page.locator('#aoqatProfileNickname');
+    await input.fill('  مستخدم الحويجة  ');
+    await page.locator('#aoqatProfileSave').click();
+    assert.match(await page.locator('#aoqatProfileSaveStatus').innerText(),/تم حفظ/);
+    assert.equal(await page.locator('#aoqatProfileDisplayName').innerText(),'مستخدم الحويجة');
+    assert.equal(await page.locator('#aoqatProfileAvatar').innerText(),'م');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('aoqatLocalProfileNameV1')),'مستخدم الحويجة');
+    await page.locator('#webDrawerSub .web-back').click();
+    await page.locator('[data-drawer="profile"]').click();
+    assert.equal(await page.locator('#aoqatProfileDisplayName').innerText(),'مستخدم الحويجة',
+      'Name must persist locally when reopening page');
+    await page.locator('#aoqatProfileClear').click();
+    assert.equal(await page.locator('#aoqatProfileDisplayName').innerText(),'مستخدم التطبيق');
+    assert.equal(await page.evaluate(()=>localStorage.getItem('aoqatLocalProfileNameV1')),null);
+    await page.locator('#aoqatProfilePrivacy').click();
+    assert.equal(await page.locator('#aoqatPrivacyPolicy section').count(),7);
     await page.locator('#webDrawerSub .web-back').click();
     assert.ok(await page.locator('[data-drawer="profile"]').isVisible(),
       'Back from profile must return to the main menu');
@@ -47,7 +59,7 @@ const {chromium}=require('playwright');
     await privacy.click();
     assert.ok(await page.locator('#aoqatPrivacyPolicy').isVisible());
     assert.equal(await page.locator('#aoqatPrivacyPolicy section').count(),7);
-    console.log('PASS: profile restored after WhatsApp in main menu; all 3 old test buttons and offline privacy preserved');
+    console.log('PASS: main-menu profile, local nickname save/clear and offline privacy; old test buttons absent');
   }finally{
     if(browser)await browser.close();
     server.kill('SIGTERM');
