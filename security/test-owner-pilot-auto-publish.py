@@ -105,7 +105,8 @@ def main():
         assert (stage / "index.html").read_bytes() == (root / "files/index.html").read_bytes()
         assert b'js/apk-startup-bundle.js' in (root / "files/index.html").read_bytes()
         assert b'privacyPolicy' in (root / "files/js/apk-startup-bundle.js").read_bytes()
-        assert b'aoqatOwnerSeq4Buttons' in (root / "files/js/apk-startup-bundle.js").read_bytes(), "Retained owner profile controls missing"
+        assert b'aoqatPersonalProfile' in (root / "files/js/apk-startup-bundle.js").read_bytes(), "Local profile content missing"
+        assert b'aoqatOwnerSeq4Buttons' not in (root / "files/js/apk-startup-bundle.js").read_bytes(), "Obsolete test buttons retained"
         for name in manifest["files"]:
             assert (stage / name).read_bytes() == (root / "files" / name).read_bytes(), name
         # In the build job, check the very same bytes inside the unsigned
