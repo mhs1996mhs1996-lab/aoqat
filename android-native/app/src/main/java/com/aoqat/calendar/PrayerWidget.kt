@@ -302,7 +302,7 @@ class NextPrayerService:Service(){
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
             if(BuildConfig.OWNER_PILOT_ENABLED){
                 views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
-                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_adhan)
+                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
                 views.setViewVisibility(R.id.lock_iqama_state_icon,
                     if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
                 if(extra!=null){
@@ -338,7 +338,7 @@ class NextPrayerService:Service(){
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
                 .setContentText(description)
                 .setShowWhen(next!=null)
@@ -351,7 +351,7 @@ class NextPrayerService:Service(){
                 .setOnlyAlertOnce(true)
                 .build()
             return Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
                 .setContentText(description)
                 .setShowWhen(next!=null)
