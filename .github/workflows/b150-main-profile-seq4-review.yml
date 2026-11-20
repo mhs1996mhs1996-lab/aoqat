@@ -23,7 +23,9 @@ jobs:
           allow={
             'security/review-b150-main-profile-seq4-index.html',
             'tests/main-b150-profile-seq4-review.cjs',
-            '.github/workflows/b150-main-profile-seq4-review.yml'
+            'security/b150-main-profile-ota-release.py',
+            '.github/workflows/b150-main-profile-seq4-review.yml',
+            '.github/workflows/b150-main-profile-ota-on-approval.yml'
           }
           assert changed==allow, 'Unexpected changes: '+repr(changed.symmetric_difference(allow))
           for p in ('android-updates/build-150/manifest.json','android-updates/build-150/files/index.html',
@@ -38,6 +40,10 @@ jobs:
         run: |
           node --check tests/main-b150-profile-seq4-review.cjs
           node tests/main-b150-profile-seq4-review.cjs
+      - name: Validate production V2 signature compatibility with fake signing key
+        run: |
+          python3 -m py_compile security/b150-main-profile-ota-release.py
+          python3 security/b150-main-profile-ota-release.py --self-test
       - name: Upload unsigned candidate for review only
         uses: actions/upload-artifact@v4
         with:
