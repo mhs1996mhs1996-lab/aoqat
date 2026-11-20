@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="42dp" android:height="33dp"
+    android:viewportWidth="74" android:viewportHeight="58">
+    <!-- Traced from the owner's exact approved reference: model 1 selected icons, adhan from model 3. -->
+    <path android:fillColor="#FB9110" android:pathData="M11,0L63,0Q74,0 74,11L74,47Q74,58 63,58L11,58Q0,58 0,47L0,11Q0,0 11,0Z"/>
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M23,9L23,12L25,13L26,21L33,28L33,29L26,36L26,38L25,39L25,44L23,45L23,47L41,47L42,48L43,47L45,48L46,47L49,47L49,45L46,43L46,37L45,35L39,29L39,28L45,22L46,20L46,14L49,11L49,9ZM34,26L35,27L38,26L39,27L39,30L45,36L46,38L46,44L45,45L27,45L26,44L26,37L33,30L33,27ZM40,41L39,41L36,38L32,41ZM26,13L27,12L45,12L46,13L46,19L43,22L42,21L28,21L26,19Z"/>
+</vector>
