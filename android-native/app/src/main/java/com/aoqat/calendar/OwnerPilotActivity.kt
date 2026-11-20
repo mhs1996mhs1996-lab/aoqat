@@ -121,7 +121,7 @@ class OwnerPilotActivity : Activity() {
     private fun refreshPilotState() {
         // Read-only, owner QA package-private preferences. No reset, approval,
         // signature bypass, import or production app access.
-        val prefs = getSharedPreferences("web_updates_v2_owner_qa", MODE_PRIVATE)
+        val prefs = getSharedPreferences("web_updates_v3_owner_pilot", MODE_PRIVATE)
         val last = prefs.getLong("lastSequence", 0L)
         val pending = prefs.getString("pending", null)
         val active = prefs.getString("active", null)
