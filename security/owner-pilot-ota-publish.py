@@ -2,6 +2,7 @@
 """Prepare signed pilot-only web OTA bytes from reviewed source; no network writes.
 
 Called only on explicit owner request with a GitHub environment secret.
+Signs APK-INTEGRATED staged assets; never signs unmodified hosted web sources.
 This script never reads the production OTA private key or production feed.
 """
 import argparse
@@ -14,6 +15,10 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+# The web repository files are NOT the same bytes as the offline Android APK.
+# prepare-web-assets.py changes the menu and Quran scripts, and packs the
+# JavaScript into an APK-specific startup bundle. The OTA MUST preserve it.
+APK_WEB_ASSETS = ROOT / "android-native/app/src/main/assets/www"
 SIGNER = ROOT / "security/owner-pilot-auto-ota-sign.py"
 
 
@@ -30,15 +35,26 @@ def load_signer():
 
 def prepare(secret_key, output_dir, sequence):
     signer = load_signer()
-    files = {"index.html": (ROOT / "index.html").read_bytes()}
+    if not APK_WEB_ASSETS.is_dir():
+        raise ValueError("APK-specific web assets missing. Run Gradle syncWebAssets first.")
+    html = (APK_WEB_ASSETS / "index.html").read_bytes()
+    # These markers prove we are signing the *APK integrated* web view, not
+    # the separately hosted web source (whose menu and Quran differ).
+    if (b'js/apk-startup-bundle.js' not in html or
+            b'js/android-back-navigation.js' not in html or
+            not (APK_WEB_ASSETS / "js/apk-startup-bundle.js").is_file()):
+        raise ValueError("APK-specific startup bundle not generated")
+    files = {"index.html": html}
     for kind, suffix in (("js", ".js"), ("css", ".css")):
-        for path in sorted((ROOT / kind).rglob("*")):
+        for path in sorted((APK_WEB_ASSETS / kind).rglob("*")):
             if not path.is_file() or path.suffix != suffix:
                 continue
-            rel = path.relative_to(ROOT).as_posix()
+            rel = path.relative_to(APK_WEB_ASSETS).as_posix()
             if not signer.allowed(rel):
-                raise ValueError("Disallowed JS/CSS path: " + rel)
+                raise ValueError("Disallowed staged APK JS/CSS path: " + rel)
             files[rel] = path.read_bytes()
+    if b'privacyPolicy' not in files["js/apk-startup-bundle.js"]:
+        raise ValueError("Required approved privacy entry absent from staged APK bundle")
     assert len(files) <= 250
     assert all(len(data) <= signer.MAX_FILE for data in files.values())
     assert sum(map(len, files.values())) <= signer.MAX_TOTAL
