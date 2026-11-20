@@ -2,7 +2,7 @@
   "channel": "owner-pilot",
   "build": 150,
   "sequence": 4,
-  "source_head": "75a5fc969c0398f675f843ebacd54365f023b62f",
+  "source_head": "9300e4b5241a2175f525343b8910637180519cb6",
   "release": true,
-  "reason": "Owner approved replacement of temporary profile test buttons with safe local personal profile; only pilot OTA seq4"
+  "reason": "Owner-requested pilot OTA seq4: local personal profile replacing test buttons; preflight now validates exact Android assets"
 }
