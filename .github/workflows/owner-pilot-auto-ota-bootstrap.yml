@@ -55,21 +55,21 @@ jobs:
             lhs=subprocess.check_output(['git','rev-parse','HEAD:'+path])
             rhs=subprocess.check_output(['git','rev-parse',base+':'+path])
             assert lhs==rhs, 'Protected file changed: '+path
-          # Only restore the pre-existing owner profile to the main menu.
-          # The full seq4 QA panel is unchanged; the only other existing
-          # menu addition remains the already approved privacy policy.
+          # Keep the real profile on the main menu; no test controls.
+          # Existing privacy policy and unrelated web content remain unchanged.
+          # The difference outside the single profile handler is unchanged.
           original=subprocess.check_output(['git','show',base+':js/web-menu-order.js'],text=True)
           modified_web=Path('js/web-menu-order.js').read_text()
-          anchor="  // Keep the owner's already-used sequence-4 profile test controls"
+          anchor="  // Optional local profile data only."
           end="  function settingsView(){"
           assert modified_web.count(anchor)==1 and modified_web.count(end)==1
           left=modified_web.index(anchor)
           right=modified_web.index(end,left)
           profile_code=modified_web[left:right]
-          assert profile_code.count("aoqatOwnerSeq4Buttons")==1
-          assert profile_code.count("فحص وصول التحديث رقم 4")==1
-          assert profile_code.count("زيادة عداد الاختبار")==1
-          assert profile_code.count("تصفير عداد الاختبار")==1
+          assert profile_code.count("aoqatPersonalProfile")==1
+          assert profile_code.count("aoqatProfileSave")==1
+          assert profile_code.count("aoqatProfileClear")==1
+          assert "aoqatOwnerSeq4Buttons" not in profile_code
           assert 'openSub("الملف الشخصي",panel,"main")' in profile_code
           stripped=modified_web[:left]+modified_web[right:]
           old_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
@@ -90,7 +90,7 @@ jobs:
         run: |
           python3 -m py_compile security/owner-pilot-auto-ota-sign.py
           python3 security/owner-pilot-auto-ota-sign.py --self-test
-      - name: Verify retained profile buttons and privacy policy in Chrome
+      - name: Verify local profile and privacy policy in Chrome
         run: |
           npm install --no-save --package-lock=false playwright
           node tests/owner-profile-retention-browser.cjs
@@ -140,7 +140,8 @@ jobs:
           with ZipFile(output,'w',ZIP_DEFLATED) as result:
             for path,data in payloads.items():result.writestr(path,data)
           assert b'privacyPolicy' in payloads['js/apk-startup-bundle.js']
-          assert b'aoqatOwnerSeq4Buttons' in payloads['js/apk-startup-bundle.js']
+          assert b'aoqatPersonalProfile' in payloads['js/apk-startup-bundle.js']
+          assert b'aoqatOwnerSeq4Buttons' not in payloads['js/apk-startup-bundle.js']
           print('PASS: unsigned review ZIP exactly reflects packaged Android startup JS; NOT deployed')
           PY
           sha256sum review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip > review/AOQAT-OWNER-PILOT-OTA-CANDIDATE-UNSIGNED.zip.sha256
