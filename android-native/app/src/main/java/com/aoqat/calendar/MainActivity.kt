@@ -373,21 +373,8 @@ class MainActivity : Activity() {
         startupContainer.addView(webView, 0, android.widget.FrameLayout.LayoutParams(
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
-        if (BuildConfig.OWNER_PILOT_ENABLED) {
-            val ownerTestButton = android.widget.Button(this).apply {
-                text = "حالة OTA التجريبية"
-                textSize = 11f
-                setOnClickListener {
-                    startActivity(Intent(this@MainActivity, OwnerPilotActivity::class.java))
-                }
-            }
-            val params = android.widget.FrameLayout.LayoutParams(
-                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL)
-            params.bottomMargin = (16 * resources.displayMetrics.density).toInt()
-            startupContainer.addView(ownerTestButton, params)
-        }
+        // The pilot OTA status/actions now live inside the pilot-only settings drawer.
+        // Do not add a floating control above the prayer UI.
 
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
@@ -761,6 +748,32 @@ class MainActivity : Activity() {
     }
 
     inner class AndroidBridge {
+        // Owner pilot only: expose read-only updater status to the existing
+        // settings icon without weakening the original signed WebUpdates receiver.
+        @JavascriptInterface fun readOwnerPilotOtaState():String {
+            if (!BuildConfig.OWNER_PILOT_ENABLED) return ""
+            val prefs=getSharedPreferences("web_updates_v3_owner_pilot",MODE_PRIVATE)
+            return org.json.JSONObject()
+                .put("lastSequence",prefs.getLong("lastSequence",0L))
+                .put("pending",prefs.getString("pending",null)!=null)
+                .put("trial",prefs.getString("trial",null)!=null)
+                .put("active",prefs.getString("active",null)!=null)
+                .put("trialConfirmed",prefs.getBoolean("trialConfirmed",false))
+                .toString()
+        }
+        @JavascriptInterface fun openOwnerPilotOtaAdvanced() {
+            if (!BuildConfig.OWNER_PILOT_ENABLED) return
+            runOnUiThread { startActivity(Intent(this@MainActivity,OwnerPilotActivity::class.java)) }
+        }
+        @JavascriptInterface fun reopenOwnerPilotForUpdate() {
+            if (!BuildConfig.OWNER_PILOT_ENABLED) return
+            runOnUiThread {
+                startActivity(Intent(this@MainActivity,MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                })
+                finish()
+            }
+        }
         @JavascriptInterface fun requestPrayerAudioDndPermission(){runOnUiThread{
             val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             if(!nm.isNotificationPolicyAccessGranted){
