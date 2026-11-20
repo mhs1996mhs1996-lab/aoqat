@@ -14,7 +14,6 @@ import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PUB = ROOT / "security/owner-pilot-ota-public.pem"
 SIGNER = ROOT / "security/owner-pilot-auto-ota-sign.py"
 
 
@@ -52,7 +51,11 @@ def prepare(secret_key, output_dir, sequence):
         with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as z:
             for name, body in sorted(files.items()):
                 z.writestr(name, body)
-        proof = signer.sign_candidate(candidate, secret_key, PUB, sequence,
+        # Derive the pilot public certificate from the *ephemeral* signing
+        # key and require its exact pinned fingerprint; never track PEM files.
+        public = Path(scratch) / "pilot-public.pem"
+        public.write_bytes(signer.openssl("pkey", "-in", str(secret_key), "-pubout"))
+        proof = signer.sign_candidate(candidate, secret_key, public, sequence,
                                       signed, password=None, require_pinned_key=True)
         with zipfile.ZipFile(signed) as z:
             manifest = json.loads(z.read(signer.ROOT + "manifest.json"))
@@ -65,7 +68,7 @@ def prepare(secret_key, output_dir, sequence):
             for name, body in files.items():
                 assert manifest["files"][name] == digest(body)
                 assert z.read(signer.ROOT + "files/" + name) == body
-            signer.verify_signature(manifest, PUB)
+            signer.verify_signature(manifest, public)
         # Export the *same* verified public bytes that were signed, never the key.
         payload_root = output_dir / signer.ROOT
         payload_root.mkdir(parents=True, exist_ok=True)
