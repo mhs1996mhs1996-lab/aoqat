@@ -98,12 +98,13 @@ jobs:
             git switch --detach FETCH_HEAD
           else
             git switch --orphan owner-pilot-ota-feed
-            git rm -rf --cached . >/dev/null
+            git rm -rf . >/dev/null
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
           fi
           rm -rf "$ROOT"
           mkdir -p "$ROOT"
           cp -a "$RUNNER_TEMP/owner-pilot-signed-feed/$ROOT/." "$ROOT/"
-          git add -A
+          git add -A "$ROOT"
           python3 - <<'PY'
           import subprocess
           paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
