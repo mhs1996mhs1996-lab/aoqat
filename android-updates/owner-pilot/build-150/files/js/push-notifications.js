@@ -1,0 +1,1 @@
+/* APK uses native publish notifications. */

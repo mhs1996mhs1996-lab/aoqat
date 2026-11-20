@@ -1,0 +1,231 @@
+"use strict";
+
+(function(){
+  const WIDTH=1024;
+  const HEIGHT=1448;
+  let bypass=false;
+  let loaderPromise=null;
+
+  function usableSlides(track){
+    return Array.from(track.querySelectorAll(":scope > .design-slide")).filter(slide=>{
+      if(slide.dataset.legacySlide==='true'||slide.querySelector('#design')) return false;
+      if(slide.classList.contains('removed-design-storage')||slide.closest('.removed-design-storage')) return false;
+      const cs=getComputedStyle(slide);
+      return cs.display!=="none"&&!slide.hidden;
+    });
+  }
+
+  function activeDesign(){
+    const track=document.querySelector(".design-carousel-track");
+    if(!track) return document.getElementById("design");
+    const slides=usableSlides(track);
+    if(!slides.length) return document.getElementById("design");
+
+    // نعتمد أولاً على التصميم الموجود فعلياً في منتصف نافذة المعاينة.
+    // هذا يمنع تصدير تصميم آخر عند اختلاف أرقام الشرائح الداخلية عن العداد الظاهر.
+    const car=document.querySelector('.design-carousel');
+    if(car){
+      const cr=car.getBoundingClientRect();
+      if(cr.width>0){
+        const center=cr.left+(cr.width/2);
+        let best=null,bestDistance=Infinity;
+        slides.forEach(slide=>{
+          const r=slide.getBoundingClientRect();
+          if(!r.width)return;
+          const distance=Math.abs((r.left+r.width/2)-center);
+          if(distance<bestDistance){bestDistance=distance;best=slide;}
+        });
+        if(best&&bestDistance<=Math.max(cr.width*.8,80)){
+          const design=best.firstElementChild;
+          if(design){
+            window.__prayerActiveDesignElement=design;
+            window.__prayerActiveVisibleIndex=slides.indexOf(best);
+            return design;
+          }
+        }
+      }
+    }
+
+    // احتياط: نحسب الشريحة من حركة المسار نفسها.
+    try{
+      const transform=getComputedStyle(track).transform;
+      const m=transform&&transform!=="none"?new DOMMatrixReadOnly(transform):null;
+      const slideWidth=car?.getBoundingClientRect().width||slides[0].getBoundingClientRect().width;
+      if(m&&slideWidth>0){
+        const all=Array.from(track.querySelectorAll(":scope > .design-slide"));
+        const domIndex=Math.max(0,Math.round(Math.abs(m.m41)/slideWidth));
+        const domSlide=all[domIndex];
+        if(domSlide&&slides.includes(domSlide)&&domSlide.firstElementChild)return domSlide.firstElementChild;
+      }
+    }catch(_){ }
+
+    const explicit=window.__prayerActiveDesignElement;
+    if(explicit&&document.contains(explicit))return explicit;
+    let index=Number(window.__prayerActiveVisibleIndex);
+    if(!Number.isFinite(index))index=Number(window.__prayerActiveDesignIndex);
+    if(!Number.isFinite(index))index=0;
+    index=Math.max(0,Math.min(index,slides.length-1));
+    return slides[index]?.firstElementChild||document.getElementById("design");
+  }
+
+  function loadHtml2Canvas(){
+    if(typeof window.html2canvas==="function") return Promise.resolve(window.html2canvas);
+    if(loaderPromise) return loaderPromise;
+    loaderPromise=new Promise((resolve,reject)=>{
+      const existing=document.querySelector('script[data-html2canvas]');
+      if(existing){
+        existing.addEventListener("load",()=>typeof window.html2canvas==="function"?resolve(window.html2canvas):reject(new Error("html2canvas missing")),{once:true});
+        existing.addEventListener("error",reject,{once:true});
+        return;
+      }
+      const s=document.createElement("script");
+      s.src="assets/vendor/html2canvas.min.js";
+      s.async=true;s.dataset.html2canvas="true";
+      s.onload=()=>typeof window.html2canvas==="function"?resolve(window.html2canvas):reject(new Error("html2canvas missing"));
+      s.onerror=reject;
+      document.head.appendChild(s);
+    });
+    return loaderPromise;
+  }
+
+  function copyCanvasContent(source,clone){
+    const src=source.querySelectorAll("canvas"),dst=clone.querySelectorAll("canvas");
+    src.forEach((canvas,i)=>{const target=dst[i];if(!target)return;try{target.width=canvas.width;target.height=canvas.height;target.getContext("2d")?.drawImage(canvas,0,0)}catch(e){}});
+  }
+
+  function addExportOnlyStyles(host,source,clone){
+    const style=document.createElement("style");
+    if(source.classList.contains("night-design")){
+      clone.classList.add("export-night-design");
+      style.textContent=`.export-night-design{isolation:isolate!important}.export-night-design:after{display:none!important;content:none!important}.export-night-design:before,.export-night-design .nd-pattern,.export-night-design .nd-stars,.export-night-design .nd-moon,.export-night-design .nd-mosque,.export-night-design .nd-export-arch{z-index:0!important}.export-night-design .nd-export-arch{position:absolute!important;left:84px!important;right:84px!important;top:14px!important;height:430px!important;border:6px solid #b97828!important;border-bottom:0!important;border-radius:52% 52% 0 0/70% 70% 0 0!important;box-shadow:inset 0 0 0 5px #061b2e!important;pointer-events:none!important;box-sizing:border-box!important}.export-night-design .nd-title,.export-night-design .nd-subtitle,.export-night-design .nd-date,.export-night-design .nd-day,.export-night-design .nd-prayers,.export-night-design .nd-book,.export-night-design .nd-lantern,.export-night-design .nd-footer{position:absolute;z-index:5!important}.export-night-design .nd-prayers{display:flex!important}.export-night-design .nd-prayer-row{position:relative!important;z-index:6!important}`;
+    }
+    if(source.classList.contains("ornate-design")){
+      clone.classList.add("export-ornate-design");
+      style.textContent+=`.export-ornate-design{isolation:isolate!important}.export-ornate-design .od-lattice,.export-ornate-design .od-inner,.export-ornate-design .od-arch,.export-ornate-design .od-stars,.export-ornate-design .od-moon,.export-ornate-design .od-mosque{z-index:0!important}.export-ornate-design .od-title,.export-ornate-design .od-subtitle,.export-ornate-design .od-date,.export-ornate-design .od-day,.export-ornate-design .od-prayers,.export-ornate-design .od-book,.export-ornate-design .od-lantern,.export-ornate-design .od-footer{z-index:5!important}`;
+    }
+    host.appendChild(style);
+  }
+
+  function fixSpecialDesignForExport(source,clone){
+    if(source.classList.contains('reference-design')){
+      const day=clone.querySelector('.ref-day'),original=source.querySelector('.ref-day');
+      if(day&&original){
+        // html2canvas does not paint CSS polygon clips. Rasterize the existing
+        // badge on a canvas inside the clone; keep its text and position.
+        const points='50,0 62,12 80,8 88,25 100,37 91,52 100,68 84,78 79,96 59,90 50,100 39,89 20,96 15,78 0,68 9,52 0,37 12,25 20,8 38,12';
+        const fill=getComputedStyle(original).backgroundColor;
+        const img=document.createElement('canvas');img.className='ref-export-day-badge';img.setAttribute('aria-hidden','true');
+        img.width=original.offsetWidth;img.height=original.offsetHeight;
+        const ctx=img.getContext('2d');ctx.scale(img.width/100,img.height/100);ctx.fillStyle=fill;ctx.beginPath();
+        points.split(' ').forEach((point,i)=>{const [x,y]=point.split(',').map(Number);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.fill();
+        img.style.cssText='position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none';
+        const text=document.createElement('span');text.style.cssText='position:relative;z-index:1';while(day.firstChild)text.appendChild(day.firstChild);day.appendChild(text);
+        day.style.clipPath='none';day.style.background='transparent';day.style.borderColor='transparent';day.style.isolation='isolate';day.style.zIndex='2';day.prepend(img);
+      }
+    }
+    if(source.classList.contains("night-design")){
+      const arch=document.createElement("div");arch.className="nd-export-arch";clone.insertBefore(arch,clone.firstChild);
+    }
+    if(source.classList.contains("fourth-design")){
+      clone.style.boxShadow="none";
+      const sky=clone.querySelector(".sd4-sky");if(sky){sky.style.background="linear-gradient(180deg, rgba(99,169,207,.16) 0%, rgba(255,255,255,.10) 30%, rgba(255,255,255,0) 55%)";sky.style.filter="none";sky.style.boxShadow="none"}
+      const prayers=clone.querySelector(".sd4-prayers");if(prayers){prayers.style.top="630px";prayers.style.gap="14px"}
+      clone.querySelectorAll(".sd4-prayer-row").forEach(row=>row.style.height="88px");
+      const footer=clone.querySelector(".sd4-footer");if(footer){footer.style.boxSizing="border-box";footer.style.height="96px";footer.style.minHeight="96px";footer.style.bottom="38px";footer.style.padding="12px 28px"}
+      clone.querySelectorAll(".sd4-day,.sd4-date-card,.sd4-prayer-row,.sd4-footer").forEach(el=>el.style.filter="none");
+    }
+  }
+
+  function prepareClone(design){
+    const host=document.createElement("div");
+    host.setAttribute("aria-hidden","true");
+    host.style.cssText=`position:fixed;left:-20000px;top:0;width:${WIDTH}px;height:${HEIGHT}px;overflow:hidden;z-index:-2147483647;pointer-events:none;`;
+    const clone=design.cloneNode(true);
+    clone.removeAttribute("id");
+    clone.style.zoom="1";
+    clone.style.transform="none";
+    clone.style.transformOrigin="top left";
+    clone.style.width=WIDTH+"px";
+    clone.style.height=HEIGHT+"px";
+    clone.style.margin="0";
+    clone.style.maxWidth="none";
+    clone.style.maxHeight="none";
+    clone.style.flex="0 0 auto";
+    addExportOnlyStyles(host,design,clone);
+    fixSpecialDesignForExport(design,clone);
+    host.appendChild(clone);
+    document.body.appendChild(host);
+    copyCanvasContent(design,clone);
+    return{host,clone};
+  }
+
+  async function renderPreview(design){
+    if(document.fonts?.ready){try{await document.fonts.ready}catch(e){}}
+    const html2canvas=await loadHtml2Canvas();
+    const{host,clone}=prepareClone(design);
+    try{
+      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      return await html2canvas(clone,{backgroundColor:null,scale:2,width:WIDTH,height:HEIGHT,windowWidth:WIDTH,windowHeight:HEIGHT,scrollX:0,scrollY:0,useCORS:true,allowTaint:true,logging:false,imageTimeout:8000,foreignObjectRendering:false,removeContainer:true});
+    }finally{host.remove()}
+  }
+
+  function canvasBlob(canvas,format="jpg"){
+    const f=(format||"jpg").toLowerCase(),isJpg=f==="jpg"||f==="jpeg",mime=isJpg?"image/jpeg":f==="webp"?"image/webp":"image/png";
+    return new Promise(resolve=>canvas.toBlob(resolve,mime,mime==="image/png"?undefined:.98));
+  }
+  function downloadBlob(blob,ext="jpg"){
+    if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`prayer-preview.${ext}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2500);
+  }
+  async function download(canvas,format){const f=(format||"jpg").toLowerCase(),ext=f==="jpeg"?"jpg":f;const blob=await canvasBlob(canvas,f);downloadBlob(blob,ext);}
+  async function saveToPhone(canvas){const blob=await canvasBlob(canvas,"jpg");if(!blob)return;const file=new File([blob],"prayer-preview.jpg",{type:"image/jpeg"});if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:"مواقيت الصلاة"});return}catch(error){if(error?.name==="AbortError")return;}}downloadBlob(blob,"jpg");}
+  // Keep one prepared image in an app-owned page. The system chooser can close
+  // after sharing; this page stays mounted for sharing the same file again.
+  let imageActionSequence=0;const imageActions=new Map();
+  window.aoqatImageActionResult=(id,ok)=>{const pending=imageActions.get(id);if(!pending)return;imageActions.delete(id);ok?pending.resolve():pending.reject(Error('Native image action failed'));};
+  async function nativeImageAction(method,file){const dataUrl=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(file);});return new Promise((resolve,reject)=>{const id='image-'+(++imageActionSequence);imageActions.set(id,{resolve,reject});try{window.AndroidNative[method](dataUrl,file.name,id);}catch(e){imageActions.delete(id);reject(e);}});}
+  window.aoqatNativeImageAction=nativeImageAction;
+  window.aoqatCreatePrayerShareView=function(){
+    const panel=document.createElement('section');panel.id='prayerShareView';panel.className='web-settings-list';
+    panel.innerHTML='<img id="prayerSharePreview" alt="معاينة صورة مواقيت الصلاة" hidden style="width:100%;max-width:320px;height:auto;margin:0 auto;border-radius:12px"><button type="button" id="prayerShareApps" class="main-action" disabled>↗ مشاركة الصورة</button><button type="button" id="prayerShareSave" class="main-action" disabled>📥 حفظ على الجهاز</button><button type="button" id="prayerShareRetry" class="main-action" hidden>إعادة المحاولة</button><p id="prayerShareStatus" role="status" style="margin:8px 0;line-height:1.8">جاري تجهيز الصورة…</p>';
+    const share=panel.querySelector('#prayerShareApps'),save=panel.querySelector('#prayerShareSave'),retry=panel.querySelector('#prayerShareRetry'),status=panel.querySelector('#prayerShareStatus'),preview=panel.querySelector('img');
+    let file=null,previewUrl=null,disposed=false,sharing=false;
+    panel.aoqatDispose=()=>{disposed=true;if(previewUrl)URL.revokeObjectURL(previewUrl);previewUrl=null;file=null;};
+    async function prepare(){
+      retry.hidden=true;status.textContent='جاري تجهيز الصورة…';
+      try{
+        const design=activeDesign();if(!design)throw Error('No active design');
+        const canvas=await renderPreview(design),blob=await canvasBlob(canvas,'jpg');
+        if(disposed)return;if(!blob)throw Error('Image unavailable');
+        file=new File([blob],'prayer-preview.jpg',{type:'image/jpeg'});previewUrl=URL.createObjectURL(blob);preview.src=previewUrl;preview.hidden=false;
+        save.disabled=false;
+        const supported=!!window.AndroidNative?.sharePrayerImage||!!navigator.share&&!!navigator.canShare&&navigator.canShare({files:[file]});share.disabled=!supported;
+        status.textContent=supported?'اختر المشاركة لعرض التطبيقات وطرق المشاركة المتاحة على هاتفك. تبقى هذه الصفحة مفتوحة للمشاركة مرة أخرى.':'يمكنك حفظ الصورة على الجهاز. مشاركة ملفات الصور غير متاحة في هذا المتصفح.';
+      }catch(e){if(disposed)return;console.error('Prayer share image',e);status.textContent='تعذر تجهيز الصورة. أعد المحاولة.';retry.hidden=false;}
+    }
+    share.onclick=async()=>{
+      if(!file||sharing)return;sharing=true;share.disabled=true;
+      try{if(window.AndroidNative?.sharePrayerImage)await nativeImageAction('sharePrayerImage',file);else await navigator.share({files:[file],title:'مواقيت الصلاة'});if(!disposed)status.textContent='يمكنك مشاركة الصورة مرة أخرى أو حفظها على الجهاز.';}
+      catch(e){if(!disposed)status.textContent=e?.name==='AbortError'?'الصورة جاهزة للمشاركة أو الحفظ.':'تعذرت المشاركة. أعد المحاولة أو احفظ الصورة على الجهاز.';}
+      finally{sharing=false;if(!disposed)share.disabled=false;}
+    };
+    save.onclick=async()=>{if(!file)return;save.disabled=true;try{if(window.AndroidNative?.savePrayerImage)await nativeImageAction('savePrayerImage',file);else downloadBlob(file,'jpg');if(!disposed)status.textContent='تم حفظ الصورة على الجهاز. يمكنك مشاركتها أيضاً.';}catch(e){if(!disposed)status.textContent='تعذر الحفظ. امنح إذن الحفظ إذا طُلب، ثم أعد المحاولة.';}finally{if(!disposed)save.disabled=false;}};
+    retry.onclick=prepare;Promise.resolve().then(prepare);return panel;
+  };
+
+  function fallbackNative(button){bypass=true;try{button.click()}finally{setTimeout(()=>{bypass=false},0)}}
+  async function exportExact(format,button,phoneMode=false){
+    const design=activeDesign();if(!design)return;
+    const oldText=button.textContent;button.disabled=true;button.textContent=phoneMode?"جاري الحفظ...":"جاري التصدير...";
+    try{const canvas=await renderPreview(design);if(phoneMode)await saveToPhone(canvas);else await download(canvas,format)}catch(error){console.error("Preview export fallback",error);if(!phoneMode)fallbackNative(button)}finally{setTimeout(()=>{button.disabled=false;button.textContent=oldText},150)}
+  }
+
+  window.addEventListener("click",function(event){
+    if(bypass)return;
+    const btn=event.target.closest?.("[data-export-format],[data-save-phone],#exportBtn");
+    if(!btn)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    const phoneMode=btn.hasAttribute("data-save-phone");
+    if(phoneMode&&window.aoqatOpenPrayerShare){window.aoqatOpenPrayerShare();return;}
+    exportExact(phoneMode?"jpg":(btn.dataset.exportFormat||"jpg"),btn,phoneMode);
+  },true);
+})();
