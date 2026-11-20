@@ -7525,7 +7525,9 @@ window.AoqatWidgetAppearance={createPanel,load};
     ["reminderInbox","🔔","الإشعارات"],
     ["appearance","🎨","شكل التطبيق"],
     ["qibla","🧭","اتجاه القبلة"],
-    ["profile","👤","الملف الشخصي"]
+    ["profile","👤","الملف الشخصي"],
+    // Only this isolated owner-pilot feed receives this JS; production stays unchanged.
+    ...((window.AndroidNative?.configureAdhan && (location.protocol==="file:" || location.hostname==="appassets.androidplatform.net")) ? [["ownerPilotOta","🔄","تحديثات النسخة التجريبية"]] : [])
   ];
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
@@ -7778,6 +7780,26 @@ window.AoqatWidgetAppearance={createPanel,load};
     "aoqatAlertScreenWakeV1","aoqatWebHelpLiveStyle"
   ];
   function profileView(){
+    // Override global theme button dimensions ONLY within this profile.
+    if(!document.getElementById("aoqatPilotProfileCompactV6")){
+      const style=document.createElement("style");
+      style.id="aoqatPilotProfileCompactV6";
+      style.textContent=`
+        #aoqatPersonalProfile{padding:3px 3px 12px!important;line-height:1.3!important}
+        #aoqatPersonalProfile #aoqatProfileCard{padding:8px 10px!important;margin:0 0 7px!important;gap:9px!important;border-radius:11px!important}
+        #aoqatPersonalProfile #aoqatProfileAvatar{width:46px!important;height:46px!important;flex-basis:46px!important;font-size:22px!important}
+        #aoqatPersonalProfile #aoqatProfileDisplayName{font-size:15px!important;line-height:1.3!important}
+        #aoqatPersonalProfile #aoqatProfileEdit{min-height:30px!important;height:30px!important;padding:3px 8px!important;border-radius:7px!important;font-size:11px!important}
+        #aoqatPersonalProfile h3{font-size:13px!important;margin:10px 0 4px!important;padding:0 2px!important;line-height:1.3!important}
+        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:42px!important;height:auto!important;padding:6px 9px!important;margin:3px 0!important;border-radius:8px!important;border:1px solid var(--wt-border,#c7d8df)!important;background:var(--wt-surface,#f7fafb)!important;box-shadow:none!important;text-align:right!important;line-height:1.25!important;text-shadow:none!important}
+        #aoqatPersonalProfile button.aoqat-profile-row span{line-height:1.3!important}
+        #aoqatPersonalProfile button.aoqat-profile-row small{font-size:10px!important;line-height:1.25!important;opacity:.77!important}
+        #aoqatPersonalProfile #aoqatProfileEditPanel{padding:7px!important;margin:4px 0!important}
+        #aoqatPersonalProfile #aoqatProfileEditPanel button,#aoqatPersonalProfile #aoqatProfileRestorePanel button,#aoqatPersonalProfile #aoqatProfileBackupCopy{min-height:34px!important;height:auto!important;padding:5px 7px!important;font-size:12px!important;border-radius:7px!important;box-shadow:none!important}
+        #aoqatPersonalProfile #aoqatProfileSaveStatus{font-size:11px!important;margin:5px 0!important;min-height:0!important}
+      `;
+      document.head.appendChild(style);
+    }
     const panel=document.createElement("section");panel.id="aoqatPersonalProfile";
     panel.dir="rtl";panel.className="web-settings-list";
     panel.style.cssText="max-width:560px;margin:0 auto;padding:10px 10px 22px;line-height:1.5;color:var(--wt-text,#173c50)";
@@ -7793,7 +7815,7 @@ window.AoqatWidgetAppearance={createPanel,load};
     function get(k){try{return localStorage.getItem(k)||"";}catch(_){return "";}}
     function put(k,v){if(v)localStorage.setItem(k,v);else localStorage.removeItem(k);}
     const sections=(heading)=>{
-      const title=el("h3",heading,"font-size:13px;font-weight:700;margin:14px 0 6px;padding:0 4px");
+      const title=el("h3",heading,"font-size:13px;font-weight:700;margin:9px 0 4px;padding:0 2px");
       panel.append(title);
     };
     function row(id,title,subtitle,action,icon){
@@ -7858,7 +7880,7 @@ window.AoqatWidgetAppearance={createPanel,load};
         say("صيغة البريد الإلكتروني غير صحيحة.");emailField.input.focus();return;
       }
       try{put(PROFILE_DISPLAY_NAME_KEY,name);put(PROFILE_EMAIL_KEY,email);
-        refresh();edit.style.display="none";say("حُفظت البيانات على الهاتف فقط. لم يُنشأ حساب إلكتروني.");
+        refresh();edit.style.display="none";say("تم حفظ بيانات الملف على الهاتف.");
       }catch(_){say("تعذّر حفظ البيانات على الهاتف.");}
     });
     const cancel=actionButton("aoqatProfileCancel","إلغاء",()=>{
@@ -7898,7 +7920,6 @@ window.AoqatWidgetAppearance={createPanel,load};
       reader.onerror=()=>say("تعذّر قراءة الصورة.");
       reader.readAsDataURL(file);
     };
-    sections("الملف الشخصي");
     row("aoqatProfileEditRow","الاسم والصورة والبريد الإلكتروني","بيانات اختيارية محفوظة محلياً",()=>editButton.click(),"👤");
     function quranDetails(){
       try{const x=JSON.parse(get("aoqatQuranReaderV1")||"{}");
@@ -7915,7 +7936,7 @@ window.AoqatWidgetAppearance={createPanel,load};
       mainView();document.querySelector('[data-drawer="quran"]')?.click();
     },"📖");
     sections("النسخ الاحتياطي");
-    const backupHint=el("small","نسخة من بيانات الملف والإعدادات والمحفوظات المحلية المتاحة فقط؛ لا تشمل الأذونات أو الملفات الصوتية أو إعدادات أندرويد الداخلية.","display:block;margin:1px 4px 8px;font-size:11px;opacity:.8");
+    const backupHint=el("small","يشمل البيانات المحلية فقط، دون الأذونات وملفات الصوت.","display:block;margin:1px 4px 8px;font-size:11px;opacity:.8");
     panel.append(backupHint);
     const backupTextArea=el("textarea",null,"width:100%;box-sizing:border-box;min-height:100px;font-size:11px;margin-top:5px;display:none;direction:ltr");
     backupTextArea.id="aoqatProfileBackupText";backupTextArea.readOnly=true;
@@ -7957,7 +7978,7 @@ window.AoqatWidgetAppearance={createPanel,load};
         }
       }catch(_){}
       backupTextArea.style.display="block";backupCopy.style.display="block";
-      backupTextArea.value=value;say("هذه بيانات النسخة. انسخها واحفظها خارج التطبيق. تحتوي الاسم والبريد إن وجد.");
+      backupTextArea.value=value;say("انسخ النسخة واحفظها خارج التطبيق.");
     },"💾");
     panel.append(backupTextArea,backupCopy);
     const restoreInput=el("input",null,"display:none");restoreInput.type="file";restoreInput.accept=".json,application/json";restoreInput.id="aoqatProfileRestoreFile";
@@ -8019,6 +8040,73 @@ window.AoqatWidgetAppearance={createPanel,load};
     },"🗑️");
     panel.append(note);
     openSub("الملف الشخصي",panel,"main");
+  }
+  // Read-only pilot OTA availability UI. Android's existing signed receiver
+  // remains solely responsible for downloading/verifying/staging OTA updates.
+  const PILOT_OTA_BUNDLED_SEQUENCE=6;
+  const PILOT_OTA_FEED="https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/manifest.json";
+  const PILOT_OTA_APK=!!window.AndroidNative?.configureAdhan &&
+    (location.protocol==="file:"||location.hostname==="appassets.androidplatform.net");
+  let pilotLatest=null,pilotCheckAt=0,pilotCheckRunning=null,pilotPanelUpdate=null;
+  function pilotBadge(){
+    const b=document.querySelector('#webDrawerMain [data-drawer="ownerPilotOta"]');
+    if(!b)return;
+    const update=pilotLatest!==null&&pilotLatest>PILOT_OTA_BUNDLED_SEQUENCE;
+    let notice=b.querySelector(".aoqat-pilot-ota-badge");
+    if(!notice){
+      notice=document.createElement("span");notice.className="aoqat-pilot-ota-badge";
+      notice.style.cssText="display:none;flex:none;border-radius:8px;padding:3px 6px;font:700 11px Arial,Tahoma,sans-serif;background:#c62f35;color:white;line-height:1.2";
+      b.appendChild(notice);
+    }
+    notice.textContent=update?"جديد":"";
+    notice.style.display=update?"inline-block":"none";
+    if(update)b.setAttribute("aria-label","تحديثات النسخة التجريبية، تحديث جديد متاح");
+    else b.removeAttribute("aria-label");
+    if(typeof pilotPanelUpdate==="function")pilotPanelUpdate();
+  }
+  async function checkPilotOtaAvailable(force=false){
+    if(!PILOT_OTA_APK)return;
+    if(pilotCheckRunning)return pilotCheckRunning;
+    if(!force && Date.now()-pilotCheckAt<300000)return;
+    pilotCheckAt=Date.now();
+    pilotCheckRunning=(async()=>{
+      const response=await fetch(PILOT_OTA_FEED,{cache:"no-store"});
+      if(!response.ok)throw Error("offline");
+      const m=await response.json();
+      if(!m||m.channel!=="owner-pilot"||m.nativeBuild!==150||
+        !Number.isInteger(m.sequence)||m.sequence<1||m.sequence>2147483647||
+        typeof m.signature!=="string"||m.signature.length<70||
+        !Number.isSafeInteger(m.expiresAt)||m.expiresAt<Date.now()||
+        !m.files||typeof m.files!=="object")throw Error("invalid");
+      pilotLatest=m.sequence;
+    })().catch(()=>{pilotLatest=null;}).finally(()=>{pilotCheckRunning=null;pilotBadge();});
+    return pilotCheckRunning;
+  }
+  function pilotOtaView(){
+    if(!PILOT_OTA_APK)return;
+    const panel=document.createElement("section");
+    panel.id="aoqatPilotOtaPanel";panel.dir="rtl";panel.style.cssText="max-width:550px;margin:0 auto;padding:7px 9px;line-height:1.4";
+    const style=document.createElement("style");
+    style.textContent="#aoqatPilotOtaPanel .pilot-line{border:1px solid var(--wt-border,#c7d8df);background:var(--wt-surface,#fff);border-radius:9px;padding:9px 11px;margin:5px 0;font-size:13px}#aoqatPilotOtaPanel .pilot-command{display:block!important;box-sizing:border-box!important;width:100%!important;min-height:37px!important;height:auto!important;padding:7px!important;font-size:13px!important;margin:8px 0 4px!important;border:1px solid var(--wt-border,#c7d8df)!important;border-radius:8px!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#173c50)!important;box-shadow:none!important}";
+    panel.appendChild(style);
+    const installed=document.createElement("div");installed.className="pilot-line";
+    installed.textContent="التحديث المفعّل: "+PILOT_OTA_BUNDLED_SEQUENCE;
+    const status=document.createElement("div");status.className="pilot-line";
+    status.setAttribute("role","status");
+    function render(){
+      if(pilotLatest===null)status.textContent="تعذّر فحص التحديث الآن. يعمل التطبيق دون إنترنت.";
+      else if(pilotLatest>PILOT_OTA_BUNDLED_SEQUENCE)status.textContent="تحديث جديد "+pilotLatest+" — يستلمه التطبيق تلقائياً، ويُفعّل عند إعادة فتحه.";
+      else status.textContent="النسخة التجريبية محدّثة.";
+    }
+    const check=document.createElement("button");check.className="pilot-command";
+    check.type="button";check.textContent="التحقق من تحديث جديد";
+    check.onclick=async()=>{check.disabled=true;status.textContent="جارٍ التحقق…";await checkPilotOtaAvailable(true);check.disabled=false;render();};
+    const hint=document.createElement("p");hint.textContent="الاستلام تلقائي. التفعيل بعد إعادة فتح التطبيق.";
+    hint.style.cssText="font-size:11px;margin:7px 3px;opacity:.8";
+    panel.append(installed,status,check,hint);
+    pilotPanelUpdate=()=>{if(panel.isConnected)render();else pilotPanelUpdate=null;};
+    render();openSub("تحديثات النسخة التجريبية",panel,"main");
+    void checkPilotOtaAvailable();
   }
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
@@ -8200,6 +8288,7 @@ window.AoqatWidgetAppearance={createPanel,load};
       if(id==="settings"){settingsView();return;}
       if(id==="usageGuide"){guideView();return;}
       if(id==="profile"){profileView();return;}
+      if(id==="ownerPilotOta"){pilotOtaView();return;}
       if(id==="privacyPolicy"){privacyView();return;}
        if(id==="contactWhatsApp"){contactView();return;}
        if(id==="alertSettings"){alertSettingsView();return;}
@@ -8212,6 +8301,12 @@ window.AoqatWidgetAppearance={createPanel,load};
       if(id==="savePhone")savePhone();
     });
     try{mainList.querySelector('[data-drawer="adhanIqama"]').classList.toggle("adhan-on",JSON.parse(localStorage.getItem("aoqatAdhanV1")||"{}").enabled===true);}catch(_){}
+    if(PILOT_OTA_APK){
+      void checkPilotOtaAvailable();
+      window.addEventListener("focus",()=>{void checkPilotOtaAvailable();});
+      document.addEventListener("visibilitychange",()=>{if(!document.hidden)void checkPilotOtaAvailable();});
+      setInterval(()=>{if(!document.hidden)void checkPilotOtaAvailable();},300000);
+    }
     const reminderId=new URL(location.href).searchParams.get('reminder');
     if(webOnly&&reminderId)inboxView(reminderId);
     const sharedPage=Number(new URL(location.href).searchParams.get("quranPage"));
