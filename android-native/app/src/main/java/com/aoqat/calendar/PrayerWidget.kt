@@ -353,6 +353,7 @@ class NextPrayerService:Service(){
                 .setPriority(Notification.PRIORITY_DEFAULT)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
+                .setDeleteIntent(LockScreenIqamaBoundaryReceiver.deleteIntent(c))
                 .setContentIntent(tap)
                 .build()
         }
