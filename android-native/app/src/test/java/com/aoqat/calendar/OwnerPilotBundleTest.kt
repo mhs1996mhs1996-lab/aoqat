@@ -21,13 +21,15 @@ class OwnerPilotBundleTest {
     private val pub = Base64.getEncoder().encodeToString(pair.public.encoded)
     private val build = 150
     private fun zip(files: Map<String, ByteArray>, sequence: Long = 4, forged: Boolean = false,
-                    extra: String? = null, target: Int = 150): ByteArray {
+                    extra: String? = null, target: Int = 150,
+                    pilot: Boolean = false): ByteArray {
         val entries = JSONObject()
         files.forEach { (path, bytes) -> entries.put(path, WebUpdates.digest(bytes)) }
         val canon = files.keys.sorted().joinToString("\n") { it + ":" + entries.getString(it) }
         val manifest = JSONObject().put("nativeBuild", target).put("sequence", sequence)
             .put("expiresAt", System.currentTimeMillis() + 86400000L)
             .put("revision", WebUpdates.digest(canon.toByteArray())).put("files", entries)
+        if (pilot) manifest.put("channel", "owner-pilot")
         val signer = Signature.getInstance("SHA256withECDSA")
         signer.initSign(pair.private)
         signer.update(SignedWebUpdateManifest.payload(manifest))
@@ -36,7 +38,9 @@ class OwnerPilotBundleTest {
         val out = ByteArrayOutputStream()
         ZipOutputStream(out).use { z ->
             fun put(name: String, bytes: ByteArray) {
-                z.putNextEntry(ZipEntry("android-updates/build-150/" + name))
+                val prefix = if (pilot) "android-updates/owner-pilot/build-150/"
+                             else "android-updates/build-150/"
+                z.putNextEntry(ZipEntry(prefix + name))
                 z.write(bytes)
                 z.closeEntry()
             }
@@ -54,6 +58,18 @@ class OwnerPilotBundleTest {
         assertEquals(2, verified.files.size)
         assertEquals("<p>pilot</p>", verified.files.getValue("index.html").toString(Charsets.UTF_8))
     }
+    @Test fun acceptsPilotChannelSignedZipAndRejectsChannelRelabeling() {
+        val files = mapOf("index.html" to "<p>qa</p>".toByteArray())
+        val pilotArchive = zip(files, pilot = true)
+        val reviewed = OwnerPilotBundle.inspect(ByteArrayInputStream(pilotArchive), build, pub, 0L)
+        assertEquals(4L, reviewed.sequence)
+        assertEquals("owner-pilot", reviewed.manifest.getString("channel"))
+        assertEquals(files.keys, reviewed.files.keys)
+        val wrongRoot = zip(files, pilot = false)
+        assertEquals(4L, OwnerPilotBundle.inspect(
+            ByteArrayInputStream(wrongRoot), build, pub, 0L).sequence)
+    }
+
     @Test fun rejectsForgedSignerSequenceAndOtherBuild() {
         val files = mapOf("index.html" to byteArrayOf(65))
         for (pack in listOf(zip(files, forged = true), zip(files, sequence = 3L),
