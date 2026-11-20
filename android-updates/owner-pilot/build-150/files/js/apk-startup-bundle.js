@@ -7526,6 +7526,7 @@ window.AoqatWidgetAppearance={createPanel,load};
     ["appearance","🎨","شكل التطبيق"],
     ["qibla","🧭","اتجاه القبلة"],
     ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],
+    ["profile","👤","الملف الشخصي"],
     ["privacyPolicy","🔒","سياسة الخصوصية"]
   ];
   let returnMode="main",bagSection="",inboxId=null;
@@ -7788,7 +7789,7 @@ window.AoqatWidgetAppearance={createPanel,load};
     addButton("+ زيادة عداد الاختبار",()=>{count++;result.textContent="عداد الاختبار فقط: "+count;});
     addButton("↺ تصفير عداد الاختبار",()=>{count=0;result.textContent="عداد الاختبار فقط: 0";});
     panel.append(note,controls,result);
-    openSub("الملف الشخصي",panel,"settings");
+    openSub("الملف الشخصي",panel,"main");
   }
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
@@ -7796,9 +7797,6 @@ window.AoqatWidgetAppearance={createPanel,load};
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
     showShortButtonHelp(wrap,DESIGN_HELP);
-    const profile=document.createElement("button");profile.type="button";profile.id="aoqatOwnerProfileOpen";
-    profile.className="main-action";profile.textContent="👤 الملف الشخصي";
-    profile.onclick=profileView;wrap.append(profile);
     openSub("إعدادات التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
@@ -7972,6 +7970,7 @@ window.AoqatWidgetAppearance={createPanel,load};
       if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
       if(id==="usageGuide"){guideView();return;}
+      if(id==="profile"){profileView();return;}
       if(id==="privacyPolicy"){privacyView();return;}
        if(id==="contactWhatsApp"){contactView();return;}
        if(id==="alertSettings"){alertSettingsView();return;}
