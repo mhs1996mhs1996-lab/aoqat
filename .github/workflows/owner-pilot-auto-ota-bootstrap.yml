@@ -101,4 +101,5 @@ jobs:
           retention-days: 7
           if-no-files-found: error
       - name: Non-publish assertion
-        run: echo 'PASS: owner-private signature is absent; no Vercel, Play, OTA, production or GitHub Release publish'
+        run: |
+          echo 'PASS: owner-private signature is absent; no Vercel, Play, OTA, production or GitHub Release publish'
