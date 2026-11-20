@@ -36,6 +36,7 @@ jobs:
             'security/owner-pilot-ota-public.pem',
             'security/owner-pilot-ota-publish.py',
             'security/test-owner-pilot-auto-publish.py',
+            'security/owner-pilot-ota-request.json',
             '.github/workflows/owner-pilot-ota-on-request.yml',
             'security/owner-pilot-auto-ota-sign.py',
             'security/OWNER-PILOT-AUTO-OTA-CHANNEL.md',
