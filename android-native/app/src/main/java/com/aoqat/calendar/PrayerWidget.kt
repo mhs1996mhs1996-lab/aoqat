@@ -288,27 +288,28 @@ class NextPrayerService:Service(){
             val seconds=(remain+999L)/1000L
             val fallback=if(next==null)"--:--:--" else String.format(java.util.Locale.US,
                 "%02d:%02d:%02d",seconds/3600L,seconds/60L%60L,seconds%60L)
-            val iqama=LockScreenIqama.current(c,now)
-            val iqamaMs=iqama?.remaining(now)?:0L
-            val iqamaSeconds=(iqamaMs+999L)/1000L
-            val iqamaClock=String.format(java.util.Locale.US,"%02d:%02d",
-                iqamaSeconds/60L,iqamaSeconds%60L)
-            val lockDetail=if(iqama!=null)"${iqama.title} $iqamaClock" else ""
-            val description=if(iqama!=null)"$fallback • $lockDetail" else "$fallback — أوقات الصلاة في الحويجة"
+            // Only one short supplemental line: iqama or Friday, never both.
+            // Android's own chronometer counts without WebView or polling.
+            val extra=LockScreenSupplement.current(c,now)
+            val extraMs=extra?.elapsedMillis(now)?:0L
+            val extraSeconds=(extraMs+999L)/1000L
+            val extraClock=String.format(java.util.Locale.US,"%02d:%02d",
+                extraSeconds/60L,extraSeconds%60L)
+            val lockDetail=if(extra!=null)"${extra.title} $extraClock" else ""
+            val description=if(extra!=null)"$fallback • $lockDetail" else "$fallback — أوقات الصلاة في الحويجة"
             val views=RemoteViews(c.packageName,R.layout.notification_lock_next)
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
             views.setViewVisibility(R.id.lock_iqama_row,
-                if(iqama!=null)android.view.View.VISIBLE else android.view.View.GONE)
-            if(iqama!=null){
-                views.setTextViewText(R.id.lock_iqama_title,iqama.title)
+                if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
+            if(extra!=null){
+                views.setTextViewText(R.id.lock_iqama_title,extra.title)
                 views.setChronometer(R.id.lock_iqama_clock,
-                    if(iqama.phase==LockScreenIqama.Phase.REMAINING)
-                        SystemClock.elapsedRealtime()+iqamaMs
-                    else SystemClock.elapsedRealtime()-iqamaMs,
+                    if(extra.countDown)
+                        SystemClock.elapsedRealtime()+extraMs
+                    else SystemClock.elapsedRealtime()-extraMs,
                     "%s",true)
-                views.setChronometerCountDown(R.id.lock_iqama_clock,
-                    iqama.phase==LockScreenIqama.Phase.REMAINING)
+                views.setChronometerCountDown(R.id.lock_iqama_clock,extra.countDown)
             }
 
             if(next!=null){
