@@ -72,10 +72,10 @@ jobs:
           assert profile_code.count("تصفير عداد الاختبار")==1
           assert 'openSub("الملف الشخصي",panel,"main")' in profile_code
           stripped=modified_web[:left]+modified_web[right:]
-          old_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
-          new_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\\n    ["profile","👤","الملف الشخصي"],\\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
-          old_route='      if(id==="usageGuide"){guideView();return;}\\n      if(id==="privacyPolicy"){privacyView();return;}'
-          new_route='      if(id==="usageGuide"){guideView();return;}\\n      if(id==="profile"){profileView();return;}\\n      if(id==="privacyPolicy"){privacyView();return;}'
+          old_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
+          new_menu='    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],\n    ["profile","👤","الملف الشخصي"],\n    ["privacyPolicy","🔒","سياسة الخصوصية"]'
+          old_route='      if(id==="usageGuide"){guideView();return;}\n      if(id==="privacyPolicy"){privacyView();return;}'
+          new_route='      if(id==="usageGuide"){guideView();return;}\n      if(id==="profile"){profileView();return;}\n      if(id==="privacyPolicy"){privacyView();return;}'
           assert original.count(old_menu)==1 and original.count(old_route)==1
           expected=original.replace(old_menu,new_menu,1).replace(old_route,new_route,1)
           assert stripped==expected,'Unauthorized change beyond restoring main-menu owner profile'
