@@ -40,7 +40,8 @@ jobs:
             '.github/workflows/owner-pilot-ota-on-request.yml',
             'security/owner-pilot-auto-ota-sign.py',
             'security/OWNER-PILOT-AUTO-OTA-CHANNEL.md',
-            '.github/workflows/owner-pilot-auto-ota-bootstrap.yml'
+            '.github/workflows/owner-pilot-auto-ota-bootstrap.yml',
+            '.github/workflows/owner-pilot-feed-smoke.yml'
           }
           assert modified and modified.issubset(allow),'Unexpected files: '+repr(modified-allow)
           for path in ('index.html','js/quran-reader.js','data/prayer-times-offline.json',
