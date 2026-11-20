@@ -69,6 +69,9 @@ object LockScreenPrayer {
             // Remove the previous service's separate notification before posting
             // the new lock-screen reminder; no FGS start is required.
             c.stopService(Intent(c,NextPrayerService::class.java))
+            // Hide a separate Friday countdown; its phases now share the
+            // supplemental line in this one opt-in lock notification.
+            c.stopService(Intent(c,FridayNotificationService::class.java))
             if(notificationsAllowed(c))showNow(c)
         }else{
             (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
