@@ -51,7 +51,7 @@ jobs:
           root=Path('android-native/app/src/main/assets/www')
           out=Path('pilot-seq6-to-sign')
           old=json.loads((out/'previous-seq5-manifest.json').read_text())
-          assert old['nativeBuild']==150 and old['sequence']==4 and old['channel']=='owner-pilot'
+          assert old['nativeBuild']==150 and old['sequence']==5 and old['channel']=='owner-pilot'
           assets={'index.html':(root/'index.html').read_bytes()}
           for folder,ext in [('js','.js'),('css','.css')]:
               for f in sorted((root/folder).rglob('*')):
