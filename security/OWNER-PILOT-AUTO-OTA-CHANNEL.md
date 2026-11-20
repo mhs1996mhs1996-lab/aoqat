@@ -43,6 +43,11 @@
   to cryptographic domain `AOQAT-WEB-UPDATE-OWNER-PILOT-V1`. A valid owner
   signature for the production domain does **not** grant access to the pilot.
   Production rejects the owner-pilot domain.
+- New `web_updates_v3_owner_pilot` preferences and `web-updates-v3-owner-pilot`
+  storage prevent an older owner QA update (such as signed sequence 4) from
+  blocking fresh pilot sequence 1. Existing prayer settings/data and the
+  previous test's snapshot are NOT deleted; the old V2 test snapshot is simply
+  never trusted in the new dedicated pilot channel.
 - SHA256, expiry, increasing sequence, nativeBuild 150, approved web-only
   index/JS/CSS paths and size limits still apply. Only a verified snapshot
   activates on the NEXT app launch; failure to signal startup-ready reverts to
