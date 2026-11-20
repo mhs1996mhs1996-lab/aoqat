@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="74" android:viewportHeight="58">
+    <!-- Android converts status bar icons to monochrome; geometry matches approved colored icon. -->
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M15,48L15,52L27,52L27,46L28,44L31,42L34,42L38,46L38,52L46,52L46,48L45,47L45,40L44,41L30,41L29,40L28,41L19,41L18,40L17,41L17,47ZM42,41L45,43L45,46L43,48L41,48L40,47L40,43ZM21,41L24,44L24,46L22,48L20,48L19,47L19,43ZM51,38L50,40L50,52L55,52L54,39L52,39ZM45,30L42,26L39,24L35,23L33,20L32,20L29,23L23,25L20,28L19,30L19,35L41,35L42,34L44,35L45,34ZM29,11L31,15L35,15L32,15L30,13L30,10ZM52,9L51,10L52,16L50,19L50,21L51,22L51,25L50,27L51,28L51,36L52,34L54,37L55,35L54,34L54,28L55,27L54,25L54,21L55,19L52,16L52,14L54,12L53,9ZM51,26L53,25L54,26L54,28L52,29L51,28Z"/>
+</vector>
