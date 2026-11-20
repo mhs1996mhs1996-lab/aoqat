@@ -49,7 +49,7 @@ const document={
 };
 const window={AndroidNative:{configureAdhan(){}},
               AoqatWebSettingsNavigation:{sub(title,panel,parent){navigation={title,panel,parent};}}};
-const blocks=[...to.matchAll(/<script(?:\\s[^>]*)?>([\\s\\S]*?)<\\/script>/g)];
+const blocks=[...to.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
 const inline=blocks.map(x=>x[1]).find(s=>s.includes('AOQAT_OTA_PROFILE_PROOF_B150_SEQUENCE2'));
 assert.ok(inline,'Expected existing profile bridge inline script');
 vm.runInNewContext(inline,{window,document,setInterval(){throw Error('Unexpected polling with ready menu');},clearInterval(){}});
