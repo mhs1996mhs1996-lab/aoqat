@@ -72,6 +72,24 @@ jobs:
             test "$PILOT_SEQUENCE" -eq 1
             echo 'PASS: first owner-pilot OTA sequence'
           fi
+      - name: Setup Java 17 for APK-specific web integration
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Generate APK-specific web bundle (NO APK or publish)
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:syncWebAssets
+          # A published web index must NEVER replace the APK's integrated one.
+          grep -F 'js/apk-startup-bundle.js' android-native/app/src/main/assets/www/index.html
+          grep -F 'privacyPolicy' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
+          python3 security/test-owner-pilot-auto-publish.py
       - name: Sign candidate with isolated pilot environment secret
         shell: bash
         env:
