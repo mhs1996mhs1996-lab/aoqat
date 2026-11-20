@@ -1,0 +1,59 @@
+name: Owner pilot lock-screen phases (NATIVE QA only)
+on:
+  push:
+    branches: [feature/owner-pilot-lockscreen-phases-20261121]
+    paths:
+      - android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/LockScreenSupplement.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt
+      - android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt
+      - .github/workflows/owner-pilot-lockscreen-phases-check.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-qa:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Only owner's requested native lock UI and phase test may change
+        run: |
+          set -euo pipefail
+          git fetch origin feature/owner-pilot-ota-seq6-ui-compact-20261120
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/owner-pilot-ota-seq6-ui-compact-20261120'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allow={
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenSupplement.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt',
+            '.github/workflows/owner-pilot-lockscreen-phases-check.yml'
+          }
+          assert changed <= allow, 'Unrelated files changed: '+str(changed-allow)
+          assert len(changed)>3
+          print('PASS: no production or unrelated files changed')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile native code and run clock-phase/lock-notification tests
+        run: |
+          gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.LockScreenSupplementTest' --tests 'com.aoqat.calendar.LockScreenPrayerTest' --tests 'com.aoqat.calendar.LockScreenIqamaTest' --tests 'com.aoqat.calendar.FridayScheduleTest'
+      - name: Native QA summary (not a release)
+        run: |
+          echo 'PASS: new Friday + iqama lock phases compile and boundary unit tests passed.'
+          echo 'No OTA, no APK rollout, no Vercel or main branch update.'
