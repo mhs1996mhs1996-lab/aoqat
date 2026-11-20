@@ -108,7 +108,9 @@ review only. Private P12 is NEVER sent to GitHub or ChatGPT.
   changes one file and selects the next sequence; no manual download required.
 - Until that secret and one-time bootstrap APK installation are complete,
   automatic delivery is NOT active. The workflow refuses to publish unsigned
-  or wrong-key updates. The protected feed is visible only to pilot apps.
+  or wrong-key updates. The feed branch is publicly readable (no secrets or
+  private user data are stored there); only the ownerPilot APK can **accept**
+  its pinned, signed manifests. This is not an access-controlled private feed.
 - A GitHub success alone is not phone acceptance; owner must approve.
 - If no signed pilot manifest is deployed, the app continues working offline
   as normal and the automatic check simply fails safely.
