@@ -29,8 +29,11 @@ class WebUpdates(
     }
 ) {
     // QA uses a distinct Android package ID and its own update snapshot namespace.
-    private val root = File(context.filesDir, if (BuildConfig.OWNER_PILOT_ENABLED) "web-updates-v2-owner-qa" else "web-updates-v2-signed")
-    private val prefs = context.getSharedPreferences(if (BuildConfig.OWNER_PILOT_ENABLED) "web_updates_v2_owner_qa" else "web_updates_v2_signed", Context.MODE_PRIVATE)
+    // Separate pilot V3 namespace: older owner QA builds used the production
+    // V2 key and may already have sequence 4+, which must not block pilot
+    // sequence 1. Preserve old snapshots/settings on disk; never trust them.
+    private val root = File(context.filesDir, if (BuildConfig.OWNER_PILOT_ENABLED) "web-updates-v3-owner-pilot" else "web-updates-v2-signed")
+    private val prefs = context.getSharedPreferences(if (BuildConfig.OWNER_PILOT_ENABLED) "web_updates_v3_owner_pilot" else "web_updates_v2_signed", Context.MODE_PRIVATE)
     private val nativeBuild = context.packageManager.getPackageInfo(context.packageName, 0).versionCode
     private val checking = AtomicBoolean(false)
 
