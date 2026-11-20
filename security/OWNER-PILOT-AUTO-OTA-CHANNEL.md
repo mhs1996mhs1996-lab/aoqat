@@ -46,8 +46,9 @@
   index/JS/CSS paths and size limits still apply. Only a verified snapshot
   activates on the NEXT app launch; failure to signal startup-ready reverts to
   the last known good.
-- Local ZIP manual import remains as a fallback, for both older V2 owner-signed
-  local archives and new pilot-signed archives. It never publishes.
+- Local ZIP manual import remains as a fallback for ZIPs signed by the
+  **separate pilot key**. Older ZIPs signed by the production V2 key are
+  deliberately incompatible with the new pilot bootstrap. It never publishes.
 
 ## Important: bootstrap install
 The *already installed* owner-pilot APK deliberately returned early in
