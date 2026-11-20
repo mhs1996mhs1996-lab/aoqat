@@ -32,7 +32,8 @@
     ["reminderInbox","🔔","الإشعارات"],
     ["appearance","🎨","شكل التطبيق"],
     ["qibla","🧭","اتجاه القبلة"],
-    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"]
+    ["contactWhatsApp","💬","تواصل معنا عبر واتساب"],
+    ["privacyPolicy","🔒","سياسة الخصوصية"]
   ];
   let returnMode="main",bagSection="",inboxId=null;
   let adhanReturnFocus=null, adhanHome=null, sidebarWasInert=false;
@@ -276,13 +277,6 @@
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
     showShortButtonHelp(wrap,DESIGN_HELP);
-    const about=document.createElement("section");about.id="aoqatAboutApp";
-    about.style.cssText="margin-top:11px;border-top:1px solid var(--wt-border,#c5d5c8);padding-top:9px";
-    const heading=document.createElement("h3");heading.textContent="حول التطبيق";
-    heading.style.cssText="font-size:14px;margin:0 0 7px;color:var(--wt-text,#233c32)";
-    const policy=document.createElement("button");policy.type="button";policy.id="aoqatPrivacySettings";
-    policy.className="main-action";policy.textContent="🔒 سياسة الخصوصية";
-    policy.onclick=privacyView;about.append(heading,policy);wrap.append(about);
     openSub("إعدادات التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
@@ -314,7 +308,7 @@
     contact.style.cssText="width:100%;min-height:44px;margin-top:7px";
     contact.onclick=()=>window.AoqatHelpSupport?.openWhatsApp?.();
     wrap.append(contact);
-    openSub("سياسة الخصوصية",wrap,"settings");
+    openSub("سياسة الخصوصية",wrap,"main");
   }
   function guideView(){const api=window.AoqatHelpSupport;if(api)openSub("شرح استخدام التطبيق",api.guide(),"main");}
   function contactView(){window.AoqatHelpSupport?.openWhatsApp?.();}
@@ -456,6 +450,7 @@
       if(id==="muslimBag"){muslimBagView();return;}
       if(id==="settings"){settingsView();return;}
       if(id==="usageGuide"){guideView();return;}
+      if(id==="privacyPolicy"){privacyView();return;}
        if(id==="contactWhatsApp"){contactView();return;}
        if(id==="alertSettings"){alertSettingsView();return;}
        if(id==="calendar"){window.aoqatOpenCalendar?.();return;}
