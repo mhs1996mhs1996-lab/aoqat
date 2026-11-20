@@ -1,4 +1,23 @@
-# Owner pilot automatic OTA channel (B150) — not yet published
+# Owner-pilot automatic OTA channel (B150) — seq4 successfully published
+
+## Proven release method: PRE-SIGNED OTA (keep this for future owner-pilot updates)
+**User-approved operating rule:** the owner-pilot Android test APK receives OTA automatically for QA. Do not change the receiver, channel, APK package ID, signing keys, main/production or admin project merely to send a web UI change. Ship to the owner-pilot channel first; promote to the main app only after the owner approves the tested changes.
+
+Successful reference release: **sequence 4**, commit `cfb39491e4c2cc1bc28a894a8b6b2ba4dabba832` on `owner-pilot-ota`, GitHub Actions run [44802311395](https://github.com/mhs1996mhs1996-lab/aoqat/actions/runs/44802311395). The feed advanced from sequence 3 to 4 with **only** the signed manifest, `files/js/web-menu-order.js`, and `files/js/apk-startup-bundle.js` changing. The other 86 APK web assets are unchanged.
+
+For the next owner-requested test update:
+1. Make **only** the owner-requested source edits on an isolated branch. Review the diff against the current published owner-pilot feed. Maintain exact APK-specific integrated web bytes via `gradle -p android-native --no-daemon :app:syncWebAssets`. Never substitute Vercel's web HTML for the APK-specific HTML.
+2. Export a complete **unsigned signing candidate** with every currently active APK `index.html`, `js/*.js`, `css/*.css` file, not merely the changed files. Example CI workflow used for seq4: `.github/workflows/owner-pilot-seq4-presigned-candidate.yml` (run [44797303794](https://github.com/mhs1996mhs1996-lab/aoqat/actions/runs/44797303794)). Assert prior active paths are preserved, the only changed file hashes are explicitly approved, and no native, prayer data, Quran content or other user settings changed.
+3. **Sign locally/securely with the EXISTING pilot-only private P-256 key** matching the public certificate pinned inside the installed pilot APK; verify key fingerprint `a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea`. The private key was recovered from the owner's private file library during seq4; for later updates request access to that existing private file through the authorized file tool, *not* a new key and *not* Termux or a user upload unless necessary. NEVER commit the private key, password or a generated new key. Sign with `security/owner-pilot-auto-ota-sign.py` using the **next** monotonic sequence and the candidate ZIP.
+4. Commit **only the public signed manifest** to the isolated pilot source branch and trigger a pre-signed publish workflow like `.github/workflows/owner-pilot-presigned-seq4-publish.yml`, adapting its sequence guards and previous-sequence checks for the next release. Rebuild exact assets in CI; validate signature against the **already pinned** pilot public key, `nativeBuild=150`, `channel=owner-pilot`, full file hashes and expiry. No GitHub signing secret is required with this proven method. Failed validation must block publication.
+5. Publish **only** `android-updates/owner-pilot/build-150/manifest.json` and the approved changed `files/...` paths into the **existing `owner-pilot-ota` feed branch**, leaving unchanged assets byte-for-byte identical. Confirm the live raw GitHub manifest advanced to the next sequence and public signature/hash checks succeed. No push to `main`, no production Vercel release, no APK rebuild/install for a web-only change.
+6. The installed `com.aoqat.calendar.ownerpilot` APK automatically checks this feed on open/resume and while foreground (up to once every five minutes). The verified update activates on the next app launch. This is **not** silent APK replacement; native changes require separate signed APK handling. Owner tests the pilot and explicitly approves before promotion to production.
+
+The older instructions below describe earlier/bootstrap alternatives. **Do not fall back to the newer secret-based GitHub auto-sign path** unless the owner explicitly asks to change release architecture. The approved, proven approach is **prepare candidate → sign with existing pilot key → public signed manifest → pinned-key CI validation → publish isolated feed → automatic pilot reception**.
+
+---
+
+
 
 ## Automatic updates on explicit owner request
 - The owner says "حدّث التجريبية OTA". The maintainer reviews code/tests and
