@@ -75,7 +75,7 @@ def verify(previous_file: Path, destination: Path):
     assert b'aoqatOwnerSeq4Buttons' not in assets['js/apk-startup-bundle.js']
     assert b'aoqatOwnerSeq4Buttons' not in assets['js/web-menu-order.js']
     assert b'js/apk-startup-bundle.js' in assets['index.html']
-    matched = re.search(r'const val PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"', SOURCE.read_text())
+    matched = re.search(r'const val PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"', SOURCE.read_text())
     assert matched, 'Pinned owner-pilot public key not found'
     der = base64.b64decode(matched.group(1), validate=True)
     assert sha(der) == EXPECTED_PIN == signer.PINNED_PUBLIC_KEY_SPKI
