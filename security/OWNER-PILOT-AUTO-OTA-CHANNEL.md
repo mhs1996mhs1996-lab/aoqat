@@ -2,12 +2,12 @@
 
 ## What is implemented
 - The Android **ownerPilot** APK (`com.aoqat.calendar.ownerpilot`) now checks:
-  `https://aoqat.vercel.app/android-updates/owner-pilot/build-150/manifest.json`
+  `https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/manifest.json`
   when it starts/returns to foreground, at most once every five minutes.
 - The normal app `com.aoqat.calendar` continues checking only its original
   `https://aoqat.vercel.app/android-updates/build-150/manifest.json` endpoint.
   Neither package ID nor native prayer/Quran feature code has been changed.
-- The pilot receiver REQUIRES a signed JSON `"channel":"owner-pilot"` bound
+- The pilot receiver REQUIRES a distinct pilot-only P-256 public key (not the production OTA key), plus a signed JSON `"channel":"owner-pilot"` bound
   to cryptographic domain `AOQAT-WEB-UPDATE-OWNER-PILOT-V1`. A valid owner
   signature for the production domain does **not** grant access to the pilot.
   Production rejects the owner-pilot domain.
@@ -39,15 +39,16 @@ review only. Private P12 is NEVER sent to GitHub or ChatGPT.
      --sequence 1 \
      --output ~/storage/downloads/AOQAT-OWNER-PILOT-OTA-SIGNED-seq1.zip
    ```
-   This requires the owner's *existing* encrypted V2 **OTA** private PEM and
-   matching public PEM under `~/aoqat-keys/`. It prompts for the OTA PEM
-   password locally. This key is separate from the APK P12 key.
+   This requires the separate **owner-pilot** OTA private PEM and public PEM
+   under `~/aoqat-keys/`. The pilot key is unrelated to the APK P12 key and
+   the production OTA V2 signing key.
 3. Before deployment, verify the signed ZIP's `manifest.json`, file SHA256,
    build, channel, sequence, expiry and original file bytes. A manual
    owner-pilot ZIP test on the actual phone is required, covering startup,
    offline, prayer alarms, iqama, quiet-mode restore, Quran and preferences.
 4. After the owner approves **that exact hash**, publish only the public
-   ZIP's contents (not the ZIP wrapper) at:
+   ZIP's contents (not the ZIP wrapper) to the public GitHub `owner-pilot-ota`
+   *feed branch*, never to `main` or the Vercel production site, at:
    ```text
    android-updates/owner-pilot/build-150/manifest.json
    android-updates/owner-pilot/build-150/files/index.html
@@ -62,6 +63,14 @@ review only. Private P12 is NEVER sent to GitHub or ChatGPT.
 
 ## Holds
 - No production, Vercel, GitHub Release or public APK publish action.
+- Once the dedicated GitHub environment `owner-pilot-publish` holds the
+  separate `AOQAT_PILOT_OTA_SIGNING_PEM` secret, an explicit owner command
+  can update `security/owner-pilot-ota-request.json` to trigger the
+  source-pinned, tested, fully signed feed publication workflow. Each request
+  changes one file and selects the next sequence; no manual download required.
+- Until that secret and one-time bootstrap APK installation are complete,
+  automatic delivery is NOT active. The workflow refuses to publish unsigned
+  or wrong-key updates. The protected feed is visible only to pilot apps.
 - A GitHub success alone is not phone acceptance; owner must approve.
 - If no signed pilot manifest is deployed, the app continues working offline
   as normal and the automatic check simply fails safely.
