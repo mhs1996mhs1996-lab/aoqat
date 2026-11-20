@@ -63,10 +63,7 @@ jobs:
           prev=json.load(open(os.environ['RUNNER_TEMP']+'/previous-pilot.json'))
           assert prev['channel']=='owner-pilot' and prev['nativeBuild']==150
           assert int(os.environ['PILOT_SEQUENCE'])>prev['sequence'],'Pilot OTA sequence must increase'
-          from pathlib import Path
-          paths={'index.html'}|{p.relative_to(Path('.')).as_posix() for folder,extension in [('js','.js'),('css','.css')] for p in Path(folder).rglob('*') if p.is_file() and p.suffix==extension}
-          assert set(prev['files'])<=paths,'Cannot delete a previously active OTA override via partial OTA'
-          print('PASS: new pilot sequence, no deleted active overrides')
+          print('PASS: new pilot sequence; APK-integrated asset existence checked AFTER Gradle syncWebAssets')
           PY
           else
             test "$PILOT_SEQUENCE" -eq 1
@@ -86,6 +83,18 @@ jobs:
         run: |
           set -euo pipefail
           gradle -p android-native --no-daemon :app:syncWebAssets
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          prior=Path(os.environ['RUNNER_TEMP'])/'previous-pilot.json'
+          root=Path('android-native/app/src/main/assets/www')
+          staged={'index.html'}|{p.relative_to(root).as_posix() for d,e in [('js','.js'),('css','.css')] for p in (root/d).rglob('*') if p.is_file() and p.suffix==e}
+          if prior.is_file():
+              prev=json.loads(prior.read_text(encoding='utf-8'))
+              assert set(prev['files'])<=staged, 'Cannot delete any previously signed APK web override'
+          assert 'js/apk-startup-bundle.js' in staged
+          print('PASS: old signed override set preserved in exact APK-integrated assets')
+          PY
           # A published web index must NEVER replace the APK's integrated one.
           grep -F 'js/apk-startup-bundle.js' android-native/app/src/main/assets/www/index.html
           grep -F 'privacyPolicy' android-native/app/src/main/assets/www/js/apk-startup-bundle.js >/dev/null
