@@ -48,7 +48,18 @@ object FridaySchedule {
         if(!f.optBoolean("quiet",true))restore(c)
     }
     private data class Adhan(val n: Int,val id: String,val time: Long,val key: String)
-    fun start(c: Context,at: Long){if(!enabled(c)||FridayCycle.frame(timing(c,at),System.currentTimeMillis())==null)return;IqamaPersistentNotification.ensureChannel(c);c.startForegroundService(Intent(c,FridayNotificationService::class.java).putExtra("at",at))}
+    fun start(c: Context,at: Long){
+        if(!enabled(c)||FridayCycle.frame(timing(c,at),System.currentTimeMillis())==null)return
+        // Keep one lock-screen card when explicitly opted in. Prayer/Friday
+        // schedule and quiet-mode alarms still run separately and unchanged.
+        if(LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c)){
+            c.stopService(Intent(c,FridayNotificationService::class.java))
+            LockScreenPrayer.showNow(c)
+            return
+        }
+        IqamaPersistentNotification.ensureChannel(c)
+        c.startForegroundService(Intent(c,FridayNotificationService::class.java).putExtra("at",at))
+    }
     fun quiet(c: Context,at: Long){
         val f=config(c);val t=timing(c,at);if(!enabled(c)||!f.optBoolean("quiet",true)||System.currentTimeMillis()>=t.end)return
         val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager;if(!nm.isNotificationPolicyAccessGranted)return
