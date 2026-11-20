@@ -1,27 +1,29 @@
-name: Owner pilot lock-screen phases (NATIVE QA only)
+name: Owner pilot lock-screen symbols and OTA-menu APK QA (NO PUBLICATION)
 on:
   push:
     branches: [feature/owner-pilot-lockscreen-phases-20261121]
     paths:
-      - android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt
-      - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
-      - android-native/app/src/main/java/com/aoqat/calendar/LockScreenSupplement.kt
-      - android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt
-      - android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt
-      - .github/workflows/owner-pilot-lockscreen-phases-check.yml
+      - 'android-native/app/src/main/java/com/aoqat/calendar/**'
+      - 'android-native/app/src/main/res/layout/notification_*.xml'
+      - 'android-native/app/src/main/res/drawable/pilot_notify_*.xml'
+      - 'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt'
+      - 'js/web-menu-order.js'
+      - 'tests/owner-pilot-profile-seq6-ui.cjs'
+      - '.github/workflows/owner-pilot-lockscreen-phases-check.yml'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   native-qa:
-    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-lockscreen-phases-20261121'
     runs-on: ubuntu-22.04
-    timeout-minutes: 30
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Only owner's requested native lock UI and phase test may change
+      - name: Guard production, OTA receiver and unrelated project files
+        shell: bash
         run: |
           set -euo pipefail
           git fetch origin feature/owner-pilot-ota-seq6-ui-compact-20261120
@@ -29,17 +31,33 @@ jobs:
           import subprocess
           base='origin/feature/owner-pilot-ota-seq6-ui-compact-20261120'
           changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
-          allow={
-            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt',
+          allowed={
+            '.github/workflows/owner-pilot-lockscreen-phases-check.yml',
+            'js/web-menu-order.js','tests/owner-pilot-profile-seq6-ui.cjs',
+            'android-native/app/src/main/res/layout/notification_lock_next.xml',
+            'android-native/app/src/main/res/layout/notification_iqama.xml',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/LockScreenSupplement.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/PrayerNotifications.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/PilotNotificationIcons.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt',
-            '.github/workflows/owner-pilot-lockscreen-phases-check.yml'
           }
-          assert changed <= allow, 'Unrelated files changed: '+str(changed-allow)
-          assert len(changed)>3
-          print('PASS: no production or unrelated files changed')
+          allowed|={'android-native/app/src/main/res/drawable/pilot_notify_'+state+'.xml' for state in ('adhan','wait','elapsed')}
+          allowed|={'android-native/app/src/main/res/drawable/pilot_notify_small_'+state+'.xml' for state in ('adhan','wait','elapsed')}
+          assert changed and changed <= allowed,'Unrelated changes: '+str(changed-allowed)
+          for f in ['android-native/app/build.gradle','android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+                    'android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt',
+                    'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
+                    'index.html','data/prayer-times-offline.json','js/quran-reader.js']:
+              original=subprocess.check_output(['git','show',base+':'+f])
+              current=open(f,'rb').read()
+              assert original==current,'Protected file changed: '+f
+          assert 'text = "حالة OTA التجريبية"' not in open('android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt').read()
+          assert 'readOwnerPilotOtaState' in open('android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt').read()
+          print('PASS: ONLY requested owner-pilot icon, native notification and OTA-menu files changed')
           PY
           python3 security/check-no-private-keys.py
           python3 security/check-sacred-content.py
@@ -50,10 +68,53 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-      - name: Compile native code and run clock-phase/lock-notification tests
+      - name: Test web OTA menu and privacy protections
+        run: |
+          node --check js/web-menu-order.js
+          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs
+      - name: Native lock-screen and Friday/iqama boundary unit tests
         run: |
           gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.LockScreenSupplementTest' --tests 'com.aoqat.calendar.LockScreenPrayerTest' --tests 'com.aoqat.calendar.LockScreenIqamaTest' --tests 'com.aoqat.calendar.FridayScheduleTest'
-      - name: Native QA summary (not a release)
+      - name: Build isolated ownerPilot UNSIGNED APK (never touch production or sign in CI)
         run: |
-          echo 'PASS: new Friday + iqama lock phases compile and boundary unit tests passed.'
-          echo 'No OTA, no APK rollout, no Vercel or main branch update.'
+          gradle -p android-native --no-daemon :app:assembleOwnerPilot
+      - name: Check package identity and unsigned status
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find android-native/app/build/outputs/apk/ownerPilot -name '*.apk' -type f | head -n 1)"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+          "$AAPT" dump badging "$APK" | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$AAPT" dump badging "$APK" | grep -F "versionCode='150'"
+          SIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
+          if "$SIGNER" verify "$APK"; then
+            echo 'REFUSE: APK unexpectedly signed with unknown CI certificate'
+            exit 1
+          fi
+          python3 - "$APK" <<'PY'
+          import sys,zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+              ns=z.namelist()
+              assert 'assets/www/js/web-menu-order.js' in ns
+              assert b'readOwnerPilotOtaState' in z.read('assets/www/js/web-menu-order.js')
+              assert b'ownerPilotOta' in z.read('assets/www/js/web-menu-order.js')
+              assert 'resources.arsc' in ns
+              fonts=[x for x in ns if x.startswith('assets/www/assets/qcf-v2-page-fonts/p') and x.endswith('.woff2')]
+              assert len(fonts)==604,len(fonts)
+          print('PASS: full offline Quran, web settings, signed-OTA menu preserved')
+          PY
+          mkdir -p /tmp/aoqat-ownerpilot-review
+          cp "$APK" /tmp/aoqat-ownerpilot-review/aoqat-ownerpilot-lockscreen-unsigned.apk
+          cd /tmp/aoqat-ownerpilot-review
+          sha256sum aoqat-ownerpilot-lockscreen-unsigned.apk > aoqat-ownerpilot-lockscreen-unsigned.apk.sha256
+          printf '%s\n' 'Pilot package com.aoqat.calendar.ownerpilot build 150. Sign this unsigned APK using the SAME original Android APK signing P12/certificate used for the already installed owner-pilot trial, not the OTA PEM key. Same signing certificate preserves upgrade, stored data and existing automatic owner-pilot OTA feed. NEVER sign with a new key. CI does not sign nor publish to production.' > INSTALL-NOTES.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-LOCK-SCREEN-ICONS-UNSIGNED-APK-SHA
+          path: /tmp/aoqat-ownerpilot-review/*
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: Final no-deployment statement
+        run: echo 'PASS QA only. Owner must sign APK with installed pilot signing certificate. Original signed automatic OTA channel unchanged. Production and admin untouched.'
