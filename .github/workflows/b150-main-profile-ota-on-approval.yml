@@ -1,0 +1,87 @@
+name: AOQAT B150 approved production OTA seq4 — OWNER APPROVAL REQUIRED
+on:
+  push:
+    branches: [feature/b150-main-profile-ota-seq4-test-20261120]
+    paths:
+      - security/b150-main-profile-approval.json
+permissions:
+  contents: write
+concurrency:
+  group: aoqat-b150-production-ota
+  cancel-in-progress: false
+jobs:
+  approved-production:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/b150-main-profile-ota-seq4-test-20261120'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 22
+    # GitHub environment should require the owner's review BEFORE a job can run.
+    # No request file exists until the owner explicitly approves live distribution.
+    environment: production-ota-publish
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate isolated one-file OWNER approval and immutable reviewed changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/b150-main-profile-approval.json"
+          python3 - <<'PY'
+          import json,subprocess
+          r=json.load(open('security/b150-main-profile-approval.json',encoding='utf-8'))
+          assert set(r)=={'channel','nativeBuild','sequence','approved','source_head','reason','pilot_accepted'}
+          assert r['channel']=='production' and type(r['nativeBuild']) is int and r['nativeBuild']==150
+          assert type(r['sequence']) is int and r['sequence']==4
+          assert r['approved'] is True and r['pilot_accepted'] is True
+          assert type(r['reason']) is str and 8<=len(r['reason'])<=180
+          assert r['source_head']==subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()
+          print('PASS: release requires explicit owner approval after successful pilot acceptance')
+          PY
+          python3 security/check-no-private-keys.py || test ! -e security/check-no-private-keys.py
+          node tests/main-b150-profile-seq4-review.cjs
+          python3 -m py_compile security/b150-main-profile-ota-release.py
+          python3 security/b150-main-profile-ota-release.py --self-test
+      - name: Sign ONLY the reviewed B150 index with original OTA V2 key
+        shell: bash
+        env:
+          MAIN_OTA_PRIVATE_PEM: ${{ secrets.AOQAT_MAIN_OTA_V2_PEM }}
+          AOQAT_V2_OTA_PASSPHRASE: ${{ secrets.AOQAT_MAIN_OTA_V2_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          test -n "$MAIN_OTA_PRIVATE_PEM" || { echo 'BLOCKED: original V2 OTA key is not configured in the owner-only environment'; exit 1; }
+          umask 077
+          KEY="$RUNNER_TEMP/aoqat-main-v2-secret.pem"
+          trap 'rm -f "$KEY"' EXIT
+          printf '%s\n' "$MAIN_OTA_PRIVATE_PEM" > "$KEY"
+          python3 security/b150-main-profile-ota-release.py --private-key "$KEY" --output "$RUNNER_TEMP/aoqat-main-seq4-verified"
+          unset MAIN_OTA_PRIVATE_PEM AOQAT_V2_OTA_PASSPHRASE
+      - name: Publish precisely TWO signed files to the production OTA path
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git switch --detach FETCH_HEAD
+          ROOT="android-updates/build-150"
+          test -s "$RUNNER_TEMP/aoqat-main-seq4-verified/$ROOT/manifest.json"
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          base=Path('android-updates/build-150')
+          m=json.loads((base/'manifest.json').read_bytes())
+          assert m['nativeBuild']==150 and m['sequence']==3
+          assert m['revision']=='98554724ebce6ab736e7c5309a136201eb2e6e52fc78085aec6585993e191d8a'
+          assert hashlib.sha256((base/'files/index.html').read_bytes()).hexdigest()=='9cc9ba4313ad9df1ece2142b1a19dafb5bb81591483b3d0aa51b077351e65658'
+          print('PASS: live main still exactly matches old approved signed seq3')
+          PY
+          cp "$RUNNER_TEMP/aoqat-main-seq4-verified/$ROOT/manifest.json" "$ROOT/manifest.json"
+          cp "$RUNNER_TEMP/aoqat-main-seq4-verified/$ROOT/files/index.html" "$ROOT/files/index.html"
+          git add "$ROOT/manifest.json" "$ROOT/files/index.html"
+          python3 - <<'PY'
+          import subprocess
+          paths=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert paths==['android-updates/build-150/files/index.html','android-updates/build-150/manifest.json'],paths
+          print('PASS: no changes outside the two signed OTA files')
+          PY
+          git -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -c user.name="github-actions[bot]" commit -m "owner-approved main B150 signed OTA sequence 4 profile test only" >/dev/null
+          git push origin HEAD:refs/heads/main
+          echo 'PASS: owner-approved signed OTA sequence 4 pushed to production path'
