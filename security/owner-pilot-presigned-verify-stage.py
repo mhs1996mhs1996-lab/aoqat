@@ -33,8 +33,8 @@ def collect_assets() -> dict[str, bytes]:
         for p in sorted((WEB_ASSETS / dirname).rglob("*")):
             if p.is_file() and p.suffix == ext:
                 rel = p.relative_to(WEB_ASSETS).as_posix()
-                assert re.fullmatch(r"(?:js|css)/[a-zA-Z0-9_./-]+\\.(?:js|css)", rel), rel
-                assert not any(x in rel for x in ("..", "//", "/.", "%", "\\\\")), rel
+                assert re.fullmatch(r"(?:js|css)/[a-zA-Z0-9_./-]+\.(?:js|css)", rel), rel
+                assert not any(x in rel for x in ("..", "//", "/.", "%", "\\")), rel
                 files[rel] = p.read_bytes()
     assert 1 <= len(files) <= 250
     assert all(len(v) <= 6 * 1024 * 1024 for v in files.values())
@@ -47,7 +47,7 @@ def collect_assets() -> dict[str, bytes]:
 
 def pinned_public() -> bytes:
     source = PIN_SOURCE.read_text()
-    match = re.search(r'const val PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"', source)
+    match = re.search(r'const val PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"', source)
     assert match, "Pilot public key not found"
     der = base64.b64decode(match.group(1), validate=True)
     assert digest(der) == EXPECTED_PIN, "Unexpected pilot signing key"
@@ -90,10 +90,10 @@ def stage(attestation_path: Path, output_dir: Path, previous_path: Path) -> None
     files = collect_assets()
     sums = {name: digest(body) for name, body in sorted(files.items())}
     assert set(previous["files"]).issubset(sums), "Cannot delete existing signed paths"
-    canonical = "\\n".join(f"{name}:{sums[name]}" for name in sorted(sums))
+    canonical = "\n".join(f"{name}:{sums[name]}" for name in sorted(sums))
     revision = digest(canonical.encode("utf-8"))
     assert revision == a["revision"], "Packaged Android assets differ from owner-signed review"
-    payload = "\\n".join([DOMAIN, "150", str(a["sequence"]), str(a["expiresAt"]),
+    payload = "\n".join([DOMAIN, "150", str(a["sequence"]), str(a["expiresAt"]),
                            revision, canonical]).encode("utf-8")
     check_signature(payload, a["signature"])
     manifest = {"nativeBuild":150, "sequence":a["sequence"],
