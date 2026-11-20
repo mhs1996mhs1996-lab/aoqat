@@ -1,7 +1,7 @@
 name: Owner pilot OTA seq6 - export safe unsigned candidate (pre-signed path)
 on:
   push:
-    branches: [feature/owner-pilot-profile-backup-seq6-20261120]
+    branches: [feature/owner-pilot-ota-seq6-ui-compact-20261120]
     paths:
       - .github/workflows/owner-pilot-seq6-presigned-candidate.yml
   workflow_dispatch:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 jobs:
   candidate:
-    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-profile-backup-seq6-20261120'
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-ota-seq6-ui-compact-20261120'
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
