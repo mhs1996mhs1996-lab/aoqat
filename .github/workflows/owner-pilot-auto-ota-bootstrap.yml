@@ -45,6 +45,7 @@ jobs:
             'security/OWNER-PILOT-AUTO-OTA-CHANNEL.md',
             '.github/workflows/owner-pilot-auto-ota-bootstrap.yml',
             '.github/workflows/owner-pilot-feed-smoke.yml',
+            '.github/workflows/owner-pilot-profile-seq4-diff-review.yml',
             'js/web-menu-order.js',
             'tests/owner-profile-retention-browser.cjs'
           }
