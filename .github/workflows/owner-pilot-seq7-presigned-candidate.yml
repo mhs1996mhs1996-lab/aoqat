@@ -1,4 +1,5 @@
 name: Owner pilot OTA seq7 - export safe unsigned candidate (pre-signed path)
+# Exact 88-file OTA candidate; no native, production or admin publishing.
 on:
   push:
     branches: [feature/owner-pilot-ota-seq7-ui-compact-20261120]
