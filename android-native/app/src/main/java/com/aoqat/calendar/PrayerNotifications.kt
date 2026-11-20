@@ -89,14 +89,16 @@ object PrayerNotifications {
         val tap=if(screenAlert)full else PendingIntent.getActivity(c,78991,
             Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
         val alert=Notification.Builder(c, "prayer_due_system_v2")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallAdhan() else android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(if (preview) "تجربة صوت الإشعار" else title(id, friday))
             .setContentText("أوقات الصلاة في الحويجة")
             .setCategory(Notification.CATEGORY_ALARM)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setPriority(Notification.PRIORITY_MAX)
             .setAutoCancel(true)
-            .setContentIntent(tap)
+            .setContentIntent(tap).apply {
+                if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.large(c,PilotNotificationIcons.coloredAdhan())?.let{setLargeIcon(it)}
+            }
         // An explicit prayer notification is allowed to wake the phone ONLY
         // when the user opted into that prayer AND enabled screen illumination.
         // It never starts or stops the independent adhan recording.
