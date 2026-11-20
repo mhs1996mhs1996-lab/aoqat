@@ -271,12 +271,41 @@
     screen:'إضاءة الهاتف عند وصول التنبيهات المفعّلة.'
   };
 
+  // Keep the owner's already-used sequence-4 profile test controls when the
+  // isolated pilot moves from the old signed V2 snapshot to its V3 channel.
+  // These three controls are local visual QA only, with no persistent data.
+  function profileView(){
+    const panel=document.createElement("section");panel.id="aoqatOwnerProfileTests";
+    panel.dir="rtl";panel.className="web-settings-list";
+    panel.style.cssText="padding:8px 10px;max-width:540px;margin:0 auto";
+    const note=document.createElement("p");note.textContent="اختبار وصول OTA رقم 4 — للمالك فقط؛ لا يجمع بيانات.";
+    note.style.cssText="font-size:14px;line-height:1.8;margin:2px 0 12px";
+    const controls=document.createElement("div");controls.id="aoqatOwnerSeq4Buttons";
+    controls.style.cssText="display:grid;gap:7px;max-width:460px";
+    const result=document.createElement("p");result.id="aoqatOwnerSeq4Result";
+    result.setAttribute("role","status");result.textContent="لم تضغط أي زر اختبار بعد.";
+    result.style.cssText="margin-top:12px;padding:10px;border:1px solid var(--wt-border,#8ca6a0);border-radius:9px";
+    let count=0;
+    function addButton(label,click){
+      const button=document.createElement("button");button.type="button";button.className="main-action";
+      button.style.cssText="min-height:42px;max-width:100%;margin:0;padding:7px 10px;text-align:center;font-size:14px";
+      button.textContent=label;button.onclick=click;controls.append(button);
+    }
+    addButton("✓ فحص وصول التحديث رقم 4",()=>{result.textContent="نجح ظهور تحديث الاختبار رقم 4 على هذا الهاتف.";});
+    addButton("+ زيادة عداد الاختبار",()=>{count++;result.textContent="عداد الاختبار فقط: "+count;});
+    addButton("↺ تصفير عداد الاختبار",()=>{count=0;result.textContent="عداد الاختبار فقط: 0";});
+    panel.append(note,controls,result);
+    openSub("الملف الشخصي",panel,"settings");
+  }
   function settingsView(){
     const wrap=document.createElement("div");wrap.id="webSettingsTemp";wrap.className="web-settings-list";
     SETTINGS.filter(([key])=>!["date","prayer","iqama","afterIqama",...(webOnly?["footer"]:[])].includes(key)).forEach(([key,icon,label,panel])=>{const b=document.createElement("button");b.type="button";b.className="main-action";b.dataset.panel=panel;b.dataset.title=label;b.innerHTML=icon+" <span>"+label+"</span>";wrap.appendChild(b);});
     wrap.addEventListener("click",e=>{const b=e.target.closest("[data-panel]");if(b)openPanel(b.dataset.title,b.dataset.panel,"settings");});
     if(webOnly){const b=document.createElement('button');b.type='button';b.className='main-action';b.dataset.settingSavePhone='true';b.textContent='📱 مشاركة التصميم';b.onclick=savePhone;wrap.appendChild(b);}
     showShortButtonHelp(wrap,DESIGN_HELP);
+    const profile=document.createElement("button");profile.type="button";profile.id="aoqatOwnerProfileOpen";
+    profile.className="main-action";profile.textContent="👤 الملف الشخصي";
+    profile.onclick=profileView;wrap.append(profile);
     openSub("إعدادات التصميم",wrap,"main");
     // Switch controls have their own page on both web and APK; never duplicate them in the settings root.
 
