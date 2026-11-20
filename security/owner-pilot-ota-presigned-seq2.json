@@ -1,0 +1,12 @@
+{
+  "channel": "owner-pilot",
+  "nativeBuild": 150,
+  "sequence": 2,
+  "source_head": "2b0a799131db75cc16632667b3f1d88feeef6352",
+  "approved": true,
+  "expiresAt": 1796395185621,
+  "revision": "3abe4b9ee79a203f1a31c45b4a3271ce553c29268fd12e798b38a4edc6e068c0",
+  "signature": "MEUCIES0vpSRSG7s7YU5U83Wol3FW+OiyXmu5Rh+P4KqHRGuAiEAptp2Um25CZmIsUaSkgAIXf964ashJfJ75Q1Fo2ZTox8=",
+  "manifest_sha256": "931b423999067f0bdb59cabe4a9c88a89e257e74495fe5eea90ee3a8bf45ae1f",
+  "reason": "Owner-requested privacy policy and retained profile buttons; isolated pilot OTA sequence 2"
+}
