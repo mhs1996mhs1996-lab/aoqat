@@ -1,0 +1,39 @@
+name: AOQAT B150 production OTA actual HTTPS endpoint — READ ONLY
+on:
+  push:
+    branches: [feature/b150-main-profile-ota-seq4-test-20261120]
+permissions:
+  contents: read
+jobs:
+  live-ota:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read installed B150 OTA URL over HTTPS; do not publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://aoqat.vercel.app/android-updates/build-150"
+          curl --fail --show-error --location --retry 4 --retry-delay 3 --connect-timeout 15 --max-time 40 "$BASE/manifest.json" -o /tmp/aoqat-b150-live-manifest.json
+          curl --fail --show-error --location --retry 4 --retry-delay 3 --connect-timeout 15 --max-time 40 "$BASE/files/index.html" -o /tmp/aoqat-b150-live-index.html
+      - name: Verify live version, SHA256 and byte equality to the currently signed sequence 3
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,time
+          from pathlib import Path
+          repo=json.loads(Path('android-updates/build-150/manifest.json').read_bytes())
+          live=json.loads(Path('/tmp/aoqat-b150-live-manifest.json').read_bytes())
+          assert live==repo, 'Production feed differs from GitHub signed baseline; STOP before publish'
+          assert live['nativeBuild']==150 and live['sequence']==3
+          assert live['expiresAt']>int(time.time()*1000),'Signed production OTA expired'
+          source=Path('android-updates/build-150/files/index.html').read_bytes()
+          live_index=Path('/tmp/aoqat-b150-live-index.html').read_bytes()
+          assert source==live_index, 'Live index differs from repository'
+          assert hashlib.sha256(live_index).hexdigest()==live['files']['index.html']
+          print('PASS: real 2.12 HTTPS OTA URL serves exact build150 signed sequence3 files')
+          PY
+          python3 security/b150-main-profile-ota-release.py --self-test
+      - name: Publication prohibited
+        run: echo 'READ-ONLY; no secret access, no OTA deployment, no main branch change.'
