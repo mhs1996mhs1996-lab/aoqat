@@ -46,6 +46,9 @@ jobs:
             '.github/workflows/owner-pilot-auto-ota-bootstrap.yml',
             '.github/workflows/owner-pilot-feed-smoke.yml',
             '.github/workflows/owner-pilot-profile-seq4-diff-review.yml',
+            '.github/workflows/owner-pilot-seq4-presigned-candidate.yml',
+            '.github/workflows/owner-pilot-presigned-seq4-publish.yml',
+            'security/owner-pilot-ota-verify-presigned-seq4.py',
             'js/web-menu-order.js',
             'tests/owner-profile-retention-browser.cjs'
           }
