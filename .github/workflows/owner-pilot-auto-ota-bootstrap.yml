@@ -32,6 +32,9 @@ jobs:
             'android-native/app/src/test/java/com/aoqat/calendar/SignedWebUpdateManifestTest.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/WebUpdatesTest.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/OwnerPilotBundleTest.kt',
+            'security/owner-pilot-ota-public.pem',
+            'security/owner-pilot-ota-publish.py',
+            '.github/workflows/owner-pilot-ota-on-request.yml',
             'security/owner-pilot-auto-ota-sign.py',
             'security/OWNER-PILOT-AUTO-OTA-CHANNEL.md',
             '.github/workflows/owner-pilot-auto-ota-bootstrap.yml'
