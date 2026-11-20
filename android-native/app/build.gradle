@@ -39,6 +39,8 @@ android {
         versionName '2.12'
     }
 
+    buildFeatures { buildConfig true }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -61,6 +63,7 @@ android {
 
     buildTypes {
         debug {
+            buildConfigField 'boolean', 'OWNER_PILOT_ENABLED', 'false'
             minifyEnabled false
             // Debug builds MUST use the disposable debug certificate,
             // even when production signing env vars happen to be present.
@@ -68,8 +71,18 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
+            buildConfigField 'boolean', 'OWNER_PILOT_ENABLED', 'false'
             minifyEnabled false
             if (signingConfigured) signingConfig signingConfigs.secureUpgrade
+        }
+        // Different application ID and local data: original phone app is not replaced.
+        create('ownerPilot') {
+            initWith(getByName('release'))
+            applicationIdSuffix '.ownerpilot'
+            versionNameSuffix '-owner-test'
+            matchingFallbacks = ['release']
+            buildConfigField 'boolean', 'OWNER_PILOT_ENABLED', 'true'
+            signingConfig null
         }
     }
 }

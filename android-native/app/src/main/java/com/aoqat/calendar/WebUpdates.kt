@@ -5,6 +5,7 @@ import android.net.Uri
 import android.webkit.WebResourceResponse
 import org.json.JSONObject
 import java.io.File
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
@@ -25,8 +26,9 @@ class WebUpdates(
         download(path, limit, context.packageManager.getPackageInfo(context.packageName, 0).versionCode)
     }
 ) {
-    private val root = File(context.filesDir, "web-updates-v2-signed")
-    private val prefs = context.getSharedPreferences("web_updates_v2_signed", Context.MODE_PRIVATE)
+    // QA uses a distinct Android package ID and its own update snapshot namespace.
+    private val root = File(context.filesDir, if (BuildConfig.OWNER_PILOT_ENABLED) "web-updates-v2-owner-qa" else "web-updates-v2-signed")
+    private val prefs = context.getSharedPreferences(if (BuildConfig.OWNER_PILOT_ENABLED) "web_updates_v2_owner_qa" else "web_updates_v2_signed", Context.MODE_PRIVATE)
     private val nativeBuild = context.packageManager.getPackageInfo(context.packageName, 0).versionCode
     private val checking = AtomicBoolean(false)
 
@@ -161,7 +163,49 @@ class WebUpdates(
         }
     }
 
+    /**
+     * A locally selected, owner-signed trial ZIP is staged only in the
+     * separate ownerPilot APK flavor. No public channel can receive it.
+     */
+    fun stageOwnerPilotZip(stream: InputStream): String {
+        require(BuildConfig.OWNER_PILOT_ENABLED) { "Owner pilot import disabled" }
+        require(prefs.getString("pending", null) == null) { "Finish earlier pilot first" }
+        val currentSequence = prefs.getLong("lastSequence", 0L)
+        val bundle = OwnerPilotBundle.inspect(stream, nativeBuild,
+            encodedPublicKey, currentSequence)
+        val existing = active?.let {
+            try {
+                JSONObject(File(it, "verified-manifest.json").readText())
+                    .getJSONObject("files").keys().asSequence().toSet()
+            } catch (_: Exception) { emptySet() }
+        } ?: emptySet()
+        // Dropping an OTA override can unexpectedly reveal APK-packaged code.
+        require(bundle.files.keys.containsAll(existing)) { "Deleted file requires full APK" }
+        val stage = File(root, "staging-ownerpilot")
+        stage.deleteRecursively()
+        require(stage.mkdirs())
+        try {
+            for ((path, bytes) in bundle.files) {
+                File(stage, path).apply { parentFile?.mkdirs(); writeBytes(bytes) }
+            }
+            File(stage, "verified-manifest.json").writeText(bundle.manifest.toString())
+            File(stage, "complete").writeText(bundle.revision)
+            val destination = File(root, bundle.revision)
+            if (!destination.exists()) {
+                require(stage.renameTo(destination)) { "Could not stage verified package" }
+            }
+            require(validSnapshot(bundle.revision) != null) { "Staged snapshot invalid" }
+            require(prefs.edit().putString("pending", bundle.revision)
+                .putLong("pendingSequence", bundle.sequence).commit()) {
+                "Cannot save pilot activation state"
+            }
+            return bundle.revision
+        } finally { stage.deleteRecursively() }
+    }
+
     fun check() {
+        // Owner QA never pulls the public production OTA channel.
+        if (BuildConfig.OWNER_PILOT_ENABLED) return
         val now = System.currentTimeMillis()
         val last = maxOf(prefs.getLong("checked", 0), prefs.getLong("attempt", 0))
         if (!due(now, last) || !checking.compareAndSet(false, true)) return

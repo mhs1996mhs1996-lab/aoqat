@@ -1,0 +1,111 @@
+name: AOQAT B150 isolated owner phone pilot APK — NEVER PUBLISH
+on:
+  push:
+    branches:
+      - feature/b150-owner-pilot-release-gate-20261119
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-qa:
+    if: github.ref == 'refs/heads/feature/b150-owner-pilot-release-gate-20261119'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Freeze original production files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import subprocess
+          baseline='dacf35169934b8b0173ee8b5215e0453343f1455'
+          permitted={
+            'security/owner-ota-preflight.py',
+            'security/test-owner-ota-preflight.py',
+            'security/OWNER-PILOT-RELEASE-GATE.md',
+            '.github/workflows/owner-pilot-preflight-review.yml',
+            '.github/workflows/owner-pilot-android-qa.yml',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotBundle.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/OwnerPilotBundleTest.kt',
+            'android-native/app/src/main/AndroidManifest.xml',
+            'android-native/app/src/ownerPilot/AndroidManifest.xml',
+            'android-native/app/build.gradle',
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only',baseline,'HEAD'],text=True).splitlines())
+          assert changed and changed.issubset(permitted),'Unsafe modified files: '+repr(changed-permitted)
+          for f in ('index.html','data/prayer-times-offline.json','js/quran-reader.js'):
+              assert subprocess.check_output(['git','rev-parse','HEAD:'+f]) == subprocess.check_output(['git','rev-parse',baseline+':'+f])
+          print('PASS: no hosted page, offline prayer data or mushaf changes')
+          PY
+          python3 security/check-sacred-content.py
+          python3 security/check-no-private-keys.py
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Create REAL previously-published owner-signed seq3 fixture for native parser test
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = '2015ca57aa0e8e4c4dd0a80dae94c5bf0e748d2a'
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,subprocess,zipfile
+          base='android-updates/build-150/'
+          a=subprocess.check_output(['git','show','origin/main:'+base+'manifest.json'])
+          b=subprocess.check_output(['git','show','origin/main:'+base+'files/index.html'])
+          m=json.loads(a)
+          assert m['nativeBuild']==150 and m['sequence']==3
+          assert m['files']=={'index.html':hashlib.sha256(b).hexdigest()}
+          folder=Path('android-native/app/src/test/resources')
+          folder.mkdir(parents=True,exist_ok=True)
+          with zipfile.ZipFile(folder/'owner-approved-b150-seq3.zip','w',zipfile.ZIP_DEFLATED) as out:
+              out.writestr(base+'manifest.json',a)
+              out.writestr(base+'files/index.html',b)
+          print('PASS: real owner-signed published seq3 ZIP ready for native import regression')
+          PY
+      - name: Run native tests and build separate unsigned pilot app
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon testDebugUnitTest assembleOwnerPilot
+      - name: Verify pilot package is isolated and unsigned
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find android-native/app/build/outputs/apk/ownerPilot -maxdepth 1 -name '*unsigned.apk' -type f | head -n 1)"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+          "$AAPT" dump badging "$APK" | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$AAPT" dump badging "$APK" | grep -F "application-label:'أوقات الصلاة — تجريبي'"
+          # Keep user-facing production display name unmodified.
+          grep -F 'android:label="اوقات الصلاة في الحويجة"' android-native/app/src/main/AndroidManifest.xml
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
+          if "$signer" verify "$APK"; then echo 'STOP: QA artifact is unexpectedly signed by CI' >&2; exit 1; fi
+          cp "$APK" android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-unsigned.apk
+          cd android-native/app/build/outputs/apk/ownerPilot
+          sha256sum aoqat-owner-pilot-unsigned.apk > aoqat-owner-pilot-unsigned.apk.sha256
+      - name: Upload ONLY owner-reviewed pilot APK + SHA256; no production deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-B150-OWNER-PILOT-UNSIGNED-REVIEW-ONLY
+          path: |
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-unsigned.apk
+            android-native/app/build/outputs/apk/ownerPilot/aoqat-owner-pilot-unsigned.apk.sha256
+          compression-level: 0
+          retention-days: 7
+          if-no-files-found: error
+      - name: Non-deployment assertion
+        run: echo 'QA APP ID ONLY. No key, APK publication or Vercel updates. OWNER TRIAL REQUIRED.'

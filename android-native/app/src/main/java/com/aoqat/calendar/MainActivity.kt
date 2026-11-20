@@ -363,6 +363,21 @@ class MainActivity : Activity() {
         startupContainer.addView(webView, 0, android.widget.FrameLayout.LayoutParams(
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
             android.widget.FrameLayout.LayoutParams.MATCH_PARENT))
+        if (BuildConfig.OWNER_PILOT_ENABLED) {
+            val ownerTestButton = android.widget.Button(this).apply {
+                text = "اختبار تحديث المالك فقط — ZIP"
+                textSize = 12f
+                setOnClickListener {
+                    startActivity(Intent(this@MainActivity, OwnerPilotActivity::class.java))
+                }
+            }
+            val params = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.BOTTOM or android.view.Gravity.CENTER_HORIZONTAL)
+            params.bottomMargin = (16 * resources.displayMetrics.density).toInt()
+            startupContainer.addView(ownerTestButton, params)
+        }
 
         if (Build.VERSION.SDK_INT >= 29) window.decorView.isForceDarkAllowed = false
         configureWebView()
