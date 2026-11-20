@@ -235,6 +235,9 @@ class WebUpdates(
                     JSONObject(File(it, "verified-manifest.json").readText()).getLong("sequence")
                 } ?: -1L
             } else -1L
+            // Do not overwrite an already verified pending trial (including an
+            // owner's manually imported ZIP) before it has been launched.
+            if (pending != null && pending != revision) return
             val sameActive = revision == current && sequence == currentSeq
             val samePending = revision == pending &&
                 sequence == prefs.getLong("pendingSequence", -1L)
