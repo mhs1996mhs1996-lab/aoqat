@@ -310,7 +310,7 @@ object AlarmUi {
         val notice="⏰ مواقيت الغد جاهزة"
         val state=if(snoozed && until>System.currentTimeMillis()) "غفوة إلى " + java.text.SimpleDateFormat("h:mm a",java.util.Locale("ar")).format(java.util.Date(until)) + " — إيقاف أو إعادة غفوة" else "المنبّه يعمل — إيقاف أو غفوة ${AlarmScheduler.snoozeMinutes(context)} دقائق"
         val notification=NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(notice)
             .setContentText(state)
             .setPriority(NotificationCompat.PRIORITY_MAX)
