@@ -53,7 +53,7 @@ test('owner-pilot restores three compact update buttons with no verbose help',()
 test('owner-pilot single prayer card has one visible state symbol and no expanded continuation',()=>{
   const file=fs.readFileSync(path.resolve(__dirname,
     '../android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt'),'utf8');
-  assert.match(file,/setCustomBigContentView\(if\(BuildConfig\.OWNER_PILOT_ENABLED\) compactViews else views\)/);
+  assert.match(file,/if\(!BuildConfig\.OWNER_PILOT_ENABLED\) setCustomBigContentView\(views\)/);
   assert.match(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(file,/setViewVisibility\(R\.id\.lock_iqama_row,android\.view\.View\.GONE\)/);
   assert.match(file,/setUsesChronometer\(!BuildConfig\.OWNER_PILOT_ENABLED && next!=null\)/);
@@ -70,7 +70,7 @@ test('reference icon assets are exact and only one compact notification is rende
     assert.equal(b.toString('ascii',8,12),'WEBP');
     assert.match(icon,new RegExp('R\\.drawable\\.pilot_notify_exact_'+state));
   }
-  assert.match(cpp,/PilotNotificationIcons\\.exactSmall/);
-  assert.match(cpp,/setCustomContentView\\(compactViews\\)/);
-  assert.match(cpp,/if\\(!BuildConfig\\.OWNER_PILOT_ENABLED\\) setCustomBigContentView\\(views\\)/);
+  assert.match(cpp,/PilotNotificationIcons\.exactSmall/);
+  assert.match(cpp,/setCustomContentView\(compactViews\)/);
+  assert.match(cpp,/if\(!BuildConfig\.OWNER_PILOT_ENABLED\) setCustomBigContentView\(views\)/);
 });
