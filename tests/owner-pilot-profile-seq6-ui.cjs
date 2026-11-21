@@ -115,3 +115,31 @@ test('three rolling backups and cross-device restore guard',()=>{
   assert.ok(js.includes('document.addEventListener("visibilitychange"'));
   assert.ok(js.includes('profileBackupAutoTick'));
 });
+
+
+test('lossless backup image codec rejects compressed or altered copies and preserves JSON',()=>{
+  const vm=require('node:vm');
+  const {TextEncoder,TextDecoder}=require('node:util');
+  const from=js.indexOf('  // Lossless PNG carrying a validated backup payload.');
+  const to=js.indexOf('  function profileView(){',from);
+  assert.ok(from>0&&to>from,'isolated PNG backup codec');
+  const context={Uint8Array,DataView,TextEncoder,TextDecoder,document:{},URL:{},Image:function(){}};
+  vm.runInNewContext(js.slice(from,to)+
+    '\nthis.codec={encode:profileBackupImageEncode,decode:profileBackupImageDecode}',context);
+  const raw=JSON.stringify({format:'aoqat-local-backup',version:2,data:{
+    aoqatLocalProfileNameV1:'احمد',aoqatQuranReaderV1:JSON.stringify({page:304,bookmarks:[{page:2}]})
+  }});
+  const packed=context.codec.encode(raw);
+  assert.equal(context.codec.decode(packed),raw);
+  packed[25]^=1;
+  assert.throws(()=>context.codec.decode(packed),/تغيّرت الصورة/);
+  assert.throws(()=>context.codec.decode(new Uint8Array(12)));
+  assert.match(js,/window\.AndroidNative\.sharePrayerImage\(exportPng/);
+  assert.match(js,/window\.AndroidNative\.savePrayerImage\(exportPng/);
+  assert.match(js,/await profileBackupReadPng\(file\)/);
+  assert.match(js,/file\.type==="image\/png"/);
+  assert.match(js,/profileBackupValidate\(content\)/);
+  assert.doesNotMatch(js,/aoqatProfileBackupText/);
+  assert.doesNotMatch(js,/aoqatProfileBackupCopy"/);
+  assert.doesNotMatch(js,/AndroidNative\.saveDataUrl\(.*json/);
+});
