@@ -400,10 +400,11 @@ class NextPrayerService:Service(){
                         R.id.lock_prayer_fallback))setTextColor(id,textColor)
                 }
             } else views
+            val pilotIconIsWaiting = extra?.countDown != false
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(pilotIconIsWaiting) else android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
                 .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
@@ -411,12 +412,12 @@ class NextPrayerService:Service(){
                 .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
                 .setCustomContentView(compactViews)
-                .setCustomBigContentView(if(BuildConfig.OWNER_PILOT_ENABLED) compactViews else views)
+                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED) setCustomBigContentView(views) }
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
                 .build()
             return Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(pilotIconIsWaiting) else android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
                 .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
@@ -424,7 +425,7 @@ class NextPrayerService:Service(){
                 .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
                 .setCustomContentView(compactViews)
-                .setCustomBigContentView(if(BuildConfig.OWNER_PILOT_ENABLED) compactViews else views)
+                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED) setCustomBigContentView(views) }
                 .setPublicVersion(public)
                 .setCategory(Notification.CATEGORY_STATUS)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
