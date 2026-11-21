@@ -96,9 +96,9 @@ object PrayerNotifications {
             .setVisibility(Notification.VISIBILITY_PUBLIC)
             .setPriority(Notification.PRIORITY_MAX)
             .setAutoCancel(true)
-            .setContentIntent(tap).apply {
-                if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.large(c,PilotNotificationIcons.coloredPhase(true))?.let{setLargeIcon(it)}
-            }
+            // Do not show a second large hourglass at the left of a
+            // notification which already has the same status icon at right.
+            .setContentIntent(tap)
         // An explicit prayer notification is allowed to wake the phone ONLY
         // when the user opted into that prayer AND enabled screen illumination.
         // It never starts or stops the independent adhan recording.
