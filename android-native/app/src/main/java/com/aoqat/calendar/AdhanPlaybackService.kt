@@ -329,9 +329,18 @@ class AdhanPlaybackService : Service(), SensorEventListener {
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("adhan_playback_silent_v2","الأذان",NotificationManager.IMPORTANCE_HIGH).apply{setSound(null,null);enableVibration(false)})
         val stop=PendingIntent.getService(this,60410,Intent(this,AdhanPlaybackService::class.java).setAction("STOP"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val screenAlert = PhoneScreenAlerts.enabled(this) && config.optBoolean("screen",false) && !preview && mode=="sound"
+        // Owner pilot: a real adhan opens its full-screen alarm only when the
+        // phone is locked / display is off. While unlocked it remains a normal
+        // visible notification with Stop and a full-screen tap destination.
+        // Keep the user's master screen-alert setting; do not change other
+        // versions or the independent sound playback settings.
+        val deviceLocked = (getSystemService(KEYGUARD_SERVICE) as KeyguardManager).isKeyguardLocked ||
+            !(getSystemService(POWER_SERVICE) as PowerManager).isInteractive
+        val screenAlert = if(BuildConfig.OWNER_PILOT_ENABLED)
+            PhoneScreenAlerts.enabled(this) && deviceLocked && !preview && mode=="sound"
+            else PhoneScreenAlerts.enabled(this) && config.optBoolean("screen",false) && !preview && mode=="sound
         val screenActivity = Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer)
-            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val show=PendingIntent.getActivity(this,60412,screenActivity,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         // Tapping the adhan ALWAYS opens its full-size screen. The optional
@@ -347,7 +356,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             .setCategory(Notification.CATEGORY_ALARM)
             .setOnlyAlertOnce(true).setOngoing(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .addAction(Notification.Action.Builder(null,"إيقاف",stop).build())
+            .addAction(Notification.Action.Builder(null,if(BuildConfig.OWNER_PILOT_ENABLED)"إيقاف الأذان" else "إيقاف",stop).build())
             .setContentIntent(content)
         // FSI is the supported alarm path to wake a sleeping phone. On Android
         // 14+ the user may still need to allow 'full-screen notifications'.
@@ -437,7 +446,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
 }
 class AdhanScreenActivity: Activity(){
     private val stopped=object:BroadcastReceiver(){override fun onReceive(c:Context,i:Intent){finish()}}
-    override fun onCreate(b:Bundle?){super.onCreate(b);PhoneScreenAlerts.applyWindow(this);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text=intent.getStringExtra("reminderMessage")?:"حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text=if(intent.hasExtra("reminderMessage"))"إغلاق" else "إيقاف الأذان";setOnClickListener{if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this@AdhanScreenActivity);finish()}});setContentView(layout);if(intent.hasExtra("reminderMessage"))android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(!isFinishing)finish()},30000);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
+    override fun onCreate(b:Bundle?){super.onCreate(b);PhoneScreenAlerts.applyWindow(this);if(BuildConfig.OWNER_PILOT_ENABLED && !intent.hasExtra("reminderMessage"))window.addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;gravity=Gravity.CENTER;setPadding(30,30,30,30);setBackgroundColor(android.graphics.Color.rgb(8,40,50))};layout.addView(TextView(this).apply{text=intent.getStringExtra("reminderMessage")?:"حان أذان ${PrayerTimes.names[intent.getStringExtra("prayerId")]?:"الصلاة"}";textSize=30f;setTextColor(android.graphics.Color.WHITE);gravity=Gravity.CENTER});layout.addView(Button(this).apply{text=if(intent.hasExtra("reminderMessage"))"إغلاق" else "إيقاف الأذان";setOnClickListener{if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this@AdhanScreenActivity);finish()}});setContentView(layout);if(intent.hasExtra("reminderMessage"))android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({if(!isFinishing)finish()},30000);if(Build.VERSION.SDK_INT>=33)registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"),RECEIVER_NOT_EXPORTED)else @Suppress("DEPRECATION") registerReceiver(stopped,IntentFilter("com.aoqat.calendar.ADHAN_STOPPED"))}
     override fun onKeyDown(code:Int,event:android.view.KeyEvent):Boolean {if(code in listOf(android.view.KeyEvent.KEYCODE_VOLUME_UP,android.view.KeyEvent.KEYCODE_VOLUME_DOWN,android.view.KeyEvent.KEYCODE_MEDIA_STOP)){if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this);finish();return true};return super.onKeyDown(code,event)}
     @Deprecated("Deprecated in Java") override fun onBackPressed(){if(!intent.hasExtra("reminderMessage"))AdhanPlaybackService.stop(this);super.onBackPressed()}
     override fun onDestroy(){unregisterReceiver(stopped);super.onDestroy()}
