@@ -1,0 +1,80 @@
+name: Owner-pilot backup seq8 - publish signed image-share backup OTA
+on:
+  push:
+    branches: [feature/owner-pilot-lockscreen-phases-20261121]
+    paths:
+      - security/owner-pilot-backup-seq8-signed-public.json
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish-presigned-profile:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-lockscreen-phases-20261121'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a single approved PUBLIC owner-signed manifest, not source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-backup-seq8-signed-public.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 -m py_compile security/owner-pilot-backup-seq8-verify-presigned.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          node --check js/web-menu-order.js
+          node --test tests/privacy-policy-check.cjs tests/owner-pilot-profile-seq6-ui.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Generate exact Android-integrated assets, preserving old overrides
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:syncWebAssets
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+          python3 security/test-owner-pilot-auto-publish.py
+      - name: Verify owner-signed seq8 using same pinned public certificate as the installed pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota
+          git show FETCH_HEAD:android-updates/owner-pilot/build-150/manifest.json > "$RUNNER_TEMP/previous-pilot.json"
+          python3 security/owner-pilot-backup-seq8-verify-presigned.py \
+            --previous "$RUNNER_TEMP/previous-pilot.json" \
+            --output "$RUNNER_TEMP/verified-public-only"
+      - name: Publish ONLY verified pilot profile-only OTA files (not main, APK or Vercel)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          git fetch origin owner-pilot-ota
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" FETCH_HEAD
+          cp -a "$RUNNER_TEMP/verified-public-only/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          import subprocess,sys
+          changes=set(subprocess.check_output(['git','-C',sys.argv[1],'diff','--cached','--name-only'],text=True).splitlines())
+          expected={
+            'android-updates/owner-pilot/build-150/manifest.json',
+            'android-updates/owner-pilot/build-150/files/js/web-menu-order.js',
+            'android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js',
+          }
+          assert changes==expected, 'STOP: unexpected feed changes: '+repr(changes)
+          print('PASS: only two backup UI JS assets and signed manifest will change')
+          PY
+          git -C "$W" -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'pilot: publish owner pre-signed backup-only seq8' >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PASS: pre-signed owner-pilot OTA sequence 8 deployed without private keys; production untouched.'
