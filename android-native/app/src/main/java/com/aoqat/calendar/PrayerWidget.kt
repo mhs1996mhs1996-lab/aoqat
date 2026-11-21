@@ -401,10 +401,26 @@ class NextPrayerService:Service(){
                 }
             } else views
             val pilotIconIsWaiting = extra?.countDown != false
+            // The approved reference has three distinct states. Prefer elapsed
+            // red during the configured post-iqama phase, blue briefly at the
+            // actual adhan minute, and orange while awaiting the next prayer.
+            val pilotIconIsAdhan = if(BuildConfig.OWNER_PILOT_ENABLED && pilotIconIsWaiting) {
+                PrayerTimes.events(c,java.time.LocalDate.now().minusDays(1)).any {
+                    now >= it.at && now - it.at < 90_000L
+                }
+            } else false
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(pilotIconIsWaiting) else android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
+                    if(pilotIconIsAdhan)PilotNotificationIcons.smallAdhan()
+                    else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
+                    else android.R.drawable.ic_lock_idle_alarm)
+                .apply {
+                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                        PilotNotificationIcons.exactSmall(c,pilotIconIsWaiting,pilotIconIsAdhan)
+                            ?.let { setSmallIcon(it) }
+                }
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
                 .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
@@ -417,7 +433,15 @@ class NextPrayerService:Service(){
                 .setOnlyAlertOnce(true)
                 .build()
             return Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(pilotIconIsWaiting) else android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
+                    if(pilotIconIsAdhan)PilotNotificationIcons.smallAdhan()
+                    else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
+                    else android.R.drawable.ic_lock_idle_alarm)
+                .apply {
+                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                        PilotNotificationIcons.exactSmall(c,pilotIconIsWaiting,pilotIconIsAdhan)
+                            ?.let { setSmallIcon(it) }
+                }
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
                 .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
