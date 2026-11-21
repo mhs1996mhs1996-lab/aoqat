@@ -6,6 +6,7 @@ on:
       - 'android-native/app/src/main/java/com/aoqat/calendar/**'
       - 'android-native/app/src/main/res/layout/notification_*.xml'
       - 'android-native/app/src/main/res/drawable/pilot_notify_*.xml'
+      - 'android-native/app/src/main/res/drawable-nodpi/pilot_notify_exact_*.webp'
       - 'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt'
       - 'js/web-menu-order.js'
       - 'tests/owner-pilot-profile-seq6-ui.cjs'
@@ -53,6 +54,7 @@ jobs:
           }
           allowed|={'android-native/app/src/main/res/drawable/pilot_notify_'+state+'.xml' for state in ('adhan','wait','elapsed')}
           allowed|={'android-native/app/src/main/res/drawable/pilot_notify_small_'+state+'.xml' for state in ('adhan','wait','elapsed')}
+          allowed|={'android-native/app/src/main/res/drawable-nodpi/pilot_notify_exact_'+state+'.webp' for state in ('adhan','wait','elapsed')}
           assert changed and changed <= allowed,'Unrelated changes: '+str(changed-allowed)
           for f in ['android-native/app/build.gradle','android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
                     'android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt',
