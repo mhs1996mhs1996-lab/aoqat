@@ -733,7 +733,7 @@
     const backupCopies=el("div",null,"margin:4px 0 7px");
     backupCopies.id="aoqatProfileBackupCopies";
     let exportJson="",exportFilename="";
-    const backupNativePending=new Map();
+    const backupNativePending=window.aoqatBackupNativePendingV1||(window.aoqatBackupNativePendingV1=new Map());
     if(!window.aoqatBackupNativeResult){
       window.aoqatBackupNativeResult=function(requestId,ok){
         const done=backupNativePending.get(requestId);
