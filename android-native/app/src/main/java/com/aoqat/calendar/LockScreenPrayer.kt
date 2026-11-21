@@ -157,7 +157,14 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
             // transition times and can fire sooner than this safety refresh.
             val phase=LockScreenSupplement.nextRefreshAt(c,now)
             val safety=if(BuildConfig.OWNER_PILOT_ENABLED) now+10*60_000L else null
-            val boundary=listOfNotNull(phase,safety).minOrNull()?:return
+            // The blue adhan artwork is time-limited; restore the orange
+            // waiting artwork at the end of that exact display window.
+            val adhanIconEnd=if(BuildConfig.OWNER_PILOT_ENABLED)
+                PrayerTimes.events(c,java.time.LocalDate.now().minusDays(1))
+                    .asSequence().map { it.at+90_000L }
+                    .filter { it>now && it<=now+90_000L }.minOrNull()
+                else null
+            val boundary=listOfNotNull(phase,safety,adhanIconEnd).minOrNull()?:return
             val delay=boundary-now
             if(delay<=0L)return
             val pi=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
