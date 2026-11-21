@@ -374,7 +374,11 @@ class NextPrayerService:Service(){
     override fun onBind(i:Intent?) : IBinder?=null
     override fun onStartCommand(i:Intent?,flags:Int,startId:Int):Int {
         if(!wanted(this)){stopSelf();return START_NOT_STICKY}
-        val n=if(LockScreenPrayer.enabled(this))lockNotification(this) else {
+        // The old "persistent next prayer" toggle is still supported; for the
+        // isolated owner-pilot APK render it with the SAME new colored card as
+        // the optional lock-screen notification. Previously this branch used
+        // the legacy clock icon and hid all the selected state icons.
+        val n=if(BuildConfig.OWNER_PILOT_ENABLED || LockScreenPrayer.enabled(this))lockNotification(this) else {
             val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(NotificationChannel(
                 "next_prayer","الصلاة القادمة",NotificationManager.IMPORTANCE_LOW
@@ -394,6 +398,9 @@ class NextPrayerService:Service(){
                 .build()
         }
         startForeground(NOTIFICATION_ID,n)
+        // Native phase boundaries must update the already-visible foreground
+        // notification, not just the separate opt-in lock-screen notification.
+        if (BuildConfig.OWNER_PILOT_ENABLED) LockScreenIqamaBoundaryReceiver.schedule(this)
         return START_STICKY
     }
     override fun onDestroy(){stopForeground(STOP_FOREGROUND_REMOVE);super.onDestroy()}
