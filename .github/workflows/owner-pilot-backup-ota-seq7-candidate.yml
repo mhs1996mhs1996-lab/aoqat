@@ -84,7 +84,17 @@ jobs:
           print('PASS: 88 approved web assets; changed only menu and its integrated startup bundle. SHA='+sha)
           PY
           cp security/owner-pilot-auto-ota-sign.py owner-backup-ota-review/owner-pilot-auto-ota-sign.py
-          cp security/owner-pilot-ota-public.pem owner-backup-ota-review/owner-pilot-ota-public.pem
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,base64,hashlib,subprocess
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          m=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"',source)
+          assert m,'Pinned owner-pilot public key unavailable'
+          raw=base64.b64decode(m.group(1),validate=True)
+          assert hashlib.sha256(raw).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          pem=subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=raw)
+          Path('owner-backup-ota-review/owner-pilot-ota-public.pem').write_bytes(pem)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: AOQAT-OWNER-PILOT-BACKUP-OTA-SEQ7-CANDIDATE-NOT-PUBLISHED
