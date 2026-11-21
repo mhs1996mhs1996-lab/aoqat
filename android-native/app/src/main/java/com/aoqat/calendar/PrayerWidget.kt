@@ -415,7 +415,7 @@ class NextPrayerService:Service(){
                     else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
                     else android.R.drawable.ic_lock_idle_alarm)
                 .apply {
-                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                    if(BuildConfig.OWNER_PILOT_ENABLED && !persistent)
                         PilotNotificationIcons.exactSmall(c,pilotIconIsWaiting,pilotIconIsAdhan)
                             ?.let { setSmallIcon(it) }
                 }
@@ -436,7 +436,7 @@ class NextPrayerService:Service(){
                     else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
                     else android.R.drawable.ic_lock_idle_alarm)
                 .apply {
-                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                    if(BuildConfig.OWNER_PILOT_ENABLED && !persistent)
                         PilotNotificationIcons.exactSmall(c,pilotIconIsWaiting,pilotIconIsAdhan)
                             ?.let { setSmallIcon(it) }
                 }
