@@ -78,7 +78,14 @@ object AdhanSchedule {
         PrayerAlarm.schedule(c)
         if (LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c)) LockScreenPrayer.showNow(c)
         else if (s.optBoolean("persistent")) NextPrayerService.start(c)
-        else c.stopService(Intent(c, NextPrayerService::class.java))
+        else {
+            c.stopService(Intent(c, NextPrayerService::class.java))
+            // The owner-pilot notification is posted without a foreground
+            // service, so explicitly remove it when the user switches it off.
+            if (BuildConfig.OWNER_PILOT_ENABLED && !LockScreenPrayer.enabled(c))
+                (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                    .cancel(NextPrayerService.NOTIFICATION_ID)
+        }
         PrayerWidget.update(c)
         Thread { IqamaNativeScheduler.refresh(c) }.start()
     }
@@ -139,7 +146,9 @@ object AdhanSchedule {
         events.firstOrNull { it.at > now }?.let { if (s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60300,"NEXT",it.at+1000) }
         cancel(c,60301,"REFRESH")
         if (s.optBoolean("enabled") || s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true || s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true || s.optJSONObject("friday")?.optBoolean("enabled")==true || s.optBoolean("persistent") || LockScreenPrayer.enabled(c) || PrayerWidget.exists(c)) alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
-        if (LockScreenPrayer.enabled(c)) LockScreenIqamaBoundaryReceiver.schedule(c)
+        if (LockScreenPrayer.enabled(c) ||
+            (BuildConfig.OWNER_PILOT_ENABLED && s.optBoolean("persistent")))
+            LockScreenIqamaBoundaryReceiver.schedule(c)
     }
 }
 class AdhanReceiver : BroadcastReceiver() {
