@@ -10,6 +10,7 @@ on:
       - 'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt'
       - 'js/web-menu-order.js'
       - 'tests/owner-pilot-profile-seq6-ui.cjs'
+      - 'tests/owner-pilot-notification-icon-routing.cjs'
       - '.github/workflows/owner-pilot-lockscreen-phases-check.yml'
   workflow_dispatch:
 permissions:
@@ -64,6 +65,9 @@ jobs:
             'android-native/app/src/main/java/com/aoqat/calendar/LockScreenSupplement.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerNotifications.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/PrayerAlarm.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
+            'tests/owner-pilot-notification-icon-routing.cjs',
             'android-native/app/src/main/java/com/aoqat/calendar/PilotNotificationIcons.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt',
           }
@@ -94,7 +98,7 @@ jobs:
       - name: Test web OTA menu and privacy protections
         run: |
           node --check js/web-menu-order.js
-          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs
+          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs tests/owner-pilot-notification-icon-routing.cjs
       - name: Native lock-screen and Friday/iqama boundary unit tests
         run: |
           gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.LockScreenSupplementTest' --tests 'com.aoqat.calendar.LockScreenPrayerTest' --tests 'com.aoqat.calendar.LockScreenIqamaTest' --tests 'com.aoqat.calendar.FridayScheduleTest' --tests 'com.aoqat.calendar.ProfileBackupFileTest'
