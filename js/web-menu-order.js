@@ -336,9 +336,13 @@
     return new Promise((resolve,reject)=>{
       if(!window.indexedDB){reject(Error("الحفظ المحلي غير متاح."));return;}
       let request;
-      try{request=indexedDB.open(PROFILE_BACKUP_DB,1);}
+      try{request=indexedDB.open(PROFILE_BACKUP_DB,2);}
       catch(e){reject(e);return;}
-      request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("copies"))db.createObjectStore("copies",{keyPath:"id"});};
+      request.onupgradeneeded=()=>{
+        const db=request.result;
+        if(!db.objectStoreNames.contains("copies"))db.createObjectStore("copies",{keyPath:"id"});
+        if(!db.objectStoreNames.contains("quran"))db.createObjectStore("quran",{keyPath:"id"});
+      };
       request.onsuccess=()=>resolve(request.result);
       request.onerror=()=>reject(request.error||Error("تعذّر فتح النسخ."));
       request.onblocked=()=>reject(Error("قاعدة النسخ مشغولة."));
@@ -409,6 +413,28 @@
       throw Error("تعذّرت الاستعادة، ولم تُحذف بقية البيانات.");
     }
   }
+  async function profileBackupSaveQuran(raw){
+    if(!raw||raw.length>500000)return;
+    const db=await profileBackupOpenDb();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction("quran","readwrite");
+      tx.objectStore("quran").put({id:"latest",createdAt:Date.now(),raw});
+      tx.oncomplete=()=>{db.close();resolve();};
+      tx.onerror=()=>{db.close();reject(tx.error||Error("تعذّر حفظ المصحف."));};
+      tx.onabort=()=>{db.close();reject(tx.error||Error("تعذّر حفظ المصحف."));};
+    });
+  }
+  async function profileBackupLatestQuran(){
+    const db=await profileBackupOpenDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction("quran","readonly"),req=tx.objectStore("quran").get("latest");
+      let value=null;
+      req.onsuccess=()=>{value=req.result||null;};
+      tx.oncomplete=()=>{db.close();resolve(value);};
+      tx.onerror=()=>{db.close();reject(tx.error||Error("تعذّرت قراءة محفوظات المصحف."));};
+      tx.onabort=()=>{db.close();reject(tx.error||Error("تعذّرت قراءة محفوظات المصحف."));};
+    });
+  }
   async function profileBackupAutoTick(forceQuran){
     let plan="off",last=0,current="";
     try{
@@ -422,8 +448,12 @@
     profileBackupLastQuran=current;
     if(!due&&!quranChanged&&!forceQuran)return;
     try{
-      await profileBackupSave(quranChanged?"quran":"scheduled",true);
-      if(due)localStorage.setItem(PROFILE_BACKUP_LAST_AUTO,String(Date.now()));
+      // Quran autosave never evicts one of the three full backups.
+      if(quranChanged||forceQuran)await profileBackupSaveQuran(current);
+      if(due){
+        await profileBackupSave("scheduled",true);
+        localStorage.setItem(PROFILE_BACKUP_LAST_AUTO,String(Date.now()));
+      }
     }catch(_){/* Storage may be unavailable or full. Never delete user state. */}
   }
   if(!window.aoqatProfileBackupAutoHooksV2){
@@ -728,6 +758,18 @@
       localRestore.replaceChildren();
       try{
         const copies=await profileBackupList();
+        const quran=await profileBackupLatestQuran();
+        if(quran?.raw){
+          const qButton=actionButton("aoqatProfileRestoreQuranAuto","آخر حفظ تلقائي للمصحف · "+new Date(quran.createdAt).toLocaleString("ar-IQ"),()=>{
+            try{
+              if(!confirm("استعادة علامات المصحف وآخر صفحة فقط؟"))return;
+              localStorage.setItem("aoqatQuranReaderV1",quran.raw);
+              say("تمت استعادة محفوظات المصحف. أعد فتحه لتظهر العلامات.");
+            }catch(_){say("تعذّرت استعادة محفوظات المصحف.");}
+          });
+          qButton.style.cssText+=";width:100%;text-align:right;margin:3px 0;font-size:11px";
+          localRestore.append(qButton);
+        }
         for(const copy of copies){
           const label="نسخة "+new Date(copy.createdAt).toLocaleString("ar-IQ");
           const button=actionButton("aoqatProfileRestoreLocal"+copy.id,label,()=>{
