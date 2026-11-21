@@ -350,9 +350,15 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
                 PilotNotificationIcons.smallAdhan() else android.R.drawable.ic_lock_idle_alarm)
             .apply {
-                if(BuildConfig.OWNER_PILOT_ENABLED)
-                    PilotNotificationIcons.large(this@AdhanPlaybackService,PilotNotificationIcons.coloredAdhan())
-                        ?.let { setLargeIcon(it) }
+                if (BuildConfig.OWNER_PILOT_ENABLED) {
+                    // Huawei/Honor places the notification small icon on the
+                    // right. Render the owner's chosen BLUE mosque there, not
+                    // as a separate left-side large icon. The large icon was
+                    // making the adhan appear with two different symbols.
+                    PilotNotificationIcons.exactSmall(
+                        this@AdhanPlaybackService, countDown = true, atAdhan = true
+                    )?.let { setSmallIcon(it) }
+                }
             }
             .setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")
                 "حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true))
