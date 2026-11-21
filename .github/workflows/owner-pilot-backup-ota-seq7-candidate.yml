@@ -88,7 +88,7 @@ jobs:
           from pathlib import Path
           import re,base64,hashlib,subprocess
           source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
-          m=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"',source)
+          m=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
           assert m,'Pinned owner-pilot public key unavailable'
           raw=base64.b64decode(m.group(1),validate=True)
           assert hashlib.sha256(raw).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
