@@ -1,5 +1,28 @@
 # Owner-pilot automatic OTA channel (B150) — seq4 successfully published
 
+## SUCCESSFUL OTA7 — PERMANENT SIGNING/RELEASE PLAYBOOK (2026-11-21)
+
+**Status verified**: existing \`owner-pilot-ota\` channel, nativeBuild **150**, sequence **7**, fully signed, 88 files. GitHub Actions successful release [run 44880288303](https://github.com/mhs1996mhs1996-lab/aoqat/actions/runs/44880288303). Public signed manifest source commit \`444c941ac37399f9f6835479e2779acb0c9eae31\` on \`feature/owner-pilot-lockscreen-phases-20261121\`. This release was produced without a GitHub private signing secret, without an APK rebuild, and without production/admin writes.
+
+**DO NOT LOSE THIS REFERENCE — ORIGINAL KEY LOCATION CONFIRMED**:
+- The actual original owner-pilot signing private key is retained in the **owner's private ChatGPT personal File Library at the root path \`/aoqat-pilot-ota-private.pem\`**, exact filename \`aoqat-pilot-ota-private.pem\` (227 bytes as of this check). It is NOT the different production V2 OTA key, APK P12, or another similarly named PEM. This exact existing key was recovered and successfully used for OTA7.
+- CRITICAL FILE DISCOVERY TIP: the private-key file has \`model_generated=true\`. **\`files.search\` missed it, and \`files.list(include_generated=false)\` hid it.** To find it again, iterate **\`files.list(surface="library", recursive=true, include_generated=true, sort="name")\`** through every cursor and find the **exact** filename. It existed in the root of the owner's Library; do not conclude it is missing from a filtered search or from a different Google Drive account. Use the returned authorized \`file_id\` in \`files.materialize\` to make a transient local copy for signing; do not hard-code an opaque file ID in the repository.
+- The only acceptable pinned **public SPKI SHA-256 fingerprint** is \`a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea\`. Validate this by deriving the SPKI public key from the original PEM before any sign/publish. Use \`security/owner-pilot-auto-ota-sign.py\`, which already validates this pinned fingerprint and verifies the generated ECDSA signature. **Never regenerate or replace the key.**
+- The private PEM remains **only in the user's private file Library** (and transient signing workspace if needed). NEVER put it, a password, or any private key data into this GitHub repo, a commit, artifact, workflow log, Vercel, chat response, or signed public manifest. Do not duplicate unencrypted copies into publicly accessible storage. The path/filename and public fingerprint recorded here are identifiers, not the private key itself.
+
+**Repeat the EXACT successful delivery process for OTA8 onward**:
+1. Verify \`owner-pilot-ota/android-updates/owner-pilot/build-150/manifest.json\` current sequence; use **current sequence + 1**. Inspect APK-integrated web assets and ensure all previously published override paths remain present; scope changes tightly to owner-approved code and protect all other assets.
+2. Build a complete 88-path (or current exact path set) **unsigned** OTA candidate ZIP via the approved isolated candidate workflow and Gradle \`:app:syncWebAssets\`; verify hashes against the last published manifest.
+3. Recover **the same private Library PEM** using the procedure above and verify the pinned public fingerprint. Sign locally using \`security/owner-pilot-auto-ota-sign.py\` (or its verified \`sign_candidate()\` function) with the correct next sequence; verify all hashes and the ECDSA signature. Private key never leaves secure local signing context.
+4. Commit **only the public already-signed \`manifest.json\`** to a new sequence-specific isolated source branch and trigger a **presigned** publication workflow patterned on \`.github/workflows/owner-pilot-backup-presigned-seq7-publish.yml\` and \`security/owner-pilot-backup-seq7-verify-presigned.py\`. This existing workflow is sequence-7-specific: adjust monotonic sequence checks and allowlist for the NEXT release rather than rerunning 7.
+5. CI rebuilds exact APK web bytes, checks original pinned public key / ECDSA signature, hashes and scope, and pushes **only approved changed web asset files and signed manifest** to \`owner-pilot-ota\`. After CI success, read back the LIVE feed sequence; only then report published. The installed ownerPilot APK checks on launch/resume and periodically while foreground, activates downloaded web OTA on a subsequent launch.
+6. **NEVER use the failed secret-based auto-sign variant** \`.github/workflows/owner-pilot-backup-auto-seq7-publish.yml\` (removed) or \`AOQAT_PILOT_OTA_SIGNING_PEM\` GitHub environment secret requirement. That variant failed and was reverted. Do not claim automatic receipt by the owner's handset without an on-device confirmation; verified feed publication only proves the server release.
+7. Do not touch \`main\`, normal APK/production channel, Vercel, \`aoqat-admin\`, Android signing certificates, or unrelated functionality. Native changes still need a signed APK; this OTA only ships web resources.
+
+---
+
+
+
 ## Proven release method: PRE-SIGNED OTA (keep this for future owner-pilot updates)
 **User-approved operating rule:** the owner-pilot Android test APK receives OTA automatically for QA. Do not change the receiver, channel, APK package ID, signing keys, main/production or admin project merely to send a web UI change. Ship to the owner-pilot channel first; promote to the main app only after the owner approves the tested changes.
 
