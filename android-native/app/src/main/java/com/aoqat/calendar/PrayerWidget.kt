@@ -330,8 +330,10 @@ class NextPrayerService:Service(){
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
             if(BuildConfig.OWNER_PILOT_ENABLED){
-                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
-                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
+                // Android already draws the next-prayer symbol at the right
+                // edge of the notification header. A second image beside
+                // this row duplicates the hourglass on Honor/Huawei.
+                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
                 views.setViewVisibility(R.id.lock_iqama_state_icon,
                     if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
                 if(extra!=null){
@@ -377,8 +379,8 @@ class NextPrayerService:Service(){
             // iqama/Friday row with its OWN state icon and stopwatch.
             val compactViews = if (BuildConfig.OWNER_PILOT_ENABLED && persistent) {
                 RemoteViews(c.packageName,R.layout.notification_lock_next).apply {
-                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
-                    setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
+                    // One system next-prayer icon; no duplicate in compact row.
+                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
                     setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
                     setViewVisibility(R.id.lock_iqama_row,android.view.View.GONE)
                     setTextViewText(R.id.lock_prayer_title,title)
