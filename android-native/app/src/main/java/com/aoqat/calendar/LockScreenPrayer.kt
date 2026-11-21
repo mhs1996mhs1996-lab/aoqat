@@ -118,8 +118,14 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
         // Android 14+ allows a user to dismiss even ongoing notifications.
         // For the explicitly opt-in lock-screen card, a dismissal requests a
         // delayed republish. Respect phone-level permission and channel blocks.
+        private fun usesPilotPersistentCard(c:Context):Boolean =
+            BuildConfig.OWNER_PILOT_ENABLED && NextPrayerService.wanted(c)
+
         private fun scheduleAfterSwipe(c:Context){
-            if(!LockScreenPrayer.enabled(c) || !LockScreenPrayer.notificationsAllowed(c))return
+            // On Android 14+ a user can also dismiss an ongoing foreground
+            // notification. Repost only if they already opted in to that card.
+            if((!LockScreenPrayer.enabled(c) && !usesPilotPersistentCard(c)) ||
+                !LockScreenPrayer.notificationsAllowed(c))return
             val pref=c.getSharedPreferences("lockscreen_prayer_v1",Context.MODE_PRIVATE)
             val now=System.currentTimeMillis()
             if(now-pref.getLong("lastSwipeRepost",0L) in 0L..14999L)return
@@ -131,7 +137,7 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
         }
         fun schedule(c:Context){
             cancel(c)
-            if(!LockScreenPrayer.enabled(c))return
+            if(!LockScreenPrayer.enabled(c) && !usesPilotPersistentCard(c))return
             val now=System.currentTimeMillis()
             // Schedule prayer start even when the WebView and service are closed.
             val boundary=LockScreenSupplement.nextRefreshAt(c,now)?:return
@@ -147,8 +153,19 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
     }
     override fun onReceive(c:Context,intent:Intent?){
         when(intent?.action){
-            ACTION,REPOST -> if(LockScreenPrayer.enabled(c) && LockScreenPrayer.notificationsAllowed(c))
-                LockScreenPrayer.showNow(c)
+            ACTION,REPOST -> {
+                if(!LockScreenPrayer.notificationsAllowed(c))return
+                if(LockScreenPrayer.enabled(c)) {
+                    LockScreenPrayer.showNow(c)
+                } else if(usesPilotPersistentCard(c)) {
+                    // Preserve the existing foreground service and notification
+                    // ID while replacing only the card's layout/state symbols.
+                    val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NextPrayerService.NOTIFICATION_ID,
+                        NextPrayerService.lockNotification(c))
+                    schedule(c)
+                }
+            }
             DISMISSED -> scheduleAfterSwipe(c)
         }
     }
