@@ -260,6 +260,21 @@ class NextPrayerService:Service(){
             AdhanSchedule.settings(c).optBoolean("persistent") && !LockScreenPrayer.enabled(c)
         fun start(c:Context) {
             if(!wanted(c))return
+            if (BuildConfig.OWNER_PILOT_ENABLED) {
+                // Foreground-service starts from BOOT_COMPLETED and on package
+                // replacement are restricted on recent Android/OEM builds.
+                // This silent native notification is driven by saved consent
+                // and AlarmManager, not WebView or an Activity.
+                if (!LockScreenPrayer.notificationsAllowed(c)) return
+                try {
+                    (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                        .notify(NOTIFICATION_ID,lockNotification(c))
+                    LockScreenIqamaBoundaryReceiver.schedule(c)
+                } catch (e:Exception) {
+                    android.util.Log.w("NextPrayer","Pilot notification post failed",e)
+                }
+                return
+            }
             try {
                 androidx.core.content.ContextCompat.startForegroundService(
                     c,Intent(c,NextPrayerService::class.java))
@@ -348,17 +363,54 @@ class NextPrayerService:Service(){
                 views.setViewVisibility(R.id.lock_prayer_clock,android.view.View.GONE)
                 views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
             }
+
+            // Android always draws its own notification small icon and header.
+            // A second colored body icon looks duplicated on Huawei/Android 16.
+            // Keep one system icon, one live countdown, and let Android own the
+            // small native expansion chevron for the single notification.
+            if (BuildConfig.OWNER_PILOT_ENABLED) {
+                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
+                views.setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
+            }
+            // The compact card shows ONLY the next prayer. The expanded card
+            // shares the same Notification ID, exposing the optional iqama /
+            // Friday phase without creating a second notification.
+            val compactViews = if (BuildConfig.OWNER_PILOT_ENABLED) {
+                RemoteViews(c.packageName,R.layout.notification_lock_next).apply {
+                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
+                    setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
+                    setViewVisibility(R.id.lock_iqama_row,android.view.View.GONE)
+                    setTextViewText(R.id.lock_prayer_title,title)
+                    setTextViewText(R.id.lock_prayer_fallback,fallback)
+                    if(next!=null) {
+                        setViewVisibility(R.id.lock_prayer_clock,android.view.View.VISIBLE)
+                        setViewVisibility(R.id.lock_prayer_fallback,android.view.View.GONE)
+                        setChronometer(R.id.lock_prayer_clock,
+                            SystemClock.elapsedRealtime()+remain,"%s",true)
+                        setChronometerCountDown(R.id.lock_prayer_clock,true)
+                    } else {
+                        setViewVisibility(R.id.lock_prayer_clock,android.view.View.GONE)
+                        setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
+                    }
+                    val dark=(c.resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK)==
+                        android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    val textColor=if(dark) Color.WHITE else Color.rgb(23,55,71)
+                    for(id in intArrayOf(R.id.lock_prayer_title,R.id.lock_prayer_clock,
+                        R.id.lock_prayer_fallback))setTextColor(id,textColor)
+                }
+            } else views
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
                 .setContentText(description)
-                .setShowWhen(next!=null)
+                .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setWhen(next?.at?:now)
-                .setUsesChronometer(next!=null)
+                .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
-                .setCustomContentView(views)
+                .setCustomContentView(compactViews)
                 .setCustomBigContentView(views)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
@@ -367,11 +419,11 @@ class NextPrayerService:Service(){
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle(title)
                 .setContentText(description)
-                .setShowWhen(next!=null)
+                .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setWhen(next?.at?:now)
-                .setUsesChronometer(next!=null)
+                .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
-                .setCustomContentView(views)
+                .setCustomContentView(compactViews)
                 .setCustomBigContentView(views)
                 .setPublicVersion(public)
                 .setCategory(Notification.CATEGORY_STATUS)
