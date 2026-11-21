@@ -468,6 +468,106 @@
         setTimeout(()=>profileBackupAutoTick(true),900);
     },true);
   }
+
+  // Lossless PNG carrying a validated backup payload. The already-installed
+  // Android bridge can share real PNG files through Gmail, Drive or Android's
+  // share sheet. Never disguise JSON as a JPEG; an altered picture must fail
+  // checksum validation BEFORE any user settings are restored.
+  const PROFILE_BACKUP_IMAGE_MAGIC="AOQAT-BK3";
+  const PROFILE_BACKUP_IMAGE_TOP=120;
+  const PROFILE_BACKUP_IMAGE_WIDTH=1024;
+  function profileBackupChecksum(bytes){
+    let crc=0xffffffff;
+    for(const b of bytes){
+      crc^=b;
+      for(let i=0;i<8;i++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);
+    }
+    return (crc^0xffffffff)>>>0;
+  }
+  function profileBackupImageEncode(raw){
+    const data=new TextEncoder().encode(raw);
+    if(data.length>2000000)throw Error("النسخة أكبر من الحد المسموح.");
+    const bytes=new Uint8Array(18+data.length);
+    for(let i=0;i<PROFILE_BACKUP_IMAGE_MAGIC.length;i++)
+      bytes[i]=PROFILE_BACKUP_IMAGE_MAGIC.charCodeAt(i);
+    const view=new DataView(bytes.buffer);
+    view.setUint32(10,data.length,true);
+    view.setUint32(14,profileBackupChecksum(data),true);
+    bytes.set(data,18);
+    return bytes;
+  }
+  function profileBackupImageDecode(imageBytes){
+    const bytes=imageBytes instanceof Uint8Array?imageBytes:new Uint8Array(imageBytes);
+    if(bytes.length<18)throw Error("هذا ليس ملف نسخة احتياطية.");
+    for(let i=0;i<PROFILE_BACKUP_IMAGE_MAGIC.length;i++)
+      if(bytes[i]!==PROFILE_BACKUP_IMAGE_MAGIC.charCodeAt(i))
+        throw Error("هذه الصورة لا تحتوي على نسخة احتياطية.");
+    const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+    const size=view.getUint32(10,true),expected=view.getUint32(14,true);
+    if(!size||size>2000000||size+18>bytes.length)
+      throw Error("ملف النسخة غير مكتمل.");
+    const payload=bytes.slice(18,18+size);
+    if(profileBackupChecksum(payload)!==expected)
+      throw Error("تغيّرت الصورة أو ضُغطت أثناء المشاركة. استخدم الملف الأصلي بدون تعديل.");
+    return new TextDecoder("utf-8",{fatal:true}).decode(payload);
+  }
+  function profileBackupBuildPng(raw){
+    const bytes=profileBackupImageEncode(raw);
+    const width=PROFILE_BACKUP_IMAGE_WIDTH;
+    const dataRows=Math.ceil(bytes.length/(width*3));
+    const height=PROFILE_BACKUP_IMAGE_TOP+dataRows;
+    if(height>1800)throw Error("النسخة كبيرة جداً للمشاركة كصورة.");
+    const canvas=document.createElement("canvas");
+    canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true});
+    if(!ctx)throw Error("تعذّر تجهيز ملف النسخة.");
+    const gradient=ctx.createLinearGradient(0,0,width,0);
+    gradient.addColorStop(0,"#0a5366");gradient.addColorStop(1,"#2196a6");
+    ctx.fillStyle=gradient;ctx.fillRect(0,0,width,PROFILE_BACKUP_IMAGE_TOP);
+    ctx.fillStyle="#ffffff";ctx.textAlign="center";ctx.direction="rtl";
+    ctx.font="bold 34px sans-serif";
+    ctx.fillText("نسخة احتياطية • أوقات الصلاة في الحويجة",width/2,54);
+    ctx.font="22px sans-serif";
+    ctx.fillText("ملف محفوظاتك وإعداداتك — لا تعدّل هذه الصورة",width/2,91);
+    const pixels=ctx.createImageData(width,dataRows);
+    for(let i=0;i<width*dataRows;i++){
+      const base=i*4,index=i*3;
+      pixels.data[base]=bytes[index]||0;
+      pixels.data[base+1]=bytes[index+1]||0;
+      pixels.data[base+2]=bytes[index+2]||0;
+      pixels.data[base+3]=255;
+    }
+    ctx.putImageData(pixels,0,PROFILE_BACKUP_IMAGE_TOP);
+    return canvas.toDataURL("image/png");
+  }
+  async function profileBackupReadPng(file){
+    if(file.size>8*1024*1024)throw Error("ملف النسخة كبير جداً.");
+    const url=URL.createObjectURL(file);
+    try{
+      const photo=await new Promise((resolve,reject)=>{
+        const img=new Image();img.onload=()=>resolve(img);
+        img.onerror=()=>reject(Error("تعذّر فتح صورة النسخة."));
+        img.src=url;
+      });
+      if(photo.naturalWidth!==PROFILE_BACKUP_IMAGE_WIDTH||
+         photo.naturalHeight<=PROFILE_BACKUP_IMAGE_TOP||
+         photo.naturalHeight>1800)
+        throw Error("هذه الصورة ليست ملف النسخة الأصلي.");
+      const canvas=document.createElement("canvas");
+      canvas.width=photo.naturalWidth;canvas.height=photo.naturalHeight;
+      const ctx=canvas.getContext("2d",{willReadFrequently:true});
+      if(!ctx)throw Error("تعذّر قراءة نسخة الصورة.");
+      ctx.drawImage(photo,0,0);
+      const image=ctx.getImageData(0,PROFILE_BACKUP_IMAGE_TOP,
+        canvas.width,canvas.height-PROFILE_BACKUP_IMAGE_TOP).data;
+      const bytes=new Uint8Array((image.length/4)*3);
+      for(let i=0,j=0;i<image.length;i+=4){
+        bytes[j++]=image[i];bytes[j++]=image[i+1];bytes[j++]=image[i+2];
+      }
+      return profileBackupImageDecode(bytes);
+    }finally{URL.revokeObjectURL(url);}
+  }
+
   function profileView(){
     // Override global theme button dimensions ONLY within this profile.
     if(!document.getElementById("aoqatPilotProfileCompactV6")){
