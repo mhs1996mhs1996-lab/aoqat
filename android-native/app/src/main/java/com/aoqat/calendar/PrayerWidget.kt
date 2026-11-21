@@ -298,6 +298,19 @@ class NextPrayerService:Service(){
             val lockDetail=if(extra!=null)"${extra.title} $extraClock" else ""
             val description=if(extra!=null)"$fallback • $lockDetail" else "$fallback — أوقات الصلاة في الحويجة"
             val views=RemoteViews(c.packageName,R.layout.notification_lock_next)
+            if (BuildConfig.OWNER_PILOT_ENABLED) {
+                // Custom RemoteViews otherwise inherit a dark teal XML color
+                // even when the phone displays a dark notification surface.
+                val dark = (c.resources.configuration.uiMode and
+                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
+                    android.content.res.Configuration.UI_MODE_NIGHT_YES
+                val cardText = if (dark) Color.WHITE else Color.rgb(23,55,71)
+                for (id in intArrayOf(R.id.lock_prayer_title,
+                    R.id.lock_prayer_clock,R.id.lock_prayer_fallback,
+                    R.id.lock_iqama_title,R.id.lock_iqama_clock)) {
+                    views.setTextColor(id,cardText)
+                }
+            }
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
             if(BuildConfig.OWNER_PILOT_ENABLED){
