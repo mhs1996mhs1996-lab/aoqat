@@ -401,14 +401,10 @@ class NextPrayerService:Service(){
                 }
             } else views
             val pilotIconIsWaiting = extra?.countDown != false
-            // The approved reference has three distinct states. Prefer elapsed
-            // red during the configured post-iqama phase, blue briefly at the
-            // actual adhan minute, and orange while awaiting the next prayer.
-            val pilotIconIsAdhan = if(BuildConfig.OWNER_PILOT_ENABLED && pilotIconIsWaiting) {
-                PrayerTimes.events(c,java.time.LocalDate.now().minusDays(1)).any {
-                    now >= it.at && now - it.at < 90_000L
-                }
-            } else false
+            // The persistent "next prayer" card is NEVER an adhan notification.
+            // Only the dedicated AdhanPlaybackService may use the blue adhan
+            // icon. Keep wait/elapsed here even during the adhan minute.
+            val pilotIconIsAdhan = false
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
