@@ -593,89 +593,166 @@
       mainView();document.querySelector('[data-drawer="quran"]')?.click();
     },"📖");
     sections("النسخ الاحتياطي");
-    const backupHint=el("small","يشمل البيانات المحلية فقط، دون الأذونات وملفات الصوت.","display:block;margin:1px 4px 8px;font-size:11px;opacity:.8");
-    panel.append(backupHint);
-    const backupTextArea=el("textarea",null,"width:100%;box-sizing:border-box;min-height:100px;font-size:11px;margin-top:5px;display:none;direction:ltr");
+    panel.append(el("small","ثلاث نسخ محلية متعاقبة مع محفوظات المصحف. لاستعادة بياناتك بعد حذف التطبيق أو تغيير الهاتف يجب حفظ ملف خارج الهاتف.","display:block;margin:4px 3px 8px;font-size:11px;opacity:.85"));
+    const backupPanel=el("div",null,"display:none;border:1px solid var(--wt-border,#c7d8df);border-radius:10px;padding:8px;margin:6px 0;background:var(--wt-surface,#fff)");
+    backupPanel.id="aoqatProfileBackupActions";
+    const backupActionStatus=el("small","","display:block;margin:3px 0 9px;font-size:11px");
+    backupActionStatus.setAttribute("role","status");
+    const backupCopies=el("div",null,"margin:4px 0 7px");
+    backupCopies.id="aoqatProfileBackupCopies";
+    const backupTextArea=el("textarea",null,"width:100%;box-sizing:border-box;min-height:82px;font-size:11px;margin-top:5px;display:none;direction:ltr");
     backupTextArea.id="aoqatProfileBackupText";backupTextArea.readOnly=true;
-    function backupData(){
-      const data={};let total=0;
-      for(const k of PROFILE_BACKUP_KEYS){const value=get(k);
-        if(!value)continue;
-        if(value.length>500000)throw Error("حجم أحد الإعدادات أكبر من المسموح.");
-        total+=value.length;if(total>1700000)throw Error("البيانات كبيرة جداً لإنشاء نسخة محلية.");
-        data[k]=value;
-      }
-      return {format:"aoqat-local-backup",version:1,exportedAt:new Date().toISOString(),data};
+    let exportJson="",exportFilename="";
+    function prepareExport(pack){
+      exportJson=JSON.stringify(pack);
+      exportFilename="AOQAT-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+".json";
+      backupTextArea.value=exportJson;
     }
-    const backupCopy=actionButton("aoqatProfileBackupCopy","نسخ بيانات النسخة",async()=>{
-      backupTextArea.select();
+    async function renderBackupCopies(){
+      backupCopies.replaceChildren();
       try{
-        if(navigator.clipboard&&navigator.clipboard.writeText){await navigator.clipboard.writeText(backupTextArea.value);}
-        else if(!document.execCommand("copy"))throw Error("copy unsupported");
-        say("تم نسخ البيانات. احفظها بملف نصي آمن خارج التطبيق.");
-      }catch(_){say("حدّد النص الظاهر وانسخه يدوياً واحفظه بمكان آمن.");}
-    });
-    backupCopy.style.display="none";backupCopy.style.width="100%";
-    row("aoqatProfileBackupExport","إنشاء نسخة احتياطية","حفظ بياناتي المحلية خارج التطبيق",async()=>{
-      let value;try{value=JSON.stringify(backupData());}catch(e){say(e.message||"تعذّر إنشاء النسخة.");return;}
-      const filename="AOQAT-backup-"+new Date().toISOString().slice(0,10)+".json";
-      try{
-        const file=new File([value],filename,{type:"application/json"});
-        if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-          try{await navigator.share({files:[file],title:"نسخة احتياطية لأوقات الصلاة"});say("تم فتح خيارات مشاركة النسخة الاحتياطية.");return;}
-          catch(e){if(e&&e.name==="AbortError")return;}
+        const copies=await profileBackupList();
+        backupCopies.append(el("strong","النسخ المحلية ("+copies.length+"/3)","display:block;font-size:12px;margin:4px 0"));
+        if(!copies.length)backupCopies.append(el("small","لم تُحفظ نسخ محلية بعد.","display:block;font-size:11px;opacity:.7"));
+        for(const copy of copies){
+          const when=new Date(copy.createdAt).toLocaleString("ar-IQ");
+          const title=(copy.reason==="quran"?"حفظ المصحف":copy.reason==="scheduled"?"نسخة مجدولة":"نسخة يدوية")+" · "+when;
+          const button=actionButton("aoqatProfileRestoreCopy"+copy.id,title,()=>{
+            try{
+              if(!profileBackupRestore(JSON.stringify(copy.pack)))return;
+              refresh();say("تمت الاستعادة. أعد فتح التطبيق لتحديث الإعدادات والمحفوظات.");
+            }catch(e){say(e.message||"تعذّرت الاستعادة.");}
+          });
+          button.style.cssText+=";width:100%;text-align:right;margin:3px 0;font-size:11px";
+          backupCopies.append(button);
         }
-        // Browser downloads use the browser; Android WebView's blob hook is
-        // for images only, so NEVER route a JSON blob into saveDataUrl().
-        if(!window.AndroidNative?.configureAdhan){
-          const url=URL.createObjectURL(new Blob([value],{type:"application/json"}));
-          const a=document.createElement("a");a.href=url;a.download=filename;
-          document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1200);
-          say("تم طلب تنزيل نسخة JSON.");return;
+      }catch(_){backupCopies.append(el("small","النسخ المحلية غير متاحة على هذا الجهاز. احفظ نسخة خارج التطبيق.","font-size:11px"));}
+    }
+    const shareBackup=actionButton("aoqatProfileBackupShare","مشاركة إلى Drive أو البريد أو تطبيق آخر",()=>{
+      if(!exportJson){say("أنشئ نسخة أولاً.");return;}
+      // Only Android's system share sheet can deliver a file to Drive/Gmail.
+      // If unavailable in WebView, do not claim that anything was uploaded.
+      try{
+        const file=new File([exportJson],exportFilename,{type:"application/json"});
+        if(typeof navigator.share==="function"&&navigator.canShare?.({files:[file]})){
+          navigator.share({files:[file],title:"نسخة احتياطية لأوقات الصلاة"})
+            .then(()=>say("تمت مشاركة الملف مع التطبيق الذي اخترته. تأكد من اكتمال حفظه."))
+            .catch(e=>{if(e?.name!=="AbortError")say("لم تكتمل المشاركة. استخدم الحفظ أو النسخ.");});
+          return;
         }
       }catch(_){}
       backupTextArea.style.display="block";backupCopy.style.display="block";
-      backupTextArea.value=value;say("انسخ النسخة واحفظها خارج التطبيق.");
-    },"💾");
-    panel.append(backupTextArea,backupCopy);
-    const restoreInput=el("input",null,"display:none");restoreInput.type="file";restoreInput.accept=".json,application/json";restoreInput.id="aoqatProfileRestoreFile";
-    const restorePanel=el("div",null,"display:none;border:1px solid var(--wt-border,#c7d8df);border-radius:10px;padding:10px;margin:6px 0;background:var(--wt-surface,#fff)");
-    restorePanel.id="aoqatProfileRestorePanel";
-    const restoreText=el("textarea",null,"min-height:84px;width:100%;box-sizing:border-box;font-size:12px;direction:ltr");
-    restoreText.placeholder="ألصق بيانات النسخة هنا، أو اختر ملف JSON";
-    const choose=actionButton("aoqatProfileChooseRestore","اختيار ملف JSON",()=>restoreInput.click());
-    const restore=actionButton("aoqatProfileRestoreSave","استعادة البيانات",()=>{
-      let parsed;try{parsed=JSON.parse(restoreText.value);}
-      catch(_){say("ملف النسخة غير صالح.");return;}
-      if(!parsed||parsed.format!=="aoqat-local-backup"||parsed.version!==1||!parsed.data||typeof parsed.data!=="object"||Array.isArray(parsed.data)){
-        say("صيغة النسخة الاحتياطية غير مدعومة.");return;
-      }
-      const entries=Object.entries(parsed.data);
-      if(!entries.length||entries.length>PROFILE_BACKUP_KEYS.length||entries.some(([k,v])=>!PROFILE_BACKUP_KEYS.includes(k)||typeof v!=="string"||v.length>500000)||restoreText.value.length>2000000){
-        say("النسخة تحتوي على بيانات غير مسموحة أو حجم كبير.");return;
-      }
-      if(!confirm("استعادة النسخة قد تستبدل إعداداتك ومحفوظاتك المحلية الحالية. هل تريد المتابعة؟"))return;
-      const previous={};try{
-        for(const [k] of entries)previous[k]=localStorage.getItem(k);
-        for(const [k,v] of entries)put(k,v);
-        refresh();say("اكتملت استعادة البيانات المحلية. أغلق التطبيق وافتحه لتظهر الإعدادات.");
-        restorePanel.style.display="none";
-      }catch(_){
-        try{for(const [k,v] of Object.entries(previous))put(k,v);}catch(_){}
-        say("تعذّرت الاستعادة، ولم تُحذف البيانات الأخرى.");
-      }
+      say("المشاركة بالملفات غير مدعومة داخل نسخة التطبيق الحالية. احفظ الملف أو انسخ النص خارج التطبيق؛ لم يتم رفعه إلى Drive.");
     });
-    restorePanel.append(restoreInput,restoreText,choose,restore);
-    restoreInput.onchange=()=>{
-      const f=restoreInput.files&&restoreInput.files[0];if(!f)return;
-      if(f.size>2000000){say("الملف كبير جداً.");return;}
-      const reader=new FileReader();
-      reader.onload=()=>{restoreText.value=String(reader.result||"");say("تم اختيار الملف. اضغط استعادة البيانات للمتابعة.");};
-      reader.onerror=()=>say("تعذّر فتح ملف النسخة.");
-      reader.readAsText(f);restoreInput.value="";
+    shareBackup.style.width="100%";
+    const downloadBackup=actionButton("aoqatProfileBackupDownload","حفظ ملف JSON على الهاتف",()=>{
+      if(!exportJson){say("أنشئ نسخة أولاً.");return;}
+      if(window.AndroidNative?.configureAdhan){
+        backupTextArea.style.display="block";backupCopy.style.display="block";
+        say("حفظ JSON مباشرة غير مدعوم في WebView الحالي. انسخ البيانات لملف خارج التطبيق.");
+        return;
+      }
+      try{
+        const url=URL.createObjectURL(new Blob([exportJson],{type:"application/json"}));
+        const link=document.createElement("a");link.href=url;link.download=exportFilename;
+        document.body.append(link);link.click();link.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),1500);
+        say("تم طلب تنزيل الملف. تحقق من وجوده في التنزيلات.");
+      }catch(_){backupTextArea.style.display="block";backupCopy.style.display="block";say("تعذّر التنزيل، انسخ بيانات النسخة.");}
+    });
+    downloadBackup.style.width="100%";
+    const backupCopy=actionButton("aoqatProfileBackupCopy","نسخ بيانات النسخة",async()=>{
+      if(!exportJson){say("أنشئ نسخة أولاً.");return;}
+      backupTextArea.style.display="block";
+      backupTextArea.select();
+      try{
+        if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(exportJson);
+        else if(!document.execCommand("copy"))throw Error("Copy unavailable");
+        say("نُسخت البيانات؛ احفظها خارج التطبيق.");
+      }catch(_){say("حدّد النص وانسخه يدوياً إلى مكان آمن.");}
+    });
+    backupCopy.style.display="none";backupCopy.style.width="100%";
+    row("aoqatProfileBackupExport","إنشاء نسخة احتياطية","اختيار الحفظ والمشاركة وثلاث نسخ محفوظة",async()=>{
+      backupPanel.style.display="block";backupActionStatus.textContent="جارٍ إنشاء النسخة...";
+      try{
+        const result=await profileBackupSave("manual",false);
+        prepareExport(result.copy.pack);
+        backupActionStatus.textContent="النسخة جاهزة؛ اختر وجهة حفظها خارج الهاتف.";
+        say("حُفظت نسخة محلية. النسخ الخارجية تحتاج اختيار وجهة وحفظها فعلياً.");
+      }catch(e){backupActionStatus.textContent=e.message||"تعذّر حفظ النسخة محلياً.";say(backupActionStatus.textContent);
+        try{prepareExport(profileBackupMakeData());shareBackup.style.display="";downloadBackup.style.display="";backupCopy.style.display="";}catch(_){}
+      }
+      await renderBackupCopies();
+    },"💾");
+    backupPanel.append(backupActionStatus,shareBackup,downloadBackup,backupCopy,backupTextArea,backupCopies);
+    panel.append(backupPanel);
+    const scheduleWrap=el("div",null,"border:1px solid var(--wt-border,#c7d8df);border-radius:9px;padding:7px 9px;margin:5px 0;background:var(--wt-surface,#fff)");
+    const scheduleLabel=el("label","مواعيد النسخ المحلي التلقائي","display:block;font-size:12px;font-weight:700");
+    const scheduleSelect=el("select",null,"width:100%;margin:4px 0 0;min-height:37px;border:1px solid var(--wt-border,#c7d8df);border-radius:7px;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50);font-size:12px");
+    scheduleSelect.id="aoqatProfileBackupSchedule";
+    for(const [value,label] of [["off","غير مفعّل"],["daily","يومي"],["weekly","أسبوعي"]]){
+      const option=el("option",label);option.value=value;scheduleSelect.append(option);
+    }
+    scheduleSelect.value=get(PROFILE_BACKUP_PLAN_KEY)||"off";
+    scheduleSelect.onchange=()=>{
+      try{
+        localStorage.setItem(PROFILE_BACKUP_PLAN_KEY,scheduleSelect.value);
+        localStorage.removeItem(PROFILE_BACKUP_LAST_AUTO);
+        profileBackupAutoTick(false);
+        say("تم حفظ الجدولة. النسخ المحلي يعمل عند تشغيل التطبيق أو أثناء استخدامه.");
+      }catch(_){say("تعذّر حفظ الجدولة.");}
     };
-    row("aoqatProfileBackupRestore","استعادة نسخة احتياطية","من ملف JSON أو نص محفوظ",()=>{
-      restorePanel.style.display=restorePanel.style.display==="none"?"block":"none";
+    scheduleLabel.append(scheduleSelect);
+    scheduleWrap.append(scheduleLabel,el("small","محفوظات المصحف وآخر صفحة تُحفظ تلقائياً أثناء استخدام التطبيق. النسخ المحلية تُحذف عند حذف التطبيق.","display:block;font-size:10px;opacity:.75;margin:5px 0"));
+    panel.append(scheduleWrap);
+    const restoreInput=el("input",null,"display:none");
+    restoreInput.type="file";restoreInput.accept=".json,application/json";restoreInput.id="aoqatProfileRestoreFile";
+    const restorePanel=el("div",null,"display:none;border:1px solid var(--wt-border,#c7d8df);border-radius:10px;padding:8px;margin:6px 0;background:var(--wt-surface,#fff)");
+    restorePanel.id="aoqatProfileRestorePanel";
+    const restoreText=el("textarea",null,"min-height:75px;width:100%;box-sizing:border-box;font-size:11px;direction:ltr");
+    restoreText.id="aoqatProfileRestoreText";restoreText.placeholder="أو ألصق بيانات JSON المحفوظة";
+    const choose=actionButton("aoqatProfileChooseRestore","فتح ملف من الهاتف أو Drive",()=>restoreInput.click());
+    choose.style.width="100%";
+    const restore=actionButton("aoqatProfileRestoreSave","استعادة البيانات",()=>{
+      try{
+        if(!profileBackupRestore(restoreText.value))return;
+        refresh();say("تمت استعادة الإعدادات ومحفوظات المصحف. أعد تشغيل التطبيق.");
+        restorePanel.style.display="none";
+      }catch(e){say(e.message||"تعذّرت الاستعادة.");}
+    });
+    restore.style.width="100%";
+    const localRestore=el("div",null,"margin-top:6px");
+    async function showLocalRestore(){
+      localRestore.replaceChildren();
+      try{
+        const copies=await profileBackupList();
+        for(const copy of copies){
+          const label="نسخة "+new Date(copy.createdAt).toLocaleString("ar-IQ");
+          const button=actionButton("aoqatProfileRestoreLocal"+copy.id,label,()=>{
+            try{
+              if(!profileBackupRestore(JSON.stringify(copy.pack)))return;
+              refresh();say("تمت الاستعادة. أعد فتح التطبيق.");
+            }catch(e){say(e.message||"تعذّرت الاستعادة.");}
+          });
+          button.style.cssText+=";width:100%;text-align:right;margin:3px 0;font-size:11px";
+          localRestore.append(button);
+        }
+      }catch(_){localRestore.append(el("small","تعذّر عرض النسخ المحلية.","font-size:11px"));}
+    }
+    restoreInput.onchange=()=>{
+      const file=restoreInput.files?.[0];restoreInput.value="";
+      if(!file)return;
+      if(file.size>2000000){say("النسخة أكبر من المسموح.");return;}
+      const reader=new FileReader();
+      reader.onload=()=>{restoreText.value=String(reader.result||"");say("تم اختيار الملف. راجعه ثم اضغط استعادة البيانات.");};
+      reader.onerror=()=>say("تعذّر قراءة الملف.");
+      reader.readAsText(file);
+    };
+    restorePanel.append(restoreInput,choose,localRestore,restoreText,restore);
+    row("aoqatProfileBackupRestore","استعادة نسخة احتياطية","من الهاتف أو Drive أو النسخ الثلاث المحلية",async()=>{
+      const show=restorePanel.style.display==="none";
+      restorePanel.style.display=show?"block":"none";
+      if(show)await showLocalRestore();
     },"📥");
     panel.append(restorePanel);
     sections("المساعدة والخصوصية");
