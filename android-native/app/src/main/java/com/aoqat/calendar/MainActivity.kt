@@ -1131,6 +1131,53 @@ class MainActivity : Activity() {
         }
 
         @JavascriptInterface
+        fun shareBackupFile(json: String, filename: String, requestId: String) {
+            if (!BuildConfig.OWNER_PILOT_ENABLED) return
+            Thread {
+                try {
+                    val send = ProfileBackupFile.shareIntent(this@MainActivity, json, filename)
+                    runOnUiThread {
+                        try {
+                            startActivity(Intent.createChooser(send, "مشاركة ملف النسخة الاحتياطية"))
+                            backupActionResult(requestId, true)
+                        } catch (_: Exception) { backupActionResult(requestId, false) }
+                    }
+                } catch (_: Exception) {
+                    runOnUiThread { backupActionResult(requestId, false) }
+                }
+            }.start()
+        }
+
+        @JavascriptInterface
+        fun saveBackupFile(json: String, filename: String, requestId: String) {
+            if (!BuildConfig.OWNER_PILOT_ENABLED) return
+            Thread {
+                try {
+                    val bytes = ProfileBackupFile.checkedBytes(json)
+                    runOnUiThread {
+                        if (pendingBackupDocument != null) {
+                            backupActionResult(requestId, false)
+                            return@runOnUiThread
+                        }
+                        pendingBackupDocument = Pair(bytes, requestId)
+                        val choose = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                            addCategory(Intent.CATEGORY_OPENABLE)
+                            type = ProfileBackupFile.MIME
+                            putExtra(Intent.EXTRA_TITLE, ProfileBackupFile.safeName(filename))
+                        }
+                        try { startActivityForResult(choose, BACKUP_DOCUMENT_REQUEST) }
+                        catch (_: Exception) {
+                            pendingBackupDocument = null
+                            backupActionResult(requestId, false)
+                        }
+                    }
+                } catch (_: Exception) {
+                    runOnUiThread { backupActionResult(requestId, false) }
+                }
+            }.start()
+        }
+
+        @JavascriptInterface
         fun sharePrayerImage(dataUrl: String, filename: String, requestId: String) {
             Thread {
                 try {
@@ -1196,6 +1243,18 @@ class MainActivity : Activity() {
         }
     }
 
+    private val BACKUP_DOCUMENT_REQUEST = 8714
+    private var pendingBackupDocument: Pair<ByteArray, String>? = null
+
+    private fun backupActionResult(id: String, ok: Boolean) {
+        if (::webView.isInitialized && !isFinishing) {
+            webView.evaluateJavascript(
+                "window.aoqatBackupNativeResult?.(" +
+                    org.json.JSONObject.quote(id) + "," + ok + ")", null
+            )
+        }
+    }
+
     private fun imageActionResult(id: String, ok: Boolean) {
         if (::webView.isInitialized && !isFinishing) webView.evaluateJavascript("window.aoqatImageActionResult?.(" + org.json.JSONObject.quote(id) + "," + ok + ")", null)
     }
@@ -1231,6 +1290,23 @@ class MainActivity : Activity() {
     private var prayerAlarmToneId=""
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == BACKUP_DOCUMENT_REQUEST) {
+            val pending = pendingBackupDocument
+            pendingBackupDocument = null
+            if (pending != null) {
+                val uri = if (resultCode == RESULT_OK) data?.data else null
+                if (uri == null) backupActionResult(pending.second, false)
+                else Thread {
+                    val succeeded = try {
+                        contentResolver.openOutputStream(uri, "w")?.use { it.write(pending.first) }
+                            ?: error("Document writing unavailable")
+                        true
+                    } catch (_: Exception) { false }
+                    runOnUiThread { backupActionResult(pending.second, succeeded) }
+                }.start()
+            }
+            return
+        }
         if(requestCode==8201||requestCode==8202){
             val id=prayerAlarmToneId;val uri=if(resultCode==RESULT_OK){if(requestCode==8202)data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)else data?.data}else null
             if(uri!=null&&id in PrayerAlarm.ids)Thread{try{
