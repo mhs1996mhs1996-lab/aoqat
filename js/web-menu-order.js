@@ -286,6 +286,156 @@
     "aoqatWebAppearanceThemeV1","aoqatWebButtonAppearanceV1",
     "aoqatAlertScreenWakeV1","aoqatWebHelpLiveStyle"
   ];
+  // Owner-pilot-only browser backup service. Three local snapshots are retained
+  // in IndexedDB. They are NOT a cloud backup and vanish if app data is erased.
+  const PROFILE_BACKUP_PLAN_KEY="aoqatProfileBackupScheduleV2";
+  const PROFILE_BACKUP_LAST_AUTO="aoqatProfileBackupLastAutoV2";
+  const PROFILE_BACKUP_DB="aoqat-profile-backups-v2";
+  const PROFILE_BACKUP_LIMIT=3;
+  const PROFILE_BACKUP_PERIOD={daily:86400000,weekly:604800000};
+  let profileBackupLastQuran=null;
+  let profileBackupInFlight=null;
+  function profileBackupIncludedKeys(){
+    const extra=["quranPage",PROFILE_BACKUP_PLAN_KEY], keys=new Set([...PROFILE_BACKUP_KEYS,...extra]);
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const name=localStorage.key(i)||"";
+        // Saved user preferences only. Never copy OAuth credentials, caches,
+        // OTA status, signing material or arbitrary third-party localStorage.
+        if(/^aoqat[A-Z][A-Za-z0-9_-]{0,75}$/.test(name) &&
+           !/(token|auth|secret|private|password|sign|update|ota|cache|blob|asset|backupLast|snapshot|session|nonce)/i.test(name))
+          keys.add(name);
+      }
+    }catch(_){}
+    return [...keys].sort();
+  }
+  function profileBackupMakeData(){
+    const data={}, allow=profileBackupIncludedKeys();
+    let size=0;
+    for(const key of allow){
+      let value=null;
+      try{value=localStorage.getItem(key);}catch(_){}
+      if(value===null || value==="")continue;
+      if(value.length>500000)throw Error("أحد الإعدادات كبير جداً.");
+      size+=key.length+value.length;
+      if(size>1800000)throw Error("النسخة أكبر من الحد المسموح.");
+      data[key]=value;
+    }
+    if(!Object.keys(data).length)throw Error("لا توجد بيانات محفوظة بعد.");
+    return {format:"aoqat-local-backup",version:2,exportedAt:new Date().toISOString(),data};
+  }
+  function profileBackupFingerprint(data){
+    const txt=JSON.stringify(data);
+    let h=2166136261;
+    for(let i=0;i<txt.length;i++){h^=txt.charCodeAt(i);h=Math.imul(h,16777619);}
+    return (h>>>0).toString(16)+":"+txt.length;
+  }
+  function profileBackupOpenDb(){
+    return new Promise((resolve,reject)=>{
+      if(!window.indexedDB){reject(Error("الحفظ المحلي غير متاح."));return;}
+      let request;
+      try{request=indexedDB.open(PROFILE_BACKUP_DB,1);}
+      catch(e){reject(e);return;}
+      request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains("copies"))db.createObjectStore("copies",{keyPath:"id"});};
+      request.onsuccess=()=>resolve(request.result);
+      request.onerror=()=>reject(request.error||Error("تعذّر فتح النسخ."));
+      request.onblocked=()=>reject(Error("قاعدة النسخ مشغولة."));
+    });
+  }
+  async function profileBackupList(){
+    const db=await profileBackupOpenDb();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction("copies","readonly");
+      const request=tx.objectStore("copies").getAll();
+      let data=[];
+      request.onsuccess=()=>{data=Array.isArray(request.result)?request.result:[];};
+      tx.oncomplete=()=>{db.close();resolve(data.sort((a,b)=>b.createdAt-a.createdAt));};
+      tx.onerror=()=>{db.close();reject(tx.error||Error("تعذّرت قراءة النسخ."));};
+      tx.onabort=()=>{db.close();reject(tx.error||Error("تعذّرت قراءة النسخ."));};
+    });
+  }
+  async function profileBackupSave(reason,skipSame){
+    if(profileBackupInFlight)await profileBackupInFlight;
+    const task=(async()=>{
+      const pack=profileBackupMakeData(), fp=profileBackupFingerprint(pack.data);
+      const all=await profileBackupList();
+      if(skipSame&&all[0]?.fingerprint===fp)return {created:false,copy:all[0]};
+      const stamp=Date.now();
+      const copy={id:String(stamp)+"-"+Math.random().toString(36).slice(2,7),
+        createdAt:stamp,reason:reason||"manual",fingerprint:fp,pack};
+      const db=await profileBackupOpenDb();
+      await new Promise((resolve,reject)=>{
+        const tx=db.transaction("copies","readwrite"), store=tx.objectStore("copies");
+        store.put(copy);
+        for(const old of all.slice(PROFILE_BACKUP_LIMIT-1))store.delete(old.id);
+        tx.oncomplete=()=>{db.close();resolve();};
+        tx.onerror=()=>{db.close();reject(tx.error||Error("تعذّر الحفظ."));};
+        tx.onabort=()=>{db.close();reject(tx.error||Error("تعذّر الحفظ."));};
+      });
+      return {created:true,copy};
+    })();
+    profileBackupInFlight=task;
+    try{return await task;}finally{if(profileBackupInFlight===task)profileBackupInFlight=null;}
+  }
+  function profileBackupValidate(raw){
+    if(raw.length>2000000)throw Error("ملف النسخة كبير جداً.");
+    let pack;
+    try{pack=JSON.parse(raw);}catch(_){throw Error("ملف النسخة غير صالح.");}
+    if(!pack||pack.format!=="aoqat-local-backup"||![1,2].includes(pack.version)||
+       !pack.data||typeof pack.data!=="object"||Array.isArray(pack.data))
+      throw Error("صيغة النسخة غير مدعومة.");
+    const allow=new Set(profileBackupIncludedKeys());
+    const entries=Object.entries(pack.data);
+    if(!entries.length||entries.length>120||entries.some(([k,v])=>
+        !allow.has(k)||typeof v!=="string"||v.length>500000))
+      throw Error("النسخة تحتوي بيانات غير مسموحة.");
+    return entries;
+  }
+  function profileBackupRestore(raw){
+    const entries=profileBackupValidate(raw);
+    if(!confirm("سيتم استبدال الإعدادات والمحـفوظات الموجودة بمحتوى النسخة المحددة. متابعة؟"))
+      return false;
+    const previous={};
+    try{
+      for(const [key] of entries)previous[key]=localStorage.getItem(key);
+      for(const [key,value] of entries)localStorage.setItem(key,value);
+      return true;
+    }catch(_){
+      try{for(const [key,value] of Object.entries(previous))
+        if(value===null)localStorage.removeItem(key);else localStorage.setItem(key,value);
+      }catch(_){}
+      throw Error("تعذّرت الاستعادة، ولم تُحذف بقية البيانات.");
+    }
+  }
+  async function profileBackupAutoTick(forceQuran){
+    let plan="off",last=0,current="";
+    try{
+      plan=localStorage.getItem(PROFILE_BACKUP_PLAN_KEY)||"off";
+      last=Number(localStorage.getItem(PROFILE_BACKUP_LAST_AUTO)||0);
+      current=localStorage.getItem("aoqatQuranReaderV1")||"";
+    }catch(_){return;}
+    const period=PROFILE_BACKUP_PERIOD[plan]||0;
+    const due=period>0&&(!last||Date.now()-last>=period);
+    const quranChanged=Boolean(current)&&(profileBackupLastQuran===null||profileBackupLastQuran!==current);
+    profileBackupLastQuran=current;
+    if(!due&&!quranChanged&&!forceQuran)return;
+    try{
+      await profileBackupSave(quranChanged?"quran":"scheduled",true);
+      if(due)localStorage.setItem(PROFILE_BACKUP_LAST_AUTO,String(Date.now()));
+    }catch(_){/* Storage may be unavailable or full. Never delete user state. */}
+  }
+  if(!window.aoqatProfileBackupAutoHooksV2){
+    window.aoqatProfileBackupAutoHooksV2=true;
+    setTimeout(()=>profileBackupAutoTick(false),2500);
+    setInterval(()=>profileBackupAutoTick(false),120000);
+    document.addEventListener("visibilitychange",()=>{
+      if(document.visibilityState==="hidden")profileBackupAutoTick(false);
+    });
+    document.addEventListener("click",event=>{
+      if(event.target?.closest?.("#aqBookmark,#aqSaveMark,#aqMoreMark,[data-delete-mark],[data-saved]"))
+        setTimeout(()=>profileBackupAutoTick(true),900);
+    },true);
+  }
   function profileView(){
     // Override global theme button dimensions ONLY within this profile.
     if(!document.getElementById("aoqatPilotProfileCompactV6")){
