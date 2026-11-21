@@ -4,7 +4,7 @@ on:
     branches: [feature/owner-pilot-lockscreen-phases-20261121]
     paths:
       - 'js/web-menu-order.js'
-      - 'tests/owner-pilot-profile-seq7-ui.cjs'
+      - 'tests/owner-pilot-profile-seq6-ui.cjs'
       - '.github/workflows/owner-pilot-backup-ota-seq8-candidate.yml'
   workflow_dispatch:
 permissions:
@@ -25,7 +25,7 @@ jobs:
           python3 security/check-sacred-content.py
           python3 security/owner-pilot-auto-ota-sign.py --self-test
           node --check js/web-menu-order.js
-          node --test tests/owner-pilot-profile-seq7-ui.cjs tests/privacy-policy-check.cjs
+          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -82,7 +82,7 @@ jobs:
           (out/'SIGNING-REVIEW.txt').write_text(
               'UNSIGNED web OTA candidate, NOT installable, NOT published.\n'
               'Requires the ORIGINAL isolated owner-pilot P-256 private key, not APK P12 or production OTA V2 key.\n'
-              'Use security/owner-pilot-auto-ota-sign.py with --sequence 7 and the pinned owner pilot public key.\n'
+              'Use security/owner-pilot-auto-ota-sign.py with --sequence 8 and the pinned owner pilot public key.\n'
               'Publish only after owner signature verification and approval, to owner-pilot-ota, NEVER main or Vercel.\n')
           print('PASS: 88 approved web assets; changed only menu and its integrated startup bundle. SHA='+sha)
           PY
