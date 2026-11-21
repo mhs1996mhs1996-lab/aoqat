@@ -26,7 +26,8 @@ test('ongoing lock-screen and next-prayer notifications never borrow adhan icon'
 test('normal prayer reminders do not carry adhan visual markers',()=>{
   const notification=source('PrayerNotifications');
   assert.match(notification,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallPhase\(true\)/);
-  assert.match(notification,/PilotNotificationIcons\.large\(c,PilotNotificationIcons\.coloredPhase\(true\)\)/);
+  assert.doesNotMatch(notification,/PilotNotificationIcons\.large\(c,PilotNotificationIcons\.coloredPhase\(true\)\)/);
+  assert.doesNotMatch(notification,/setLargeIcon\(/);
   assert.doesNotMatch(notification,/PilotNotificationIcons\.smallAdhan\(\)/);
   assert.doesNotMatch(notification,/PilotNotificationIcons\.coloredAdhan\(\)/);
 });
