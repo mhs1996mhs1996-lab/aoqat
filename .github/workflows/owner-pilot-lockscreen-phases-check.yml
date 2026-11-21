@@ -34,6 +34,7 @@ jobs:
           changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           allowed={
             '.github/workflows/owner-pilot-lockscreen-phases-check.yml',
+            '.github/workflows/owner-pilot-backup-ota-seq7-candidate.yml',
             '.github/workflows/owner-pilot-seq6-presigned-candidate.yml',
             '.github/workflows/owner-pilot-seq7-presigned-candidate.yml',
             '.github/workflows/owner-pilot-presigned-seq7-publish.yml',
