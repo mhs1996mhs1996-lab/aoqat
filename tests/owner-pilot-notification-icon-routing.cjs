@@ -11,8 +11,16 @@ test('ongoing lock-screen and next-prayer notifications never borrow adhan icon'
   assert.match(widget,/val pilotIconIsAdhan = false/);
   assert.match(widget,/PilotNotificationIcons\.smallPhase\(pilotIconIsWaiting\)/);
   assert.match(widget,/PilotNotificationIcons\.exactSmall\(c,pilotIconIsWaiting,pilotIconIsAdhan\)/);
-  assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED \|\| LockScreenPrayer\.enabled\(this\)\)lockNotification\(this\)/);
+  assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED \|\| LockScreenPrayer\.enabled\(this\)\)lockNotification\(this,BuildConfig\.OWNER_PILOT_ENABLED\)/);
   assert.doesNotMatch(widget,/now - it\.at < 90_000L/);
+  assert.match(widget,/fun lockNotification\(c:Context, persistent:Boolean=false\)/);
+  assert.match(widget,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_wait\)/);
+  assert.match(widget,/setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
+  assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_wait else R\.drawable\.pilot_notify_elapsed/);
+  assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.match(widget,/if\(!BuildConfig\.OWNER_PILOT_ENABLED \|\| !persistent\) setCustomBigContentView\(views\)/);
+  assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !persistent\)/);
+  assert.doesNotMatch(widget,/views\.setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
 });
 
 test('normal prayer reminders do not carry adhan visual markers',()=>{
@@ -31,6 +39,10 @@ test('real adhan foreground notification uses adhan icon and tapping opens adhan
   assert.match(adhan,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallAdhan\(\)/);
   // Auto wake remains controlled by the existing opt-in, unlike explicit taps.
   assert.match(adhan,/if\(screenAlert\)builder\.setFullScreenIntent\(show,true\)/);
+  assert.match(adhan,/val deviceLocked = \(getSystemService\(KEYGUARD_SERVICE\) as KeyguardManager\)\.isKeyguardLocked/);
+  assert.match(adhan,/PhoneScreenAlerts\.enabled\(this\) && deviceLocked && !preview && mode=="sound"/);
+  assert.match(adhan,/if\(BuildConfig\.OWNER_PILOT_ENABLED\)"إيقاف الأذان" else "إيقاف"/);
+  assert.match(adhan,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !intent\.hasExtra\("reminderMessage"\)\)window\.addFlags\(android\.view\.WindowManager\.LayoutParams\.FLAG_FULLSCREEN\)/);
   assert.doesNotMatch(adhan,/val content=if\(screenAlert\)show else/);
   const manifest=fs.readFileSync(path.join(__dirname,'../android-native/app/src/main/AndroidManifest.xml'),'utf8');
   assert.match(manifest,/android\.permission\.USE_FULL_SCREEN_INTENT/);
