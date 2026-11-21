@@ -605,7 +605,7 @@
     const panel=document.createElement("section");
     panel.id="aoqatPilotOtaPanel";panel.dir="rtl";panel.style.cssText="max-width:550px;margin:0 auto;padding:7px 9px;line-height:1.4";
     const style=document.createElement("style");
-    style.textContent="#aoqatPilotOtaPanel .pilot-line{border:1px solid var(--wt-border,#c7d8df);background:var(--wt-surface,#fff);border-radius:9px;padding:9px 11px;margin:5px 0;font-size:13px}#aoqatPilotOtaPanel .pilot-command{display:block!important;box-sizing:border-box!important;width:100%!important;min-height:37px!important;height:auto!important;padding:7px!important;font-size:13px!important;margin:8px 0 4px!important;border:1px solid var(--wt-border,#c7d8df)!important;border-radius:8px!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#173c50)!important;box-shadow:none!important}";
+    style.textContent="#aoqatPilotOtaPanel .pilot-line{border:1px solid var(--wt-border,#c7d8df);background:var(--wt-surface,#fff);border-radius:8px;padding:6px 9px;margin:4px 0;font-size:12px}#aoqatPilotOtaPanel .pilot-command{display:block!important;box-sizing:border-box!important;width:100%!important;min-height:33px!important;height:auto!important;padding:6px!important;font-size:12px!important;margin:5px 0!important;border:1px solid var(--wt-border,#c7d8df)!important;border-radius:7px!important;background:var(--wt-surface,#fff)!important;color:var(--wt-text,#173c50)!important;box-shadow:none!important}";
     panel.appendChild(style);
     const installed=document.createElement("div");installed.className="pilot-line";
     installed.textContent="التحديث المفعّل: "+pilotActiveSequence();
@@ -624,15 +624,13 @@
     const check=document.createElement("button");check.className="pilot-command";
     check.type="button";check.textContent="التحقق من تحديث جديد";
     check.onclick=async()=>{check.disabled=true;status.textContent="جارٍ التحقق…";await checkPilotOtaAvailable(true);check.disabled=false;render();};
-    const hint=document.createElement("p");hint.textContent="الاستلام تلقائي. التفعيل بعد إعادة فتح التطبيق.";
-    hint.style.cssText="font-size:11px;margin:7px 3px;opacity:.8";
     const rerun=document.createElement("button");rerun.type="button";rerun.className="pilot-command";
     rerun.textContent="إعادة فتح التطبيق لتفعيل التحديث";
     rerun.onclick=()=>{if(confirm("إعادة فتح النسخة التجريبية الآن؟"))window.AndroidNative.reopenOwnerPilotForUpdate?.();};
     const advanced=document.createElement("button");advanced.type="button";advanced.className="pilot-command";
     advanced.textContent="خيارات متقدمة (ZIP احتياطي)";
     advanced.onclick=()=>window.AndroidNative.openOwnerPilotOtaAdvanced?.();
-    panel.append(installed,status,check,rerun,advanced,hint);
+    panel.append(installed,status,check,rerun,advanced);
     pilotPanelUpdate=()=>{if(panel.isConnected)render();else pilotPanelUpdate=null;};
     render();openSub("تحديثات النسخة التجريبية",panel,"main");
     void checkPilotOtaAvailable();
