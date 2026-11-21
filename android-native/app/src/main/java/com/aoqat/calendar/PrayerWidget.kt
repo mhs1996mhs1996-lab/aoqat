@@ -268,7 +268,7 @@ class NextPrayerService:Service(){
                 if (!LockScreenPrayer.notificationsAllowed(c)) return
                 try {
                     (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                        .notify(NOTIFICATION_ID,lockNotification(c))
+                        .notify(NOTIFICATION_ID,lockNotification(c,true))
                     LockScreenIqamaBoundaryReceiver.schedule(c)
                 } catch (e:Exception) {
                     android.util.Log.w("NextPrayer","Pilot notification post failed",e)
@@ -284,7 +284,7 @@ class NextPrayerService:Service(){
         }
         /** Android's native live countdown is readable on lock screens where
          * the owner allows public notification contents. No audio or wakeups. */
-        fun lockNotification(c:Context):Notification {
+        fun lockNotification(c:Context, persistent:Boolean=false):Notification {
             val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(NotificationChannel(
                 LOCK_CHANNEL,"الصلاة القادمة على شاشة القفل",NotificationManager.IMPORTANCE_DEFAULT
@@ -364,20 +364,20 @@ class NextPrayerService:Service(){
                 views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
             }
 
-            // Android always draws its own notification small icon and header.
-            // A second colored body icon looks duplicated on Huawei/Android 16.
-            // Keep one system icon, one live countdown, and let Android own the
-            // small native expansion chevron for the single notification.
-            if (BuildConfig.OWNER_PILOT_ENABLED) {
-                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
-                views.setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
-            }
+            // Keep both state images in the visible card. The prayer icon
+            // always describes the NEXT prayer; the separate iqama/Friday icon
+            // describes its own countdown or elapsed phase. Never borrow the
+            // adhan icon for either notification.
             // The compact card shows ONLY the next prayer. The expanded card
             // shares the same Notification ID, exposing the optional iqama /
             // Friday phase without creating a second notification.
-            val compactViews = if (BuildConfig.OWNER_PILOT_ENABLED) {
+            // The ordinary persistent notification has one prayer row;
+            // the separate lock-screen notification displays its optional
+            // iqama/Friday row with its OWN state icon and stopwatch.
+            val compactViews = if (BuildConfig.OWNER_PILOT_ENABLED && persistent) {
                 RemoteViews(c.packageName,R.layout.notification_lock_next).apply {
-                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
+                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
+                    setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
                     setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
                     setViewVisibility(R.id.lock_iqama_row,android.view.View.GONE)
                     setTextViewText(R.id.lock_prayer_title,title)
@@ -400,7 +400,9 @@ class NextPrayerService:Service(){
                         R.id.lock_prayer_fallback))setTextColor(id,textColor)
                 }
             } else views
-            val pilotIconIsWaiting = extra?.countDown != false
+            // This system icon is for the prayer countdown, not the
+            // supplemental iqama elapsed flag.
+            val pilotIconIsWaiting = next != null
             // The persistent "next prayer" card is NEVER an adhan notification.
             // Only the dedicated AdhanPlaybackService may use the blue adhan
             // icon. Keep wait/elapsed here even during the adhan minute.
@@ -424,7 +426,7 @@ class NextPrayerService:Service(){
                 .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
                 .setCustomContentView(compactViews)
-                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED) setCustomBigContentView(views) }
+                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED || !persistent) setCustomBigContentView(views) }
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
                 .build()
@@ -445,7 +447,7 @@ class NextPrayerService:Service(){
                 .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
                 .setCustomContentView(compactViews)
-                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED) setCustomBigContentView(views) }
+                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED || !persistent) setCustomBigContentView(views) }
                 .setPublicVersion(public)
                 .setCategory(Notification.CATEGORY_STATUS)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
@@ -464,7 +466,7 @@ class NextPrayerService:Service(){
         // isolated owner-pilot APK render it with the SAME new colored card as
         // the optional lock-screen notification. Previously this branch used
         // the legacy clock icon and hid all the selected state icons.
-        val n=if(BuildConfig.OWNER_PILOT_ENABLED || LockScreenPrayer.enabled(this))lockNotification(this) else {
+        val n=if(BuildConfig.OWNER_PILOT_ENABLED || LockScreenPrayer.enabled(this))lockNotification(this,BuildConfig.OWNER_PILOT_ENABLED) else {
             val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(NotificationChannel(
                 "next_prayer","الصلاة القادمة",NotificationManager.IMPORTANCE_LOW
