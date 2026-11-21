@@ -74,3 +74,44 @@ test('reference icon assets are exact and only one compact notification is rende
   assert.match(cpp,/setCustomContentView\(compactViews\)/);
   assert.match(cpp,/if\(!BuildConfig\.OWNER_PILOT_ENABLED\) setCustomBigContentView\(views\)/);
 });
+
+
+test('three rolling backups and cross-device restore guard',()=>{
+  const vm=require('node:vm');
+  const start=js.indexOf('  // Owner-pilot-only browser backup service.');
+  const end=js.indexOf('  function profileView(){',start);
+  assert.ok(start>=0&&end>start,'isolated web backup module');
+  let raw=new Map([['aoqatQuranReaderV1',JSON.stringify({page:304,bookmarks:[{i:10,page:2}]})]]);
+  const localStorage={
+    get length(){return raw.size;},key:i=>[...raw.keys()][i]||null,
+    getItem:k=>raw.get(k)||null,setItem:(k,v)=>raw.set(k,String(v)),
+    removeItem:k=>raw.delete(k)
+  };
+  const context={window:{},document:{addEventListener(){}},localStorage,
+    PROFILE_BACKUP_KEYS:['aoqatQuranReaderV1','aoqatLocalProfileNameV1'],
+    setTimeout:()=>1,setInterval:()=>1,confirm:()=>true,Date,Math};
+  vm.runInNewContext(js.slice(start,end)+
+    '\nthis.api={allow:profileBackupAllowedKey,validate:profileBackupValidate,pack:profileBackupMakeData}',context);
+  assert.equal(context.api.allow('aoqatLocalProfileNameV1'),true);
+  assert.equal(context.api.allow('aoqatQuranReaderV1'),true);
+  assert.equal(context.api.allow('aoqatPrayerUserSettingV1'),true);
+  assert.equal(context.api.allow('aoqatUpdatePrivateKey'),false);
+  assert.equal(context.api.allow('aoqatProfileBackupLastAutoV2'),false);
+  const backup=context.api.pack();
+  assert.equal(backup.version,2);
+  assert.equal(JSON.parse(backup.data.aoqatQuranReaderV1).page,304);
+  raw=new Map(); // New phone has no matching localStorage keys.
+  const entries=context.api.validate(JSON.stringify(backup));
+  assert.equal(entries.length,1);
+  assert.throws(()=>context.api.validate(JSON.stringify({
+    format:'aoqat-local-backup',version:2,data:{aoqatUpdatePrivateKey:'secret'}
+  })));
+  assert.ok(js.includes('const PROFILE_BACKUP_LIMIT=3;'));
+  assert.ok(js.includes('all.slice(PROFILE_BACKUP_LIMIT-1)'));
+  for(const item of ['aoqatProfileBackupShare','aoqatProfileBackupDownload',
+    'aoqatProfileBackupSchedule','aoqatProfileRestoreFile','aoqatProfileBackupRestore']){
+    assert.ok(js.includes(item),item);
+  }
+  assert.ok(js.includes('document.addEventListener("visibilitychange"'));
+  assert.ok(js.includes('profileBackupAutoTick'));
+});
