@@ -58,3 +58,19 @@ test('all pilot prayer alarms and reminders replace the old Android clock icon',
   assert.match(source('PilotNotificationIcons'),/fun smallAdhan\(\)/);
   assert.match(source('PilotNotificationIcons'),/fun smallPhase\(countDown: Boolean\)/);
 });
+
+
+test('ordinary and lock-screen cards are independently opted in and show their own two state symbols',()=>{
+  const widget=source('PrayerWidget'), lock=source('LockScreenPrayer');
+  assert.match(widget,/AdhanSchedule\.settings\(c\)\.optBoolean\("persistent"\) &&\s*\(BuildConfig\.OWNER_PILOT_ENABLED \|\| !LockScreenPrayer\.enabled\(c\)\)/);
+  assert.match(widget,/\.notify\(NOTIFICATION_ID,lockNotification\(c,true\)\)/);
+  assert.match(widget,/val compactViews = if \(BuildConfig\.OWNER_PILOT_ENABLED && persistent\)/);
+  assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,/);
+  assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_wait else R\.drawable\.pilot_notify_elapsed/);
+  assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !persistent\)/);
+  assert.match(lock,/manager\.notify\(LOCK_NOTIFICATION_ID,NextPrayerService\.lockNotification\(c\)\)/);
+  assert.match(lock,/if\(LockScreenPrayer\.enabled\(c\)\) LockScreenPrayer\.showNow\(c\)/);
+  assert.match(lock,/if\(usesPilotPersistentCard\(c\)\)/);
+  assert.doesNotMatch(lock,/\.cancel\(NextPrayerService\.NOTIFICATION_ID\)/);
+});
