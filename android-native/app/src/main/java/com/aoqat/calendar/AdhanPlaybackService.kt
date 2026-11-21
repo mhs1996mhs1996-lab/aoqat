@@ -334,10 +334,12 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val show=PendingIntent.getActivity(this,60412,screenActivity,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val content=if(screenAlert)show else PendingIntent.getActivity(this,60411,
-            Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
+        // Tapping the adhan ALWAYS opens its full-size screen. The optional
+        // screen-alert switch controls automatic wake/FSI, not user taps.
+        val content=show
         val builder=Notification.Builder(this,"adhan_playback_silent_v2")
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
+                PilotNotificationIcons.smallAdhan() else android.R.drawable.ic_lock_idle_alarm)
             .setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")
                 "حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true))
             .setContentText("اضغط إيقاف لإنهاء الأذان")
