@@ -50,11 +50,11 @@ test('owner-pilot restores three compact update buttons with no verbose help',()
   assert.doesNotMatch(js,/hint\.textContent="الاستلام تلقائي/);
 });
 
-test('owner-pilot single prayer card has one visible state symbol and no expanded continuation',()=>{
+test('owner-pilot prayer and iqama symbols are independent in persistent and lock-screen cards',()=>{
   const file=fs.readFileSync(path.resolve(__dirname,
     '../android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt'),'utf8');
-  assert.match(file,/if\(!BuildConfig\.OWNER_PILOT_ENABLED\) setCustomBigContentView\(views\)/);
-  assert.match(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
+  assert.match(file,/if\(!BuildConfig\.OWNER_PILOT_ENABLED \|\| !persistent\) setCustomBigContentView\(views\)/);
+  assert.match(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(file,/setViewVisibility\(R\.id\.lock_iqama_row,android\.view\.View\.GONE\)/);
   assert.match(file,/setUsesChronometer\(!BuildConfig\.OWNER_PILOT_ENABLED && next!=null\)/);
 });
@@ -72,7 +72,7 @@ test('reference icon assets are exact and only one compact notification is rende
   }
   assert.match(cpp,/PilotNotificationIcons\.exactSmall/);
   assert.match(cpp,/setCustomContentView\(compactViews\)/);
-  assert.match(cpp,/if\(!BuildConfig\.OWNER_PILOT_ENABLED\) setCustomBigContentView\(views\)/);
+  assert.match(cpp,/if\(!BuildConfig\.OWNER_PILOT_ENABLED \|\| !persistent\) setCustomBigContentView\(views\)/);
 });
 
 
