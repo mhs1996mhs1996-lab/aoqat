@@ -66,12 +66,14 @@ object LockScreenPrayer {
         if(!c.getSharedPreferences(PREFS,Context.MODE_PRIVATE).edit()
                 .putBoolean("enabled",on).commit())return false
         if(on){
-            // Remove the previous service's separate notification before posting
-            // the new lock-screen reminder; no FGS start is required.
-            c.stopService(Intent(c,NextPrayerService::class.java))
-            if(BuildConfig.OWNER_PILOT_ENABLED)
-                (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                    .cancel(NextPrayerService.NOTIFICATION_ID)
+            // Both toggles are independent in the owner's trial:
+            // the ordinary next-prayer card and the opt-in lock-screen card
+            // keep separate IDs and their own visual state symbols.
+            if(!BuildConfig.OWNER_PILOT_ENABLED) {
+                c.stopService(Intent(c,NextPrayerService::class.java))
+            } else if(NextPrayerService.wanted(c)) {
+                NextPrayerService.start(c)
+            }
             // Hide a separate Friday countdown; its phases now share the
             // supplemental line in this one opt-in lock notification.
             c.stopService(Intent(c,FridayNotificationService::class.java))
@@ -179,11 +181,10 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
         when(intent?.action){
             ACTION,REPOST -> {
                 if(!LockScreenPrayer.notificationsAllowed(c))return
-                if(LockScreenPrayer.enabled(c)) {
-                    LockScreenPrayer.showNow(c)
-                } else if(usesPilotPersistentCard(c)) {
-                    // Only one notification ID, even when Android wakes this
-                    // receiver after the app process was killed.
+                if(LockScreenPrayer.enabled(c)) LockScreenPrayer.showNow(c)
+                if(usesPilotPersistentCard(c)) {
+                    // Two separately opted-in cards retain their independent
+                    // notification IDs across phase changes and process restarts.
                     NextPrayerService.start(c)
                 }
             }
