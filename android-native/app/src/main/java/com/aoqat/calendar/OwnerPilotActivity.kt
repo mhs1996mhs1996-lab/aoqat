@@ -11,6 +11,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import java.util.zip.ZipException
+import java.net.HttpURLConnection
+import java.net.URL
+import org.json.JSONObject
 
 /**
  * QA package is a separate app ID, never the user's installed production app.
@@ -49,15 +52,8 @@ class OwnerPilotActivity : Activity() {
             setTextColor(ink)
             setPadding(0, 0, 0, dp(14))
         }
-        val instructions = TextView(this).apply {
-            text = "يفحص التطبيق قناة OTA التجريبية تلقائياً عند فتحه وكل خمس دقائق وهو مفتوح. " +
-                "ما تحتاج تحمل ملفات أو تدخل بصمات. التحديث الموقّع يُفعّل عند إعادة الفتح."
-            textSize = 15f
-            setTextColor(ink)
-            setPadding(0, 0, 0, dp(14))
-        }
         status = TextView(this).apply {
-            text = "اختيار ملف التحديث يدوياً احتياطي فقط."
+            text = "ملف ZIP احتياطي"
             textSize = 16f
             setTextColor(ink)
             setBackgroundColor(Color.rgb(225, 238, 240))
@@ -71,7 +67,7 @@ class OwnerPilotActivity : Activity() {
         }
         refreshPilotState()
         val select = Button(this).apply {
-            text = "اختيار ZIP موقّع يدوياً (اختياري)"
+            text = "اختيار ملف ZIP"
             setOnClickListener {
                 if (working) return@setOnClickListener
                 val request = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
@@ -82,7 +78,7 @@ class OwnerPilotActivity : Activity() {
             }
         }
         val reopen = Button(this).apply {
-            text = "إعادة فتح التجريبية لتفعيل التحديث المقبول"
+            text = "إعادة فتح التطبيق"
             setOnClickListener {
                 if (working) return@setOnClickListener
                 startActivity(Intent(this@OwnerPilotActivity, MainActivity::class.java).apply {
@@ -92,22 +88,22 @@ class OwnerPilotActivity : Activity() {
             }
         }
         val inspect = Button(this).apply {
-            text = "عرض حالة التحديث التجريبي"
-            setOnClickListener { refreshPilotState() }
+            text = "التحقق من تحديث جديد"
+            setOnClickListener { checkPublishedPilotUpdate() }
         }
         val advanced = Button(this).apply {
-            text = "خيارات متقدمة (اختيار ZIP احتياطي)"
+            text = "خيارات متقدمة (ZIP احتياطي)"
             textSize = 13f
             setOnClickListener {
                 val show = select.visibility != View.VISIBLE
                 select.visibility = if (show) View.VISIBLE else View.GONE
                 status.visibility = if (show) View.VISIBLE else View.GONE
-                text = if (show) "إخفاء الخيارات المتقدمة" else "خيارات متقدمة (اختيار ZIP احتياطي)"
+                text = if (show) "إخفاء الخيارات المتقدمة" else "خيارات متقدمة (ZIP احتياطي)"
             }
         }
         select.visibility = View.GONE
         status.visibility = View.GONE
-        listOf(title, instructions, pilotState, inspect, reopen, advanced, select, status).forEach {
+        listOf(title, pilotState, inspect, reopen, advanced, select, status).forEach {
             layout.addView(it, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
@@ -134,11 +130,45 @@ class OwnerPilotActivity : Activity() {
             active != null -> "يوجد تحديث مسجّل نشط، دون تأكيد بدء تشغيل موثوق."
             else -> "ماكو تحديث نشط مسجّل حالياً."
         }
-        pilotState.text = "قناة OTA التجريبية — موقّعة ومستقلة\n" +
-            "فحص عند فتح التطبيق وكل خمس دقائق أثناء الاستخدام؛ التفعيل عند إعادة الفتح.\n" +
-            "أعلى تسلسل مُفعّل سابقاً: $last\n" +
-            "أي تحديث جديد لازم يحمل تسلسلاً أكبر من $last، وتوقيع المالك الصحيح.\n" +
-            state + "\nهاي الحالة لا تعني اجتياز اختبارات الأذان والتنبيهات أو موافقة النشر."
+        pilotState.text = "التحديث المفعّل: $last\n$state"
+    }
+
+    /** Display published sequence only; WebUpdates still verifies the signed
+     * manifest and is solely responsible for downloading/activating OTA. */
+    private fun checkPublishedPilotUpdate() {
+        if (working) return
+        working = true
+        pilotState.text = "جارٍ التحقق..."
+        Thread {
+            val result = try {
+                val address = URL("https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-150/manifest.json")
+                val connection = address.openConnection() as HttpURLConnection
+                connection.connectTimeout = 7000
+                connection.readTimeout = 7000
+                connection.useCaches = false
+                try {
+                    if (connection.responseCode != 200) error("Unavailable feed")
+                    val payload = connection.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                    require(payload.length in 1..131072)
+                    val manifest = JSONObject(payload)
+                    require(manifest.optString("channel") == "owner-pilot")
+                    require(manifest.optInt("nativeBuild") == 150)
+                    require(manifest.optString("signature").length >= 70)
+                    val latest = manifest.getLong("sequence")
+                    val last = getSharedPreferences("web_updates_v3_owner_pilot", MODE_PRIVATE)
+                        .getLong("lastSequence", 0L)
+                    if (latest > last)
+                        "إصدار $latest متوفر؛ يُفحص توقيعه ويُستلم داخل التطبيق."
+                    else "لا يوجد تحديث أحدث من $last."
+                } finally { connection.disconnect() }
+            } catch (_: Exception) {
+                "تعذّر التحقق الآن. التطبيق يعمل دون إنترنت."
+            }
+            runOnUiThread {
+                if (!isFinishing && !isDestroyed) pilotState.text = result
+                working = false
+            }
+        }.start()
     }
 
     private fun updateStatus(text: String, color: Int, background: Int) {
