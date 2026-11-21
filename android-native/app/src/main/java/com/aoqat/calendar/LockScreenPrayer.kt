@@ -69,6 +69,9 @@ object LockScreenPrayer {
             // Remove the previous service's separate notification before posting
             // the new lock-screen reminder; no FGS start is required.
             c.stopService(Intent(c,NextPrayerService::class.java))
+            if(BuildConfig.OWNER_PILOT_ENABLED)
+                (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
+                    .cancel(NextPrayerService.NOTIFICATION_ID)
             // Hide a separate Friday countdown; its phases now share the
             // supplemental line in this one opt-in lock notification.
             c.stopService(Intent(c,FridayNotificationService::class.java))
@@ -140,7 +143,13 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
             if(!LockScreenPrayer.enabled(c) && !usesPilotPersistentCard(c))return
             val now=System.currentTimeMillis()
             // Schedule prayer start even when the WebView and service are closed.
-            val boundary=LockScreenSupplement.nextRefreshAt(c,now)?:return
+            // On the owner-pilot device recheck the persisted opt-in card even
+            // if Android/OEM terminated the app process. No WebView launch.
+            // Normal prayer/Friday/iqama alarms still refresh at their actual
+            // transition times and can fire sooner than this safety refresh.
+            val phase=LockScreenSupplement.nextRefreshAt(c,now)
+            val safety=if(BuildConfig.OWNER_PILOT_ENABLED) now+30*60_000L else null
+            val boundary=listOfNotNull(phase,safety).minOrNull()?:return
             val delay=boundary-now
             if(delay<=0L)return
             val pi=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
@@ -158,12 +167,9 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
                 if(LockScreenPrayer.enabled(c)) {
                     LockScreenPrayer.showNow(c)
                 } else if(usesPilotPersistentCard(c)) {
-                    // Preserve the existing foreground service and notification
-                    // ID while replacing only the card's layout/state symbols.
-                    val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    manager.notify(NextPrayerService.NOTIFICATION_ID,
-                        NextPrayerService.lockNotification(c))
-                    schedule(c)
+                    // Only one notification ID, even when Android wakes this
+                    // receiver after the app process was killed.
+                    NextPrayerService.start(c)
                 }
             }
             DISMISSED -> scheduleAfterSwipe(c)
