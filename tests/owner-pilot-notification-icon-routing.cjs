@@ -36,6 +36,7 @@ test('real adhan foreground notification uses adhan icon and tapping opens adhan
   assert.match(adhan,/val content=show/);
   assert.match(adhan,/\.setContentIntent\(content\)/);
   assert.match(adhan,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallAdhan\(\)/);
+  assert.match(adhan,/PilotNotificationIcons\.large\(this@AdhanPlaybackService,PilotNotificationIcons\.coloredAdhan\(\)\)/);
   // Auto wake remains controlled by the existing opt-in, unlike explicit taps.
   assert.match(adhan,/if\(screenAlert\)builder\.setFullScreenIntent\(show,true\)/);
   assert.match(adhan,/val deviceLocked = \(getSystemService\(KEYGUARD_SERVICE\) as KeyguardManager\)\.isKeyguardLocked/);
