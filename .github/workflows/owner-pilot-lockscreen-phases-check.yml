@@ -44,6 +44,7 @@ jobs:
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/LockScreenSupplement.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerNotifications.kt',
@@ -55,7 +56,7 @@ jobs:
           assert changed and changed <= allowed,'Unrelated changes: '+str(changed-allowed)
           for f in ['android-native/app/build.gradle','android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
                     'android-native/app/src/main/java/com/aoqat/calendar/SignedWebUpdateManifest.kt',
-                    'android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt',
+                    
                     'index.html','data/prayer-times-offline.json','js/quran-reader.js']:
               original=subprocess.check_output(['git','show',base+':'+f])
               current=open(f,'rb').read()
