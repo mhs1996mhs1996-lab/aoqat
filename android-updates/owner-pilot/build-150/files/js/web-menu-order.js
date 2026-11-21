@@ -725,18 +725,34 @@
       mainView();document.querySelector('[data-drawer="quran"]')?.click();
     },"📖");
     sections("النسخ الاحتياطي");
-    panel.append(el("small","احفظ ملفاً واحداً يشمل الإعدادات ومحفوظات المصحف، ثم اختر Gmail أو Google Drive أو واتساب أو أي تطبيق. يمكنك استعادته عند تغيير الهاتف.","display:block;margin:4px 4px 9px;font-size:11px;line-height:1.7"));
+    panel.append(el("small","نسخة احتياطية بصيغة JSON تحفظ الإعدادات ومحفوظات المصحف في ملف واحد، وليس صورة. اختر حفظ الملف أو مشاركته عبر Gmail أو Drive أو التطبيقات الداعمة.","display:block;margin:4px 4px 9px;font-size:11px;line-height:1.7"));
     const backupPanel=el("div",null,"display:none;border:1px solid var(--wt-border,#c7d8df);border-radius:10px;padding:9px;margin:5px 0;background:var(--wt-surface,#fff)");
     backupPanel.id="aoqatProfileBackupActions";
     const backupActionStatus=el("small","","display:block;line-height:1.6;margin:4px 0 8px;font-size:12px");
     backupActionStatus.setAttribute("role","status");
     const backupCopies=el("div",null,"margin:4px 0 7px");
     backupCopies.id="aoqatProfileBackupCopies";
-    let exportJson="",exportFilename="",exportPng="";
+    let exportJson="",exportFilename="";
+    const backupNativePending=window.aoqatBackupNativePendingV1||(window.aoqatBackupNativePendingV1=new Map());
+    if(!window.aoqatBackupNativeResult){
+      window.aoqatBackupNativeResult=function(requestId,ok){
+        const done=backupNativePending.get(requestId);
+        if(done){backupNativePending.delete(requestId);done(!!ok);}
+      };
+    }
+    function backupNativeAction(method){
+      const requestId="aoqat-backup-"+Date.now()+"-"+Math.random().toString(36).slice(2,8);
+      backupNativePending.set(requestId,ok=>{
+        backupActionStatus.textContent=ok
+          ?(method==="saveBackupFile"?"تم حفظ ملف النسخة في المكان الذي اخترته.":"تم فتح اختيار التطبيق. تأكد من إرسال ملف النسخة في الوجهة التي اخترتها.")
+          :"لم يكتمل حفظ ملف النسخة. أعد المحاولة.";
+      });
+      window.AndroidNative[method](exportJson,exportFilename,requestId);
+    }
     function prepareExport(pack){
       exportJson=JSON.stringify(pack);
       exportFilename="AOQAT-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+".json";
-      exportPng="";
+
     }
     function fileBackupDownload(){
       if(!exportJson){say("أنشئ نسخة احتياطية أولاً.");return;}
@@ -752,47 +768,43 @@
     async function shareBackupFile(){
       if(!exportJson){say("أنشئ نسخة احتياطية أولاً.");return;}
       backupActionStatus.textContent="جارٍ تجهيز ملف النسخة...";
-      // The installed APK already has a safe file-sharing Android chooser for
-      // PNG images. Encode backup bytes losslessly; no new native APK required.
-      if(typeof window.AndroidNative?.sharePrayerImage==="function"){
-        try{
-          if(!exportPng)exportPng=profileBackupBuildPng(exportJson);
-          window.AndroidNative.sharePrayerImage(exportPng,
-            "AOQAT-backup.png","aoqat-profile-backup-"+Date.now());
-          backupActionStatus.textContent="اختر Gmail أو Drive أو واتساب أو تطبيقاً آخر من قائمة المشاركة. احتفظ بالملف دون قص أو ضغط.";
-          return;
-        }catch(e){
-          backupActionStatus.textContent="تعذّرت مشاركة ملف النسخة من هذا الجهاز.";
-          say(e?.message||backupActionStatus.textContent);
-          return;
-        }
-      }
+      // Web Share, when implemented, shares a REAL .json file, not an image.
       try{
         const file=new File([exportJson],exportFilename,{type:"application/json"});
-        if(navigator.share && navigator.canShare?.({files:[file]})){
-          await navigator.share({files:[file],title:"النسخة الاحتياطية لأوقات الصلاة"});
-          backupActionStatus.textContent="تم فتح مشاركة الملف. تأكد من إتمام الحفظ في التطبيق الذي اخترته.";
+        if(typeof navigator.share==="function" &&
+           typeof navigator.canShare==="function" &&
+           navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:"نسخة احتياطية لأوقات الصلاة"});
+          backupActionStatus.textContent="اخترت مشاركة ملف النسخة. تأكد من إتمام إرساله إلى التطبيق المطلوب.";
           return;
         }
       }catch(e){
         if(e?.name==="AbortError"){
-          backupActionStatus.textContent="أُلغيت المشاركة. الملف جاهز، جرّب مرة أخرى.";
+          backupActionStatus.textContent="أُلغيت المشاركة؛ يمكنك اختيار وجهة أخرى.";
           return;
         }
       }
+      if(typeof window.AndroidNative?.shareBackupFile==="function"){
+        try{backupNativeAction("shareBackupFile");return;}
+        catch(e){backupActionStatus.textContent="تعذّر فتح مشاركة ملف النسخة.";return;}
+      }
+      // Old APK builds have IMAGE-ONLY native sharing. Refuse to mislabel a
+      // PNG as a backup document or claim it was uploaded to Gmail/Drive.
+      if(window.AndroidNative?.configureAdhan){
+        backupActionStatus.textContent="نسخة التطبيق الحالية تدعم مشاركة الصور فقط، وليس ملفات النسخ. يلزم تحديث APK لدعم مشاركة ملف JSON حقيقي. لم يتم إرسال صورة أو فقدان بياناتك.";
+        return;
+      }
       fileBackupDownload();
     }
-    const shareBackup=actionButton("aoqatProfileBackupShare","📤 اختيار Gmail أو Drive أو تطبيق آخر",()=>shareBackupFile());
+    const shareBackup=actionButton("aoqatProfileBackupShare","📤 مشاركة ملف النسخة (.json)",()=>shareBackupFile());
     shareBackup.style.width="100%";
-    const downloadBackup=actionButton("aoqatProfileBackupDownload","📁 حفظ نسخة على هذا الهاتف",()=>{
+    const downloadBackup=actionButton("aoqatProfileBackupDownload","📁 حفظ ملف نسخة احتياطية (.json)",()=>{
       if(!exportJson){say("أنشئ النسخة أولاً.");return;}
-      if(typeof window.AndroidNative?.savePrayerImage==="function"){
-        try{
-          if(!exportPng)exportPng=profileBackupBuildPng(exportJson);
-          window.AndroidNative.savePrayerImage(exportPng,"AOQAT-backup.png",
-            "aoqat-backup-save-"+Date.now());
-          backupActionStatus.textContent="تم طلب حفظ ملف النسخة في صور الهاتف، داخل مجلد TaqawimAlSalah.";
-        }catch(e){say(e?.message||"تعذّر حفظ النسخة.");}
+      if(typeof window.AndroidNative?.saveBackupFile==="function"){
+        try{backupNativeAction("saveBackupFile");}
+        catch(_){backupActionStatus.textContent="تعذّر فتح اختيار مكان الحفظ.";}
+      }else if(window.AndroidNative?.configureAdhan){
+        backupActionStatus.textContent="حفظ ملف JSON من داخل هذا الإصدار القديم غير مدعوم. يلزم تحديث APK لدعم حفظ الملفات، ولم تُنشأ صورة بديلة.";
       }else fileBackupDownload();
     });
     downloadBackup.style.width="100%";
@@ -818,7 +830,7 @@
         }
       }catch(_){backupCopies.append(el("small","النسخ المحلية غير متاحة على هذا الهاتف.","font-size:11px"));}
     }
-    row("aoqatProfileBackupExport","حفظ ومشاركة نسخة احتياطية","ملف واحد • Gmail • Drive • واتساب",async()=>{
+    row("aoqatProfileBackupExport","إنشاء نسخة احتياطية","ملف JSON • الحفظ أو المشاركة",async()=>{
       backupPanel.style.display="block";
       backupActionStatus.textContent="جارٍ إعداد الملف...";
       try{
@@ -936,7 +948,7 @@
       }catch(e){restoreStatus.textContent=e?.message||"هذا الملف ليس نسخة احتياطية صالحة.";say(restoreStatus.textContent);}
     };
     restorePanel.append(restoreInput,restoreStatus,choose,localRestore);
-    row("aoqatProfileBackupRestore","استعادة نسخة احتياطية","من Drive أو Gmail أو الهاتف",()=>{
+    row("aoqatProfileBackupRestore","استعادة نسخة احتياطية","اختيار ملف JSON من Drive أو الهاتف",()=>{
       const open=restorePanel.style.display==="none";
       restorePanel.style.display=open?"block":"none";
       if(open){restorePanel.scrollIntoView?.({behavior:"smooth",block:"nearest"});}
