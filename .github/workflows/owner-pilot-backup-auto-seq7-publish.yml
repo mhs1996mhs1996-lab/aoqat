@@ -1,0 +1,139 @@
+name: Owner pilot OTA 7 - original-key automatic publish
+on:
+  push:
+    branches: [feature/owner-pilot-lockscreen-phases-20261121]
+    paths:
+      - .github/workflows/owner-pilot-backup-auto-seq7-publish.yml
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish-pilot-only:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-lockscreen-phases-20261121'
+    runs-on: ubuntu-22.04
+    environment: owner-pilot-publish
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Approve only requested release workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = ".github/workflows/owner-pilot-backup-auto-seq7-publish.yml"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          node --check js/web-menu-order.js
+          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Generate exact offline APK web assets
+        run: |
+          set -euo pipefail
+          gradle -p android-native --no-daemon :app:syncWebAssets
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+          python3 security/test-owner-pilot-auto-publish.py
+      - name: Ensure seq6 is live and only backup JS changes
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota
+          git show FETCH_HEAD:android-updates/owner-pilot/build-150/manifest.json > "$RUNNER_TEMP/previous-seq6.json"
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,os
+          prior=json.loads(Path(os.environ['RUNNER_TEMP'],'previous-seq6.json').read_text())
+          assert (prior['channel'],prior['nativeBuild'],prior['sequence'])==('owner-pilot',150,6)
+          base=Path('android-native/app/src/main/assets/www')
+          items={'index.html':(base/'index.html').read_bytes()}
+          for directory,ext in [('js','.js'),('css','.css')]:
+            for item in sorted((base/directory).rglob('*')):
+              if item.is_file() and item.suffix==ext: items[item.relative_to(base).as_posix()]=item.read_bytes()
+          assert len(items)==88 and set(items)==set(prior['files'])
+          diff={p for p,v in items.items() if hashlib.sha256(v).hexdigest()!=prior['files'][p]}
+          assert diff=={'js/web-menu-order.js','js/apk-startup-bundle.js'},diff
+          for p in diff:
+            for mark in (b'aoqatProfileBackupSchedule',b'aoqatProfileRestoreQuranAuto',
+                         b'profileBackupValidate',b'PROFILE_BACKUP_LIMIT=3'):
+              assert mark in items[p],(p,mark)
+          assert sum(map(len,items.values()))<=24*1024*1024
+          print('PASS: 88 files, only approved backup menu and embedded bundle changed')
+          PY
+      - name: Sign with existing pinned owner-pilot private key ONLY
+        shell: bash
+        env:
+          PILOT_SIGNING_PEM: ${{ secrets.AOQAT_PILOT_OTA_SIGNING_PEM }}
+        run: |
+          set -euo pipefail
+          if test -z "$PILOT_SIGNING_PEM"; then
+            echo 'BLOCKED: original owner-pilot signing key is not configured in environment'
+            exit 9
+          fi
+          umask 077
+          KEY="$RUNNER_TEMP/original-pilot-key.pem"
+          trap 'rm -f "$KEY"' EXIT
+          printf '%s\n' "$PILOT_SIGNING_PEM" > "$KEY"
+          # Existing script requires the EXACT old pinned key and verifies signature.
+          python3 security/owner-pilot-ota-publish.py --secret-key "$KEY" \
+            --sequence 7 --output-dir "$RUNNER_TEMP/signed-pilot"
+      - name: Verify signed manifest against APK public key and all files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import os,json,re,base64,hashlib,tempfile,subprocess,importlib.util
+          root=Path(os.environ['RUNNER_TEMP'],'signed-pilot/android-updates/owner-pilot/build-150')
+          m=json.loads((root/'manifest.json').read_text())
+          prev=json.loads(Path(os.environ['RUNNER_TEMP'],'previous-seq6.json').read_text())
+          assert m['nativeBuild']==150 and m['channel']=='owner-pilot' and m['sequence']==7
+          assert len(m['files'])==88 and set(m['files'])==set(prev['files'])
+          changed={n for n,h in m['files'].items() if h!=prev['files'][n]}
+          assert changed=={'js/web-menu-order.js','js/apk-startup-bundle.js'},changed
+          for n,h in m['files'].items():
+            assert hashlib.sha256((root/'files'/n).read_bytes()).hexdigest()==h
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          encoded=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source).group(1)
+          der=base64.b64decode(encoded,validate=True)
+          assert hashlib.sha256(der).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          with tempfile.TemporaryDirectory() as temp:
+            public=Path(temp,'public.pem')
+            public.write_bytes(subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=der))
+            spec=importlib.util.spec_from_file_location('signer','security/owner-pilot-auto-ota-sign.py')
+            signer=importlib.util.module_from_spec(spec);spec.loader.exec_module(signer)
+            signer.verify_signature(m,public)
+          print('PASS: OTA 7 ECDSA signed by existing pilot key; all hashes verified')
+          PY
+      - name: Publish three public files ONLY to owner-pilot-ota
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          git fetch origin owner-pilot-ota
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" FETCH_HEAD
+          for FILE in manifest.json files/js/web-menu-order.js files/js/apk-startup-bundle.js; do
+            cp "$RUNNER_TEMP/signed-pilot/$ROOT/$FILE" "$W/$ROOT/$FILE"
+          done
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          import subprocess,sys
+          changed=set(subprocess.check_output(['git','-C',sys.argv[1],'diff','--cached','--name-only'],text=True).splitlines())
+          expected={'android-updates/owner-pilot/build-150/manifest.json',
+                    'android-updates/owner-pilot/build-150/files/js/web-menu-order.js',
+                    'android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js'}
+          assert changed==expected,changed
+          PY
+          git -C "$W" -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'pilot: publish original-key signed backup OTA 7' >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PASS: signed OTA 7 live in owner-pilot feed ONLY; production untouched'
