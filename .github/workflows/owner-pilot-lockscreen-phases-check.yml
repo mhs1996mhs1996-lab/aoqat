@@ -67,6 +67,7 @@ jobs:
             'android-native/app/src/main/java/com/aoqat/calendar/FridaySchedule.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerNotifications.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerAlarm.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/AlarmCore.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
             'tests/owner-pilot-notification-icon-routing.cjs',
             'android-native/app/src/main/java/com/aoqat/calendar/PilotNotificationIcons.kt',
