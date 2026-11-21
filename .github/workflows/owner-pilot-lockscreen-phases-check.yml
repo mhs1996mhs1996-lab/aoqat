@@ -35,6 +35,9 @@ jobs:
           allowed={
             '.github/workflows/owner-pilot-lockscreen-phases-check.yml',
             '.github/workflows/owner-pilot-backup-ota-seq7-candidate.yml',
+            '.github/workflows/owner-pilot-backup-ota-seq8-candidate.yml',
+            '.github/workflows/owner-pilot-backup-presigned-seq8-publish.yml',
+            'security/owner-pilot-backup-seq8-verify-presigned.py',
             '.github/workflows/owner-pilot-backup-presigned-seq7-publish.yml',
             '.github/workflows/owner-pilot-seq6-presigned-candidate.yml',
             '.github/workflows/owner-pilot-seq7-presigned-candidate.yml',
