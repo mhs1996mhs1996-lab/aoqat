@@ -40,7 +40,7 @@ test('real adhan foreground notification uses adhan icon and tapping opens adhan
 test('all pilot prayer alarms and reminders replace the old Android clock icon',()=>{
   const alarm=source('PrayerAlarm');
   const ahead=source('AdhanSchedule');
-  for(const s of [alarm,ahead]){
+  for(const s of [alarm,ahead,source('AlarmCore')]){
     assert.match(s,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallPhase\(true\) else android\.R\.drawable\.ic_lock_idle_alarm\)/);
   }
   assert.match(source('PilotNotificationIcons'),/fun smallAdhan\(\)/);
