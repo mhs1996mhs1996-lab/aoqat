@@ -295,16 +295,18 @@
   const PROFILE_BACKUP_PERIOD={daily:86400000,weekly:604800000};
   let profileBackupLastQuran=null;
   let profileBackupInFlight=null;
+  function profileBackupAllowedKey(name){
+    return PROFILE_BACKUP_KEYS.includes(name)||name==="quranPage"||name===PROFILE_BACKUP_PLAN_KEY||
+      (/^aoqat[A-Z][A-Za-z0-9_-]{0,75}$/.test(name) &&
+      !/(token|auth|secret|private|password|sign|update|ota|cache|blob|asset|backupLast|snapshot|session|nonce)/i.test(name));
+  }
   function profileBackupIncludedKeys(){
-    const extra=["quranPage",PROFILE_BACKUP_PLAN_KEY], keys=new Set([...PROFILE_BACKUP_KEYS,...extra]);
+    const keys=new Set([...PROFILE_BACKUP_KEYS,"quranPage",PROFILE_BACKUP_PLAN_KEY]);
     try{
       for(let i=0;i<localStorage.length;i++){
         const name=localStorage.key(i)||"";
-        // Saved user preferences only. Never copy OAuth credentials, caches,
-        // OTA status, signing material or arbitrary third-party localStorage.
-        if(/^aoqat[A-Z][A-Za-z0-9_-]{0,75}$/.test(name) &&
-           !/(token|auth|secret|private|password|sign|update|ota|cache|blob|asset|backupLast|snapshot|session|nonce)/i.test(name))
-          keys.add(name);
+        // Selected user settings only; never copy credentials, caches, or OTA.
+        if(profileBackupAllowedKey(name))keys.add(name);
       }
     }catch(_){}
     return [...keys].sort();
@@ -384,7 +386,7 @@
     if(!pack||pack.format!=="aoqat-local-backup"||![1,2].includes(pack.version)||
        !pack.data||typeof pack.data!=="object"||Array.isArray(pack.data))
       throw Error("صيغة النسخة غير مدعومة.");
-    const allow=new Set(profileBackupIncludedKeys());
+    const allow={has:profileBackupAllowedKey};
     const entries=Object.entries(pack.data);
     if(!entries.length||entries.length>120||entries.some(([k,v])=>
         !allow.has(k)||typeof v!=="string"||v.length>500000))
