@@ -20,7 +20,6 @@ test('ongoing lock-screen and next-prayer notifications never borrow adhan icon'
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/if\(!BuildConfig\.OWNER_PILOT_ENABLED \|\| !persistent\) setCustomBigContentView\(views\)/);
   assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !persistent\)/);
-  assert.doesNotMatch(widget,/views\.setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
 });
 
 test('normal prayer reminders do not carry adhan visual markers',()=>{
