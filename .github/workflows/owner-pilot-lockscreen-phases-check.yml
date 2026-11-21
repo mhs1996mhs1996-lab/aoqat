@@ -36,6 +36,7 @@ jobs:
             '.github/workflows/owner-pilot-lockscreen-phases-check.yml',
             '.github/workflows/owner-pilot-backup-ota-seq7-candidate.yml',
             '.github/workflows/owner-pilot-backup-presigned-seq7-publish.yml',
+            '.github/workflows/owner-pilot-backup-auto-seq7-publish.yml',
             '.github/workflows/owner-pilot-seq6-presigned-candidate.yml',
             '.github/workflows/owner-pilot-seq7-presigned-candidate.yml',
             '.github/workflows/owner-pilot-presigned-seq7-publish.yml',
