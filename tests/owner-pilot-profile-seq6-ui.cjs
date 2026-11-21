@@ -58,3 +58,19 @@ test('owner-pilot single prayer card has one visible state symbol and no expande
   assert.match(file,/setViewVisibility\(R\.id\.lock_iqama_row,android\.view\.View\.GONE\)/);
   assert.match(file,/setUsesChronometer\(!BuildConfig\.OWNER_PILOT_ENABLED && next!=null\)/);
 });
+
+test('reference icon assets are exact and only one compact notification is rendered',()=>{
+  const base=path.resolve(__dirname,'../android-native/app/src/main');
+  const cpp=fs.readFileSync(path.join(base,'java/com/aoqat/calendar/PrayerWidget.kt'),'utf8');
+  const icon=fs.readFileSync(path.join(base,'java/com/aoqat/calendar/PilotNotificationIcons.kt'),'utf8');
+  for(const state of ['adhan','wait','elapsed']){
+    const file=path.join(base,'res/drawable-nodpi/pilot_notify_exact_'+state+'.webp');
+    const b=fs.readFileSync(file);
+    assert.equal(b.toString('ascii',0,4),'RIFF');
+    assert.equal(b.toString('ascii',8,12),'WEBP');
+    assert.match(icon,new RegExp('R\\.drawable\\.pilot_notify_exact_'+state));
+  }
+  assert.match(cpp,/PilotNotificationIcons\\.exactSmall/);
+  assert.match(cpp,/setCustomContentView\\(compactViews\\)/);
+  assert.match(cpp,/if\\(!BuildConfig\\.OWNER_PILOT_ENABLED\\) setCustomBigContentView\\(views\\)/);
+});
