@@ -134,12 +134,32 @@ test('lossless backup image codec rejects compressed or altered copies and prese
   packed[25]^=1;
   assert.throws(()=>context.codec.decode(packed),/تغيّرت الصورة/);
   assert.throws(()=>context.codec.decode(new Uint8Array(12)));
-  assert.match(js,/window\.AndroidNative\.sharePrayerImage\(exportPng/);
-  assert.match(js,/window\.AndroidNative\.savePrayerImage\(exportPng/);
+  assert.match(js,/backupNativeAction\("shareBackupFile"\)/);
+  assert.match(js,/backupNativeAction\("saveBackupFile"\)/);
+  assert.match(js,/new File\(\[exportJson\],exportFilename,\{type:"application\/json"\}\)/);
+  assert.doesNotMatch(js,/window\.AndroidNative\.sharePrayerImage\(exportPng/);
+  assert.doesNotMatch(js,/window\.AndroidNative\.savePrayerImage\(exportPng/);
+  assert.match(js,/window\.aoqatBackupNativeResult/);
   assert.match(js,/await profileBackupReadPng\(file\)/);
   assert.match(js,/file\.type==="image\/png"/);
   assert.match(js,/profileBackupValidate\(content\)/);
   assert.doesNotMatch(js,/aoqatProfileBackupText/);
   assert.doesNotMatch(js,/aoqatProfileBackupCopy"/);
   assert.doesNotMatch(js,/AndroidNative\.saveDataUrl\(.*json/);
+});
+
+test('backup document bridge is isolated to pilot and uses real JSON MIME with URI permission',()=>{
+  const root=path.resolve(__dirname,'../android-native/app/src/main');
+  const native=fs.readFileSync(path.join(root,'java/com/aoqat/calendar/MainActivity.kt'),'utf8');
+  const helper=fs.readFileSync(path.join(root,'java/com/aoqat/calendar/ProfileBackupFile.kt'),'utf8');
+  const paths=fs.readFileSync(path.join(root,'res/xml/prayer_image_paths.xml'),'utf8');
+  for(const method of ['shareBackupFile','saveBackupFile']) assert.ok(native.includes('fun '+method+'('));
+  assert.match(native,/if \(!BuildConfig\.OWNER_PILOT_ENABLED\) return/);
+  assert.match(native,/Intent\.ACTION_CREATE_DOCUMENT/);
+  assert.match(native,/window\.aoqatBackupNativeResult/);
+  assert.match(helper,/const val MIME = "application\/json"/);
+  assert.match(helper,/Intent\.ACTION_SEND/);
+  assert.match(helper,/FLAG_GRANT_READ_URI_PERMISSION/);
+  assert.match(helper,/aoqat-local-backup/);
+  assert.match(paths,/shared-backups\//);
 });
