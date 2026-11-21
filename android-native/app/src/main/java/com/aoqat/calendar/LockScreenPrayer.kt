@@ -112,9 +112,13 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
                 Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(REPOST),
                 flags or PendingIntent.FLAG_IMMUTABLE)
 
-        fun cancel(c:Context){
+        private fun cancelBoundary(c:Context){
             val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             pending(c,PendingIntent.FLAG_NO_CREATE)?.let { alarm.cancel(it);it.cancel() }
+        }
+        fun cancel(c:Context){
+            cancelBoundary(c)
+            val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             repostIntent(c,PendingIntent.FLAG_NO_CREATE)?.let { alarm.cancel(it);it.cancel() }
         }
 
@@ -135,11 +139,15 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
             pref.edit().putLong("lastSwipeRepost",now).apply()
             val pi=repostIntent(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
             val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            alarm.set(AlarmManager.ELAPSED_REALTIME_WAKEUP,
-                SystemClock.elapsedRealtime()+8_000L,pi)
+            val at=SystemClock.elapsedRealtime()+4_000L
+            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||alarm.canScheduleExactAlarms())
+                alarm.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
+            else alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
         }
         fun schedule(c:Context){
-            cancel(c)
+            // Do not cancel a pending post-swipe restoration when refreshing
+            // a prayer/iqama boundary; only cancel it if user opts out.
+            cancelBoundary(c)
             if(!LockScreenPrayer.enabled(c) && !usesPilotPersistentCard(c))return
             val now=System.currentTimeMillis()
             // Schedule prayer start even when the WebView and service are closed.
@@ -148,7 +156,7 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
             // Normal prayer/Friday/iqama alarms still refresh at their actual
             // transition times and can fire sooner than this safety refresh.
             val phase=LockScreenSupplement.nextRefreshAt(c,now)
-            val safety=if(BuildConfig.OWNER_PILOT_ENABLED) now+30*60_000L else null
+            val safety=if(BuildConfig.OWNER_PILOT_ENABLED) now+10*60_000L else null
             val boundary=listOfNotNull(phase,safety).minOrNull()?:return
             val delay=boundary-now
             if(delay<=0L)return
