@@ -338,7 +338,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             !(getSystemService(POWER_SERVICE) as PowerManager).isInteractive
         val screenAlert = if(BuildConfig.OWNER_PILOT_ENABLED)
             PhoneScreenAlerts.enabled(this) && deviceLocked && !preview && mode=="sound"
-            else PhoneScreenAlerts.enabled(this) && config.optBoolean("screen",false) && !preview && mode=="sound
+            else PhoneScreenAlerts.enabled(this) && config.optBoolean("screen",false) && !preview && mode=="sound"
         val screenActivity = Intent(this,AdhanScreenActivity::class.java).putExtra("prayerId",prayer)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val show=PendingIntent.getActivity(this,60412,screenActivity,
