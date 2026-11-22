@@ -1012,6 +1012,10 @@ class MainActivity : Activity() {
         @JavascriptInterface fun configurePrayerLockWallpaperConfig(json:String):Boolean =
             LockWallpaperOptions.configure(this@MainActivity,json)
         @JavascriptInterface fun openPrayerEssentialPermissions(){runOnUiThread{this@MainActivity.openPrayerEssentialPermissions()}}
+        @JavascriptInterface fun openLockScreenTextStyle() {
+            if(!BuildConfig.OWNER_PILOT_ENABLED)return
+            runOnUiThread { LockScreenTextStyle.showEditor(this@MainActivity) }
+        }
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
         @JavascriptInterface fun readLockScreenPrayerStatus():String =
