@@ -32,7 +32,6 @@ def compare_profile_only(previous,updated):
     assert new_tail.endswith('  }')
     for key in ("account","backup","help","quran"):
         assert '["'+key+'"' in new_tail,"Missing profile category "+key
-        assert 'groupNodes.'+key not in new_tail or True
     assert 'panel.append(groupNodes[section],note)' in new_tail
     assert 'openSub(profilePages[section],panel,"profile")' in new_tail
     assert 'panel.append(card)' in new_tail
@@ -101,7 +100,7 @@ def publish(out):
     assert proof["revision"]==sha(canonical.encode()),"Unexpected release digest"
     manifest={**proof,"files":digests}
     source=(HERE/"android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt").read_text()
-    match=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"',source)
+    match=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
     assert match,"Pinned public key not found"
     der=base64.b64decode(match.group(1),validate=True)
     assert sha(der)==PIN
