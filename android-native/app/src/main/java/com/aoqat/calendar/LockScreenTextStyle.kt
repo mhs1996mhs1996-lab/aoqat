@@ -4,6 +4,8 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
+import android.content.res.ColorStateList
+import android.os.Build
 import android.text.InputType
 import android.util.TypedValue
 import android.view.View
@@ -40,14 +42,18 @@ internal object LockScreenTextStyle {
         val color=palette[prefs.getInt(key+"_color",0).coerceIn(0,palette.lastIndex)]
         val titleSize=size(c,key,"title",16).toFloat()
         val clockSize=size(c,key,"clock",17).toFloat()
-        v.setTextColor(title,color)
-        v.setTextColor(clock,color)
-        v.setTextViewTextSize(title,TypedValue.COMPLEX_UNIT_SP,titleSize)
-        v.setTextViewTextSize(clock,TypedValue.COMPLEX_UNIT_SP,clockSize)
-        fallback?.let{
-            v.setTextColor(it,color)
-            v.setTextViewTextSize(it,TypedValue.COMPLEX_UNIT_SP,clockSize)
+        // On Android 12+/Honor the notification host can replace a plain
+        // text-color int with its dynamic (dark) notification palette.
+        // Supply a ColorStateList as well for ALL three countdown text views.
+        fun tint(id:Int,sp:Float){
+            v.setTextColor(id,color)
+            if(Build.VERSION.SDK_INT>=31)
+                v.setColorStateList(id,"setTextColor",ColorStateList.valueOf(color))
+            v.setTextViewTextSize(id,TypedValue.COMPLEX_UNIT_SP,sp)
         }
+        tint(title,titleSize)
+        tint(clock,clockSize)
+        fallback?.let{tint(it,clockSize)}
     }
     fun showEditor(activity:Activity){
         if(!BuildConfig.OWNER_PILOT_ENABLED)return
