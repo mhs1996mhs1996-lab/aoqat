@@ -1,8 +1,1 @@
-{
-  "nativeBuild": 150,
-  "sequence": 15,
-  "channel": "owner-pilot",
-  "expiresAt": 1796571621311,
-  "revision": "2214f77bf25c2e250730d10b1c8ccaeae66a79abf3e1c261e83697e40019e5a7",
-  "signature": "MEYCIQDJWZPzImGIGXHuDfq9e1kXLi+IKYfCkOPikZiycooXAQIhANb0AreJxhZJQVXpFnJPFyWaXBZf3V5k2LC/FZtJjLmK"
-}
+{"nativeBuild":150,"sequence":15,"channel":"owner-pilot","expiresAt":1796571621311,"revision":"2214f77bf25c2e250730d10b1c8ccaeae66a79abf3e1c261e83697e40019e5a7","signature":"MEYCIQDJWZPzImGIGXHuDfq9e1kXLi+IKYfCkOPikZiycooXAQIhANb0AreJxhZJQVXpFnJPFyWaXBZf3V5k2LC/FZtJjLmK"}
