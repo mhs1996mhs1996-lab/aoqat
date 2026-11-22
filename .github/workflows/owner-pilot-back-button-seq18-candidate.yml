@@ -1,0 +1,48 @@
+name: Owner pilot seq18 - build unsigned cards-and-lock-font OTA candidate ONLY
+on:
+  push:
+    branches: [feature/owner-pilot-back-button-theme-seq18-20261122]
+    paths: ['.github/workflows/owner-pilot-back-button-seq18-candidate.yml']
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify isolation, source syntax and previous signed feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          node --check js/web-menu-order.js
+          python3 -m py_compile security/owner-pilot-back-button-seq18-release.py
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-back-button-seq18-release.py --candidate-dir pilot-seq18-to-sign
+          node --check pilot-seq18-to-sign/check-web-menu-order.js
+          node --check pilot-seq18-to-sign/check-apk-startup-bundle.js
+          cp security/owner-pilot-auto-ota-sign.py pilot-seq18-to-sign/owner-pilot-auto-ota-sign.py
+          python3 - <<'PY'
+          import base64,hashlib,re,subprocess
+          from pathlib import Path
+          src=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          key=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',src)
+          assert key
+          der=base64.b64decode(key.group(1),validate=True)
+          assert hashlib.sha256(der).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          Path('pilot-seq18-to-sign/pilot-public.pem').write_bytes(subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=der))
+          print('PASS: pinned original pilot key certificate')
+          PY
+      - name: Export unsigned candidate and source proof, DO NOT PUBLISH
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-CARDS-SEQ18-UNSIGNED-CANDIDATE
+          path: pilot-seq18-to-sign/
+          retention-days: 10
+          if-no-files-found: error
