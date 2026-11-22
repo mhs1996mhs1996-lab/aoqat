@@ -379,19 +379,15 @@ class NextPrayerService:Service(){
             // The second symbol, label and chronometer all share one
             // visibility condition (extra != null) in 'views' above.
             val compactViews = views
-            // This system icon is for the prayer countdown, not the
-            // supplemental iqama elapsed flag.
-            val pilotIconIsWaiting = next != null
-            // The persistent "next prayer" card is NEVER an adhan notification.
-            // Only the dedicated AdhanPlaybackService may use the blue adhan
-            // icon. Keep wait/elapsed here even during the adhan minute.
-            val pilotIconIsAdhan = false
+            // Android's mandatory system notification icon is independent
+            // of the custom counter row. The colored top icon always means
+            // next prayer, and the optional lower icon follows extra.countDown.
+            // Never repeat the orange hourglass in the system header and row.
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
-                    if(pilotIconIsAdhan)PilotNotificationIcons.smallAdhan()
-                    else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
+                    PilotNotificationIcons.smallAppMarker()
                     else android.R.drawable.ic_lock_idle_alarm)
                 .apply {
                     // Decorated header separates Android's mandatory
@@ -412,8 +408,7 @@ class NextPrayerService:Service(){
                 .build()
             return Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
-                    if(pilotIconIsAdhan)PilotNotificationIcons.smallAdhan()
-                    else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
+                    PilotNotificationIcons.smallAppMarker()
                     else android.R.drawable.ic_lock_idle_alarm)
                 .apply {
                     // Decorated header separates Android's mandatory
