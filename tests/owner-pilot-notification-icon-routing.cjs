@@ -10,7 +10,7 @@ test('ongoing lock-screen and next-prayer notifications never borrow adhan icon'
   const widget=source('PrayerWidget');
   assert.doesNotMatch(widget,/val pilotIconIsAdhan = false/);
   assert.match(widget,/PilotNotificationIcons\.smallAppMarker\(\)/);
-  assert.match(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
+  assert.doesNotMatch(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
   assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED \|\| LockScreenPrayer\.enabled\(this\)\)lockNotification\(this,BuildConfig\.OWNER_PILOT_ENABLED\)/);
   assert.doesNotMatch(widget,/now - it\.at < 90_000L/);
   assert.match(widget,/fun lockNotification\(c:Context, persistent:Boolean=false\)/);
@@ -96,7 +96,7 @@ test('Honor notifications: blue adhan symbol occupies system right icon and neve
 });
 
 
-test('two aligned colored status symbols, equal countdown columns, middle Arabic title absorbs text length',()=>{
+test('one original phase icon per active row, identical icon and countdown measurements',()=>{
   const xml=fs.readFileSync(path.join(__dirname,'../android-native/app/src/main/res/layout/notification_lock_next.xml'),'utf8');
   const tag=id=>{
     const match=xml.match(new RegExp('<(?:ImageView|Chronometer|TextView)\\b[^>]*android:id="@\\+id/'+id+'"[^>]*\\/?>','s'));
@@ -113,6 +113,8 @@ test('two aligned colored status symbols, equal countdown columns, middle Arabic
   }
   assert.equal(prop(upper,'layout_width'),'30dp');
   assert.equal(prop(upper,'layout_height'),'26dp');
+  // Retain approved icon measurements; only remove the oversized OEM decoration.
+  assert.equal(prop(upper,'layout_marginEnd'),'6dp');
   const firstClock=tag('lock_prayer_clock'),secondClock=tag('lock_iqama_clock');
   for(const attribute of ['layout_width','layout_marginStart','textSize','gravity','layoutDirection']){
     assert.equal(prop(firstClock,attribute),prop(secondClock,attribute),attribute);
@@ -129,7 +131,7 @@ test('two aligned colored status symbols, equal countdown columns, middle Arabic
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_row,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_exact_wait else R\.drawable\.pilot_notify_exact_elapsed/);
-  assert.match(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
+  assert.doesNotMatch(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
 });
 
 
