@@ -35,6 +35,6 @@ jobs:
               assert 'aoqatProfileGroup-' in value
               assert 'profileView(key)' in value
               assert 'groupNodes[section]' in value
-          assert (base.parent/'manifest.json').exists()
+          assert (base.parent.parent/'manifest.json').exists()
           print('PASS: profile-only light buttons, preserved nested navigation, no publish')
           PY
