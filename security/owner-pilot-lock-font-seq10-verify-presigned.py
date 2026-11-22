@@ -82,7 +82,7 @@ def verify(previous_file: Path, destination: Path):
         assert 'openSub("تعديل بطاقات الشاشة الرئيسية",panel,"appearance")' in source[a:b]
         alert = source[source.index('function alertSettingsView(){'):source.index('function openAlertSection(', source.index('function alertSettingsView(){'))]
         assert '"lockFont"' not in alert, 'Button must not appear in alert scheduling'
-    assert 'window.AndroidNative?.openLockScreenTextStyle?.();return;' in assets['js/web-menu-order.js'].decode('utf-8')
+    assert 'if(kind==="lockFont")' not in assets['js/web-menu-order.js'].decode('utf-8')
 
     assert all(len(data) <= signer.MAX_FILE for data in assets.values())
     assert sum(map(len, assets.values())) <= signer.MAX_TOTAL
