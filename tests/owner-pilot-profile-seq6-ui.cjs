@@ -54,8 +54,8 @@ test('owner-pilot prayer icon is not duplicated and iqama indicator remains inde
   const file=fs.readFileSync(path.resolve(__dirname,
     '../android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt'),'utf8');
   assert.match(file,/\.setCustomBigContentView\(views\)/);
-  assert.match(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
-  assert.match(file,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
+  assert.doesNotMatch(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.doesNotMatch(file,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
   assert.match(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(file,/setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
   assert.match(file,/views\.setViewVisibility\(R\.id\.lock_iqama_row,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
