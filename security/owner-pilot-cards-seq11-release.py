@@ -108,7 +108,7 @@ def verify_and_stage(destination):
     canonical="\n".join(name+":"+sums[name] for name in sorted(sums))
     assert manifest["revision"]==hash_bytes(canonical.encode()),"Proof doesn't match current candidate"
     source=(HERE/"android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt").read_text()
-    match=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\\s*=\\s*"([^"]+)"',source)
+    match=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
     assert match,"Pinned public key missing"
     der=base64.b64decode(match.group(1),validate=True)
     assert hash_bytes(der)==PIN
