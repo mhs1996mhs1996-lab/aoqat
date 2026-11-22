@@ -241,10 +241,12 @@ object IqamaNotificationRenderer {
         view.setChronometer(R.id.iqama_chronometer, display.baseRealtime, null, true)
         if (BuildConfig.OWNER_PILOT_ENABLED) {
             view.setViewVisibility(R.id.iqama_state_icon,android.view.View.VISIBLE)
-            view.setImageViewResource(R.id.iqama_state_icon,PilotNotificationIcons.coloredPhase(display.countDown))
+            view.setImageViewResource(R.id.iqama_state_icon,
+                if(display.countDown)R.drawable.pilot_notify_exact_wait
+                else R.drawable.pilot_notify_exact_elapsed)
         } else view.setViewVisibility(R.id.iqama_state_icon,android.view.View.GONE)
         fun builder() = NotificationCompat.Builder(context, IqamaPersistentNotification.CHANNEL_ID)
-            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(display.countDown) else android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallAppMarker() else android.R.drawable.ic_lock_idle_alarm)
             .setCustomContentView(view).setCustomBigContentView(view).setCustomHeadsUpContentView(view)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setColor(if (appearance.first == Color.TRANSPARENT) Color.rgb(23,55,71) else appearance.first)
@@ -253,9 +255,7 @@ object IqamaNotificationRenderer {
             .setPriority(NotificationCompat.PRIORITY_LOW).setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true).setAutoCancel(false).setOnlyAlertOnce(true).setSilent(true).setShowWhen(false)
-            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE).apply {
-                if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.large(context,PilotNotificationIcons.coloredPhase(display.countDown))?.let{setLargeIcon(it)}
-            }
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         // Explicit public version: lock-screen hosts receive the same running clock,
         // never a separately formatted/cached numeric fallback.
         val n = builder().setPublicVersion(builder().build()).build()
