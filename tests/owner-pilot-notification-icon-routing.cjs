@@ -141,7 +141,7 @@ test('exact primary state icon is reused by Android instead of duplicated in con
  const icons=source('PilotNotificationIcons');
  const systemSmall=widget.match(/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallPhase\(true\)/g)||[];
  assert.equal(systemSmall.length,2,'both builders use the original primary countdown artwork');
- assert.equal((widget.match(/PilotNotificationIcons\\.exactSmall\\(c,true\\)\\?\\.let/g)||[]).length,2,'the original bitmap is assigned as Android icon in public and private templates');
+ assert.equal(widget.split('PilotNotificationIcons.exactSmall(c,true)?.let').length-1,2,'the original bitmap is assigned as Android icon in public and private templates');
  assert.match(icons,/fun smallAppMarker\(\): Int = R\.drawable\.pilot_notify_small_app/);
  assert.match(widget,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallPhase/);
  assert.doesNotMatch(widget,/views\.setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
