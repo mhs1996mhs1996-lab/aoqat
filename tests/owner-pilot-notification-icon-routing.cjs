@@ -115,7 +115,7 @@ test('one original phase icon per active row, identical icon and countdown measu
   assert.equal(prop(upper,'layout_height'),'26dp');
   // Retain approved icon measurements; only remove the oversized OEM decoration.
   assert.equal(prop(upper,'layout_marginEnd'),'6dp');
-  assert.equal(prop(lower,'translationX'),'82dp','secondary icon is directly below the original Honor system icon');
+  assert.equal(prop(lower,'translationX'),undefined,'secondary icon must not be translated outside its RemoteViews bounds');
   const firstClock=tag('lock_prayer_clock'),secondClock=tag('lock_iqama_clock');
   for(const attribute of ['layout_width','layout_marginStart','textSize','gravity','layoutDirection']){
     assert.equal(prop(firstClock,attribute),prop(secondClock,attribute),attribute);
