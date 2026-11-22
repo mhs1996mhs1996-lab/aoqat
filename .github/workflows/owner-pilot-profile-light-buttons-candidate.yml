@@ -1,0 +1,88 @@
+name: Owner pilot light-buttons unsigned OTA candidate (NO PUBLISH)
+on:
+  push:
+    branches:
+      - fix/owner-pilot-profile-light-buttons-20261122
+    paths:
+      - .github/workflows/owner-pilot-profile-light-buttons-candidate.yml
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify owner-only scope and JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+      - name: Reassemble exactly the 88 signed pilot files for owner-side signing (sequence 20)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 - <<'PY'
+          import base64,hashlib,json,os,re,subprocess,zipfile
+          from pathlib import Path
+          import importlib.util
+          root='android-updates/owner-pilot/build-150/'
+          out=Path('owner-pilot-light-buttons-candidate')
+          out.mkdir(exist_ok=False)
+          def show(name):
+              return subprocess.check_output(['git','show','origin/owner-pilot-ota:'+root+name])
+          m=json.loads(show('manifest.json'))
+          assert (m['nativeBuild'],m['channel'],m['sequence'])==(150,'owner-pilot',19)
+          assert len(m['files'])==88
+          files={}
+          changed={'js/web-menu-order.js','js/apk-startup-bundle.js'}
+          old='box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:42px!important;height:auto!important;padding:6px 9px!important;margin:3px 0!important;border-radius:8px!important;border:1px solid var(--wt-border,#c7d8df)!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important;box-shadow:none!important;text-align:right!important;line-height:1.25!important;text-shadow:none!important'
+          new='box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:48px!important;height:auto!important;padding:9px 12px!important;margin:4px 0!important;border-radius:9px!important;border:1px solid #d1b981!important;background:linear-gradient(90deg,#fffdf7 0%,#f7ebce 100%)!important;color:#4b3924!important;box-shadow:none!important;text-align:right!important;line-height:1.35!important;text-shadow:none!important'
+          for name,digest in sorted(m['files'].items()):
+              previous=show('files/'+name)
+              assert hashlib.sha256(previous).hexdigest()==digest,('old signed byte mismatch',name)
+              current=(Path(root)/'files'/name).read_bytes()
+              if name in changed:
+                  prior=previous.decode('utf-8')
+                  assert prior.count(old)==1 and prior.count('aoqatPilotProfileCompactV6')==2,name
+                  expected=prior.replace(old,new).replace('aoqatPilotProfileCompactV6','aoqatPilotProfileLightV7')
+                  assert current==expected.encode('utf-8'),('unexpected source change',name)
+              else:
+                  assert previous==current,('untouched asset mismatch',name)
+              files[name]=current
+          assert set(files)==set(m['files'])
+          spec=importlib.util.spec_from_file_location('sign',Path('security/owner-pilot-auto-ota-sign.py'))
+          lib=importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(lib)
+          assert all(lib.allowed(k) and len(v)<=lib.MAX_FILE for k,v in files.items())
+          assert sum(map(len,files.values()))<=lib.MAX_TOTAL
+          der=base64.b64decode(re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()).group(1))
+          assert hashlib.sha256(der).hexdigest()==lib.PINNED_PUBLIC_KEY_SPKI
+          pem=subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=der)
+          (out/'pilot-public.pem').write_bytes(pem)
+          lib.verify_signature(m,out/'pilot-public.pem')
+          zipname='AOQAT-OWNER-PILOT-SEQ20-LIGHT-BUTTONS-UNSIGNED.zip'
+          zippath=out/zipname
+          with zipfile.ZipFile(zippath,'w',zipfile.ZIP_DEFLATED) as archive:
+              for name in sorted(files):archive.writestr(name,files[name])
+          assert set(lib.read_candidate(zippath))==set(files)
+          (out/'owner-pilot-auto-ota-sign.py').write_bytes(Path('security/owner-pilot-auto-ota-sign.py').read_bytes())
+          (out/'candidate.sha256').write_text(hashlib.sha256(zippath.read_bytes()).hexdigest()+'  '+zipname+'\n')
+          (out/'SIGNING-NOTE.txt').write_text('OWNER PILOT ONLY / build 150 / sequence 20\nUNSIGNED: NOT installable, NOT deployed. Sign locally using the pinned owner-pilot private OTA key; NEVER upload that key or password.\n')
+          print('PASS: all 88 signed seq19 assets verified; only 2 JavaScript files changed; sequence 20 candidate prepared without publication')
+          PY
+      - name: Upload only unsigned owner review candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-SEQ20-LIGHT-BUTTONS-UNSIGNED
+          path: owner-pilot-light-buttons-candidate/
+          retention-days: 10
+          if-no-files-found: error
