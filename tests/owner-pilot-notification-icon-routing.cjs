@@ -9,15 +9,15 @@ const source=name=>fs.readFileSync(path.join(__dirname,'..',java+name+'.kt'),'ut
 test('ongoing lock-screen and next-prayer notifications never borrow adhan icon',()=>{
   const widget=source('PrayerWidget');
   assert.doesNotMatch(widget,/val pilotIconIsAdhan = false/);
-  assert.match(widget,/PilotNotificationIcons\.smallAppMarker\(\)/);
+  assert.match(widget,/PilotNotificationIcons\.exactSmall\(c,true\)\?\.let \{ setSmallIcon\(it\) \}/);
   assert.doesNotMatch(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
   assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED \|\| LockScreenPrayer\.enabled\(this\)\)lockNotification\(this,BuildConfig\.OWNER_PILOT_ENABLED\)/);
   assert.doesNotMatch(widget,/now - it\.at < 90_000L/);
   assert.match(widget,/fun lockNotification\(c:Context, persistent:Boolean=false\)/);
-  assert.match(widget,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
+  assert.doesNotMatch(widget,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
   assert.match(widget,/setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_exact_wait else R\.drawable\.pilot_notify_exact_elapsed/);
-  assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.doesNotMatch(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(widget,/\.setCustomBigContentView\(views\)/);
   assert.match(widget,/\.setCustomBigContentView\(views\)/);
@@ -73,7 +73,7 @@ test('ordinary and lock-screen cards keep distinct icons without repeating next-
   assert.match(widget,/\.setCustomContentView\(compactViews\)/);
   assert.match(widget,/\.setCustomBigContentView\(views\)/);
   assert.doesNotMatch(widget,/setViewVisibility\(R\.id\.lock_iqama_row,android\.view\.View\.GONE\)/);
-  assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.doesNotMatch(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_exact_wait else R\.drawable\.pilot_notify_exact_elapsed/);
@@ -91,7 +91,7 @@ test('Honor notifications: blue adhan symbol occupies system right icon and neve
  assert.match(icons,/Icon\.createWithBitmap\(it\)/);
  assert.match(adhan,/PilotNotificationIcons\.exactSmall\(\s*this@AdhanPlaybackService, countDown = true, atAdhan = true/);
  assert.doesNotMatch(adhan,/\.setLargeIcon\(/);
- assert.match(next,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
+ assert.doesNotMatch(next,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
  assert.match(next,/views\.setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
 });
 
@@ -127,7 +127,7 @@ test('one original phase icon per active row, identical icon and countdown measu
   }
   assert.match(xml,/android:id="@\+id\/lock_iqama_row"[\s\S]*?android:visibility="gone"/);
   const widget=source('PrayerWidget');
-  assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.doesNotMatch(widget,/views\.setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_row,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_exact_wait else R\.drawable\.pilot_notify_exact_elapsed/);
@@ -135,15 +135,16 @@ test('one original phase icon per active row, identical icon and countdown measu
 });
 
 
-test('exact approved model images are only shown once per active countdown and system marker is distinct',()=>{
+test('exact primary state icon is reused by Android instead of duplicated in content',()=>{
  const widget=source('PrayerWidget');
  const activity=source('MainActivity');
  const icons=source('PilotNotificationIcons');
- const systemSmall=widget.match(/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallAppMarker\(\)/g)||[];
- assert.equal(systemSmall.length,2,'lock-screen and ordinary notifications both use neutral OS icon');
+ const systemSmall=widget.match(/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallPhase\(true\)/g)||[];
+ assert.equal(systemSmall.length,2,'both builders use the original primary countdown artwork');
+ assert.equal((widget.match(/PilotNotificationIcons\\.exactSmall\\(c,true\\)\\?\\.let/g)||[]).length,2,'the original bitmap is assigned as Android icon in public and private templates');
  assert.match(icons,/fun smallAppMarker\(\): Int = R\.drawable\.pilot_notify_small_app/);
- assert.doesNotMatch(widget,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallPhase/);
- assert.match(widget,/views\.setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
+ assert.match(widget,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)\s*PilotNotificationIcons\.smallPhase/);
+ assert.doesNotMatch(widget,/views\.setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_exact_wait\)/);
  assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_exact_wait else R\.drawable\.pilot_notify_exact_elapsed/);
  assert.match(activity,/setImageViewResource\(R\.id\.iqama_state_icon,\s*if\(display\.countDown\)R\.drawable\.pilot_notify_exact_wait\s*else R\.drawable\.pilot_notify_exact_elapsed\)/);
  assert.match(activity,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallAppMarker\(\)/);
