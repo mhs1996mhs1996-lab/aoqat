@@ -389,12 +389,11 @@ class NextPrayerService:Service(){
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
                     PilotNotificationIcons.smallAppMarker()
                     else android.R.drawable.ic_lock_idle_alarm)
-                .apply {
-                    // Decorated header separates Android's mandatory
-                    // monochrome app icon from both colored clock-row icons.
-                    if(BuildConfig.OWNER_PILOT_ENABLED)
-                        setStyle(Notification.DecoratedCustomViewStyle())
-                }
+                // Keep Android's required status icon in its normal header.
+                // DecoratedCustomViewStyle promotes that icon to a second,
+                // large, button-looking tile on Honor's lock screen. The
+                // ORIGINAL phase artwork is already rendered once beside
+                // each active countdown in notification_lock_next.xml.
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
                 .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
@@ -410,12 +409,11 @@ class NextPrayerService:Service(){
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
                     PilotNotificationIcons.smallAppMarker()
                     else android.R.drawable.ic_lock_idle_alarm)
-                .apply {
-                    // Decorated header separates Android's mandatory
-                    // monochrome app icon from both colored clock-row icons.
-                    if(BuildConfig.OWNER_PILOT_ENABLED)
-                        setStyle(Notification.DecoratedCustomViewStyle())
-                }
+                // Keep Android's required status icon in its normal header.
+                // DecoratedCustomViewStyle promotes that icon to a second,
+                // large, button-looking tile on Honor's lock screen. The
+                // ORIGINAL phase artwork is already rendered once beside
+                // each active countdown in notification_lock_next.xml.
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
                 .setShowWhen(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
