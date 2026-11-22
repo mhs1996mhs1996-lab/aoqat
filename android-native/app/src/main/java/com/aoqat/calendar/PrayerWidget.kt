@@ -335,12 +335,12 @@ class NextPrayerService:Service(){
                 // The required Android small icon stays monochrome in the
                 // separate notification header to avoid a third colored symbol.
                 views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
-                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
+                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_exact_wait)
                 views.setViewVisibility(R.id.lock_iqama_state_icon,
                     if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
                 if(extra!=null){
                     views.setImageViewResource(R.id.lock_iqama_state_icon,
-                        if(extra.countDown)R.drawable.pilot_notify_wait else R.drawable.pilot_notify_elapsed)
+                        if(extra.countDown)R.drawable.pilot_notify_exact_wait else R.drawable.pilot_notify_exact_elapsed)
                 }
             }else{
                 views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
