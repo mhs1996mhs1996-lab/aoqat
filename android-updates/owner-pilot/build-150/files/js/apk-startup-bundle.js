@@ -8063,9 +8063,9 @@ window.AoqatWidgetAppearance={createPanel,load};
 
   function profileView(section="root"){
     // Override global theme button dimensions ONLY within this profile.
-    if(!document.getElementById("aoqatPilotProfileThemeV8")){
+    if(!document.getElementById("aoqatPilotProfileSharedNavV9")){
       const style=document.createElement("style");
-      style.id="aoqatPilotProfileThemeV8";
+      style.id="aoqatPilotProfileSharedNavV9";
       style.textContent=`
         #aoqatPersonalProfile{padding:3px 3px 12px!important;line-height:1.3!important}
         #aoqatPersonalProfile #aoqatProfileCard{padding:8px 10px!important;margin:0 0 7px!important;gap:9px!important;border-radius:11px!important}
@@ -8073,7 +8073,7 @@ window.AoqatWidgetAppearance={createPanel,load};
         #aoqatPersonalProfile #aoqatProfileDisplayName{font-size:15px!important;line-height:1.3!important}
         #aoqatPersonalProfile #aoqatProfileEdit{min-height:30px!important;height:30px!important;padding:3px 8px!important;border-radius:7px!important;font-size:11px!important}
         #aoqatPersonalProfile h3{font-size:13px!important;margin:10px 0 4px!important;padding:0 2px!important;line-height:1.3!important}
-        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:48px!important;height:auto!important;padding:9px 12px!important;margin:4px 0!important;border-radius:9px!important;border:1px solid var(--wt-border,#c5d5c8)!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important;box-shadow:none!important;text-align:right!important;line-height:1.35!important;text-shadow:none!important}
+        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:48px!important;height:auto!important;padding:9px 12px!important;margin:4px 0!important;border-radius:9px!important;box-shadow:none!important;text-align:right!important;line-height:1.35!important;text-shadow:none!important}
         #aoqatPersonalProfile button.aoqat-profile-row span{line-height:1.3!important}
         #aoqatPersonalProfile button.aoqat-profile-row small{font-size:10px!important;line-height:1.25!important;opacity:.77!important}
         #aoqatPersonalProfile #aoqatProfileEditPanel{padding:7px!important;margin:4px 0!important}
@@ -8102,7 +8102,7 @@ window.AoqatWidgetAppearance={createPanel,load};
     };
     function row(id,title,subtitle,action,icon){
       const b=el("button",null,"width:100%;display:flex;align-items:center;gap:10px;min-height:49px;border:1px solid var(--wt-border,#c7d8df);border-radius:11px;background:var(--wt-surface,#fff);color:var(--wt-text,#173c50);padding:8px 10px;margin:4px 0;text-align:right;font:inherit;cursor:pointer");
-      b.id=id;b.type="button";b.className="aoqat-profile-row";
+      b.id=id;b.type="button";b.className="main-action aoqat-profile-row";
       const glyph=el("span",icon,"font-size:19px;flex:0 0 26px;text-align:center");
       const detail=el("span",null,"display:flex;flex:1;min-width:0;flex-direction:column;gap:2px");
       detail.append(el("span",title,"font-size:14px;font-weight:700"));
@@ -9189,28 +9189,27 @@ window.AoqatWidgetAppearance={createPanel,load};
  const roots='#settingsContentDialog,#adhanServicesDialog';
  const switches='[data-global-mode],[data-prayer][data-mode],.pa-switch,.interface-visibility-btn,#manualEditToggle,#adEnable,#autoTomorrowToggle,#tomorrowNotifyToggle,#tomorrowAlarmEnable,#iqamaNotificationToggle,button[data-enabled],[data-time-mode]';
  const skip='#adAudibilityHelp,.aoqat-help-circle,[data-azkar-toggle],[data-azkar-mode],[data-post-reminder],#frReminderToggle,#fastingReminderToggle,.wt-card,.color-swatch,.palette-color,[data-color],.web-back,.web-drawer-row,[data-drawer],#aqReader button,.web-settings-list .main-action,#aoqatPersonalProfile .aoqat-profile-row,#adhanServicesDialog #adhanPanel .ad-section-toggle,#adhanServicesDialog #adhanPanel #paMethodOpen,#adhanServicesDialog #adhanPanel #adRefresh';
- function blend(hex,t){const n=parseInt(hex.slice(1),16),rgb=[n>>16,(n>>8)&255,n&255].map(v=>Math.round(t>=0?v*(1-t):v+(255-v)*(-t)));return '#'+rgb.map(v=>v.toString(16).padStart(2,'0')).join('');}
- function lum(hex){const n=parseInt(hex.slice(1),16);return [n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4}).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);}
- function palette(){const accent=getComputedStyle(document.documentElement).getPropertyValue('--wt-button-accent').trim()||'#137985',a=blend(accent,.40),b=blend(accent,-.15),l=[lum(a),lum(b)];const white=Math.min(...l.map(v=>1.05/(v+.05))),black=Math.min(...l.map(v=>(v+.05)/.05));return {background:document.body.dataset.buttonStyle==='solid'?accent:'linear-gradient(135deg,'+a+','+b+')',color:(document.body.dataset.buttonStyle==='solid'?lum(accent)<.18:white>=black)?'#fff':'#10212a'};}
  function on(button){const pressed=button.getAttribute('aria-pressed');if(pressed==='true'||pressed==='false')return pressed==='true';if(button.hasAttribute('data-enabled'))return button.dataset.enabled==='true';return button.matches('.pa-on,.is-on,.enabled,.on');}
  // Main drawer and nested navigation share the exact theme-surface gradients. Do not\n // inline-paint their buttons: inline !important used to override the CSS and\n // made nested sections dark while the twelve main entries stayed pale.\n // Selection is a state, so it must remain distinct from decorative button palettes.
  const modeStyle=document.createElement('style');modeStyle.id='webAdhanModeSelectionStyle';
  modeStyle.textContent=':is(#settingsContentDialog,#adhanServicesDialog) button[data-prayer][data-mode] small{color:inherit!important}:is(#settingsContentDialog,#adhanServicesDialog) button[data-prayer][data-mode][aria-pressed="true"] small::after{content:" ✓";font-weight:900}:is(#settingsContentDialog,#adhanServicesDialog) button[data-global-mode][aria-pressed="true"]::after{content:" ✓";font-weight:900}';
  document.head.appendChild(modeStyle);
  let queued=false;
- function paint(){queued=false;const p=palette();document.querySelectorAll(roots).forEach(root=>root.querySelectorAll('button').forEach(button=>{
+ function paint(){queued=false;document.querySelectorAll(roots).forEach(root=>root.querySelectorAll('button').forEach(button=>{
   if(button.matches(skip)||button.closest('#aqReader,#monthlyCalendars'))return;
+  // Only ON/OFF controls retain state colors. All navigation actions use their
+  // own shared theme surface gradients, including buttons added in the future.
+  if(!button.matches(switches))return;
   if(button.matches('[data-global-mode]')){
    const selected=[...(button.closest('#adSection-modes')?.querySelectorAll('[data-prayer][data-mode][aria-pressed="true"]')||[])];
    const active=selected.length===5&&new Set(selected.map(b=>b.dataset.prayer)).size===5&&selected.every(b=>b.dataset.mode===button.dataset.globalMode);
    if(button.getAttribute('aria-pressed')!==String(active))button.setAttribute('aria-pressed',String(active));
   }
-  const toggle=button.matches(switches);
-  const bg=toggle?(on(button)?'#278052':'#858e8b'):p.background;
-  button.style.setProperty('background',bg,'important');
-  button.style.setProperty('color',toggle?'#fff':p.color,'important');
-  button.style.setProperty('border-color',toggle?(on(button)?'#167043':'#859593'):'var(--wt-border)','important');
-  button.querySelectorAll('span,strong,b').forEach(x=>x.style.setProperty('color',toggle?'#fff':p.color,'important'));
+  const active=on(button);
+  button.style.setProperty('background',active?'#278052':'#858e8b','important');
+  button.style.setProperty('color','#fff','important');
+  button.style.setProperty('border-color',active?'#167043':'#859593','important');
+  button.querySelectorAll('span,strong,b').forEach(x=>x.style.setProperty('color','#fff','important'));
  }));}
  function schedule(){if(!queued){queued=true;requestAnimationFrame(paint);}}
  function start(){
