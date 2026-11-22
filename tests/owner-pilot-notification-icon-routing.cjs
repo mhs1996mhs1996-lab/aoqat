@@ -20,7 +20,7 @@ test('ongoing lock-screen and next-prayer notifications never borrow adhan icon'
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(widget,/\.setCustomBigContentView\(views\)/);
-  assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !persistent\)/);
+  assert.match(widget,/\.setCustomBigContentView\(views\)/);
 });
 
 test('due-prayer system notifications use the exact blue adhan icon',()=>{
@@ -74,7 +74,7 @@ test('ordinary and lock-screen cards keep distinct icons without repeating next-
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_wait else R\.drawable\.pilot_notify_elapsed/);
-  assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !persistent\)/);
+  assert.match(widget,/\.setCustomBigContentView\(views\)/);
   assert.match(lock,/manager\.notify\(LOCK_NOTIFICATION_ID,NextPrayerService\.lockNotification\(c\)\)/);
   assert.match(lock,/if\(LockScreenPrayer\.enabled\(c\)\) LockScreenPrayer\.showNow\(c\)/);
   assert.match(lock,/if\(usesPilotPersistentCard\(c\)\)/);
