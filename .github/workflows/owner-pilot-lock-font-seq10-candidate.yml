@@ -70,7 +70,7 @@ jobs:
               assert b'"lockFont"' not in assets[name],name
               assert b'window.AndroidNative.sharePrayerImage(exportPng' not in assets[name],name
               assert b'window.AndroidNative.openLockScreenTextStyle()' in assets[name],name
-              assert b'\"تعديل بطاقات الشاشة الرئيسية\"' in assets[name],name
+              assert 'تعديل بطاقات الشاشة الرئيسية'.encode() in assets[name],name
           assert b'privacyPolicy' in assets['js/apk-startup-bundle.js']
           assert b'aoqatQuranReaderV1' in assets['js/apk-startup-bundle.js']
           assert sum(map(len,assets.values()))<24*1024*1024
