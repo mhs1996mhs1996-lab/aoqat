@@ -1,4 +1,4 @@
-name: Owner pilot lock-screen symbols and OTA-menu APK QA (NO PUBLICATION)
+name: Owner pilot lock-screen, ringer-only and azkar fixes APK QA (NO PUBLICATION)
 on:
   push:
     branches: [feature/owner-pilot-lockscreen-phases-20261121]
@@ -11,6 +11,7 @@ on:
       - 'js/web-menu-order.js'
       - 'tests/owner-pilot-profile-seq6-ui.cjs'
       - 'tests/owner-pilot-notification-icon-routing.cjs'
+      - 'tests/owner-pilot-lockscreen-regressions.cjs'
       - '.github/workflows/owner-pilot-lockscreen-phases-check.yml'
   workflow_dispatch:
 permissions:
@@ -69,6 +70,10 @@ jobs:
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerAlarm.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/AlarmCore.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/CommunityReminders.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt',
+            'tests/owner-pilot-lockscreen-regressions.cjs',
             'tests/owner-pilot-notification-icon-routing.cjs',
             'android-native/app/src/main/java/com/aoqat/calendar/PilotNotificationIcons.kt',
             'android-native/app/src/test/java/com/aoqat/calendar/LockScreenSupplementTest.kt',
@@ -101,10 +106,10 @@ jobs:
       - name: Test web OTA menu and privacy protections
         run: |
           node --check js/web-menu-order.js
-          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs tests/owner-pilot-notification-icon-routing.cjs
+          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs tests/owner-pilot-notification-icon-routing.cjs tests/owner-pilot-lockscreen-regressions.cjs
       - name: Native lock-screen and Friday/iqama boundary unit tests
         run: |
-          gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.LockScreenSupplementTest' --tests 'com.aoqat.calendar.LockScreenPrayerTest' --tests 'com.aoqat.calendar.LockScreenIqamaTest' --tests 'com.aoqat.calendar.FridayScheduleTest' --tests 'com.aoqat.calendar.ProfileBackupFileTest'
+          gradle -p android-native --no-daemon :app:testDebugUnitTest --tests 'com.aoqat.calendar.LockScreenSupplementTest' --tests 'com.aoqat.calendar.AfterIqamaQuietTest' --tests 'com.aoqat.calendar.LockScreenPrayerTest' --tests 'com.aoqat.calendar.LockScreenIqamaTest' --tests 'com.aoqat.calendar.FridayScheduleTest' --tests 'com.aoqat.calendar.ProfileBackupFileTest'
       - name: Build isolated ownerPilot UNSIGNED APK (never touch production or sign in CI)
         run: |
           gradle -p android-native --no-daemon :app:assembleOwnerPilot
