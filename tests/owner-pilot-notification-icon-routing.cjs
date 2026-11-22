@@ -158,23 +158,23 @@ test('exact primary state icon is reused by Android instead of duplicated in con
 test('owner-only silent mode never falls back to Do Not Disturb',()=>{
  const quiet=source('AdhanPlaybackService');
  const after=source('AfterIqamaQuiet');
- assert.match(quiet,/val ringerOnlyRequested=preserveUserDnd \\|\\| BuildConfig\\.OWNER_PILOT_ENABLED/);
- assert.match(quiet,/if\\(!silentApplied && ringerOnlyRequested\\) \\{/);
- assert.match(quiet,/if\\(!ringerOnlyRequested && nm\\.currentInterruptionFilter/);
+ assert.match(quiet,/val ringerOnlyRequested=preserveUserDnd \|\| BuildConfig\.OWNER_PILOT_ENABLED/);
+ assert.match(quiet,/if\(!silentApplied && ringerOnlyRequested\) \{/);
+ assert.match(quiet,/if\(!ringerOnlyRequested && nm\.currentInterruptionFilter/);
  assert.match(after,/preserveUserDnd=true/);
 });
 test('old after-prayer azkar notification IDs are removed without clearing other topics',()=>{
  const reminders=source('CommunityReminders');
- assert.match(reminders,/val code=if\\(BuildConfig\\.OWNER_PILOT_ENABLED.*63941/);
+ assert.match(reminders,/val code=if\(BuildConfig\.OWNER_PILOT_ENABLED.*63941/);
  assert.match(reminders,/activeTitle=="تذكير: أذكار بعد الصلاة"/);
- assert.match(reminders,/nm\\.cancel\\(active\\.tag,active\\.id\\)/);
+ assert.match(reminders,/nm\.cancel\(active\.tag,active\.id\)/);
  assert.match(reminders,/lastPrayerAzkarNotifiedAt/);
 });
 test('per-state font and contrast settings remain independent from notification timing',()=>{
  const style=source('LockScreenTextStyle');
  const web=fs.readFileSync(path.join(__dirname,'../js/web-menu-order.js'),'utf8');
- assert.match(style,/ColorStateList\\.valueOf\\(color\\)/);
- assert.match(style,/v\\.setColorStateList\\(id,"setTextColor"/);
+ assert.match(style,/ColorStateList\.valueOf\(color\)/);
+ assert.match(style,/v\.setColorStateList\(id,"setTextColor"/);
  for(const key of ['prayer','iqama_wait','iqama_elapsed','friday_first','sermon_wait','sermon_elapsed'])assert.ok(style.includes('"'+key+'"'));
  assert.match(web,/openLockScreenTextStyle/);
 });
