@@ -58,7 +58,7 @@ test('owner-pilot prayer icon is not duplicated and iqama indicator remains inde
   assert.match(file,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_wait\)/);
   assert.match(file,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(file,/setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
-  assert.match(file,/setViewVisibility\(R\.id\.lock_iqama_row,android\.view\.View\.GONE\)/);
+  assert.match(file,/views\.setViewVisibility\(R\.id\.lock_iqama_row,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
   assert.match(file,/setUsesChronometer\(!BuildConfig\.OWNER_PILOT_ENABLED && next!=null\)/);
 });
 
@@ -74,6 +74,7 @@ test('reference icon assets are exact and only one compact notification is rende
     assert.match(icon,new RegExp('R\\.drawable\\.pilot_notify_exact_'+state));
   }
   assert.match(cpp,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
+  assert.match(cpp,/val compactViews = views/);
   assert.match(cpp,/setCustomContentView\(compactViews\)/);
   assert.match(cpp,/\.setCustomBigContentView\(views\)/);
 });
