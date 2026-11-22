@@ -10,26 +10,26 @@ test('ongoing lock-screen and next-prayer notifications never borrow adhan icon'
   const widget=source('PrayerWidget');
   assert.match(widget,/val pilotIconIsAdhan = false/);
   assert.match(widget,/PilotNotificationIcons\.smallPhase\(pilotIconIsWaiting\)/);
-  assert.match(widget,/PilotNotificationIcons\.exactSmall\(c,pilotIconIsWaiting,pilotIconIsAdhan\)/);
+  assert.match(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
   assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED \|\| LockScreenPrayer\.enabled\(this\)\)lockNotification\(this,BuildConfig\.OWNER_PILOT_ENABLED\)/);
   assert.doesNotMatch(widget,/now - it\.at < 90_000L/);
   assert.match(widget,/fun lockNotification\(c:Context, persistent:Boolean=false\)/);
-  assert.doesNotMatch(widget,/setImageViewResource\(R\.id\.lock_prayer_state_icon,/);
+  assert.match(widget,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_wait\)/);
   assert.match(widget,/setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_wait else R\.drawable\.pilot_notify_elapsed/);
-  assert.doesNotMatch(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
-  assert.match(widget,/if\(!BuildConfig\.OWNER_PILOT_ENABLED \|\| !persistent\) setCustomBigContentView\(views\)/);
+  assert.match(widget,/\.setCustomBigContentView\(views\)/);
   assert.match(widget,/if\(BuildConfig\.OWNER_PILOT_ENABLED && !persistent\)/);
 });
 
-test('normal prayer reminders do not carry adhan visual markers',()=>{
+test('due-prayer system notifications use the exact blue adhan icon',()=>{
   const notification=source('PrayerNotifications');
-  assert.match(notification,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallPhase\(true\)/);
+  assert.match(notification,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallAdhan\(\)/);
+  assert.match(notification,/PilotNotificationIcons\.exactSmall\(c,true,true\)/);
   assert.doesNotMatch(notification,/PilotNotificationIcons\.large\(c,PilotNotificationIcons\.coloredPhase\(true\)\)/);
   assert.doesNotMatch(notification,/setLargeIcon\(/);
-  assert.doesNotMatch(notification,/PilotNotificationIcons\.smallAdhan\(\)/);
-  assert.doesNotMatch(notification,/PilotNotificationIcons\.coloredAdhan\(\)/);
+  assert.doesNotMatch(notification,/PilotNotificationIcons\.coloredPhase\(/);
 });
 
 test('real adhan foreground notification uses adhan icon and tapping opens adhan screen',()=>{
@@ -55,9 +55,11 @@ test('real adhan foreground notification uses adhan icon and tapping opens adhan
 test('all pilot prayer alarms and reminders replace the old Android clock icon',()=>{
   const alarm=source('PrayerAlarm');
   const ahead=source('AdhanSchedule');
-  for(const s of [alarm,ahead,source('AlarmCore')]){
+  for(const s of [ahead,source('AlarmCore')]){
     assert.match(s,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallPhase\(true\) else android\.R\.drawable\.ic_lock_idle_alarm\)/);
   }
+  assert.match(alarm,/\.setSmallIcon\(if\(BuildConfig\.OWNER_PILOT_ENABLED\)PilotNotificationIcons\.smallAdhan\(\)/);
+  assert.match(alarm,/PilotNotificationIcons\.exactSmall\(this,true,true\)/);
   assert.match(source('PilotNotificationIcons'),/fun smallAdhan\(\)/);
   assert.match(source('PilotNotificationIcons'),/fun smallPhase\(countDown: Boolean\)/);
 });
@@ -68,7 +70,7 @@ test('ordinary and lock-screen cards keep distinct icons without repeating next-
   assert.match(widget,/AdhanSchedule\.settings\(c\)\.optBoolean\("persistent"\) &&\s*\(BuildConfig\.OWNER_PILOT_ENABLED \|\| !LockScreenPrayer\.enabled\(c\)\)/);
   assert.match(widget,/\.notify\(NOTIFICATION_ID,lockNotification\(c,true\)\)/);
   assert.match(widget,/val compactViews = if \(BuildConfig\.OWNER_PILOT_ENABLED && persistent\)/);
-  assert.doesNotMatch(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,/);
   assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_wait else R\.drawable\.pilot_notify_elapsed/);
@@ -86,6 +88,43 @@ test('Honor notifications: blue adhan symbol occupies system right icon and neve
  assert.match(icons,/Icon\.createWithBitmap\(it\)/);
  assert.match(adhan,/PilotNotificationIcons\.exactSmall\(\s*this@AdhanPlaybackService, countDown = true, atAdhan = true/);
  assert.doesNotMatch(adhan,/\.setLargeIcon\(/);
- assert.doesNotMatch(next,/setImageViewResource\(R\.id\.lock_prayer_state_icon,/);
+ assert.match(next,/setImageViewResource\(R\.id\.lock_prayer_state_icon,R\.drawable\.pilot_notify_wait\)/);
  assert.match(next,/views\.setImageViewResource\(R\.id\.lock_iqama_state_icon,/);
+});
+
+
+test('two aligned colored status symbols, equal countdown columns, middle Arabic title absorbs text length',()=>{
+  const xml=fs.readFileSync(path.join(__dirname,'../android-native/app/src/main/res/layout/notification_lock_next.xml'),'utf8');
+  const tag=id=>{
+    const match=xml.match(new RegExp('<(?:ImageView|Chronometer|TextView)\\b[^>]*android:id="@\\+id/'+id+'"[^>]*\\/?>','s'));
+    assert.ok(match,'notification element '+id);
+    return match[0];
+  };
+  const prop=(tag,name)=>{
+    const match=tag.match(new RegExp('android:'+name+'="([^"]+)"'));
+    return match?.[1];
+  };
+  const upper=tag('lock_prayer_state_icon'),lower=tag('lock_iqama_state_icon');
+  for(const attribute of ['layout_width','layout_height','layout_marginEnd','scaleType']){
+    assert.equal(prop(upper,attribute),prop(lower,attribute),attribute);
+  }
+  assert.equal(prop(upper,'layout_width'),'36dp');
+  assert.equal(prop(upper,'layout_height'),'30dp');
+  const firstClock=tag('lock_prayer_clock'),secondClock=tag('lock_iqama_clock');
+  for(const attribute of ['layout_width','layout_marginStart','textSize','gravity','layoutDirection']){
+    assert.equal(prop(firstClock,attribute),prop(secondClock,attribute),attribute);
+  }
+  assert.equal(prop(firstClock,'layout_width'),'105dp');
+  assert.equal(prop(firstClock,'layoutDirection'),'ltr');
+  for(const id of ['lock_prayer_title','lock_iqama_title']){
+    assert.equal(prop(tag(id),'layout_weight'),'1');
+    assert.equal(prop(tag(id),'layout_width'),'0dp');
+  }
+  assert.match(xml,/android:id="@\+id\/lock_iqama_row"[\s\S]*?android:visibility="gone"/);
+  const widget=source('PrayerWidget');
+  assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
+  assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_row,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
+  assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,\s*if\(extra!=null\)android\.view\.View\.VISIBLE else android\.view\.View\.GONE\)/);
+  assert.match(widget,/if\(extra\.countDown\)R\.drawable\.pilot_notify_wait else R\.drawable\.pilot_notify_elapsed/);
+  assert.match(widget,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
 });
