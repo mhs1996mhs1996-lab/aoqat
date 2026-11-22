@@ -1,0 +1,102 @@
+name: Owner pilot seq21 shared theme buttons - verified unsigned candidate (NO PUBLISH)
+on:
+  push:
+    branches: [fix/owner-pilot-profile-palette-painter-seq21-20261122]
+    paths:
+      - .github/workflows/owner-pilot-profile-seq21-theme-qa.yml
+permissions:
+  contents: read
+jobs:
+  qa-and-unsigned-candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate source syntax and no private keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-profile-theme-seq21-verify.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-button-theme.js
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - name: Exercise real menu painter - ordinary buttons untouched; toggles retain status
+        shell: bash
+        run: |
+          node <<'JS'
+          const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+          const dir='android-updates/owner-pilot/build-150/files/js/';
+          const source=fs.readFileSync(dir+'web-menu-button-theme.js','utf8');
+          const nav=fs.readFileSync(dir+'web-menu-order.js','utf8');
+          const startup=fs.readFileSync(dir+'apk-startup-bundle.js','utf8');
+          assert(!source.includes('function palette('),'legacy dark menu painter still present');
+          assert(!startup.includes('function palette('),'legacy dark menu painter duplicated in APK bundle');
+          for(const text of [nav,startup]){
+            assert(text.includes('b.className="main-action aoqat-profile-row"'),'new profile rows must use shared theme class');
+            const css=/#aoqatPersonalProfile button\.aoqat-profile-row\{([^}]+)\}/.exec(text);
+            assert(css,'profile style absent');
+            assert(!/\bbackground\s*:/.test(css[1]),'profile must inherit existing .main-action theme surface gradient');
+            assert(!/\bcolor\s*:/.test(css[1]),'profile must inherit existing .main-action theme text color');
+            assert(text.includes('var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9)'),'theme gradient missing');
+          }
+          function button(type){
+            const history=[];
+            return {
+              history,
+              matches(q){
+                if(q.includes('#adAudibilityHelp')) return type==='profile'||type==='regular-menu';
+                if(q.includes('[data-global-mode]') && q==='[data-global-mode]')return false;
+                if(q.includes('[data-global-mode]'))return type==='on-toggle'||type==='off-toggle';
+                return false;
+              },
+              closest(){return null;},
+              getAttribute(){return null;},
+              hasAttribute(){return false;},
+              style:{setProperty:(...props)=>history.push(props)},
+              querySelectorAll(){return [{style:{setProperty:(...props)=>history.push(props)}}]}
+            };
+          }
+          const ordinary=button('new-ordinary'),profile=button('profile'),
+                toggled=button('on-toggle'),off=button('off-toggle');
+          toggled.matches=q=>q.includes('#adAudibilityHelp')?false:q==='[data-global-mode]'?false:q.includes('data-global-mode')?true:q.includes('.pa-on')?true:false;
+          off.matches=q=>q.includes('#adAudibilityHelp')?false:q==='[data-global-mode]'?false:q.includes('data-global-mode')?true:false;
+          toggled.getAttribute=()=>null;off.getAttribute=()=>null;
+          const host={querySelectorAll:()=>[ordinary,profile,toggled,off]};
+          const fakeDocument={
+            readyState:'complete', head:{appendChild(){}},
+            createElement:()=>({id:'',textContent:''}),
+            querySelectorAll:()=>[host],
+            addEventListener(){}
+          };
+          const runtime={
+            document:fakeDocument, window:{addEventListener(){}},
+            MutationObserver:class{observe(){}},
+            requestAnimationFrame:f=>f(),
+          };
+          vm.runInNewContext(source,runtime);
+          assert.equal(ordinary.history.length,0,'future ordinary button painted with legacy palette');
+          assert.equal(profile.history.length,0,'profile button painted with legacy palette');
+          assert(toggled.history.some(p=>p[0]==='background'&&p[1]==='#278052'),'ON toggle lost green');
+          assert(off.history.some(p=>p[0]==='background'&&p[1]==='#858e8b'),'OFF toggle lost grey');
+          console.log('PASS: no dark recoloring of existing/new menu rows; state colors preserved');
+          JS
+      - name: Verify seq20 signed snapshot and build exact sequence 21 unsigned candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-profile-theme-seq21-verify.py --candidate-dir pilot-seq21-candidate
+          test -s pilot-seq21-candidate/AOQAT-OWNER-PILOT-SEQ21-THEME-GRADIENT-UNSIGNED.zip
+      - name: Upload unsigned candidate for EXISTING owner-only private key
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-SEQ21-SHARED-THEME-UNSIGNED
+          path: pilot-seq21-candidate/
+          retention-days: 10
+          if-no-files-found: error
