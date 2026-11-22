@@ -1,7 +1,7 @@
 name: Owner pilot seq13 signed cards-and-lock-font menu OTA publish (PILOT ONLY)
 on:
   push:
-    branches: [feature/owner-pilot-cards-font-menu-ota-seq13-20261122]
+    branches: [feature/owner-pilot-cards-qa-seq13-20261122]
     paths: ['security/owner-pilot-cards-seq13-signed-public.json']
 permissions:
   contents: write
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-cards-font-menu-ota-seq13-20261122'
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-cards-qa-seq13-20261122'
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
