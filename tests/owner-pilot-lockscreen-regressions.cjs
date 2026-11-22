@@ -29,9 +29,10 @@ test('all six lockscreen states have isolated text settings and do not alter vis
   assert.match(w,/LockScreenTextStyle\.apply\(c,views,"prayer"/);
   assert.match(w,/LockScreenSupplement\.Kind\.FRIDAY_SERMON_ELAPSED -> "sermon_elapsed"/);
 });
-test('secondary icon moves into primary OEM icon lane, not an extra card',()=>{
+test('secondary icon remains inside the row so Honor does not crop it',()=>{
   const xml=fs.readFileSync(root+'res/layout/notification_lock_next.xml','utf8');
-  assert.match(xml,/android:id="@\+id\/lock_iqama_state_icon"[\s\S]*?android:translationX="82dp"/);
+  assert.doesNotMatch(xml,/android:translationX="[1-9][0-9]*dp"/);
+  assert.match(xml,/android:id="@\\+id\\/lock_iqama_state_icon"[\\s\\S]*?android:layout_width="30dp"/);
   assert.match(xml,/android:clipChildren="false"/);
   const widget=native('PrayerWidget');
   assert.match(widget,/PilotNotificationIcons\.exactSmall\(c,true\)/);
