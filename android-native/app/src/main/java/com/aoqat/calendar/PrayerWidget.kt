@@ -373,35 +373,12 @@ class NextPrayerService:Service(){
             // top is always next-prayer waiting; bottom follows only the
             // active iqama / Friday phase and disappears with its countdown.
             // The fixed-width left clock columns do not move with title length.
-            // The persistent card stays single-row while compact; expanding
-            // reveals its optional supplemental line just like lock-screen.
-            val compactViews = if (BuildConfig.OWNER_PILOT_ENABLED && persistent) {
-                RemoteViews(c.packageName,R.layout.notification_lock_next).apply {
-                    // Compact still shows the SAME fixed next-prayer symbol.
-                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
-                    setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
-                    setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
-                    setViewVisibility(R.id.lock_iqama_row,android.view.View.GONE)
-                    setTextViewText(R.id.lock_prayer_title,title)
-                    setTextViewText(R.id.lock_prayer_fallback,fallback)
-                    if(next!=null) {
-                        setViewVisibility(R.id.lock_prayer_clock,android.view.View.VISIBLE)
-                        setViewVisibility(R.id.lock_prayer_fallback,android.view.View.GONE)
-                        setChronometer(R.id.lock_prayer_clock,
-                            SystemClock.elapsedRealtime()+remain,"%s",true)
-                        setChronometerCountDown(R.id.lock_prayer_clock,true)
-                    } else {
-                        setViewVisibility(R.id.lock_prayer_clock,android.view.View.GONE)
-                        setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
-                    }
-                    val dark=(c.resources.configuration.uiMode and
-                        android.content.res.Configuration.UI_MODE_NIGHT_MASK)==
-                        android.content.res.Configuration.UI_MODE_NIGHT_YES
-                    val textColor=if(dark) Color.WHITE else Color.rgb(23,55,71)
-                    for(id in intArrayOf(R.id.lock_prayer_title,R.id.lock_prayer_clock,
-                        R.id.lock_prayer_fallback))setTextColor(id,textColor)
-                }
-            } else views
+            // Both enabled notification surfaces use the EXACT SAME two-row
+            // RemoteViews. Android's ordinary notification panel must not
+            // hide the supplemental line while the lock-screen shows it.
+            // The second symbol, label and chronometer all share one
+            // visibility condition (extra != null) in 'views' above.
+            val compactViews = views
             // This system icon is for the prayer countdown, not the
             // supplemental iqama elapsed flag.
             val pilotIconIsWaiting = next != null
