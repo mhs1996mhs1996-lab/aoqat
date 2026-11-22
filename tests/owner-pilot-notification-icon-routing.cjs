@@ -69,7 +69,10 @@ test('ordinary and lock-screen cards keep distinct icons without repeating next-
   const widget=source('PrayerWidget'), lock=source('LockScreenPrayer');
   assert.match(widget,/AdhanSchedule\.settings\(c\)\.optBoolean\("persistent"\) &&\s*\(BuildConfig\.OWNER_PILOT_ENABLED \|\| !LockScreenPrayer\.enabled\(c\)\)/);
   assert.match(widget,/\.notify\(NOTIFICATION_ID,lockNotification\(c,true\)\)/);
-  assert.match(widget,/val compactViews = if \(BuildConfig\.OWNER_PILOT_ENABLED && persistent\)/);
+  assert.match(widget,/val compactViews = views/);
+  assert.match(widget,/\.setCustomContentView\(compactViews\)/);
+  assert.match(widget,/\.setCustomBigContentView\(views\)/);
+  assert.doesNotMatch(widget,/setViewVisibility\(R\.id\.lock_iqama_row,android\.view\.View\.GONE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.VISIBLE\)/);
   assert.match(widget,/setViewVisibility\(R\.id\.lock_prayer_state_icon,android\.view\.View\.GONE\)/);
   assert.match(widget,/views\.setViewVisibility\(R\.id\.lock_iqama_state_icon,/);
@@ -108,8 +111,8 @@ test('two aligned colored status symbols, equal countdown columns, middle Arabic
   for(const attribute of ['layout_width','layout_height','layout_marginEnd','scaleType']){
     assert.equal(prop(upper,attribute),prop(lower,attribute),attribute);
   }
-  assert.equal(prop(upper,'layout_width'),'36dp');
-  assert.equal(prop(upper,'layout_height'),'30dp');
+  assert.equal(prop(upper,'layout_width'),'30dp');
+  assert.equal(prop(upper,'layout_height'),'26dp');
   const firstClock=tag('lock_prayer_clock'),secondClock=tag('lock_iqama_clock');
   for(const attribute of ['layout_width','layout_marginStart','textSize','gravity','layoutDirection']){
     assert.equal(prop(firstClock,attribute),prop(secondClock,attribute),attribute);
