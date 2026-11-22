@@ -39,7 +39,9 @@ test('secondary icon moves into primary OEM icon lane, not an extra card',()=>{
 });
 test('format button appears in owner pilot alerts only, never in visibility switches',()=>{
   const s=fs.readFileSync('js/web-menu-order.js','utf8');
-  assert.match(s,/readOwnerPilotOtaState\?\.\(\) \? \[\["lockFont"/);
-  assert.match(s,/AndroidNative\?\.openLockScreenTextStyle\?\.\(\)/);
+  assert.match(s,/button\.id="aoqatLockScreenNotificationTextStyle"/);
+  assert.match(s,/button\.onclick=\(\)=>window\.AndroidNative\.openLockScreenTextStyle\(\)/);
+  assert.match(s,/openSub\("تعديل بطاقات الشاشة الرئيسية",panel,"appearance"\)/);
+  assert.doesNotMatch(s,/\["lockFont","🔤","تنسيق خطوط إشعار شاشة القفل"\]/);
   assert.match(native('MainActivity'),/if\(!BuildConfig\.OWNER_PILOT_ENABLED\)return\s*runOnUiThread \{ LockScreenTextStyle\.showEditor/);
 });
