@@ -1,0 +1,58 @@
+name: Owner pilot seq10 signed screen-font menu OTA publish (PILOT ONLY)
+on:
+  push:
+    branches: [feature/owner-pilot-lock-font-ota-seq10-20261122]
+    paths:
+      - 'security/owner-pilot-lock-font-seq10-signature.json'
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-lock-font-ota-seq10-20261122'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject unauthorized changes, private keys and unsafe production content
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-lock-font-seq10-signature.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-lock-font-seq10-publish.py
+      - name: Verify original-pilot signature and exact two JS changes from live sequence 9
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-lock-font-seq10-publish.py --output "$RUNNER_TEMP/verified-pilot-only"
+          node --check "$RUNNER_TEMP/verified-pilot-only/android-updates/owner-pilot/build-150/files/js/web-menu-order.js"
+          node --check "$RUNNER_TEMP/verified-pilot-only/android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js"
+      - name: Publish exactly three PUBLIC pilot feed files, never production/admin
+        run: |
+          set -euo pipefail
+          ROOT=android-updates/owner-pilot/build-150
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" origin/owner-pilot-ota
+          cp -a "$RUNNER_TEMP/verified-pilot-only/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          import subprocess,sys
+          actual=set(subprocess.check_output(['git','-C',sys.argv[1],'diff','--cached','--name-only'],text=True).splitlines())
+          expected={
+            'android-updates/owner-pilot/build-150/manifest.json',
+            'android-updates/owner-pilot/build-150/files/js/web-menu-order.js',
+            'android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js',
+          }
+          assert actual==expected,(actual,expected)
+          print('PASS: strictly 3 approved PILOT files staged')
+          PY
+          git -C "$W" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            -c user.name="github-actions[bot]" commit -m "pilot: owner signed OTA seq10 lock-screen font button" >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PUBLISHED signed owner-pilot OTA sequence 10. No main, production, APK or admin write.'
