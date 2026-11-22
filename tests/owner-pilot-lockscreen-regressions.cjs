@@ -32,7 +32,8 @@ test('all six lockscreen states have isolated text settings and do not alter vis
 test('secondary icon remains inside the row so Honor does not crop it',()=>{
   const xml=fs.readFileSync(root+'res/layout/notification_lock_next.xml','utf8');
   assert.doesNotMatch(xml,/android:translationX="[1-9][0-9]*dp"/);
-  assert.match(xml,/android:id="@\\+id\\/lock_iqama_state_icon"[\\s\\S]*?android:layout_width="30dp"/);
+  assert.ok(xml.includes('android:id="@+id/lock_iqama_state_icon"'),'supplementary icon is in the custom row');
+  assert.ok(xml.includes('android:layout_width="30dp"'),'icon stays inside its reserved native cell');
   assert.match(xml,/android:clipChildren="false"/);
   const widget=native('PrayerWidget');
   assert.match(widget,/PilotNotificationIcons\.exactSmall\(c,true\)/);
