@@ -1,0 +1,40 @@
+name: Owner pilot profile light-buttons isolated QA (NO PUBLISH)
+on:
+  push:
+    branches:
+      - fix/owner-pilot-profile-light-buttons-20261122
+    paths:
+      - android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+      - android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - .github/workflows/owner-pilot-profile-light-buttons-qa.yml
+permissions:
+  contents: read
+jobs:
+  syntax-and-scope:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure both owner-pilot JS assets parse
+        run: |
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - name: Ensure appearance is isolated and theme-safe
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          base=Path('android-updates/owner-pilot/build-150/files/js')
+          a=(base/'web-menu-order.js').read_text()
+          b=(base/'apk-startup-bundle.js').read_text()
+          assert a.count('aoqatPilotProfileLightV7')==2
+          assert b.count('aoqatPilotProfileLightV7')==2
+          for value in (a,b):
+              assert value.count('background:linear-gradient(90deg,#fffdf7 0%,#f7ebce 100%)!important')==1
+              assert '#aoqatPersonalProfile button.aoqat-profile-row{' in value
+              assert 'aoqatProfileGroup-' in value
+              assert 'profileView(key)' in value
+              assert 'groupNodes[section]' in value
+          assert (base.parent/'manifest.json').exists()
+          print('PASS: profile-only light buttons, preserved nested navigation, no publish')
+          PY
