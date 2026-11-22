@@ -96,6 +96,24 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
             return am.ringerMode==target && nm.currentInterruptionFilter==before
         }
+        /** Ringer-only after iqama: never replace silence with a DND rule.
+         * Honor can couple the two. Restore the former filter immediately;
+         * if the OEM cannot keep them independent, fail instead of using DND. */
+        private fun ringerOnly(am:AudioManager,nm:NotificationManager,target:Int):Boolean {
+            val oldRinger=am.ringerMode
+            val oldFilter=nm.currentInterruptionFilter
+            try { am.ringerMode=target }
+            catch(e:Exception){android.util.Log.w("IqamaQuiet","Ringer-only rejected",e)}
+            if(nm.currentInterruptionFilter!=oldFilter && nm.isNotificationPolicyAccessGranted){
+                try { nm.setInterruptionFilter(oldFilter) }
+                catch(e:Exception){android.util.Log.w("IqamaQuiet","DND rollback failed",e)}
+            }
+            if(am.ringerMode==target && nm.currentInterruptionFilter==oldFilter)return true
+            if(am.ringerMode!=oldRinger)try{am.ringerMode=oldRinger}catch(_:Exception){}
+            if(nm.currentInterruptionFilter!=oldFilter && nm.isNotificationPolicyAccessGranted)
+                try{nm.setInterruptionFilter(oldFilter)}catch(_:Exception){}
+            return false
+        }
         @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L, preserveUserDnd:Boolean=false): Boolean {
             val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if(!nm.isNotificationPolicyAccessGranted) {
@@ -111,6 +129,14 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
             val am=c.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+            // Recover any old pre-fix DND fallback before starting a ringer-only period.
+            if(preserveUserDnd && p.getBoolean("changed",false) && p.getBoolean("dndApplied",false)) {
+                restoreRinger(c)
+                if(p.getBoolean("changed",false)) {
+                    auditQuiet(c,"old_dnd_restore_pending",scheduledStart,end)
+                    return false
+                }
+            }
             val already=p.getBoolean("changed",false)
             val ringerBefore=am.ringerMode
             val filterBefore=nm.currentInterruptionFilter
@@ -158,13 +184,18 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
                 return false
             }
-            val silentApplied=switchRingerPreservingDnd(
-                am,nm,AudioManager.RINGER_MODE_SILENT)
-            var dndApplied=p.getBoolean("dndApplied",false)
+            val silentApplied=if(preserveUserDnd)
+                ringerOnly(am,nm,AudioManager.RINGER_MODE_SILENT)
+            else switchRingerPreservingDnd(am,nm,AudioManager.RINGER_MODE_SILENT)
+            var dndApplied=if(preserveUserDnd)false else p.getBoolean("dndApplied",false)
             // Some OEMs turn on DND as a side effect of changing ringer mode.
             // Record this as OUR change so the exact previous DND policy is restored.
-            if(nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE &&
+            if(!preserveUserDnd && nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE &&
                 oldFilter!=NotificationManager.INTERRUPTION_FILTER_NONE) dndApplied=true
+            if(!silentApplied && preserveUserDnd) {
+                auditQuiet(c,"ringer_only_unsupported",scheduledStart,end)
+                return false
+            }
             if(!silentApplied) {
                 // OEMs may refuse setting RINGER_MODE_SILENT under scheduled DND.
                 // A user-enabled quiet window must still silence notifications.
@@ -186,7 +217,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 return false
             }
             p.edit().putBoolean("changed",true).putInt("previous",prior)
-                .putBoolean("dndApplied",dndApplied).putInt("previousFilter",oldFilter)
+                .putBoolean("dndApplied",dndApplied).putBoolean("ringerOnly",preserveUserDnd)
+                .putInt("previousFilter",oldFilter)
                 .putLong("end",until)
                 .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
             auditQuiet(c,"applied",scheduledStart,until)
@@ -205,7 +237,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                     am.ringerMode==AudioManager.RINGER_MODE_SILENT) {
                     // Restore NORMAL or VIBRATE even while the user's DND
                     // schedule is active; never leave ringer stuck in SILENT.
-                    ringerRestored=switchRingerPreservingDnd(am,nm,previous)
+                    ringerRestored=if(p.getBoolean("ringerOnly",false))
+                        ringerOnly(am,nm,previous)
+                    else switchRingerPreservingDnd(am,nm,previous)
                 }
             } catch (e: Exception) {
                 ringerRestored=false
