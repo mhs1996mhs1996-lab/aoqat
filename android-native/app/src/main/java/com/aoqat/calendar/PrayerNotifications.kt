@@ -89,7 +89,13 @@ object PrayerNotifications {
         val tap=if(screenAlert)full else PendingIntent.getActivity(c,78991,
             Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
         val alert=Notification.Builder(c, "prayer_due_system_v2")
-            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallPhase(true) else android.R.drawable.ic_lock_idle_alarm)
+            .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)PilotNotificationIcons.smallAdhan() else android.R.drawable.ic_lock_idle_alarm)
+            .apply {
+                // An actual due-prayer notification shares the exact BLUE
+                // adhan symbol, not the orange waiting-hourglass symbol.
+                if(BuildConfig.OWNER_PILOT_ENABLED)
+                    PilotNotificationIcons.exactSmall(c,true,true)?.let { setSmallIcon(it) }
+            }
             .setContentTitle(if (preview) "تجربة صوت الإشعار" else title(id, friday))
             .setContentText("أوقات الصلاة في الحويجة")
             .setCategory(Notification.CATEGORY_ALARM)
