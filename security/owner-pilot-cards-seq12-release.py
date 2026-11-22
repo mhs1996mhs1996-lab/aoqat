@@ -75,27 +75,6 @@ def prepare_assets():
         assert "cardsAndLockStyleButton" in text
         assert "openLockScreenTextStyle" in text
         assets[name]=text.encode("utf-8")
-    sums='widgets.textContent="🖼️ تعديل بطاقات الشاشة الرئيسية";'
-    new_title='widgets.textContent="🖼️ بطاقات الشاشة الرئيسية و القفل";'
-    old_back='else if(returnMode==="appearance")themeView();'
-    new_back='else if(returnMode==="cardsLock")widgetAppearanceView();else if(returnMode==="appearance")themeView();'
-    old_open='if(node)body.appendChild(node);sub.classList.add("open");'
-    new_open='if(node)body.appendChild(node);sub.classList.toggle("aoqat-cards-sub",!!node&&["aoqatCardsAndLockMenu","aoqatWidgetAppearance","aoqatLockCardSettings","aoqatLockFontMenu"].includes(node.id));sub.classList.add("open");'
-    for name in CHANGED:
-        text=assets[name].decode("utf-8")
-        assert text.count("  function widgetAppearanceView(){")==1 and text.count(END)>=1
-        beg=text.index("  function widgetAppearanceView(){")
-        end=text.index(END,beg)
-        assert "aoqatLockScreenNotificationTextStyle" in text[beg:end] and "cardsAndLockThemeStyles" not in text[beg:end]
-        text=text[:beg]+section+text[end:]
-        for old,new in [(old_title,new_title),(old_back,new_back),(old_open,new_open)]:
-            assert text.count(old)==1,(name,old)
-            text=text.replace(old,new)
-        assert "تنسيق خطوط إشعار شاشة القفل" in text
-        assert "aoqatCardsAndLockMenu" in text
-        assert "🔤 فتح تنسيق العنوان والأرقام" in text
-        assert "openLockScreenTextStyle" in text
-        assets[name]=text.encode("utf-8")
     sums={name:hash_bytes(data) for name,data in assets.items()}
     assert set(sums)==set(prior["files"]) and {name for name in sums if sums[name]!=prior["files"][name]}==CHANGED
     assert b"js/apk-startup-bundle.js" in assets["index.html"]
@@ -115,7 +94,7 @@ def create_candidate(destination):
     target=destination/"AOQAT-OWNER-PILOT-OTA-SEQ12-UNSIGNED.zip"
     with zipfile.ZipFile(target,"w",zipfile.ZIP_DEFLATED) as z:
         for name,data in sorted(assets.items()):z.writestr(name,data)
-    (destination/"previous-seq10-manifest.json").write_bytes(show("manifest.json"))
+    (destination/"previous-seq11-manifest.json").write_bytes(show("manifest.json"))
     (destination/"candidate.sha256").write_text(hash_bytes(target.read_bytes())+"  "+target.name+"\n")
     for name in CHANGED:
         (destination/("check-"+name.split("/")[-1])).write_bytes(assets[name])
