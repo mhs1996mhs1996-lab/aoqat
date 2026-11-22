@@ -8471,7 +8471,7 @@ window.AoqatWidgetAppearance={createPanel,load};
     const originalRows=[
       ["manage","👤 إدارة الملف الشخصي",[
         "aoqatProfileCard","aoqatProfileEditPanel","aoqatProfileEditRow",
-        "aoqatProfileDelete","aoqatProfileSaveStatus"
+        "aoqatProfileDelete"
       ]],
       ["backup","💾 النسخ الاحتياطي",[
         "aoqatProfileBackupExport","aoqatProfileBackupActions",
@@ -8504,7 +8504,7 @@ window.AoqatWidgetAppearance={createPanel,load};
       const button=document.createElement("button");
       button.type="button";button.className="main-action";
       button.dataset.profileGroup=kind;button.textContent=label;
-      button.onclick=()=>openSub(label.replace(/^[^ ]+ /,""),group,"profile");
+      button.onclick=()=>{group.append(note);openSub(label.replace(/^[^ ]+ /,""),group,"profile");};
       hub.append(button);
     }
     openSub("الملف الشخصي",hub,"main");
