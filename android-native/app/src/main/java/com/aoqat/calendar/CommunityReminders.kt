@@ -102,6 +102,20 @@ object CommunityReminders {
   val nm=c.getSystemService(Context.NOTIFICATION_SERVICE)as NotificationManager;nm.createNotificationChannel(NotificationChannel(CHANNEL,"تذكيرات الأذكار والجمعة والصيام",NotificationManager.IMPORTANCE_DEFAULT).apply{setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())})
   val code=if(BuildConfig.OWNER_PILOT_ENABLED && e.optString("kind")=="azkar-reminder" && e.optString("topicId")=="prayer") 63941 else e.getString("id").hashCode()
    val open=Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("communityReminderId",e.getString("id"));val pi=PendingIntent.getActivity(c,code,open,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+  // Retire ONLY the older pilot's per-slot notification for this topic.
+  // Other adhkar, adhan and unrelated notifications must remain untouched.
+  if(BuildConfig.OWNER_PILOT_ENABLED &&
+     e.optString("kind")=="azkar-reminder" && e.optString("topicId")=="prayer") {
+    try {
+      for(active in nm.activeNotifications) {
+        val activeTitle=active.notification.extras?.getCharSequence(android.app.Notification.EXTRA_TITLE)?.toString() ?: ""
+        if(active.id!=code && activeTitle=="تذكير: أذكار بعد الصلاة")
+          nm.cancel(active.tag,active.id)
+      }
+    } catch(err:Exception) {
+      android.util.Log.w("CommunityReminders","Legacy prayer-azkar cleanup unavailable",err)
+    }
+  }
   try{nm.notify(code,NotificationCompat.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_popup_reminder).setContentTitle(e.getString("title")).setContentText(e.getString("body")).setStyle(NotificationCompat.BigTextStyle().bigText(e.getString("body"))).setContentIntent(pi).setAutoCancel(true).setTimeoutAfter(TTL).build());if(!e.optString("id").startsWith("azkar-preview"))PhoneScreenAlerts.pulse(c)}catch(_:SecurityException){}
  }
 }
