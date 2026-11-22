@@ -1,43 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Pilot notification: fixed identical icon/countdown columns on both lines.
+     The middle title uses remaining width, so longer Arabic text cannot shift
+     the timer or the phase icon. Android's obligatory small app icon stays
+     in the separate decorated notification header. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:orientation="vertical" android:layoutDirection="rtl">
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical"
-        android:paddingTop="4dp" android:paddingBottom="4dp">
-        <ImageView android:id="@+id/lock_prayer_state_icon"
-            android:layout_width="37dp" android:layout_height="30dp"
-            android:layout_marginEnd="5dp" android:visibility="gone"
-            android:contentDescription="رمز الصلاة"/>
-        <TextView android:id="@+id/lock_prayer_title" android:layout_width="0dp"
-            android:layout_weight="1" android:layout_height="wrap_content"
-            android:textSize="16sp" android:textStyle="bold" android:textColor="#FF173747"
-            android:singleLine="true" android:ellipsize="end"/>
-        <Chronometer android:id="@+id/lock_prayer_clock" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:layout_marginStart="9dp"
-            android:textSize="17sp" android:textStyle="bold" android:singleLine="true"
-            android:textColor="#FF173747" android:layoutDirection="ltr"/>
-        <TextView android:id="@+id/lock_prayer_fallback" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:layout_marginStart="9dp"
-            android:textSize="17sp" android:textStyle="bold" android:singleLine="true"
-            android:textColor="#FF173747" android:layoutDirection="ltr"/>
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layoutDirection="rtl">
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="40dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp">
+        <ImageView
+            android:id="@+id/lock_prayer_state_icon"
+            android:layout_width="36dp"
+            android:layout_height="30dp"
+            android:layout_marginEnd="7dp"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:contentDescription="رمز ثابت للصلاة القادمة"/>
+        <TextView
+            android:id="@+id/lock_prayer_title"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:gravity="right|center_vertical"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FF173747"
+            android:singleLine="true"
+            android:ellipsize="end"/>
+        <Chronometer
+            android:id="@+id/lock_prayer_clock"
+            android:layout_width="105dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:gravity="left|center_vertical"
+            android:layoutDirection="ltr"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:textColor="#FF173747"/>
+        <TextView
+            android:id="@+id/lock_prayer_fallback"
+            android:layout_width="105dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:gravity="left|center_vertical"
+            android:layoutDirection="ltr"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:textColor="#FF173747"/>
     </LinearLayout>
-    <LinearLayout android:id="@+id/lock_iqama_row"
-        android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="horizontal" android:gravity="center_vertical"
-        android:paddingTop="2dp" android:paddingBottom="4dp"
+    <!-- This whole row disappears together with its dynamic counter/icon. -->
+    <LinearLayout
+        android:id="@+id/lock_iqama_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="40dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingTop="3dp"
+        android:paddingBottom="3dp"
         android:visibility="gone">
-        <ImageView android:id="@+id/lock_iqama_state_icon"
-            android:layout_width="37dp" android:layout_height="30dp"
-            android:layout_marginEnd="5dp" android:visibility="gone"
-            android:contentDescription="رمز حالة الإقامة أو الجمعة"/>
-        <TextView android:id="@+id/lock_iqama_title" android:layout_width="0dp"
-            android:layout_weight="1" android:layout_height="wrap_content"
-            android:textSize="15sp" android:textStyle="bold" android:textColor="#FF173747"
-            android:singleLine="true" android:ellipsize="end"/>
-        <Chronometer android:id="@+id/lock_iqama_clock" android:layout_width="wrap_content"
-            android:layout_height="wrap_content" android:layout_marginStart="9dp"
-            android:textSize="16sp" android:textStyle="bold" android:singleLine="true"
-            android:textColor="#FF173747" android:layoutDirection="ltr"/>
+        <ImageView
+            android:id="@+id/lock_iqama_state_icon"
+            android:layout_width="36dp"
+            android:layout_height="30dp"
+            android:layout_marginEnd="7dp"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            android:contentDescription="رمز متغير للإقامة أو الجمعة"/>
+        <TextView
+            android:id="@+id/lock_iqama_title"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:gravity="right|center_vertical"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="#FF173747"
+            android:singleLine="true"
+            android:ellipsize="end"/>
+        <Chronometer
+            android:id="@+id/lock_iqama_clock"
+            android:layout_width="105dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="5dp"
+            android:gravity="left|center_vertical"
+            android:layoutDirection="ltr"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:singleLine="true"
+            android:textColor="#FF173747"/>
     </LinearLayout>
 </LinearLayout>
