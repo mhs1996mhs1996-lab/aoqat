@@ -1,7 +1,7 @@
 name: Owner pilot seq13 - build unsigned cards-and-lock-font OTA candidate ONLY
 on:
   push:
-    branches: [feature/owner-pilot-cards-font-menu-ota-seq13-20261122]
+    branches: [feature/owner-pilot-cards-qa-seq13-20261122]
     paths: ['.github/workflows/owner-pilot-cards-seq13-candidate.yml']
 permissions:
   contents: read
