@@ -240,7 +240,7 @@
   function openSub(title,node,backTo="main"){
     restoreMoved();const m=document.getElementById("webDrawerMain"),sub=document.getElementById("webDrawerSub"),body=document.getElementById("webSubBody");
     if(!sub||!body)return;if(m)m.style.display="none";body.innerHTML="";document.getElementById("webSubTitle").textContent=title;
-    if(node)body.appendChild(node);sub.classList.toggle("aoqat-cards-sub",!!node&&["aoqatCardsAndLockMenu","aoqatWidgetAppearance","aoqatLockCardSettings","aoqatLockFontMenu","aoqatLockFontState"].includes(node.id));cardsAndLockBackButton(sub,sub.classList.contains("aoqat-cards-sub"));sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
+    if(node)body.appendChild(node);sub.classList.toggle("aoqat-cards-sub",!!node&&["aoqatCardsAndLockMenu","aoqatWidgetAppearance","aoqatLockCardSettings","aoqatLockFontMenu","aoqatLockFontState"].includes(node.id));cardsAndLockBackButton(sub,true); // Every submenu uses the same live theme-aware Back button, including future views.sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
   }
   function openPanel(title,id,backTo="main"){
     if(id==="adhanPanel"){openAdhanServices();return;}
