@@ -1222,6 +1222,15 @@
       "#aoqatWidgetAppearance .wa-style-group,#aoqatLockCardSettings .wa-style-group{border:1px solid var(--wt-border,#c7d8df)!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#183a4a)!important;box-shadow:none!important}",
       "#aoqatWidgetAppearance .wa-note,#aoqatLockCardSettings .wa-note,#aoqatLockFontMenu .aoqat-cards-note{color:var(--wt-text,#354d5a)!important;font-size:12px!important;line-height:1.6!important;margin:5px 2px!important}",
       "#aoqatWidgetAppearance .wa-chooser button[aria-pressed=true]{outline:2px solid var(--wt-border,#aac2d2)!important;font-weight:800!important}",
+      "#aoqatWidgetAppearance .wa-actions{display:grid!important;grid-template-columns:1fr!important;gap:7px!important}",
+      "#aoqatWidgetAppearance .wa-primary,#aoqatWidgetAppearance .wa-chooser button,#aoqatLockCardSettings .wa-primary{background-image:linear-gradient(115deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#e4f2f7))!important;background-color:transparent!important;color:var(--wt-text,#183a4a)!important;box-shadow:none!important;text-align:center!important}",
+      "#aoqatWidgetAppearance .wa-chooser button[aria-pressed=true]{outline:2px solid var(--wt-border,#aec7d3)!important}",
+      "#aoqatLockCardSettings .wa-style-group{display:grid!important;gap:8px!important;padding:8px!important;border:0!important;background:transparent!important}",
+      "#aoqatLockCardSettings .wa-primary{min-height:48px!important;margin:0!important}",
+      "#aoqatWidgetAppearance .wa-preview{border:1px solid var(--wt-border,#b4cbd1)!important}",
+      "#aoqatLockFontMenu .aoqat-cards-note{padding:4px 2px!important}",
+      "#webDrawerSub.aoqat-cards-sub .web-sub-head{min-height:42px!important;flex-basis:42px!important;padding:4px 9px!important}",
+      "#webDrawerSub.aoqat-cards-sub .web-sub-title{font-size:17px!important}",
       "#aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=color]{background:var(--wt-surface,#fff)!important;border-color:var(--wt-border,#c7d8df)!important;color:var(--wt-text,#183a4a)!important}"
     ].join("\n");
     document.head.append(css);
@@ -1256,7 +1265,16 @@
     if(!source)return;
     const panel=document.createElement("section");panel.id="aoqatLockCardSettings";panel.dir="rtl";
     const original=source.querySelector("#aoqatLockScreenSection");
-    if(original)panel.append(original); // Preserve the native toggles and permissions handlers.
+    if(original){
+      const heading=original.querySelector("strong");
+      if(heading){heading.style.textAlign="right";heading.style.margin="4px 2px";panel.append(heading);}
+      // Move original native-bound controls, NEVER clone or recreate their listeners.
+      original.querySelectorAll("button.wa-primary").forEach(button=>{
+        button.classList.add("main-action");
+        panel.append(button);
+      });
+      original.querySelectorAll(".wa-note").forEach(note=>panel.append(note));
+    }
     if(window.AndroidNative?.readOwnerPilotOtaState?.())
       cardsAndLockButton(panel,"aoqatLockScreenFontFromLock","🔤 تنسيق خطوط إشعار شاشة القفل",lockFontSubmenuView);
     openSub("إشعار شاشة القفل",panel,"cardsLock");
@@ -1266,6 +1284,9 @@
     const note=document.createElement("p");note.className="aoqat-cards-note";
     note.textContent="اختَر نوع العدّاد ثم عدّل حجم عنوانه وأرقامه ولونه بشكل مستقل.";
     panel.append(note);
+    const notice=document.createElement("p");notice.className="aoqat-cards-note";
+    notice.textContent="تعديل قيم الخط محفوظ داخل أندرويد. زر التحرير يفتح نافذة النظام الحالية؛ تغييرها إلى حقول داخل هذه الصفحة يحتاج تحديث APK.";
+    panel.append(notice);
     cardsAndLockButton(panel,"aoqatLaunchLockFontEditor","🔤 فتح تنسيق العنوان والأرقام",()=>{
       if(typeof window.AndroidNative?.openLockScreenTextStyle==="function")
         window.AndroidNative.openLockScreenTextStyle();
