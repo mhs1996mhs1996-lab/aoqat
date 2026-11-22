@@ -1,0 +1,113 @@
+name: Owner pilot backup OTA seq10 - unsigned review candidate ONLY
+on:
+  push:
+    branches: [feature/owner-pilot-lockscreen-phases-20261121]
+    paths:
+      - 'js/web-menu-order.js'
+      - 'tests/owner-pilot-profile-seq6-ui.cjs'
+      - '.github/workflows/owner-pilot-backup-ota-seq10-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup-candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-lockscreen-phases-20261121'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify isolated owner-pilot lock-screen typography placement and signing safety
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          node --check js/web-menu-order.js
+          node --test tests/owner-pilot-profile-seq6-ui.cjs tests/privacy-policy-check.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Generate exact web assets used by isolated APK
+        run: |
+          gradle -p android-native --no-daemon :app:syncWebAssets
+          node --check android-native/app/src/main/assets/www/js/apk-startup-bundle.js
+      - name: Verify published seq9, export full 88-file unsigned backup candidate
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota
+          mkdir -p owner-backup-ota-review
+          git show FETCH_HEAD:android-updates/owner-pilot/build-150/manifest.json > owner-backup-ota-review/previous-seq9-manifest.json
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile,ZIP_DEFLATED
+          import hashlib,json,subprocess
+          root=Path('android-native/app/src/main/assets/www')
+          out=Path('owner-backup-ota-review')
+          old=json.loads((out/'previous-seq9-manifest.json').read_text())
+          assert old['channel']=='owner-pilot' and old['nativeBuild']==150 and old['sequence']==9
+          assets={'index.html':(root/'index.html').read_bytes()}
+          for folder,ext in [('js','.js'),('css','.css')]:
+              for f in sorted((root/folder).rglob('*')):
+                  if f.is_file() and f.suffix==ext:
+                      assets[f.relative_to(root).as_posix()]=f.read_bytes()
+          assert set(assets)==set(old['files']) and len(assets)==88, 'Must keep every prior signed override'
+          newhash={name:hashlib.sha256(payload).hexdigest() for name,payload in assets.items()}
+          changes={name for name,digest in newhash.items() if digest!=old['files'][name]}
+          assert changes=={'js/web-menu-order.js','js/apk-startup-bundle.js'},'Unexpected files changed: '+repr(changes)
+          for name in changes:
+              assert b'aoqatLockScreenNotificationTextStyle' in assets[name],name
+              assert b'openLockScreenTextStyle' in assets[name],name
+              assert b'function widgetAppearanceView()' in assets[name],name
+              assert b'if(!panel)return' in assets[name],name
+              assert b'window.aoqatBackupNativeResult' in assets[name],name
+              assert 'تنسيق خطوط إشعارات شاشة القفل'.encode() in assets[name],name
+              assert b'"lockFont"' not in assets[name],name
+              assert b'window.AndroidNative.sharePrayerImage(exportPng' not in assets[name],name
+              assert b'window.AndroidNative.openLockScreenTextStyle()' in assets[name],name
+              assert b'\"تعديل بطاقات الشاشة الرئيسية\"' in assets[name],name
+          assert b'privacyPolicy' in assets['js/apk-startup-bundle.js']
+          assert b'aoqatQuranReaderV1' in assets['js/apk-startup-bundle.js']
+          assert sum(map(len,assets.values()))<24*1024*1024
+          zip_path=out/'AOQAT-OWNER-PILOT-BACKUP-OTA-SEQ10-UNSIGNED.zip'
+          with ZipFile(zip_path,'w',ZIP_DEFLATED) as z:
+              for name,body in sorted(assets.items()):z.writestr(name,body)
+          with ZipFile(zip_path) as z:
+              assert set(z.namelist())==set(assets)
+              assert all(z.read(name)==data for name,data in assets.items())
+          sha=hashlib.sha256(zip_path.read_bytes()).hexdigest()
+          (out/(zip_path.name+'.sha256')).write_text(sha+'  '+zip_path.name+'\n')
+          (out/'source-commit.txt').write_text(subprocess.check_output(['git','rev-parse','HEAD'],text=True))
+          (out/'SIGNING-REVIEW.txt').write_text(
+              'Unsigned web-only typography location OTA, NOT installable, NOT published.\n'
+              'Requires the ORIGINAL isolated owner-pilot P-256 private key, not APK P12 or production OTA V2 key.\n'
+              'Use security/owner-pilot-auto-ota-sign.py with --sequence 10 and the pinned owner pilot public key.\n'
+              'Publish only after owner signature verification and approval, to owner-pilot-ota, NEVER main or Vercel.\n')
+          print('PASS: 88 approved web assets; changed only menu and its integrated startup bundle. SHA='+sha)
+          PY
+          cp security/owner-pilot-auto-ota-sign.py owner-backup-ota-review/owner-pilot-auto-ota-sign.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import re,base64,hashlib,subprocess
+          source=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          m=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',source)
+          assert m,'Pinned owner-pilot public key unavailable'
+          raw=base64.b64decode(m.group(1),validate=True)
+          assert hashlib.sha256(raw).hexdigest()=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          pem=subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=raw)
+          Path('owner-backup-ota-review/owner-pilot-ota-public.pem').write_bytes(pem)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-BACKUP-OTA-SEQ10-CANDIDATE-NOT-PUBLISHED
+          path: owner-backup-ota-review/
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+      - name: Safety boundary
+        run: echo 'No private signing keys, no APK build/install, no production, admin, Vercel or OTA publication.'
