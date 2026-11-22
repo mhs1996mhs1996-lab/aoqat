@@ -73,7 +73,7 @@ test('reference icon assets are exact and only one compact notification is rende
     assert.equal(b.toString('ascii',8,12),'WEBP');
     assert.match(icon,new RegExp('R\\.drawable\\.pilot_notify_exact_'+state));
   }
-  assert.match(cpp,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
+  assert.doesNotMatch(cpp,/setStyle\(Notification\.DecoratedCustomViewStyle\(\)\)/);
   assert.match(cpp,/val compactViews = views/);
   assert.match(cpp,/setCustomContentView\(compactViews\)/);
   assert.match(cpp,/\.setCustomBigContentView\(views\)/);
