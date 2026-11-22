@@ -8063,9 +8063,9 @@ window.AoqatWidgetAppearance={createPanel,load};
 
   function profileView(section="root"){
     // Override global theme button dimensions ONLY within this profile.
-    if(!document.getElementById("aoqatPilotProfileLightV7")){
+    if(!document.getElementById("aoqatPilotProfileThemeV8")){
       const style=document.createElement("style");
-      style.id="aoqatPilotProfileLightV7";
+      style.id="aoqatPilotProfileThemeV8";
       style.textContent=`
         #aoqatPersonalProfile{padding:3px 3px 12px!important;line-height:1.3!important}
         #aoqatPersonalProfile #aoqatProfileCard{padding:8px 10px!important;margin:0 0 7px!important;gap:9px!important;border-radius:11px!important}
@@ -8073,7 +8073,7 @@ window.AoqatWidgetAppearance={createPanel,load};
         #aoqatPersonalProfile #aoqatProfileDisplayName{font-size:15px!important;line-height:1.3!important}
         #aoqatPersonalProfile #aoqatProfileEdit{min-height:30px!important;height:30px!important;padding:3px 8px!important;border-radius:7px!important;font-size:11px!important}
         #aoqatPersonalProfile h3{font-size:13px!important;margin:10px 0 4px!important;padding:0 2px!important;line-height:1.3!important}
-        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:48px!important;height:auto!important;padding:9px 12px!important;margin:4px 0!important;border-radius:9px!important;border:1px solid #d1b981!important;background:linear-gradient(90deg,#fffdf7 0%,#f7ebce 100%)!important;color:#4b3924!important;box-shadow:none!important;text-align:right!important;line-height:1.35!important;text-shadow:none!important}
+        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:48px!important;height:auto!important;padding:9px 12px!important;margin:4px 0!important;border-radius:9px!important;border:1px solid var(--wt-border,#c5d5c8)!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important;box-shadow:none!important;text-align:right!important;line-height:1.35!important;text-shadow:none!important}
         #aoqatPersonalProfile button.aoqat-profile-row span{line-height:1.3!important}
         #aoqatPersonalProfile button.aoqat-profile-row small{font-size:10px!important;line-height:1.25!important;opacity:.77!important}
         #aoqatPersonalProfile #aoqatProfileEditPanel{padding:7px!important;margin:4px 0!important}
