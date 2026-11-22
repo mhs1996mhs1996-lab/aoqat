@@ -1,0 +1,68 @@
+name: Owner pilot seq20 light profile buttons SIGNED OTA publish (PILOT ONLY)
+on:
+  push:
+    branches:
+      - fix/owner-pilot-profile-light-buttons-20261122
+    paths:
+      - security/owner-pilot-light-buttons-seq20-signed-public.json
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/fix/owner-pilot-profile-light-buttons-20261122'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require signed PUBLIC proof to be the only triggering change
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-light-buttons-seq20-signed-public.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-light-buttons-seq20-release.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - name: Verify previous seq19 and exact signed seq20 with installed pilot public key
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-light-buttons-seq20-release.py --verify-output "$RUNNER_TEMP/verified-owner-pilot-20"
+          node --check "$RUNNER_TEMP/verified-owner-pilot-20/android-updates/owner-pilot/build-150/files/js/web-menu-order.js"
+          node --check "$RUNNER_TEMP/verified-owner-pilot-20/android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js"
+      - name: Atomically publish ONLY three signed owner-pilot feed paths
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" origin/owner-pilot-ota
+          cp -a "$RUNNER_TEMP/verified-owner-pilot-20/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          from pathlib import Path
+          import json,subprocess,sys
+          p=Path(sys.argv[1])
+          changed=set(subprocess.check_output(["git","-C",str(p),"diff","--cached","--name-only"],text=True).splitlines())
+          root="android-updates/owner-pilot/build-150/"
+          assert changed=={root+"manifest.json",root+"files/js/web-menu-order.js",root+"files/js/apk-startup-bundle.js"},changed
+          prev=json.loads(subprocess.check_output(["git","-C",str(p),"show","HEAD:"+root+"manifest.json"]))
+          new=json.loads((p/root/"manifest.json").read_text())
+          assert (prev["sequence"],new["sequence"])==(19,20)
+          assert set(prev["files"])==set(new["files"])
+          assert {name for name in prev["files"] if prev["files"][name]!=new["files"][name]}=={"js/web-menu-order.js","js/apk-startup-bundle.js"}
+          print("PASS: only exact three files staged; no main, admin or production changes")
+          PY
+          git -C "$W" diff --cached --check
+          git -C "$W" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            -c user.name="github-actions[bot]" commit -m "pilot: publish verified signed seq20 light profile buttons" >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PUBLISHED: owner-pilot B150 seq20 only; production and admin untouched'
