@@ -7733,7 +7733,7 @@ window.AoqatWidgetAppearance={createPanel,load};
   function openSub(title,node,backTo="main"){
     restoreMoved();const m=document.getElementById("webDrawerMain"),sub=document.getElementById("webDrawerSub"),body=document.getElementById("webSubBody");
     if(!sub||!body)return;if(m)m.style.display="none";body.innerHTML="";document.getElementById("webSubTitle").textContent=title;
-    if(node)body.appendChild(node);sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
+    if(node)body.appendChild(node);sub.classList.toggle("aoqat-cards-sub",!!node&&["aoqatCardsAndLockMenu","aoqatWidgetAppearance","aoqatLockCardSettings","aoqatLockFontMenu"].includes(node.id));sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
   }
   function openPanel(title,id,backTo="main"){
     if(id==="adhanPanel"){openAdhanServices();return;}
@@ -8699,25 +8699,74 @@ window.AoqatWidgetAppearance={createPanel,load};
     showShortButtonHelp(wrap,{adhanPanel:'مواقيت الصلاة وصوت المؤذن.',iqamaPanel:'المدة بين الأذان والإقامة.',afterIqamaPanel:'مدة ظهور مضى على الإقامة.'});
     openSub("بيانات الاذان والإقامة",wrap,"main");
   }
+  // Owner-pilot web-only cards + lock-screen navigation. The existing native
+  // typography dialog and its persisted Android preferences stay unchanged.
+  function cardsAndLockThemeStyles(){
+    if(document.getElementById("aoqatCardsAndLockThemeCss"))return;
+    const css=document.createElement("style");css.id="aoqatCardsAndLockThemeCss";
+    css.textContent=[
+      "#aoqatCardsAndLockMenu,#aoqatLockCardSettings,#aoqatLockFontMenu{display:grid;gap:7px;direction:rtl;padding:4px 0 10px}",
+      "#webDrawerSub.aoqat-cards-sub .web-back{width:auto!important;min-height:30px!important;height:30px!important;padding:3px 9px!important;font-size:12px!important;line-height:1.2!important;border-radius:7px!important}",
+      "#aoqatCardsAndLockMenu>button.main-action,#aoqatLockCardSettings>button.main-action,#aoqatLockFontMenu>button.main-action,#aoqatWidgetAppearance .wa-primary,#aoqatWidgetAppearance .wa-chooser button,#aoqatLockCardSettings .wa-primary{display:block!important;box-sizing:border-box!important;width:100%!important;min-height:51px!important;height:auto!important;padding:9px 12px!important;margin:4px 0!important;border:1px solid var(--wt-border,#c7d8df)!important;border-radius:10px!important;background:linear-gradient(110deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#e4f2f7))!important;color:var(--wt-text,#183a4a)!important;box-shadow:none!important;text-shadow:none!important;font-size:15px!important;font-weight:750!important;line-height:1.55!important;text-align:right!important;white-space:normal!important}",
+      "#aoqatCardsAndLockMenu>button.main-action:nth-of-type(even),#aoqatLockCardSettings>button.main-action:nth-of-type(even),#aoqatWidgetAppearance .wa-chooser button:nth-of-type(even){background:linear-gradient(110deg,var(--wt-surface2,#e4f2f7),var(--wt-surface,#fffaf0))!important}",
+      "#aoqatWidgetAppearance{color:var(--wt-text,#183a4a)!important;gap:8px!important}",
+      "#aoqatWidgetAppearance .wa-chooser,#aoqatWidgetAppearance .wa-actions{grid-template-columns:1fr!important;gap:6px!important}",
+      "#aoqatWidgetAppearance .wa-style-group,#aoqatLockCardSettings .wa-style-group{border:1px solid var(--wt-border,#c7d8df)!important;background:var(--wt-surface,#fffaf0)!important;color:var(--wt-text,#183a4a)!important;box-shadow:none!important}",
+      "#aoqatWidgetAppearance .wa-note,#aoqatLockCardSettings .wa-note,#aoqatLockFontMenu .aoqat-cards-note{color:var(--wt-text,#354d5a)!important;font-size:12px!important;line-height:1.6!important;margin:5px 2px!important}",
+      "#aoqatWidgetAppearance .wa-chooser button[aria-pressed=true]{outline:2px solid var(--wt-border,#aac2d2)!important;font-weight:800!important}",
+      "#aoqatWidgetAppearance select,#aoqatWidgetAppearance input[type=color]{background:var(--wt-surface,#fff)!important;border-color:var(--wt-border,#c7d8df)!important;color:var(--wt-text,#183a4a)!important}"
+    ].join("\n");
+    document.head.append(css);
+  }
+  function cardsAndLockButton(parent,id,label,onclick){
+    const b=document.createElement("button");b.type="button";b.id=id;b.className="main-action";
+    b.textContent=label;b.onclick=onclick;parent.append(b);return b;
+  }
   function widgetAppearanceView(){
+    cardsAndLockThemeStyles();
+    const root=document.createElement("section");root.id="aoqatCardsAndLockMenu";
+    root.className="web-settings-list";root.dir="rtl";
+    cardsAndLockButton(root,"aoqatHomeCardsMenu","🖼️ بطاقات الشاشة الرئيسية",homeCardsEditorView);
+    if(window.AndroidNative?.configureLockScreenPrayer)
+      cardsAndLockButton(root,"aoqatLockCardMenu","🔒 إشعار شاشة القفل",lockCardSettingsView);
+    if(window.AndroidNative?.readOwnerPilotOtaState?.())
+      cardsAndLockButton(root,"aoqatLockScreenNotificationTextStyle","🔤 تنسيق خطوط إشعار شاشة القفل",lockFontSubmenuView);
+    openSub("بطاقات الشاشة الرئيسية و القفل",root,"appearance");
+  }
+  function homeCardsEditorView(){
     const panel=window.AoqatWidgetAppearance?.createPanel?.();
     if(!panel)return;
-    if(window.AndroidNative?.readOwnerPilotOtaState?.()){
-      const button=document.createElement("button");
-      button.type="button";button.className="main-action";
-      button.id="aoqatLockScreenNotificationTextStyle";
-      button.textContent="🔤 تنسيق خطوط إشعار شاشة القفل";
-      button.onclick=()=>{
-        if(typeof window.AndroidNative?.openLockScreenTextStyle==="function")
-          window.AndroidNative.openLockScreenTextStyle();
-        else window.alert("تنسيق الخط يحتاج إصدار APK التجريبي الذي يدعم هذه الميزة.");
-      };
-      panel.append(button);
-    }
-    openSub("تعديل بطاقات الشاشة الرئيسية",panel,"appearance");
+    // The SAME controls remain available, but lock-screen actions now have
+    // their own menu instead of being mixed into homepage widget styling.
+    if(window.AndroidNative?.configureLockScreenPrayer)
+      panel.querySelector("#aoqatLockScreenSection")?.remove();
+    panel.querySelector(":scope > strong")?.remove();
+    openSub("بطاقات الشاشة الرئيسية",panel,"cardsLock");
+  }
+  function lockCardSettingsView(){
+    const source=window.AoqatWidgetAppearance?.createPanel?.();
+    if(!source)return;
+    const panel=document.createElement("section");panel.id="aoqatLockCardSettings";panel.dir="rtl";
+    const original=source.querySelector("#aoqatLockScreenSection");
+    if(original)panel.append(original); // Preserve the native toggles and permissions handlers.
+    if(window.AndroidNative?.readOwnerPilotOtaState?.())
+      cardsAndLockButton(panel,"aoqatLockScreenFontFromLock","🔤 تنسيق خطوط إشعار شاشة القفل",lockFontSubmenuView);
+    openSub("إشعار شاشة القفل",panel,"cardsLock");
+  }
+  function lockFontSubmenuView(){
+    const panel=document.createElement("section");panel.id="aoqatLockFontMenu";panel.dir="rtl";
+    const note=document.createElement("p");note.className="aoqat-cards-note";
+    note.textContent="اختَر نوع العدّاد ثم عدّل حجم عنوانه وأرقامه ولونه بشكل مستقل.";
+    panel.append(note);
+    cardsAndLockButton(panel,"aoqatLaunchLockFontEditor","🔤 فتح تنسيق العنوان والأرقام",()=>{
+      if(typeof window.AndroidNative?.openLockScreenTextStyle==="function")
+        window.AndroidNative.openLockScreenTextStyle();
+      else window.alert("تنسيق الإشعار يحتاج نسخة أندرويد التجريبية الداعمة لهذه الميزة.");
+    });
+    openSub("تنسيق خطوط إشعار شاشة القفل",panel,"cardsLock");
   }
   function themeView(){const p=document.createElement("div");p.className="web-theme-drawer-panel";const source=document.getElementById("webThemePanel");if(source){p.innerHTML=source.innerHTML;}else{p.innerHTML='<div class="wt-head"><span>🎨 الثيمات والألوان</span><span>اختيار مباشر</span></div><div class="wt-grid"><button type="button" class="wt-card" data-theme="cream-blue">🟦 كريمي وأزرق فاتح</button><button type="button" class="wt-card" data-theme="cream-gold">🟨 كريمي وذهبي هادئ</button><button type="button" class="wt-card" data-theme="white-sky">🔵 أبيض وسماوي حديث</button><button type="button" class="wt-card" data-theme="cream-green">🟩 كريمي وأخضر هادئ</button><button type="button" class="wt-card" data-theme="beige-gold">🟫 بيج وذهبي أنيق</button><button type="button" class="wt-card" data-theme="dark-night">🌙 داكن كحلي (ليلي)</button></div>';}p.addEventListener("click",e=>{const card=e.target.closest(".wt-card");if(!card)return;if(typeof window.applyWebTheme==="function")window.applyWebTheme(card.dataset.theme);p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));window.refreshWebThemeControls?.();});p.querySelectorAll(".wt-card").forEach(b=>b.classList.toggle("is-active",b.dataset.theme===document.body.dataset.webTheme));const widgets=document.createElement("button");widgets.type="button";widgets.className="main-action";
-    widgets.textContent="🖼️ تعديل بطاقات الشاشة الرئيسية";
+    widgets.textContent="🖼️ بطاقات الشاشة الرئيسية و القفل";
     widgets.style.cssText="display:block;width:100%;margin:4px 0 14px;padding:12px;border-radius:12px;text-align:center;font-weight:800;background:linear-gradient(90deg,var(--wt-surface,#f9f7f0),var(--wt-surface2,#e1eeec));color:var(--wt-text,#193f42);border:1px solid var(--wt-border,#b4cbd1)";
     widgets.onclick=widgetAppearanceView;p.prepend(widgets);
     openSub("شكل التطبيق",p,"main");window.refreshWebThemeControls?.();}
@@ -8735,7 +8784,7 @@ window.AoqatWidgetAppearance={createPanel,load};
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="cardsLock")widgetAppearanceView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}
       if(["quran","qibla","azkar","widget"].includes(id)){
