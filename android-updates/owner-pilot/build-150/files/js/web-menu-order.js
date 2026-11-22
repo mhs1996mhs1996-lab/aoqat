@@ -568,7 +568,7 @@
     }finally{URL.revokeObjectURL(url);}
   }
 
-  function profileView(){
+  function profileView(section="root"){
     // Override global theme button dimensions ONLY within this profile.
     if(!document.getElementById("aoqatPilotProfileCompactV6")){
       const style=document.createElement("style");
@@ -580,7 +580,7 @@
         #aoqatPersonalProfile #aoqatProfileDisplayName{font-size:15px!important;line-height:1.3!important}
         #aoqatPersonalProfile #aoqatProfileEdit{min-height:30px!important;height:30px!important;padding:3px 8px!important;border-radius:7px!important;font-size:11px!important}
         #aoqatPersonalProfile h3{font-size:13px!important;margin:10px 0 4px!important;padding:0 2px!important;line-height:1.3!important}
-        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:42px!important;height:auto!important;padding:6px 9px!important;margin:3px 0!important;border-radius:8px!important;border:1px solid var(--wt-border,#c7d8df)!important;background:var(--wt-surface,#f7fafb)!important;box-shadow:none!important;text-align:right!important;line-height:1.25!important;text-shadow:none!important}
+        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:42px!important;height:auto!important;padding:6px 9px!important;margin:3px 0!important;border-radius:8px!important;border:1px solid var(--wt-border,#c7d8df)!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important;box-shadow:none!important;text-align:right!important;line-height:1.25!important;text-shadow:none!important}
         #aoqatPersonalProfile button.aoqat-profile-row span{line-height:1.3!important}
         #aoqatPersonalProfile button.aoqat-profile-row small{font-size:10px!important;line-height:1.25!important;opacity:.77!important}
         #aoqatPersonalProfile #aoqatProfileEditPanel{padding:7px!important;margin:4px 0!important}
@@ -955,7 +955,7 @@
     },"📥");
     panel.append(restorePanel);
     sections("المساعدة والخصوصية");
-    row("aoqatProfilePrivacy","سياسة الخصوصية","قراءة السياسة داخل التطبيق",()=>privacyView(),"🔒");
+    row("aoqatProfilePrivacy","سياسة الخصوصية","قراءة السياسة داخل التطبيق",()=>privacyView("profileHelp"),"🔒");
     row("aoqatProfileContact","تواصل معنا عبر واتساب","فتح جهة الدعم",()=>window.AoqatHelpSupport?.openWhatsApp?.(),"💬");
     row("aoqatProfileAbout","حول التطبيق","أوقات الصلاة في الحويجة وضواحيها · التجريبي 2.12 (بناء 150)",()=>{
       say("النسخة التجريبية تستقبل تحديثات OTA الموقّعة تلقائياً عند اتصال التطبيق بالإنترنت.");
@@ -972,7 +972,45 @@
       }catch(_){say("تعذّر حذف بيانات الملف الشخصي.");}
     },"🗑️");
     panel.append(note);
-    openSub("الملف الشخصي",panel,"main");
+    // Pure navigation regrouping: reuse the ORIGINAL nodes and click handlers.
+    // Storage keys, backup/restore methods, Quran actions and delete confirmation
+    // are not changed. Each call rebuilds a fresh panel for safe Back navigation.
+    const groupNodes={account:document.createDocumentFragment(),backup:document.createDocumentFragment(),
+      help:document.createDocumentFragment(),quran:document.createDocumentFragment()};
+    const headings={"القرآن ومحفوظاتي":"quran","النسخ الاحتياطي":"backup",
+      "المساعدة والخصوصية":"help","إدارة الملف الشخصي":"account"};
+    let currentGroup="account";
+    for(const node of [...panel.children]){
+      if(node===card || node===note)continue;
+      if(node.tagName==="H3" && headings[node.textContent.trim()]){
+        currentGroup=headings[node.textContent.trim()];
+        continue;
+      }
+      groupNodes[currentGroup].append(node);
+    }
+    panel.replaceChildren();
+    const profilePages={
+      account:"إدارة الملف الشخصي",
+      backup:"النسخ الاحتياطي",
+      help:"المساعدة والخصوصية",
+      quran:"محفوظات القرآن"
+    };
+    if(section==="root" || !Object.hasOwn(profilePages,section)){
+      panel.append(card);
+      editButton.onclick=()=>profileView("account");
+      const mainGroups=[
+        ["account","👤","إدارة الملف الشخصي","الاسم والصورة والبريد الإلكتروني وحذف بيانات الملف"],
+        ["backup","💾","النسخ الاحتياطي","إنشاء النسخ واستعادتها والنسخ التلقائي"],
+        ["help","🔒","المساعدة والخصوصية","سياسة الخصوصية والتواصل وحول التطبيق"],
+        ["quran","📖","محفوظات القرآن","العلامات المرجعية وآخر صفحة قرأتها"]
+      ];
+      for(const [key,icon,title,subtitle] of mainGroups)
+        row("aoqatProfileGroup-"+key,title,subtitle,()=>profileView(key),icon);
+      openSub("الملف الشخصي",panel,"main");
+    }else{
+      panel.append(groupNodes[section],note);
+      openSub(profilePages[section],panel,"profile");
+    }
   }
   // Read-only pilot OTA availability UI. Android's existing signed receiver
   // remains solely responsible for downloading/verifying/staging OTA updates.
@@ -1073,7 +1111,7 @@
   }
   // Self-contained policy copy: readable in the offline APK, no web fetch.
   const PRIVACY_SECTIONS=[{"title":"ما الذي يحتفظ به التطبيق على الجهاز؟","paragraphs":["يحفظ التطبيق إعدادات العرض والأذان والإقامة والتنبيهات والصامت والمواقيت المختارة، وما تنشئه من تصاميم وتقاويم، وعلامات المصحف المرجعية، في مساحة التخزين المحلية للتطبيق متى كانت الميزة متاحة. لا تحتاج وظائف الصلاة والمصحف الأساسية في نسخة أندرويد المجهزة للعمل دون إنترنت إلى حساب شخصي.","يمكنك مسح البيانات المحلية عبر إعدادات التطبيق في هاتفك أو إزالة التطبيق؛ وقد تُفقد حينها إعداداتك وعلاماتك وملفاتك غير المحفوظة خارج التطبيق."]},{"title":"الموقع والاتجاه إلى القبلة","paragraphs":["قد تطلب ميزة اتجاه القبلة إذن الموقع التقريبي (ACCESS_COARSE_LOCATION) لحساب اتجاه القبلة من موقع الهاتف، وتستخدم حساسات الاتجاه عند توفرها. يُستخدم الموقع لهذه المهمة على الجهاز؛ ولا تتضمن وظيفة القبلة البرمجية الحالية إرسال الإحداثيات إلى خادمنا. يمكنك رفض الإذن أو سحبه من إعدادات الهاتف.","مواقيت الصلاة الأساسية مخصصة لمدينة الحويجة وضواحيها، ولا تحتاج إلى تتبع مستمر لموقعك."]},{"title":"الإنترنت وخدمات الجهات الأخرى","paragraphs":["عند الاتصال بالإنترنت قد يتواصل التطبيق مع خدمة Supabase للحصول على بيانات مواقيت الصلاة وتحديثاتها، وقد يرسل بيانات المواقيت التي تختار حفظها في قاعدة البيانات عند استخدام أمر الحفظ المتاح في الواجهة.","إذا اخترت تشغيل إشعارات الويب الخلفية، قد تُرسل إلى خدمة الاشتراك بيانات اشتراك الإشعارات، ومنها عنوان الاشتراك ومفاتيحه والمنطقة الزمنية، لغرض إيصال الإشعار إلى متصفحك. تستطيع تعطيل الاشتراك من إعدادات التنبيهات.","قد تعالج خدمات الاستضافة والشبكات عنوان IP ومعلومات الاتصال التقنية وسجلات الأمان اللازمة لتقديم الخدمة. وإذا اخترت التواصل عبر واتساب، تُفتح خدمة واتساب الخارجية وتسري عليها سياسة الخصوصية الخاصة بها."]},{"title":"أذونات الهاتف","paragraphs":["قد يطلب التطبيق إذناً للإشعارات والمنبهات الدقيقة وإظهار التنبيه على شاشة القفل، وتشغيل خدمات التنبيه في الخلفية والتحكم بوضع عدم الإزعاج أو الصوت، بحسب الميزة التي تفعّلها. تُستخدم هذه الصلاحيات لتشغيل الأذان والإقامة والتذكيرات ولا تعني وحدها إرسال معلومات شخصية.","قد تُستخدم أدوات اختيار الملفات أو مشاركة الصور عندما تطلب حفظ تصميم أو مشاركته. لا تُرفع ملفاتك الشخصية تلقائياً بمجرد اختيارها."]},{"title":"الاحتفاظ بالبيانات والحماية","paragraphs":["تبقى البيانات المحلية في مساحة التطبيق إلى أن تحذفها أو تمسح بيانات التطبيق، وفق آليات أندرويد والنسخ الاحتياطي المفعّلة على جهازك. بيانات اشتراك الإشعارات المرتبطة بالخدمة تبقى حسب حالة الاشتراك وإجراءات مشغّل الخدمة؛ وعند إلغاء الاشتراك يحاول التطبيق إبلاغ الخادم بحذفه.","تستخدم اتصالات خدماتنا الشبكية المعتمدة HTTPS حيثما تكون الخدمة متاحة. لا يمكن ضمان خلو أي نقل أو تخزين إلكتروني من المخاطر بالكامل. يمكن أن تحتفظ مزودات البنية التحتية بسجلات تقنية لأغراض التشغيل والأمان وفق سياساتها."]},{"title":"خياراتك وطلبات الحذف","paragraphs":["تستطيع تعطيل الأذونات من إعدادات أندرويد، وإيقاف الإشعارات من التطبيق، ومسح إعدادات التطبيق المحلية. إذا رغبت في الاستفسار عن بيانات قد تكون محفوظة لدى الخدمة، أو طلب حذفها، تواصل معنا عبر «تواصل معنا عبر واتساب» الموجود بالتطبيق مع توضيح الطلب، دون إرسال كلمة مرور أو مفتاح توقيع."]},{"title":"التغييرات والتواصل","paragraphs":["قد نعدّل هذه السياسة عند تغيير الوظائف أو الأذونات أو الخدمات المستخدمة، ونحدّث تاريخ المراجعة. راجع هذه الصفحة عند تثبيت إصدار جديد.","اسم التطبيق: أوقات الصلاة في الحويجة وضواحيها. جهة التواصل: خدمة الدعم عبر خيار «تواصل معنا عبر واتساب» داخل التطبيق. تاريخ آخر تحديث: 20 تشرين الثاني 2026."]}];
-  function privacyView(){
+  function privacyView(backTo="profile"){
     const wrap=document.createElement("section");wrap.id="aoqatPrivacyPolicy";
     wrap.dir="rtl";wrap.style.cssText="max-width:720px;margin:0 auto;padding:7px 9px 22px;color:var(--wt-text,#293d37);line-height:1.75";
     const intro=document.createElement("p");
@@ -1098,7 +1136,7 @@
     contact.style.cssText="width:100%;min-height:44px;margin-top:7px";
     contact.onclick=()=>window.AoqatHelpSupport?.openWhatsApp?.();
     wrap.append(contact);
-    openSub("سياسة الخصوصية",wrap,"profile");
+    openSub("سياسة الخصوصية",wrap,backTo);
   }
   function guideView(){const api=window.AoqatHelpSupport;if(api)openSub("شرح استخدام التطبيق",api.guide(),"main");}
   function contactView(){window.AoqatHelpSupport?.openWhatsApp?.();}
@@ -1379,7 +1417,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="lockFontMenu")lockFontSubmenuView();else if(returnMode==="lockCard")lockCardSettingsView();else if(returnMode==="cardsLock")widgetAppearanceView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profileHelp")profileView("help");else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="lockFontMenu")lockFontSubmenuView();else if(returnMode==="lockCard")lockCardSettingsView();else if(returnMode==="cardsLock")widgetAppearanceView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;if(id==="qibla"){window.AndroidNative.openQibla();return;}
       if(["quran","qibla","azkar","widget"].includes(id)){
