@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pilot notification: fixed identical icon/countdown columns on both lines.
-     The middle title uses remaining width, so longer Arabic text cannot shift
-     the timer or the phase icon. Android's obligatory small app icon stays
-     in the separate decorated notification header. -->
+<!-- Owner pilot: Android/OEM owns the upper waiting symbol in a fixed icon lane.
+     Align the active secondary symbol vertically below that lane without
+     altering the clock widths, labels, timing, or secondary row visibility. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:layoutDirection="rtl">
     <LinearLayout
         android:layout_width="match_parent"
@@ -32,7 +33,10 @@
             android:gravity="right|center_vertical"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#FF173747"
+            android:textColor="#FFFFFFFF"
+            android:shadowColor="#CC000000"
+            android:shadowRadius="2"
+            android:shadowDy="1"
             android:singleLine="true"
             android:ellipsize="end"/>
         <Chronometer
@@ -45,7 +49,10 @@
             android:textSize="17sp"
             android:textStyle="bold"
             android:singleLine="true"
-            android:textColor="#FF173747"/>
+            android:textColor="#FFFFFFFF"
+            android:shadowColor="#CC000000"
+            android:shadowRadius="2"
+            android:shadowDy="1"/>
         <TextView
             android:id="@+id/lock_prayer_fallback"
             android:layout_width="105dp"
@@ -56,13 +63,18 @@
             android:textSize="17sp"
             android:textStyle="bold"
             android:singleLine="true"
-            android:textColor="#FF173747"/>
+            android:textColor="#FFFFFFFF"
+            android:shadowColor="#CC000000"
+            android:shadowRadius="2"
+            android:shadowDy="1"/>
     </LinearLayout>
     <!-- This whole row disappears together with its dynamic counter/icon. -->
     <LinearLayout
         android:id="@+id/lock_iqama_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:minHeight="30dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
@@ -73,6 +85,7 @@
             android:id="@+id/lock_iqama_state_icon"
             android:layout_width="30dp"
             android:layout_height="26dp"
+            android:translationX="42dp"
             android:layout_marginEnd="6dp"
             android:scaleType="fitCenter"
             android:visibility="gone"
@@ -85,7 +98,10 @@
             android:gravity="right|center_vertical"
             android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="#FF173747"
+            android:textColor="#FFFFFFFF"
+            android:shadowColor="#CC000000"
+            android:shadowRadius="2"
+            android:shadowDy="1"
             android:singleLine="true"
             android:ellipsize="end"/>
         <Chronometer
@@ -98,6 +114,9 @@
             android:textSize="17sp"
             android:textStyle="bold"
             android:singleLine="true"
-            android:textColor="#FF173747"/>
+            android:textColor="#FFFFFFFF"
+            android:shadowColor="#CC000000"
+            android:shadowRadius="2"
+            android:shadowDy="1"/>
     </LinearLayout>
 </LinearLayout>
