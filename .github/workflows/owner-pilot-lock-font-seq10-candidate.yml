@@ -5,7 +5,7 @@ on:
     paths:
       - 'js/web-menu-order.js'
       - 'tests/owner-pilot-profile-seq6-ui.cjs'
-      - '.github/workflows/owner-pilot-backup-ota-seq10-candidate.yml'
+      - '.github/workflows/owner-pilot-lock-font-seq10-candidate.yml'
   workflow_dispatch:
 permissions:
   contents: read
