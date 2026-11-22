@@ -48,7 +48,7 @@ def prepare_assets():
     old=",.web-drawer-row,[data-drawer]"
     new=",.web-back,.web-drawer-row,[data-drawer]"
     source=(HERE/"js/web-menu-button-theme.js").read_text(encoding="utf-8")
-    assert source.count(new)==1 and old not in source
+    assert source.count(new)==1 and source.count(',.web-back,')==1
     menu=assets["js/web-menu-order.js"].decode("utf-8")
     assert menu.count('cardsAndLockBackButton(sub,true); sub.classList.add("open");')==1,"Submenu must stay open"
     assert "sub.classList.add(\"open\");" in menu
