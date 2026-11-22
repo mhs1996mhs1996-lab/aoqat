@@ -115,7 +115,7 @@ test('one original phase icon per active row, identical icon and countdown measu
   assert.equal(prop(upper,'layout_height'),'26dp');
   // Retain approved icon measurements; only remove the oversized OEM decoration.
   assert.equal(prop(upper,'layout_marginEnd'),'6dp');
-  assert.equal(prop(lower,'translationX'),'42dp','secondary icon follows fixed Honor system icon column');
+  assert.equal(prop(lower,'translationX'),'82dp','secondary icon is directly below the original Honor system icon');
   const firstClock=tag('lock_prayer_clock'),secondClock=tag('lock_iqama_clock');
   for(const attribute of ['layout_width','layout_marginStart','textSize','gravity','layoutDirection']){
     assert.equal(prop(firstClock,attribute),prop(secondClock,attribute),attribute);
@@ -153,4 +153,28 @@ test('exact primary state icon is reused by Android instead of duplicated in con
  const manifest=fs.readFileSync(path.join(__dirname,'../android-native/app/src/main/res/drawable/pilot_notify_small_app.xml'),'utf8');
  assert.match(manifest,/<vector /);
  assert.doesNotMatch(manifest,/pilot_notify_exact_wait|pilot_notify_wait|pilot_notify_adhan/);
+});
+
+test('owner-only silent mode never falls back to Do Not Disturb',()=>{
+ const quiet=source('AdhanPlaybackService');
+ const after=source('AfterIqamaQuiet');
+ assert.match(quiet,/val ringerOnlyRequested=preserveUserDnd \\|\\| BuildConfig\\.OWNER_PILOT_ENABLED/);
+ assert.match(quiet,/if\\(!silentApplied && ringerOnlyRequested\\) \\{/);
+ assert.match(quiet,/if\\(!ringerOnlyRequested && nm\\.currentInterruptionFilter/);
+ assert.match(after,/preserveUserDnd=true/);
+});
+test('old after-prayer azkar notification IDs are removed without clearing other topics',()=>{
+ const reminders=source('CommunityReminders');
+ assert.match(reminders,/val code=if\\(BuildConfig\\.OWNER_PILOT_ENABLED.*63941/);
+ assert.match(reminders,/activeTitle=="تذكير: أذكار بعد الصلاة"/);
+ assert.match(reminders,/nm\\.cancel\\(active\\.tag,active\\.id\\)/);
+ assert.match(reminders,/lastPrayerAzkarNotifiedAt/);
+});
+test('per-state font and contrast settings remain independent from notification timing',()=>{
+ const style=source('LockScreenTextStyle');
+ const web=fs.readFileSync(path.join(__dirname,'../js/web-menu-order.js'),'utf8');
+ assert.match(style,/ColorStateList\\.valueOf\\(color\\)/);
+ assert.match(style,/v\\.setColorStateList\\(id,"setTextColor"/);
+ for(const key of ['prayer','iqama_wait','iqama_elapsed','friday_first','sermon_wait','sermon_elapsed'])assert.ok(style.includes('"'+key+'"'));
+ assert.match(web,/openLockScreenTextStyle/);
 });
