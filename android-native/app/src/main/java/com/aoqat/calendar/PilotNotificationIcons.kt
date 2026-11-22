@@ -13,6 +13,11 @@ import android.util.Base64
  * versions appear inside custom cards and (where supported) as large icons.
  */
 internal object PilotNotificationIcons {
+    // Android 12+ always places a required application small icon in its
+    // notification chrome. Keep it a neutral brand marker, NEVER one of the
+    // colored counter/adhan images already shown in the custom two-row card.
+    // Otherwise Honor draws a second orange hourglass beside the first row.
+    fun smallAppMarker(): Int = R.drawable.pilot_notify_small_app
     fun smallAdhan(): Int = R.drawable.pilot_notify_small_adhan
     fun smallPhase(countDown: Boolean): Int =
         if(countDown) R.drawable.pilot_notify_small_wait else R.drawable.pilot_notify_small_elapsed
