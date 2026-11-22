@@ -315,17 +315,10 @@ class NextPrayerService:Service(){
             val description=if(extra!=null)"$fallback • $lockDetail" else "$fallback — أوقات الصلاة في الحويجة"
             val views=RemoteViews(c.packageName,R.layout.notification_lock_next)
             if (BuildConfig.OWNER_PILOT_ENABLED) {
-                // Custom RemoteViews otherwise inherit a dark teal XML color
-                // even when the phone displays a dark notification surface.
-                val dark = (c.resources.configuration.uiMode and
-                    android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-                    android.content.res.Configuration.UI_MODE_NIGHT_YES
-                val cardText = if (dark) Color.WHITE else Color.rgb(23,55,71)
-                for (id in intArrayOf(R.id.lock_prayer_title,
-                    R.id.lock_prayer_clock,R.id.lock_prayer_fallback,
-                    R.id.lock_iqama_title,R.id.lock_iqama_clock)) {
-                    views.setTextColor(id,cardText)
-                }
+                // Honor lock-screen glass may be dark while app theme is light.
+                // Default to white and support separate saved per-row styles.
+                LockScreenTextStyle.apply(c,views,"prayer",R.id.lock_prayer_title,
+                    R.id.lock_prayer_clock,R.id.lock_prayer_fallback)
             }
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
@@ -350,6 +343,17 @@ class NextPrayerService:Service(){
                 if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
             if(extra!=null){
                 views.setTextViewText(R.id.lock_iqama_title,extra.title)
+                if(BuildConfig.OWNER_PILOT_ENABLED){
+                    val key=when(extra.kind){
+                        LockScreenSupplement.Kind.IQAMA_WAITING -> "iqama_wait"
+                        LockScreenSupplement.Kind.IQAMA_ELAPSED -> "iqama_elapsed"
+                        LockScreenSupplement.Kind.FRIDAY_FIRST -> "friday_first"
+                        LockScreenSupplement.Kind.FRIDAY_SERMON_WAITING -> "sermon_wait"
+                        LockScreenSupplement.Kind.FRIDAY_SERMON_ELAPSED -> "sermon_elapsed"
+                    }
+                    LockScreenTextStyle.apply(c,views,key,
+                        R.id.lock_iqama_title,R.id.lock_iqama_clock)
+                }
                 views.setChronometer(R.id.lock_iqama_clock,
                     if(extra.countDown)
                         SystemClock.elapsedRealtime()+extraMs
