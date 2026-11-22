@@ -84,17 +84,24 @@ object CommunityReminders {
   for(offset in 0L..7L){val d=today.plusDays(offset);val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};for(e in events(c,d,config,row))if(e.getLong("at")>now)alarm(c,id++,e.getLong("at"),e)}
   alarm(c,88299,today.plusDays(1).atStartOfDay(CommunityReminderPlan.zone).plusMinutes(2).toInstant().toEpochMilli(),null);inbox(c)
  }
- @Synchronized fun deliver(c:Context,raw:String?){if(raw.isNullOrBlank())return;val e=try{JSONObject(raw)}catch(_:Exception){return};val now=System.currentTimeMillis();if(now-e.optLong("at") !in 0 until (if(e.optString("kind")=="azkar-reminder")120000L else 1800000L))return
+ @Synchronized fun deliver(c:Context,raw:String?){if(raw.isNullOrBlank())return;val e=try{JSONObject(raw)}catch(_:Exception){return};val now=System.currentTimeMillis()
+   val ownerPrayerAzkar=BuildConfig.OWNER_PILOT_ENABLED && e.optString("kind")=="azkar-reminder" && e.optString("topicId")=="prayer"
+   // Suppress duplicate reminders caused by overlapping prayer slots/alarms.
+   if(ownerPrayerAzkar && now-prefs(c).getLong("lastPrayerAzkarNotifiedAt",0L) in 0L..(30L*60000L))return
+   if(now-e.optLong("at") !in 0 until (if(e.optString("kind")=="azkar-reminder")120000L else 1800000L))return
   val rows=PrayerTimes.rows(c);val d=if(e.optString("kind")=="azkar-reminder")try{LocalDate.parse(e.getString("sourceDate"))}catch(_:Exception){return}else Instant.ofEpochMilli(e.optLong("at")).atZone(CommunityReminderPlan.zone).toLocalDate();val row=(0 until rows.length()).mapNotNull{rows.optJSONObject(it)}.firstOrNull{it.optInt("gregorian_month")==d.monthValue&&it.optInt("gregorian_day")==d.dayOfMonth};val cutoff=when(e.optString("kind")){"community-post","sunnah"->PrayerTimes.minutes(row?.optString("isha")?:"","isha");"kahf"->PrayerTimes.minutes(row?.optString("maghrib")?:"","maghrib");else->null};if(cutoff!=null&&now>=d.atStartOfDay(CommunityReminderPlan.zone).plusMinutes(cutoff.toLong()).toInstant().toEpochMilli())return
   if(events(c,d,JSONObject(settings(c)),row).none{it.optString("id")==e.optString("id")&&it.optLong("at")==e.optLong("at")})return
   val entries=inbox(c);if((0 until entries.length()).any{entries.getJSONObject(it).optString("id")==e.optString("id")})return
-  e.put("createdAt",now);val updated=JSONArray().put(e);for(i in 0 until entries.length())updated.put(entries.getJSONObject(i));prefs(c).edit().putString("inbox",updated.toString()).commit()
+  e.put("createdAt",now);val updated=JSONArray().put(e);for(i in 0 until entries.length())updated.put(entries.getJSONObject(i));val save=prefs(c).edit().putString("inbox",updated.toString())
+   if(ownerPrayerAzkar)save.putLong("lastPrayerAzkarNotifiedAt",now)
+   if(!save.commit())return
   notify(c,e)
  }
  internal fun preview(c:Context,kind:String){val e=JSONObject().put("id","azkar-preview:"+kind).put("title","معاينة: "+AzkarReminderPlan.titles[kind]).put("body","تجربة تذكير الأذكار");notify(c,e)}
  private fun notify(c:Context,e:JSONObject){
   val nm=c.getSystemService(Context.NOTIFICATION_SERVICE)as NotificationManager;nm.createNotificationChannel(NotificationChannel(CHANNEL,"تذكيرات الأذكار والجمعة والصيام",NotificationManager.IMPORTANCE_DEFAULT).apply{setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())})
-  val code=e.getString("id").hashCode();val open=Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("communityReminderId",e.getString("id"));val pi=PendingIntent.getActivity(c,code,open,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+  val code=if(BuildConfig.OWNER_PILOT_ENABLED && e.optString("kind")=="azkar-reminder" && e.optString("topicId")=="prayer") 63941 else e.getString("id").hashCode()
+   val open=Intent(c,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP).putExtra("communityReminderId",e.getString("id"));val pi=PendingIntent.getActivity(c,code,open,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
   try{nm.notify(code,NotificationCompat.Builder(c,CHANNEL).setSmallIcon(android.R.drawable.ic_popup_reminder).setContentTitle(e.getString("title")).setContentText(e.getString("body")).setStyle(NotificationCompat.BigTextStyle().bigText(e.getString("body"))).setContentIntent(pi).setAutoCancel(true).setTimeoutAfter(TTL).build());if(!e.optString("id").startsWith("azkar-preview"))PhoneScreenAlerts.pulse(c)}catch(_:SecurityException){}
  }
 }
