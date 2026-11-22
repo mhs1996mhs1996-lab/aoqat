@@ -1,0 +1,58 @@
+name: Owner pilot seq13 signed cards-and-lock-font menu OTA publish (PILOT ONLY)
+on:
+  push:
+    branches: [feature/owner-pilot-cards-font-menu-ota-seq13-20261122]
+    paths: ['security/owner-pilot-cards-seq13-signed-public.json']
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-cards-font-menu-ota-seq13-20261122'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Only the public pre-signed original-key proof may trigger a publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-cards-seq13-signed-public.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-cards-seq13-release.py
+          node --check js/web-menu-order.js
+      - name: Verify pinned owner signature and precisely two allowed JavaScript changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-cards-seq13-release.py --verify-output "$RUNNER_TEMP/approved-pilot-only"
+          node --check "$RUNNER_TEMP/approved-pilot-only/android-updates/owner-pilot/build-150/files/js/web-menu-order.js"
+          node --check "$RUNNER_TEMP/approved-pilot-only/android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js"
+      - name: Publish only signed manifest plus two pilot JS files, NEVER main/admin/production
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=android-updates/owner-pilot/build-150
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" origin/owner-pilot-ota
+          cp -a "$RUNNER_TEMP/approved-pilot-only/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          import subprocess,sys
+          changed=set(subprocess.check_output(['git','-C',sys.argv[1],'diff','--cached','--name-only'],text=True).splitlines())
+          base='android-updates/owner-pilot/build-150/'
+          allowed={base+'manifest.json',base+'files/js/web-menu-order.js',base+'files/js/apk-startup-bundle.js'}
+          assert changed==allowed,(changed,allowed)
+          print('PASS: exactly three verified owner-pilot feed paths will publish')
+          PY
+          git -C "$W" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+             -c user.name="github-actions[bot]" commit -m "pilot: publish original-key signed cards-and-lock-font menu seq13" >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PUBLISHED owner pilot OTA seq13, never production or admin'
