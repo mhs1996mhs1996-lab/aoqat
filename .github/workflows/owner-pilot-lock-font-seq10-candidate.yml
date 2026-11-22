@@ -1,0 +1,96 @@
+name: Owner pilot seq10 lock-screen font button unsigned OTA review (NO PUBLICATION)
+on:
+  push:
+    branches: [feature/owner-pilot-lock-font-ota-seq10-20261122]
+    paths: ['.github/workflows/owner-pilot-lock-font-seq10-candidate.yml']
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build complete unsigned candidate from CURRENT published seq9, not other source changes
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          mkdir -p pilot-lock-font-seq10-review
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,subprocess,zipfile,base64,re
+          out=Path('pilot-lock-font-seq10-review')
+          root='android-updates/owner-pilot/build-150/'
+          def show(path):return subprocess.check_output(['git','show','origin/owner-pilot-ota:'+root+path])
+          oldbytes=show('manifest.json')
+          m=json.loads(oldbytes)
+          assert (m['nativeBuild'],m['sequence'],m['channel'])==(150,9,'owner-pilot')
+          assert len(m['files'])==88
+          assets={name:show('files/'+name) for name in sorted(m['files'])}
+          hash=lambda b:hashlib.sha256(b).hexdigest()
+          assert {name:hash(blob) for name,blob in assets.items()}==m['files']
+          old='''  function widgetAppearanceView(){
+              const panel=window.AoqatWidgetAppearance?.createPanel?.();
+              if(panel)openSub("تعديل بطاقات الشاشة الرئيسية",panel,"appearance");
+            }'''.replace('              ','    ').replace('            }','  }')
+          new='''  function widgetAppearanceView(){
+              const panel=window.AoqatWidgetAppearance?.createPanel?.();
+              if(!panel)return;
+              if(window.AndroidNative?.readOwnerPilotOtaState?.()){
+                const button=document.createElement("button");
+                button.type="button";button.className="main-action";
+                button.id="aoqatLockScreenNotificationTextStyle";
+                button.textContent="🔤 تنسيق خطوط إشعار شاشة القفل";
+                button.onclick=()=>{
+                  if(typeof window.AndroidNative?.openLockScreenTextStyle==="function")
+                    window.AndroidNative.openLockScreenTextStyle();
+                  else window.alert("تنسيق الخط يحتاج إصدار APK التجريبي الذي يدعم هذه الميزة.");
+                };
+                panel.append(button);
+              }
+              openSub("تعديل بطاقات الشاشة الرئيسية",panel,"appearance");
+            }'''.replace('              ','    ').replace('            }','  }')
+          changed=set()
+          for name in ['js/web-menu-order.js','js/apk-startup-bundle.js']:
+            raw=assets[name].decode('utf-8')
+            assert raw.count(old)==1,(name,'unexpected pre-existing screen')
+            updated=raw.replace(old,new)
+            assert updated.count('aoqatLockScreenNotificationTextStyle')==1
+            assert 'readOwnerPilotOtaState' in updated and 'openLockScreenTextStyle' in updated
+            assets[name]=updated.encode('utf-8')
+            changed.add(name)
+            (out/('check-'+name.split('/')[-1])).write_bytes(assets[name])
+          assert changed=={'js/web-menu-order.js','js/apk-startup-bundle.js'}
+          assert set(assets)==set(m['files'])
+          assert {name for name in assets if hash(assets[name])!=m['files'][name]}==changed
+          assert b'privacyPolicy' in assets['js/apk-startup-bundle.js']
+          assert b'aoqatPersonalProfile' in assets['js/apk-startup-bundle.js']
+          assert b'aoqatQuranReaderV1' in assets['js/apk-startup-bundle.js']
+          assert b'aoqatProfileBackupSchedule' in assets['js/apk-startup-bundle.js']
+          assert b'aoqatPilotOtaPanel' in assets['js/apk-startup-bundle.js']
+          assert b'js/apk-startup-bundle.js' in assets['index.html']
+          with zipfile.ZipFile(out/'pilot-lock-font-seq10-UNSIGNED.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for name,blob in sorted(assets.items()):z.writestr(name,blob)
+          (out/'previous-seq9-manifest.json').write_bytes(oldbytes)
+          src=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          match=re.search(r'PILOT_SIGNING_PUBLIC_KEY_B64\s*=\s*"([^"]+)"',src)
+          assert match
+          der=base64.b64decode(match.group(1))
+          assert hash(der)=='a0acf8f0464bad18392073c47166937e68f72b732efa3e1299331d0bc43307ea'
+          (out/'pilot-public.pem').write_bytes(subprocess.check_output(['openssl','pkey','-pubin','-inform','DER','-outform','PEM'],input=der))
+          (out/'SOURCE-VERIFICATION.txt').write_text('Owner-only seq10, derived from LIVE signed seq9; changed ONLY two JS assets: the appearance > home cards screen font button. Never production or admin. Requires the ORIGINAL PILOT key. No signature/publish yet.\n')
+          print('PASS: all 88 seq9 assets preserved, only menu and its matching APK bundle changed')
+          PY
+          node --check pilot-lock-font-seq10-review/check-web-menu-order.js
+          node --check pilot-lock-font-seq10-review/check-apk-startup-bundle.js
+          cp security/owner-pilot-auto-ota-sign.py pilot-lock-font-seq10-review/owner-pilot-auto-ota-sign.py
+      - name: Export UNSIGNED candidate (not a release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-PILOT-SEQ10-LOCK-FONT-UNSIGNED-NOT-PUBLISHED
+          path: pilot-lock-font-seq10-review/
+          retention-days: 14
+          if-no-files-found: error
