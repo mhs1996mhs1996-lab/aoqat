@@ -17,6 +17,7 @@ import android.widget.RemoteViews
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
+import org.json.JSONObject
 
 /**
  * Independent per-state title/time typography. NEVER alters a countdown base,
@@ -54,6 +55,24 @@ internal object LockScreenTextStyle {
         tint(title,titleSize)
         tint(clock,clockSize)
         fallback?.let{tint(it,clockSize)}
+    }
+    /** Exact owner-only state bridge for the web subpage, never alters timing. */
+    fun readState(c:Context,key:String):String {
+        if(!BuildConfig.OWNER_PILOT_ENABLED || key !in keys)return "{}"
+        val p=pref(c)
+        return JSONObject().put("title",size(c,key,"title",16))
+            .put("clock",size(c,key,"clock",17))
+            .put("color",p.getInt(key+"_color",0).coerceIn(0,palette.lastIndex))
+            .toString()
+    }
+    fun updateState(c:Context,key:String,title:Int,clock:Int,color:Int):Boolean {
+        if(!BuildConfig.OWNER_PILOT_ENABLED || key !in keys)return false
+        if(title !in 12..24 || clock !in 12..24 || color !in palette.indices)return false
+        return pref(c).edit()
+            .putInt(key+"_title",title)
+            .putInt(key+"_clock",clock)
+            .putInt(key+"_color",color)
+            .commit()
     }
     fun showEditor(activity:Activity){
         if(!BuildConfig.OWNER_PILOT_ENABLED)return
