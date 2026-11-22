@@ -1,0 +1,60 @@
+name: Owner pilot seq19 profile submenu signed OTA publish (TRIAL ONLY)
+on:
+  push:
+    branches: [feature/owner-pilot-profile-menu-seq19-20261122]
+    paths:
+      - 'security/owner-pilot-profile-seq19-signed-public.json'
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-profile-menu-seq19-20261122'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Only one public key signature proof can trigger publication
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-profile-seq19-signed-public.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-profile-seq19-release.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - name: Verify original pinned pilot signature and exactly two approved JS changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-profile-seq19-release.py --verify-output "$RUNNER_TEMP/approved-pilot-only"
+          node --check "$RUNNER_TEMP/approved-pilot-only/android-updates/owner-pilot/build-150/files/js/web-menu-order.js"
+          node --check "$RUNNER_TEMP/approved-pilot-only/android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js"
+      - name: Publish only owner trial profile assets and signed manifest; never main or admin
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=android-updates/owner-pilot/build-150
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" origin/owner-pilot-ota
+          cp -a "$RUNNER_TEMP/approved-pilot-only/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          import subprocess,sys
+          files=set(subprocess.check_output(['git','-C',sys.argv[1],'diff','--cached','--name-only'],text=True).splitlines())
+          prefix='android-updates/owner-pilot/build-150/'
+          allowed={prefix+'manifest.json',prefix+'files/js/web-menu-order.js',prefix+'files/js/apk-startup-bundle.js'}
+          assert files==allowed,(files,allowed)
+          print('PASS: only 3 owner-pilot OTA feed paths changed')
+          PY
+          git -C "$W" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+             -c user.name="github-actions[bot]" commit -m "pilot: publish signed profile four-menu navigation seq19" >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PUBLISHED signed owner pilot seq19; did not change production or admin'
