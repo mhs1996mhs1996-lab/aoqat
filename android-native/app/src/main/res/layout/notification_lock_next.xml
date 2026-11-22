@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Owner pilot: Android/OEM owns the upper waiting symbol in a fixed icon lane.
-     Align the active secondary symbol under the OEM right-side icon (Honor measured offset 82dp), without
-     altering the clock widths, labels, timing, or secondary row visibility. -->
+<!-- Owner pilot: the upper wait symbol is the OEM-supplied small icon.
+     The supplemental state image must stay INSIDE its actual custom row:
+     translated pixels outside RemoteViews' bounds are clipped by Honor.
+     Reserve the same native 30dp image cell without any translation. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -85,7 +86,6 @@
             android:id="@+id/lock_iqama_state_icon"
             android:layout_width="30dp"
             android:layout_height="26dp"
-            android:translationX="82dp"
             android:layout_marginEnd="6dp"
             android:scaleType="fitCenter"
             android:visibility="gone"
