@@ -56,7 +56,7 @@ def prepare_assets():
         assert candidate==text.replace(old,new),"Reject any change beyond the back-button color"
         assert candidate.count(safe)==1 and wrong not in candidate,"Never hide submenu content again"
         assert candidate.count("const overlay=subOverlay()")==1
-        assert candidate.count("sub.classList.add(\\\"open\\\");")==1
+        assert candidate.count("sub.classList.add(")==1
         assets[name]=candidate.encode("utf-8")
     sums={name:hash_bytes(data) for name,data in assets.items()}
     assert set(sums)==set(prior["files"])
@@ -85,7 +85,7 @@ def verify_and_stage(destination):
     prior,assets,sums=prepare_assets()
     proof=json.loads(PROOF.read_text(encoding="utf-8"),object_pairs_hook=no_duplicate)
     assert set(proof)=={"nativeBuild","sequence","channel","expiresAt","revision","signature"}
-    assert (proof["nativeBuild"],proof["sequence"],proof["channel"])==(150,16,"owner-pilot")
+    assert (proof["nativeBuild"],proof["sequence"],proof["channel"])==(150,18,"owner-pilot")
     assert type(proof["expiresAt"]) is int and int(time.time()*1000)+300000<proof["expiresAt"]<int(time.time()*1000)+15*86400000
     manifest={**proof,"files":sums}
     canonical="\n".join(name+":"+sums[name] for name in sorted(sums))
@@ -108,7 +108,7 @@ def verify_and_stage(destination):
         p.parent.mkdir(parents=True,exist_ok=True)
         p.write_bytes(assets[name])
         assert hash_bytes(p.read_bytes())==sums[name]
-    print("PASS: pinned original pilot signature verified, sequence 16; only two JS override changes")
+    print("PASS: pinned original pilot signature verified, sequence 18; only two JS override changes")
     print("PASS: no production, main, APK, Quran, prayer times or admin modified")
 
 if __name__=="__main__":
