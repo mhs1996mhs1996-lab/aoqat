@@ -1016,6 +1016,23 @@ class MainActivity : Activity() {
             if(!BuildConfig.OWNER_PILOT_ENABLED)return
             runOnUiThread { LockScreenTextStyle.showEditor(this@MainActivity) }
         }
+        @JavascriptInterface fun readLockScreenTextStyle(key:String):String {
+            if(!BuildConfig.OWNER_PILOT_ENABLED)return "{}"
+            return LockScreenTextStyle.readState(this@MainActivity,key)
+        }
+        @JavascriptInterface fun configureLockScreenTextStyle(
+            key:String,title:Int,clock:Int,color:Int
+        ):Boolean {
+            if(!BuildConfig.OWNER_PILOT_ENABLED)return false
+            val saved=LockScreenTextStyle.updateState(this@MainActivity,key,title,clock,color)
+            if(saved)runOnUiThread {
+                if(LockScreenPrayer.enabled(this@MainActivity))
+                    LockScreenPrayer.showNow(this@MainActivity)
+                if(NextPrayerService.wanted(this@MainActivity))
+                    NextPrayerService.start(this@MainActivity)
+            }
+            return saved
+        }
         @JavascriptInterface fun readLockScreenPrayerEnabled():Boolean =
             LockScreenPrayer.enabled(this@MainActivity)
         @JavascriptInterface fun readLockScreenPrayerStatus():String =
