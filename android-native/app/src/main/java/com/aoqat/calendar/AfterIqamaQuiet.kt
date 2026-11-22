@@ -44,6 +44,7 @@ object AfterIqamaQuiet {
         }
         // Only change the ringtone, never substitute or overwrite the user's
         // scheduled Do Not Disturb policy (e.g. 23:20–07:00).
+        // After iqama is ringer-only: no automatic DND substitution.
         AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)
     }
 
