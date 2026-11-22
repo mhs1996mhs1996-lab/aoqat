@@ -1,0 +1,70 @@
+name: Owner pilot seq21 shared theme navigation signed OTA publish (PILOT ONLY)
+on:
+  push:
+    branches: [fix/owner-pilot-profile-palette-painter-seq21-20261122]
+    paths: [security/owner-pilot-profile-theme-seq21-signed-public.json]
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/fix/owner-pilot-profile-palette-painter-seq21-20261122'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require only user-signed PUBLIC seq21 proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-profile-theme-seq21-signed-public.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-profile-theme-seq21-verify.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-button-theme.js
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - name: Cryptographically verify seq20 and seq21 signatures with already pinned pilot key
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-profile-theme-seq21-verify.py --verify-output "$RUNNER_TEMP/approved-owner-pilot-seq21"
+          for file in web-menu-button-theme.js web-menu-order.js apk-startup-bundle.js; do
+            node --check "$RUNNER_TEMP/approved-owner-pilot-seq21/android-updates/owner-pilot/build-150/files/js/$file"
+          done
+      - name: Publish ONLY verified four ownerPilot feed paths, never production/admin
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" origin/owner-pilot-ota
+          cp -a "$RUNNER_TEMP/approved-owner-pilot-seq21/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          from pathlib import Path
+          import json,subprocess,sys
+          worktree=Path(sys.argv[1])
+          root="android-updates/owner-pilot/build-150/"
+          changed=set(subprocess.check_output(["git","-C",str(worktree),"diff","--cached","--name-only"],text=True).splitlines())
+          expected={root+"manifest.json"}|{root+"files/js/"+name for name in ("web-menu-button-theme.js","web-menu-order.js","apk-startup-bundle.js")}
+          assert changed==expected,(changed,expected)
+          old=json.loads(subprocess.check_output(["git","-C",str(worktree),"show","HEAD:"+root+"manifest.json"]))
+          new=json.loads((worktree/root/"manifest.json").read_text())
+          assert (old["nativeBuild"],old["channel"],old["sequence"])==(150,"owner-pilot",20)
+          assert (new["nativeBuild"],new["channel"],new["sequence"])==(150,"owner-pilot",21)
+          assert old["files"].keys()==new["files"].keys()
+          assert {p for p in old["files"] if old["files"][p]!=new["files"][p]}=={"js/web-menu-button-theme.js","js/web-menu-order.js","js/apk-startup-bundle.js"}
+          print("PASS: only four allowed ownerPilot paths, no main, Vercel, admin or APK changes")
+          PY
+          git -C "$W" diff --cached --check
+          git -C "$W" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            -c user.name="github-actions[bot]" commit -m "pilot: publish verified signed seq21 theme-based navigation" >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo 'PUBLISHED: owner-pilot build 150 sequence 21 ONLY'
