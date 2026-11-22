@@ -1,0 +1,85 @@
+name: Owner pilot native lock-screen state editor QA ONLY (unsigned)
+on:
+  push:
+    branches: [feature/owner-pilot-native-font-bridge-20261122]
+    paths:
+      - 'android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt'
+      - 'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt'
+      - 'tests/owner-pilot-font-bridge.cjs'
+      - '.github/workflows/owner-pilot-native-font-bridge-qa.yml'
+permissions:
+  contents: read
+jobs:
+  native-qa:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Strict isolation and source tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feature/owner-pilot-lockscreen-phases-20261121:refs/remotes/origin/feature/owner-pilot-lockscreen-phases-20261121
+          python3 - <<'PY'
+          import subprocess
+          base='origin/feature/owner-pilot-lockscreen-phases-20261121'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+            'tests/owner-pilot-font-bridge.cjs',
+            '.github/workflows/owner-pilot-native-font-bridge-qa.yml'
+          }
+          assert changed==allowed,(changed,allowed)
+          for path in ('android-native/app/build.gradle','android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt','index.html','data/prayer-times-offline.json','js/quran-reader.js'):
+            assert subprocess.check_output(['git','show',base+':'+path])==open(path,'rb').read(),path
+          print('PASS: only native owner-pilot state bridge and isolated test changed')
+          PY
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          node --test tests/owner-pilot-font-bridge.cjs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Compile exact pilot package with new state-specific bridge
+        run: gradle -p android-native --no-daemon :app:assembleOwnerPilot
+      - name: Verify package ID and original update channel, export UNSIGNED APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find android-native/app/build/outputs/apk/ownerPilot -name '*.apk' -type f | head -n 1)"
+          test -s "$APK"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort | tail -1)"
+          "$AAPT" dump badging "$APK" | grep -F "name='com.aoqat.calendar.ownerpilot'"
+          "$AAPT" dump badging "$APK" | grep -F "versionCode='150'"
+          SIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort | tail -1)"
+          if "$SIGNER" verify "$APK"; then echo 'Unexpected signed APK'; exit 1; fi
+          python3 - "$APK" <<'PY'
+          import sys,zipfile
+          with zipfile.ZipFile(sys.argv[1]) as z:
+            names=z.namelist()
+            assert 'assets/www/js/web-menu-order.js' in names
+            assert b'readOwnerPilotOtaState' in z.read('assets/www/js/web-menu-order.js')
+            assert len([x for x in names if x.startswith('assets/www/assets/qcf-v2-page-fonts/p') and x.endswith('.woff2')])==604
+          print('PASS: all 604 offline Quran fonts and signed OTA entrypoint preserved')
+          PY
+          mkdir -p /tmp/owner-pilot-native-font
+          cp "$APK" /tmp/owner-pilot-native-font/aoqat-ownerpilot-native-font-unsigned.apk
+          cd /tmp/owner-pilot-native-font
+          sha256sum aoqat-ownerpilot-native-font-unsigned.apk > aoqat-ownerpilot-native-font-unsigned.apk.sha256
+          printf '%s\n' 'QA-only trial APK. Sign with the SAME installed owner-pilot Android APK P12 certificate; the OTA PEM signature is not an Android APK certificate. Production and admin are unchanged.' > INSTALL-NOTES.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-NATIVE-FONT-STATE-UNSIGNED-APK
+          path: /tmp/owner-pilot-native-font/*
+          retention-days: 14
+          if-no-files-found: error
+      - name: Confirm no deployment
+        run: echo 'Native bridge QA only; no publication or signing to main, admin, or OTA feed.'
