@@ -8073,7 +8073,7 @@ window.AoqatWidgetAppearance={createPanel,load};
         #aoqatPersonalProfile #aoqatProfileDisplayName{font-size:15px!important;line-height:1.3!important}
         #aoqatPersonalProfile #aoqatProfileEdit{min-height:30px!important;height:30px!important;padding:3px 8px!important;border-radius:7px!important;font-size:11px!important}
         #aoqatPersonalProfile h3{font-size:13px!important;margin:10px 0 4px!important;padding:0 2px!important;line-height:1.3!important}
-        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:42px!important;height:auto!important;padding:6px 9px!important;margin:3px 0!important;border-radius:8px!important;border:1px solid var(--wt-border,#c7d8df)!important;background:var(--wt-surface,#f7fafb)!important;box-shadow:none!important;text-align:right!important;line-height:1.25!important;text-shadow:none!important}
+        #aoqatPersonalProfile button.aoqat-profile-row{box-sizing:border-box!important;display:flex!important;align-items:center!important;gap:7px!important;min-height:42px!important;height:auto!important;padding:6px 9px!important;margin:3px 0!important;border-radius:8px!important;border:1px solid var(--wt-border,#c7d8df)!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#173c50)!important;box-shadow:none!important;text-align:right!important;line-height:1.3!important;text-shadow:none!important}
         #aoqatPersonalProfile button.aoqat-profile-row span{line-height:1.3!important}
         #aoqatPersonalProfile button.aoqat-profile-row small{font-size:10px!important;line-height:1.25!important;opacity:.77!important}
         #aoqatPersonalProfile #aoqatProfileEditPanel{padding:7px!important;margin:4px 0!important}
@@ -8465,7 +8465,49 @@ window.AoqatWidgetAppearance={createPanel,load};
       }catch(_){say("تعذّر حذف بيانات الملف الشخصي.");}
     },"🗑️");
     panel.append(note);
-    openSub("الملف الشخصي",panel,"main");
+    // Owner pilot: four ordered profile hubs. Reparent the ORIGINAL nodes, so
+    // backup/restore, Quran, delete and privacy click handlers are unchanged.
+    // Do not rewrite any saved values or clear local storage.
+    const originalRows=[
+      ["manage","👤 إدارة الملف الشخصي",[
+        "aoqatProfileCard","aoqatProfileEditPanel","aoqatProfileEditRow",
+        "aoqatProfileDelete","aoqatProfileSaveStatus"
+      ]],
+      ["backup","💾 النسخ الاحتياطي",[
+        "aoqatProfileBackupExport","aoqatProfileBackupActions",
+        "aoqatProfileBackupOptionalSettings","aoqatProfileBackupRestore",
+        "aoqatProfileRestorePanel"
+      ]],
+      ["support","🔒 المساعدة والخصوصية",[
+        "aoqatProfilePrivacy","aoqatProfileContact","aoqatProfileAbout"
+      ]],
+      ["quran","📖 محفوظات القرآن",[
+        "aoqatProfileQuranBookmarks","aoqatProfileQuranLastPage"
+      ]]
+    ];
+    const expected=originalRows.reduce((all,[,,ids])=>all.concat(ids),[]);
+    const missing=expected.filter(id=>!panel.querySelector("#"+id));
+    if(missing.length){openSub("الملف الشخصي",panel,"main");return;}
+    const backupIntro=[...panel.children].find(node=>
+      node.tagName==="SMALL"&&node.textContent.includes("نسخة احتياطية بصيغة JSON"));
+    const hub=document.createElement("section");
+    hub.id="aoqatProfileMainMenu";hub.dir="rtl";hub.className="web-settings-list";
+    hub.style.cssText="display:grid;gap:8px;padding:5px 2px 16px";
+    for(const [kind,label,ids] of originalRows){
+      const group=document.createElement("section");
+      // This id keeps the existing scoped compact profile styles intact.
+      // Only the currently opened group is inserted in the live document.
+      group.id="aoqatPersonalProfile";group.className="web-settings-list aoqat-profile-group";
+      group.dir="rtl";group.style.cssText="max-width:560px;margin:0 auto;padding:8px 5px 20px;width:100%;box-sizing:border-box;color:var(--wt-text,#173c50)";
+      if(kind==="backup"&&backupIntro)group.append(backupIntro);
+      ids.forEach(id=>group.append(panel.querySelector("#"+id)));
+      const button=document.createElement("button");
+      button.type="button";button.className="main-action";
+      button.dataset.profileGroup=kind;button.textContent=label;
+      button.onclick=()=>openSub(label.replace(/^[^ ]+ /,""),group,"profile");
+      hub.append(button);
+    }
+    openSub("الملف الشخصي",hub,"main");
   }
   // Read-only pilot OTA availability UI. Android's existing signed receiver
   // remains solely responsible for downloading/verifying/staging OTA updates.
