@@ -1140,7 +1140,6 @@
   function openAlertSection(kind){
     const api=window.AoqatAlertsHub;
     if(kind==="prayer"){openAdhanServices("alerts");return;}
-    if(kind==="lockFont"){window.AndroidNative?.openLockScreenTextStyle?.();return;}
     if(kind==="screen"){screenWakeView();return;}
     if(kind==="calendarNotice"){window.AoqatCalendars?.reminder?.(alertSettingsView);return;}
     if(kind==="quiet"){window.AoqatApkQuietSettings?.render?.();openPanel("تفعيل وضع الصامت","quietPanel","prayerAlerts");return;}
