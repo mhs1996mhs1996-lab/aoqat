@@ -330,12 +330,12 @@ class NextPrayerService:Service(){
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
             if(BuildConfig.OWNER_PILOT_ENABLED){
-                // Both colored symbols are owned by the SAME custom layout:
-                // same right-hand icon column, same size, different rows.
-                // The required Android small icon stays monochrome in the
-                // separate notification header to avoid a third colored symbol.
-                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
-                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_exact_wait)
+                // Honor renders Android's mandatory small icon as a LARGE
+                // tile next to the first row. That tile IS the waiting icon;
+                // do not paint a second hourglass inside the same row.
+                // The extra row still owns one exact original icon, shown
+                // only while its iqama/Friday counter is active.
+                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
                 views.setViewVisibility(R.id.lock_iqama_state_icon,
                     if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
                 if(extra!=null){
@@ -379,16 +379,19 @@ class NextPrayerService:Service(){
             // The second symbol, label and chronometer all share one
             // visibility condition (extra != null) in 'views' above.
             val compactViews = views
-            // Android's mandatory system notification icon is independent
-            // of the custom counter row. The colored top icon always means
-            // next prayer, and the optional lower icon follows extra.countDown.
-            // Never repeat the orange hourglass in the system header and row.
+            // One state symbol per counter: Android's required small icon
+            // uses the exact orange waiting artwork for the primary row;
+            // only a currently active supplemental row paints its own icon.
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val public=Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
-                    PilotNotificationIcons.smallAppMarker()
+                    PilotNotificationIcons.smallPhase(true)
                     else android.R.drawable.ic_lock_idle_alarm)
+                .apply {
+                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                        PilotNotificationIcons.exactSmall(c,true)?.let { setSmallIcon(it) }
+                }
                 // Keep Android's required status icon in its normal header.
                 // DecoratedCustomViewStyle promotes that icon to a second,
                 // large, button-looking tile on Honor's lock screen. The
@@ -407,8 +410,12 @@ class NextPrayerService:Service(){
                 .build()
             return Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(if(BuildConfig.OWNER_PILOT_ENABLED)
-                    PilotNotificationIcons.smallAppMarker()
+                    PilotNotificationIcons.smallPhase(true)
                     else android.R.drawable.ic_lock_idle_alarm)
+                .apply {
+                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                        PilotNotificationIcons.exactSmall(c,true)?.let { setSmallIcon(it) }
+                }
                 // Keep Android's required status icon in its normal header.
                 // DecoratedCustomViewStyle promotes that icon to a second,
                 // large, button-looking tile on Honor's lock screen. The
