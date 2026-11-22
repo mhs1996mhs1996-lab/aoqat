@@ -330,10 +330,12 @@ class NextPrayerService:Service(){
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
             if(BuildConfig.OWNER_PILOT_ENABLED){
-                // Android already draws the next-prayer symbol at the right
-                // edge of the notification header. A second image beside
-                // this row duplicates the hourglass on Honor/Huawei.
-                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
+                // Both colored symbols are owned by the SAME custom layout:
+                // same right-hand icon column, same size, different rows.
+                // The required Android small icon stays monochrome in the
+                // separate notification header to avoid a third colored symbol.
+                views.setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
+                views.setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
                 views.setViewVisibility(R.id.lock_iqama_state_icon,
                     if(extra!=null)android.view.View.VISIBLE else android.view.View.GONE)
                 if(extra!=null){
@@ -367,20 +369,17 @@ class NextPrayerService:Service(){
                 views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.VISIBLE)
             }
 
-            // Keep both state images in the visible card. The prayer icon
-            // always describes the NEXT prayer; the separate iqama/Friday icon
-            // describes its own countdown or elapsed phase. Never borrow the
-            // adhan icon for either notification.
-            // The compact card shows ONLY the next prayer. The expanded card
-            // shares the same Notification ID, exposing the optional iqama /
-            // Friday phase without creating a second notification.
-            // The ordinary persistent notification has one prayer row;
-            // the separate lock-screen notification displays its optional
-            // iqama/Friday row with its OWN state icon and stopwatch.
+            // Keep equal-sized colored icons on two aligned right-side rows:
+            // top is always next-prayer waiting; bottom follows only the
+            // active iqama / Friday phase and disappears with its countdown.
+            // The fixed-width left clock columns do not move with title length.
+            // The persistent card stays single-row while compact; expanding
+            // reveals its optional supplemental line just like lock-screen.
             val compactViews = if (BuildConfig.OWNER_PILOT_ENABLED && persistent) {
                 RemoteViews(c.packageName,R.layout.notification_lock_next).apply {
-                    // One system next-prayer icon; no duplicate in compact row.
-                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.GONE)
+                    // Compact still shows the SAME fixed next-prayer symbol.
+                    setViewVisibility(R.id.lock_prayer_state_icon,android.view.View.VISIBLE)
+                    setImageViewResource(R.id.lock_prayer_state_icon,R.drawable.pilot_notify_wait)
                     setViewVisibility(R.id.lock_iqama_state_icon,android.view.View.GONE)
                     setViewVisibility(R.id.lock_iqama_row,android.view.View.GONE)
                     setTextViewText(R.id.lock_prayer_title,title)
@@ -418,9 +417,10 @@ class NextPrayerService:Service(){
                     else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
                     else android.R.drawable.ic_lock_idle_alarm)
                 .apply {
-                    if(BuildConfig.OWNER_PILOT_ENABLED && !persistent)
-                        PilotNotificationIcons.exactSmall(c,pilotIconIsWaiting,pilotIconIsAdhan)
-                            ?.let { setSmallIcon(it) }
+                    // Decorated header separates Android's mandatory
+                    // monochrome app icon from both colored clock-row icons.
+                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                        setStyle(Notification.DecoratedCustomViewStyle())
                 }
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
@@ -429,7 +429,7 @@ class NextPrayerService:Service(){
                 .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
                 .setCustomContentView(compactViews)
-                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED || !persistent) setCustomBigContentView(views) }
+                .setCustomBigContentView(views)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
                 .build()
@@ -439,9 +439,10 @@ class NextPrayerService:Service(){
                     else PilotNotificationIcons.smallPhase(pilotIconIsWaiting)
                     else android.R.drawable.ic_lock_idle_alarm)
                 .apply {
-                    if(BuildConfig.OWNER_PILOT_ENABLED && !persistent)
-                        PilotNotificationIcons.exactSmall(c,pilotIconIsWaiting,pilotIconIsAdhan)
-                            ?.let { setSmallIcon(it) }
+                    // Decorated header separates Android's mandatory
+                    // monochrome app icon from both colored clock-row icons.
+                    if(BuildConfig.OWNER_PILOT_ENABLED)
+                        setStyle(Notification.DecoratedCustomViewStyle())
                 }
                 .setContentTitle(if(BuildConfig.OWNER_PILOT_ENABLED) "أوقات الصلاة في الحويجة" else title)
                 .setContentText(if(BuildConfig.OWNER_PILOT_ENABLED) "" else description)
@@ -450,7 +451,7 @@ class NextPrayerService:Service(){
                 .setUsesChronometer(!BuildConfig.OWNER_PILOT_ENABLED && next!=null)
                 .setChronometerCountDown(true)
                 .setCustomContentView(compactViews)
-                .apply { if(!BuildConfig.OWNER_PILOT_ENABLED || !persistent) setCustomBigContentView(views) }
+                .setCustomBigContentView(views)
                 .setPublicVersion(public)
                 .setCategory(Notification.CATEGORY_STATUS)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
