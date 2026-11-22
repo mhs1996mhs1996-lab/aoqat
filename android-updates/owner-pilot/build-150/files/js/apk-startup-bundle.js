@@ -7733,7 +7733,7 @@ window.AoqatWidgetAppearance={createPanel,load};
   function openSub(title,node,backTo="main"){
     restoreMoved();const m=document.getElementById("webDrawerMain"),sub=document.getElementById("webDrawerSub"),body=document.getElementById("webSubBody");
     if(!sub||!body)return;if(m)m.style.display="none";body.innerHTML="";document.getElementById("webSubTitle").textContent=title;
-    if(node)body.appendChild(node);sub.classList.toggle("aoqat-cards-sub",!!node&&["aoqatCardsAndLockMenu","aoqatWidgetAppearance","aoqatLockCardSettings","aoqatLockFontMenu","aoqatLockFontState"].includes(node.id));cardsAndLockBackButton(sub,sub.classList.contains("aoqat-cards-sub"));sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
+    if(node)body.appendChild(node);sub.classList.toggle("aoqat-cards-sub",!!node&&["aoqatCardsAndLockMenu","aoqatWidgetAppearance","aoqatLockCardSettings","aoqatLockFontMenu","aoqatLockFontState"].includes(node.id));cardsAndLockBackButton(sub,true); // Every submenu uses the same live theme-aware Back button, including future views.sub.classList.add("open");const overlay=subOverlay();overlay.appendChild(sub);overlay.hidden=false;body.scrollTop=0;returnMode=backTo;
   }
   function openPanel(title,id,backTo="main"){
     if(id==="adhanPanel"){openAdhanServices();return;}
@@ -8750,7 +8750,7 @@ window.AoqatWidgetAppearance={createPanel,load};
   }
   function cardsAndLockBackButton(sub,enabled){
     const button=sub.querySelector(".web-sub-head .web-back");if(!button)return;
-    const css={width:"70px",height:"32px","min-height":"32px","min-width":"0",padding:"3px 8px","font-size":"12px","line-height":"1.2","border-radius":"7px",background:"linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#e4f2f7))",color:"var(--wt-text,#183a4a)",border:"1px solid var(--wt-border,#b4cbd1)","box-shadow":"none"};
+    const css={width:"70px",height:"32px","min-height":"32px","min-width":"0",padding:"3px 8px","font-size":"12px","line-height":"1.2","border-radius":"9px",background:"linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))",color:"var(--wt-text,#183a4a)",border:"1px solid var(--wt-border,#b4cbd1)","box-shadow":"none"};
     for(const [name,value] of Object.entries(css)){
       if(enabled)button.style.setProperty(name,value,"important");
       else button.style.removeProperty(name);
