@@ -10,8 +10,26 @@ PROOF=Path("security/owner-pilot-profile-theme-seq21-signed-public.json")
 CHANGED={"js/web-menu-button-theme.js","js/web-menu-order.js","js/apk-startup-bundle.js"}
 PAINTER_OLD=".web-settings-list .main-action,#adhanServicesDialog"
 PAINTER_NEW=".web-settings-list .main-action,#aoqatPersonalProfile .aoqat-profile-row,#adhanServicesDialog"
-STYLE_OLD="border:1px solid #d1b981!important;background:linear-gradient(90deg,#fffdf7 0%,#f7ebce 100%)!important;color:#4b3924!important"
-STYLE_NEW="border:1px solid var(--wt-border,#c5d5c8)!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#284435)!important"
+STYLE_OLD="border:1px solid #d1b981!important;background:linear-gradient(90deg,#fffdf7 0%,#f7ebce 100%)!important;color:#4b3924!important;"
+ROW_CLASS_OLD='b.id=id;b.type="button";b.className="aoqat-profile-row";'
+ROW_CLASS_NEW='b.id=id;b.type="button";b.className="main-action aoqat-profile-row";'
+NEW_PAINT=''' function paint(){queued=false;document.querySelectorAll(roots).forEach(root=>root.querySelectorAll('button').forEach(button=>{
+  if(button.matches(skip)||button.closest('#aqReader,#monthlyCalendars'))return;
+  // Only ON/OFF controls retain state colors. All navigation actions use their
+  // own shared theme surface gradients, including buttons added in the future.
+  if(!button.matches(switches))return;
+  if(button.matches('[data-global-mode]')){
+   const selected=[...(button.closest('#adSection-modes')?.querySelectorAll('[data-prayer][data-mode][aria-pressed="true"]')||[])];
+   const active=selected.length===5&&new Set(selected.map(b=>b.dataset.prayer)).size===5&&selected.every(b=>b.dataset.mode===button.dataset.globalMode);
+   if(button.getAttribute('aria-pressed')!==String(active))button.setAttribute('aria-pressed',String(active));
+  }
+  const active=on(button);
+  button.style.setProperty('background',active?'#278052':'#858e8b','important');
+  button.style.setProperty('color','#fff','important');
+  button.style.setProperty('border-color',active?'#167043':'#859593','important');
+  button.querySelectorAll('span,strong,b').forEach(x=>x.style.setProperty('color','#fff','important'));
+ }));}
+'''
 
 def sha(b):
     return hashlib.sha256(b).hexdigest()
@@ -31,10 +49,22 @@ def transform(name,original):
     if name in ("js/web-menu-button-theme.js","js/apk-startup-bundle.js"):
         assert content.count(PAINTER_OLD)==1,name
         content=content.replace(PAINTER_OLD,PAINTER_NEW)
+        anchor=content.index(" const roots='#settingsContentDialog,#adhanServicesDialog'")
+        start=content.index(" function blend(",anchor)
+        stop=content.index(" function on(button)",start)
+        assert " function palette(" in content[start:stop],name
+        content=content[:start]+content[stop:]
+        start=content.index(" function paint(){",anchor)
+        stop=content.index(" function schedule()",start)
+        assert "const p=palette()" in content[start:stop],name
+        content=content[:start]+NEW_PAINT+content[stop:]
     if name in ("js/web-menu-order.js","js/apk-startup-bundle.js"):
         assert content.count(STYLE_OLD)==1,name
         assert content.count("aoqatPilotProfileLightV7")==2,name
-        content=content.replace(STYLE_OLD,STYLE_NEW).replace("aoqatPilotProfileLightV7","aoqatPilotProfileThemeV8")
+        assert content.count(ROW_CLASS_OLD)==1,name
+        content=(content.replace(STYLE_OLD,"")
+                   .replace(ROW_CLASS_OLD,ROW_CLASS_NEW)
+                   .replace("aoqatPilotProfileLightV7","aoqatPilotProfileSharedNavV9"))
         assert content.count("aoqatProfileGroup-")>=1,name
     return content.encode("utf-8")
 
