@@ -1283,7 +1283,7 @@
     if(window.AndroidNative?.configureLockScreenPrayer)
       cardsAndLockButton(root,"aoqatLockCardMenu","🔒 إشعار شاشة القفل",lockCardSettingsView);
     if(window.AndroidNative?.readOwnerPilotOtaState?.())
-      cardsAndLockButton(root,"aoqatLockScreenNotificationTextStyle","🔤 تنسيق خطوط إشعار شاشة القفل",lockFontSubmenuView);
+      cardsAndLockButton(root,"aoqatLockScreenNotificationTextStyle","🔤 تنسيق خطوط إشعار شاشة القفل",()=>lockFontSubmenuView("cardsLock"));
     cardsAndLockStyleButtons(root);
     openSub("بطاقات الشاشة الرئيسية و القفل",root,"appearance");
   }
@@ -1303,10 +1303,11 @@
     const original=source.querySelector("#aoqatLockScreenSection");
     if(original)panel.append(original); // original native toggles and permissions
     if(window.AndroidNative?.readOwnerPilotOtaState?.())
-      cardsAndLockButton(panel,"aoqatLockScreenFontFromLock","🔤 تنسيق خطوط إشعار شاشة القفل",lockFontSubmenuView);
+      cardsAndLockButton(panel,"aoqatLockScreenFontFromLock","🔤 تنسيق خطوط إشعار شاشة القفل",()=>lockFontSubmenuView("lockCard"));
     cardsAndLockStyleButtons(panel);
     openSub("إشعار شاشة القفل",panel,"cardsLock");
   }
+  let lockFontMenuReturn="cardsLock";
   const LOCK_FONT_STATES=[
     ["prayer","باقي على الصلاة"],
     ["iqama_wait","باقي على الإقامة"],
@@ -1315,7 +1316,8 @@
     ["sermon_wait","باقي على الخطبة"],
     ["sermon_elapsed","مضى على الخطبة"]
   ];
-  function lockFontSubmenuView(){
+  function lockFontSubmenuView(backTo=lockFontMenuReturn){
+    lockFontMenuReturn=backTo;
     const panel=document.createElement("section");panel.id="aoqatLockFontMenu";panel.dir="rtl";
     const note=document.createElement("p");note.className="aoqat-cards-note";
     note.textContent="تنسيق مستقل لكل عدّاد؛ اختَر الحالة المطلوب تعديلها.";
@@ -1323,7 +1325,7 @@
     LOCK_FONT_STATES.forEach(([key,label],i)=>
       cardsAndLockButton(panel,"aoqatLockFontState-"+key,(i+1)+". "+label,()=>lockFontStateView(key,label)));
     cardsAndLockStyleButtons(panel);
-    openSub("تنسيق خطوط إشعار شاشة القفل",panel,"cardsLock");
+    openSub("تنسيق خطوط إشعار شاشة القفل",panel,lockFontMenuReturn);
   }
   function lockFontStateView(key,label){
     // OTA has navigation access, but the existing APK exposes only a no-argument
@@ -1361,7 +1363,7 @@
     MENU_ROWS.forEach(([id,icon,label])=>{const b=document.createElement("button");b.type="button";b.className="web-drawer-row";b.dataset.drawer=id;b.innerHTML='<span class="ico">'+icon+'</span><span class="txt">'+label+'</span>';mainList.appendChild(b);});
     const sub=document.createElement("div");sub.id="webDrawerSub";sub.innerHTML='<div class="web-sub-head"><button type="button" class="web-back" aria-label="رجوع">‹ رجوع</button><div id="webSubTitle" class="web-sub-title"></div></div><div id="webSubBody" class="web-sub-body"></div>';
     drawer.append(mainList,sub);main.appendChild(drawer);
-    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="lockFontMenu")lockFontSubmenuView();else if(returnMode==="cardsLock")widgetAppearanceView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
+    sub.querySelector(".web-back").addEventListener("click",()=>{if(returnMode.startsWith("post:")){openMuslimBagSection(returnMode.slice(5));return;}if(returnMode==="muslimBag"&&bagSection==="friday"){muslimBagView();return;}if(window.aoqatAzkarCategory&&window.aoqatCloseAzkarCategory?.())return;if(returnMode==="muslimBag"){muslimBagView();return;}if(returnMode==="reminderInbox"){inboxView();return;}if(returnMode==="program"){mainView();if(document.body.classList.contains('design-menu-open'))document.getElementById('designSideMenuBtn')?.click();}else if(returnMode==="tools")openInterfacePart('tools','أدوات تعديل التصميم');else if(returnMode==="background")openPanel('واجهة البرنامج','backgroundPanel','settings');else if(returnMode==="settings")settingsView();else if(returnMode==="profile")profileView();else if(returnMode==="alertSettings")alertSettingsView();else if(returnMode==="prayerAlerts"){mainView();openAdhanServices("alerts");}else if(returnMode==="lockFontMenu")lockFontSubmenuView();else if(returnMode==="lockCard")lockCardSettingsView();else if(returnMode==="cardsLock")widgetAppearanceView();else if(returnMode==="appearance")themeView();else if(returnMode==="datePrayer")datePrayerView();else if(returnMode==="adhanIqama")adhanIqamaView();else mainView();});
     mainList.addEventListener("click",e=>{
       const b=e.target.closest("[data-drawer]");if(!b)return;const id=b.dataset.drawer;
       if(["quran","qibla","azkar"].includes(id)){
