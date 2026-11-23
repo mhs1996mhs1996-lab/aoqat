@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 152 // Native lock-notification correction; B151 owner-signed baseline preserved
-        versionName '2.13.1'
+        versionCode 153 // Full-color hourglass device compatibility correction; B151 signed baseline preserved
+        versionName '2.13.2'
     }
 
     buildFeatures { buildConfig true }
@@ -132,7 +132,7 @@ tasks.register('syncWebAssets', Sync) {
         }
         // Main-only packaging: import exactly the verified pilot UI, disable pilot controls.
         // No production signing keys in CI or repository. Never alter raw Quran or prayer data.
-        exec { commandLine 'python3', file("$rootProject.projectDir/prepare-production-b152.py"), webAssetDir }
+        exec { commandLine 'python3', file("$rootProject.projectDir/prepare-production-b153.py"), webAssetDir }
     }
 }
 
