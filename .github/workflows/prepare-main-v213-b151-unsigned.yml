@@ -7,6 +7,12 @@ on:
       - android-native/app/build.gradle
       - android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt
       - android-native/prepare-production-b151.py
+      - android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/BackupDocuments.kt
+      - android-native/app/src/test/java/com/aoqat/calendar/LockScreenTextStyleTest.kt
+      - android-native/app/src/test/java/com/aoqat/calendar/BackupDocumentsTest.kt
       - .github/workflows/prepare-main-v213-b151-unsigned.yml
   workflow_dispatch:
 permissions:
@@ -36,12 +42,17 @@ jobs:
             'android-native/app/build.gradle',
             'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
             'android-native/prepare-production-b151.py',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/BackupDocuments.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/LockScreenTextStyleTest.kt',
+            'android-native/app/src/test/java/com/aoqat/calendar/BackupDocumentsTest.kt',
             '.github/workflows/prepare-main-v213-b151-unsigned.yml',
           }
           assert files==approved,(files,approved)
           baseline='origin/owner-pilot-ota'
           for path in [
-           'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
            'android-native/app/src/main/java/com/aoqat/calendar/StartupScreen.kt',
            'android-native/app/src/main/AndroidManifest.xml',
            'android-native/prepare-web-assets.py',
@@ -57,7 +68,17 @@ jobs:
           assert 'else if (build >= 151) "https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/production-ota/android-updates/production/build-$build/"' in native
           assert 'SIGNING_PUBLIC_KEY_B64' in native
           assert 'PILOT_SIGNING_PUBLIC_KEY_B64' in native
-          print("PASS: only 4 source/review files; unchanged native splash, Quran and prayer sources")
+          # Guard native bridge and rendered text styles, not merely their UI labels.
+          main=Path('android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt').read_text()
+          assert '@JavascriptInterface fun readLockScreenTextStyle' in main
+          assert '@JavascriptInterface fun configureLockScreenTextStyle' in main
+          assert '@JavascriptInterface fun saveBackupFile' in main
+          assert '@JavascriptInterface fun shareBackupFile' in main
+          assert 'LockScreenTextStyle.applyIqama(context,view,title)' in main
+          renderer=Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          assert 'LockScreenTextStyle.applyPrayer(c,views,iqama?.phase)' in renderer
+          print("PASS: exactly approved B151 sources changed; native splash, Quran and prayer data identical")
+          print("PASS: real lock typography persistence and JSON backup document bridge installed")
           PY
       - name: Verify owner-tested seq22 exact signed source offline
         shell: bash
@@ -115,6 +136,14 @@ jobs:
               assert 'const PILOT_OTA_APK=false;' in bundle
               assert 'aoqatPrivacyWelcomeSeenV1' in script
               assert 'aoqatPrivacyWelcomeSeenV1' in bundle
+              for source in (script,bundle):
+                  assert 'aoqatLockScreenNotificationTextStyle' in source
+                  assert 'aoqatLockScreenFontFromLock' in source
+                  assert 'typeof window.AndroidNative?.readLockScreenTextStyle==="function"' in source
+                  assert 'aoqatProfileBackupDownload' in source
+                  assert 'aoqatProfileBackupShare' in source
+                  assert 'aoqatProfileBackupActions' in source
+                  assert 'profileBackupRestore' in source
               assert 'ownerPilotOta","🔄","تحديثات النسخة التجريبية"]] : [])' not in script
               fonts=[x for x in files if x.startswith('assets/www/assets/qcf-v2-page-fonts/') and x.endswith('.woff2')]
               assert len(fonts)==604,len(fonts)
