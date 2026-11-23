@@ -343,6 +343,7 @@ class WebUpdates(
 
         fun baseUrl(build: Int, ownerPilot: Boolean = false): String =
             if (ownerPilot) "https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/owner-pilot-ota/android-updates/owner-pilot/build-$build/"
+            else if (build >= 151) "https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/production-ota/android-updates/production/build-$build/"
             else if (build >= 145) "https://aoqat.vercel.app/android-updates/build-$build/"
             else "https://aoqat.vercel.app/android-updates/"
 
