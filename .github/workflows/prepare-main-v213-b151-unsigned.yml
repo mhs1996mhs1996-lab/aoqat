@@ -97,6 +97,10 @@ jobs:
               assert b'const PILOT_OTA_APK=false;' in a
               assert b'aoqatPrivacyWelcomeSeenV1' in a
               assert b'web-settings-list' in a
+              assert v.PRODUCTION_ABOUT.encode('utf-8') in a
+              assert v.PRODUCTION_ABOUT_ACTION.encode('utf-8') in a
+              assert v.PILOT_ABOUT.encode('utf-8') not in a
+              assert v.PILOT_ABOUT_ACTION.encode('utf-8') not in a
           print('PASS: pilot seq22 signed with pinned publisher and 88 files verified')
           PY
       - uses: actions/setup-java@v4
@@ -144,6 +148,10 @@ jobs:
                   assert 'aoqatProfileBackupShare' in source
                   assert 'aoqatProfileBackupActions' in source
                   assert 'profileBackupRestore' in source
+                  assert 'النسخة الرئيسية 2.13 (بناء 151)' in source
+                  assert 'النسخة الرئيسية تستقبل تحديثات OTA الآمنة' in source
+                  assert 'التجريبي 2.12 (بناء 150)' not in source
+                  assert 'النسخة التجريبية تستقبل تحديثات OTA الموقّعة' not in source
               assert 'ownerPilotOta","🔄","تحديثات النسخة التجريبية"]] : [])' not in script
               fonts=[x for x in files if x.startswith('assets/www/assets/qcf-v2-page-fonts/') and x.endswith('.woff2')]
               assert len(fonts)==604,len(fonts)
