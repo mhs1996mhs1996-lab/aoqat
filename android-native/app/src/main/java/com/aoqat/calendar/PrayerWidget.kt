@@ -311,6 +311,9 @@ class NextPrayerService:Service(){
                     iqama.phase==LockScreenIqama.Phase.REMAINING)
             }
 
+            // Apply only explicitly saved typography. Uncustomized notifications
+            // remain byte-for-byte visually equivalent to the previous APK.
+            LockScreenTextStyle.applyPrayer(c,views,iqama?.phase)
             if(next!=null){
                 views.setViewVisibility(R.id.lock_prayer_clock,android.view.View.VISIBLE)
                 views.setViewVisibility(R.id.lock_prayer_fallback,android.view.View.GONE)
