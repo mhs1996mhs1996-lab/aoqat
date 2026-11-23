@@ -1,0 +1,59 @@
+name: Owner pilot seq22 first-run privacy, splash-safe unsigned candidate (NO PUBLISH)
+on:
+  push:
+    branches: [feature/owner-pilot-privacy-welcome-after-splash-seq22-20261123]
+    paths:
+      - .github/workflows/owner-pilot-privacy-welcome-seq22-candidate.yml
+      - android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+      - android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - tests/owner-pilot-privacy-welcome-browser.cjs
+      - security/owner-pilot-privacy-welcome-seq22-verify.py
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Confirm strict owner-only scope and parse both edited JavaScript files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-privacy-welcome-seq22-verify.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+          node --check tests/owner-pilot-privacy-welcome-browser.cjs
+          python3 - <<'PY'
+          import subprocess
+          base='origin/owner-pilot-ota'
+          paths=set(subprocess.check_output(['git','diff','--name-only',base+'...HEAD'],text=True).splitlines())
+          allowed={
+            'android-updates/owner-pilot/build-150/files/js/web-menu-order.js',
+            'android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js',
+            'tests/owner-pilot-privacy-welcome-browser.cjs',
+            'security/owner-pilot-privacy-welcome-seq22-verify.py',
+            '.github/workflows/owner-pilot-privacy-welcome-seq22-candidate.yml'}
+          assert paths==allowed,(paths,allowed)
+          print('PASS: only 2 app JS assets changed, 1 test and 2 QA files')
+          PY
+      - name: Verify previous signed 88 assets, unchanged native splash, export seq22 candidate
+        run: python3 security/owner-pilot-privacy-welcome-seq22-verify.py --candidate-dir owner-pilot-privacy22-candidate
+      - name: Install browser QA runner
+        run: npm install --no-save --package-lock=false playwright
+      - name: Test first-run privacy, offline reading, continue, and repeat-launch behavior
+        run: node tests/owner-pilot-privacy-welcome-browser.cjs
+      - name: Upload unsigned candidate; no private key or deployment
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-OWNER-PILOT-SEQ22-PRIVACY-UNSIGNED
+          path: owner-pilot-privacy22-candidate/
+          retention-days: 10
+          if-no-files-found: error
