@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Single-color silhouette for Android's required notification small icon. -->
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M5,2 L19,2 L19,4 L5,4 Z M5,20 L19,20 L19,22 L5,22 Z
+        M7,5 L17,5 L17,7 C17,9 14.5,10.5 13,12 C14.5,13.5 17,15 17,17 L17,19 L7,19 L7,17 C7,15 9.5,13.5 11,12 C9.5,10.5 7,9 7,7 Z
+        M10,7 L14,7 L12,10 Z M12,14 L15,18 L9,18 Z"/>
+</vector>
