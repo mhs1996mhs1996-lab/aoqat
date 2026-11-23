@@ -237,6 +237,7 @@ object IqamaNotificationRenderer {
         view.setTextColor(R.id.iqama_state, appearance.second)
         view.setTextColor(R.id.iqama_chronometer, appearance.second)
         view.setTextViewText(R.id.iqama_state, title)
+        LockScreenTextStyle.applyIqama(context,view,title)
         view.setChronometerCountDown(R.id.iqama_chronometer, display.countDown)
         view.setChronometer(R.id.iqama_chronometer, display.baseRealtime, null, true)
         fun builder() = NotificationCompat.Builder(context, IqamaPersistentNotification.CHANNEL_ID)
@@ -345,6 +346,14 @@ class MainActivity : Activity() {
     private lateinit var webUpdates: WebUpdates
     private val ADHAN_AUDIO_REQUEST = 812
     private var fileCallback: ValueCallback<Array<Uri>>? = null
+    // Only held in memory while Android's document picker is visible.
+    // Never saved to preferences, caches or outgoing network requests.
+    private var pendingBackupBytes: ByteArray? = null
+    private var pendingBackupRequestId: String? = null
+    private fun backupDocumentResult(requestId:String,ok:Boolean) {
+        if (!BackupDocuments.safeRequestId(requestId) || !::webView.isInitialized || isDestroyed) return
+        webView.evaluateJavascript("window.aoqatBackupNativeResult?.("+org.json.JSONObject.quote(requestId)+","+ok+")",null)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1109,6 +1118,57 @@ class MainActivity : Activity() {
             }.start()
         }
 
+        @JavascriptInterface fun readLockScreenTextStyle(state:String):String =
+            try { LockScreenTextStyle.read(this@MainActivity,state).toString() }
+            catch (_: Exception) { "{}" }
+
+        @JavascriptInterface fun configureLockScreenTextStyle(
+            state:String,title:Int,clock:Int,color:Int
+        ):Boolean = LockScreenTextStyle.configure(this@MainActivity,state,title,clock,color)
+
+        // JSON backup export uses Android SAF and the existing private FileProvider.
+        // Neither path changes app storage; the user explicitly chooses a document
+        // destination or recipient. Keys, update files and passwords are excluded
+        // by the existing WebView backup allowlist.
+        @JavascriptInterface fun saveBackupFile(json:String,filename:String,requestId:String) {
+            if(!BackupDocuments.safeRequestId(requestId))return
+            val bytes=try { BackupDocuments.encode(json) }
+                catch (_: Exception) {
+                    runOnUiThread { backupDocumentResult(requestId,false) }
+                    return
+                }
+            runOnUiThread {
+                if(pendingBackupBytes!=null){
+                    backupDocumentResult(requestId,false)
+                    return@runOnUiThread
+                }
+                pendingBackupBytes=bytes
+                pendingBackupRequestId=requestId
+                try { startActivityForResult(BackupDocuments.createFileIntent(filename),BACKUP_SAVE_REQUEST) }
+                catch (_: Exception) {
+                    pendingBackupBytes=null;pendingBackupRequestId=null
+                    backupDocumentResult(requestId,false)
+                }
+            }
+        }
+
+        @JavascriptInterface fun shareBackupFile(json:String,filename:String,requestId:String) {
+            if(!BackupDocuments.safeRequestId(requestId))return
+            Thread {
+                try {
+                    val intent=BackupDocuments.shareIntent(this@MainActivity,json,filename)
+                    runOnUiThread {
+                        try {
+                            startActivity(Intent.createChooser(intent,"مشاركة النسخة الاحتياطية"))
+                            backupDocumentResult(requestId,true)
+                        } catch (_: Exception) { backupDocumentResult(requestId,false) }
+                    }
+                } catch (_: Exception) {
+                    runOnUiThread { backupDocumentResult(requestId,false) }
+                }
+            }.start()
+        }
+
         // Compatibility bridge only. UI text never owns the native clock lifecycle.
         @JavascriptInterface
         fun showIqamaNotification(text: String) = Unit
@@ -1186,6 +1246,25 @@ class MainActivity : Activity() {
     private var prayerAlarmToneId=""
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
+        if(requestCode==BACKUP_SAVE_REQUEST){
+            val bytes=pendingBackupBytes
+            val requestId=pendingBackupRequestId ?: ""
+            pendingBackupBytes=null
+            pendingBackupRequestId=null
+            val uri=if(resultCode==RESULT_OK)data?.data else null
+            if(uri!=null && bytes!=null)Thread {
+                val saved=try {
+                    contentResolver.openOutputStream(uri,"w")?.use {
+                        it.write(bytes)
+                        it.flush()
+                        true
+                    } ?: false
+                } catch (_: Exception){ false }
+                runOnUiThread { backupDocumentResult(requestId,saved) }
+            }.start()
+            else backupDocumentResult(requestId,false)
+            return
+        }
         if(requestCode==8201||requestCode==8202){
             val id=prayerAlarmToneId;val uri=if(resultCode==RESULT_OK){if(requestCode==8202)data?.getParcelableExtra<Uri>(android.media.RingtoneManager.EXTRA_RINGTONE_PICKED_URI)else data?.data}else null
             if(uri!=null&&id in PrayerAlarm.ids)Thread{try{
@@ -1246,6 +1325,8 @@ class MainActivity : Activity() {
 
     override fun onDestroy() {
         if (BuildConfig.OWNER_PILOT_ENABLED) ownerPilotOtaHandler.removeCallbacks(ownerPilotOtaPoll)
+        pendingBackupBytes=null
+        pendingBackupRequestId=null
         if (Build.VERSION.SDK_INT >= 33) onBackInvokedDispatcher.unregisterOnBackInvokedCallback(phoneBackCallback)
         super.onDestroy()
     }
@@ -1337,6 +1418,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val FILE_CHOOSER_REQUEST = 3011
+        private const val BACKUP_SAVE_REQUEST = 8134
         private const val NOTIFICATION_PERMISSION_REQUEST = 2001
         private const val STORAGE_PERMISSION_REQUEST = 2002
     }
