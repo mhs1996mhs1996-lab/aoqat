@@ -1,0 +1,68 @@
+name: Owner pilot seq22 privacy welcome signed OTA publish (TRIAL ONLY)
+on:
+  push:
+    branches: [feature/owner-pilot-privacy-welcome-after-splash-seq22-20261123]
+    paths:
+      - security/owner-pilot-privacy-welcome-seq22-signed-public.json
+permissions:
+  contents: write
+concurrency:
+  group: owner-pilot-ota-feed
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/feature/owner-pilot-privacy-welcome-after-splash-seq22-20261123'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Accept ONLY owner-signed PUBLIC proof; no private key or native changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" = "security/owner-pilot-privacy-welcome-seq22-signed-public.json"
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 -m py_compile security/owner-pilot-privacy-welcome-seq22-verify.py
+          node --check android-updates/owner-pilot/build-150/files/js/web-menu-order.js
+          node --check android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js
+      - name: Verify previous signed seq21 and PINNED seq22 owner-pilot signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/owner-pilot-privacy-welcome-seq22-verify.py --verify-output "$RUNNER_TEMP/pilot22-verified"
+          node --check "$RUNNER_TEMP/pilot22-verified/android-updates/owner-pilot/build-150/files/js/web-menu-order.js"
+          node --check "$RUNNER_TEMP/pilot22-verified/android-updates/owner-pilot/build-150/files/js/apk-startup-bundle.js"
+      - name: Publish only the 2 approved JavaScript paths and signed manifest to pilot feed
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="android-updates/owner-pilot/build-150"
+          W="$(mktemp -d)"
+          git worktree add --detach "$W" origin/owner-pilot-ota
+          cp -a "$RUNNER_TEMP/pilot22-verified/$ROOT/." "$W/$ROOT/"
+          git -C "$W" add -- "$ROOT"
+          python3 - "$W" <<'PY'
+          import json,subprocess,sys
+          from pathlib import Path
+          p=Path(sys.argv[1])
+          root='android-updates/owner-pilot/build-150/'
+          altered=set(subprocess.check_output(['git','-C',str(p),'diff','--cached','--name-only'],text=True).splitlines())
+          allow={root+'manifest.json',root+'files/js/web-menu-order.js',root+'files/js/apk-startup-bundle.js'}
+          assert altered==allow,(altered,allow)
+          prior=json.loads(subprocess.check_output(['git','-C',str(p),'show','HEAD:'+root+'manifest.json']))
+          new=json.loads((p/root/'manifest.json').read_text())
+          assert (prior['sequence'],new['sequence'])==(21,22)
+          assert set(prior['files'])==set(new['files'])
+          assert {n for n in prior['files'] if prior['files'][n]!=new['files'][n]}=={'js/web-menu-order.js','js/apk-startup-bundle.js'}
+          print('PASS: only profile-independent privacy onboarding and signed pilot manifest, splash unchanged')
+          PY
+          git -C "$W" diff --cached --check
+          git -C "$W" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            -c user.name="github-actions[bot]" commit -m "pilot: publish signed first-run privacy welcome seq22 after splash" >/dev/null
+          git -C "$W" push origin HEAD:refs/heads/owner-pilot-ota
+          echo "PUBLISHED owner-pilot 22 only; main, production APK and admin untouched"
