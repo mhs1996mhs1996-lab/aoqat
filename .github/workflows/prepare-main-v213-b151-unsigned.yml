@@ -1,0 +1,145 @@
+name: AOQAT main 2.13 B151 from accepted pilot seq22 — UNSIGNED owner-review build
+on:
+  push:
+    branches:
+      - release/main-v2-13-b151-reviewed-20261123
+    paths:
+      - android-native/app/build.gradle
+      - android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt
+      - android-native/prepare-production-b151.py
+      - .github/workflows/prepare-main-v213-b151-unsigned.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  approved-main-unsigned:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/release/main-v2-13-b151-reviewed-20261123'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Strict release diff: do not modify user data, pilot, Quran or prayer sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin owner-pilot-ota:refs/remotes/origin/owner-pilot-ota
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 security/owner-pilot-auto-ota-sign.py --self-test
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          files=set(subprocess.check_output(['git','diff','--name-only','origin/owner-pilot-ota...HEAD'],text=True).splitlines())
+          approved={
+            'android-native/app/build.gradle',
+            'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+            'android-native/prepare-production-b151.py',
+            '.github/workflows/prepare-main-v213-b151-unsigned.yml',
+          }
+          assert files==approved,(files,approved)
+          baseline='origin/owner-pilot-ota'
+          for path in [
+           'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+           'android-native/app/src/main/java/com/aoqat/calendar/StartupScreen.kt',
+           'android-native/app/src/main/AndroidManifest.xml',
+           'android-native/prepare-web-assets.py',
+           'android-native/download-qcf-fonts.py',
+           'data/prayer-times-offline.json',
+           'js/quran-reader.js']:
+              assert Path(path).read_bytes()==subprocess.check_output(['git','show',baseline+':'+path]),path
+          gradle=Path('android-native/app/build.gradle').read_text()
+          assert "applicationId 'com.aoqat.calendar'" in gradle
+          assert "versionCode 151" in gradle and "versionName '2.13'" in gradle
+          assert "AOQAT_APK_SIGNING_KEYSTORE_FILE" in gradle
+          native=Path('android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt').read_text()
+          assert 'else if (build >= 151) "https://raw.githubusercontent.com/mhs1996mhs1996-lab/aoqat/production-ota/android-updates/production/build-$build/"' in native
+          assert 'SIGNING_PUBLIC_KEY_B64' in native
+          assert 'PILOT_SIGNING_PUBLIC_KEY_B64' in native
+          print("PASS: only 4 source/review files; unchanged native splash, Quran and prayer sources")
+          PY
+      - name: Verify owner-tested seq22 exact signed source offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          from pathlib import Path
+          p=Path('android-native/prepare-production-b151.py')
+          s=importlib.util.spec_from_file_location('prod151',p)
+          v=importlib.util.module_from_spec(s);s.loader.exec_module(v)
+          checked=v.verify_approved_pilot()
+          assert len(checked)==88
+          for name in ['js/web-menu-order.js','js/apk-startup-bundle.js']:
+              a=v.produce_release_ui(checked[name])
+              assert b'const PILOT_OTA_APK=false;' in a
+              assert b'aoqatPrivacyWelcomeSeenV1' in a
+              assert b'web-settings-list' in a
+          print('PASS: pilot seq22 signed with pinned publisher and 88 files verified')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Build full offline main B151 and run native updater tests
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease
+      - name: Verify produced unsigned main APK, 604-page offline Quran, saved state and no pilot UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -name aapt -type f | sort -V | tail -1)
+          apksigner=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | head -n 1 | tee main-b151-version.txt
+          grep -F "name='com.aoqat.calendar'" main-b151-version.txt
+          grep -F "versionCode='151'" main-b151-version.txt
+          grep -F "versionName='2.13'" main-b151-version.txt
+          if "$apksigner" verify "$apk"; then
+              echo 'STOP: CI artifact unexpectedly signed, never publish it'
+              exit 1
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,zipfile,json
+          p=Path('android-native/app/build/outputs/apk/release/app-release-unsigned.apk')
+          with zipfile.ZipFile(p) as z:
+              files=z.namelist()
+              script=z.read('assets/www/js/web-menu-order.js').decode()
+              bundle=z.read('assets/www/js/apk-startup-bundle.js').decode()
+              assert 'const PILOT_OTA_APK=false;' in script
+              assert 'const PILOT_OTA_APK=false;' in bundle
+              assert 'aoqatPrivacyWelcomeSeenV1' in script
+              assert 'aoqatPrivacyWelcomeSeenV1' in bundle
+              assert 'ownerPilotOta","🔄","تحديثات النسخة التجريبية"]] : [])' not in script
+              fonts=[x for x in files if x.startswith('assets/www/assets/qcf-v2-page-fonts/') and x.endswith('.woff2')]
+              assert len(fonts)==604,len(fonts)
+              prayers=json.loads(z.read('assets/www/data/prayer-times-offline.json'))
+              assert len(prayers)==366,len(prayers)
+              assert z.read('assets/www/js/quran-reader.js')
+              assert z.read('assets/www/index.html')
+              assert z.read('assets/splash-hawija-original.jpg')
+              assert 'classes.dex' in files
+          print('PASS: production main B151 APK, splash, signed UI baseline, offline 604 pages & 366 prayer days')
+          PY
+          sha256sum "$apk" | tee main-b151-unsigned.sha256
+          echo 'UNSIGNED REVIEW ONLY — owner must sign with SAME V2 P12, no publication'
+      - name: Upload EXACT unsigned owner-signable production APK and checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-MAIN-2.13-B151-UNSIGNED-OWNER-REVIEW
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            main-b151-unsigned.sha256
+            main-b151-version.txt
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+      - name: Explicit production hold
+        run: |
+          echo 'NO MAIN BRANCH CHANGE, NO PROD OTA MANIFEST, NO APK RELEASE, NO SIGNING PRIVATE KEYS'
+          echo 'Await independent owner P12 signature, certificate verification, safe install-over and device acceptance.'
