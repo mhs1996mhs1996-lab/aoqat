@@ -30,6 +30,10 @@ WELCOME_TIMER_START='if(!PILOT_OTA_APK||!window.AndroidNative?.readOwnerPilotOta
 WELCOME_TIMER_RELEASE='if(!window.AndroidNative?.configureAdhan||pilotPrivacyWelcomeQueued)return;'
 OLD_KEY='pilotPrivacyWelcomeSeenV1'
 NEW_KEY='aoqatPrivacyWelcomeSeenV1'
+PILOT_ABOUT='أوقات الصلاة في الحويجة وضواحيها · التجريبي 2.12 (بناء 150)'
+PRODUCTION_ABOUT='أوقات الصلاة في الحويجة وضواحيها · النسخة الرئيسية 2.13 (بناء 151)'
+PILOT_ABOUT_ACTION='النسخة التجريبية تستقبل تحديثات OTA الموقّعة تلقائياً عند اتصال التطبيق بالإنترنت.'
+PRODUCTION_ABOUT_ACTION='النسخة الرئيسية تستقبل تحديثات OTA الآمنة والموقّعة بعد اعتمادها ونشرها على القناة الرئيسية.'
 
 def sha(data:bytes)->str:
     return hashlib.sha256(data).hexdigest()
@@ -78,6 +82,10 @@ def produce_release_ui(data:bytes)->bytes:
     txt=replace_one(txt,WELCOME_START,WELCOME_RELEASE,"privacy splash gate")
     txt=replace_one(txt,WELCOME_TIMER_START,WELCOME_TIMER_RELEASE,"privacy scheduler gate")
     txt=replace_one(txt,OLD_KEY,NEW_KEY,"production privacy storage")
+    # About must describe the actual release, never the source pilot package.
+    # Both the visible subtitle and its on-tap description are production only.
+    txt=replace_one(txt,PILOT_ABOUT,PRODUCTION_ABOUT,"main version and channel label")
+    txt=replace_one(txt,PILOT_ABOUT_ACTION,PRODUCTION_ABOUT_ACTION,"main OTA description")
     # The pilot-only lock typography button was accidentally withheld from
     # production even though these same six tested views are in the release UI.
     # Reveal it ONLY if the B151 native persistence bridge really exists.
@@ -108,6 +116,10 @@ def main():
             raise RuntimeError("Nested lock text formatting feature was dropped: "+name)
         if file.count(b'readLockScreenTextStyle')<3:
             raise RuntimeError("Native bridge gate and state editor missing: "+name)
+        if PRODUCTION_ABOUT.encode("utf-8") not in file or PRODUCTION_ABOUT_ACTION.encode("utf-8") not in file:
+            raise RuntimeError("Main about/version label was not promoted: "+name)
+        if PILOT_ABOUT.encode("utf-8") in file or PILOT_ABOUT_ACTION.encode("utf-8") in file:
+            raise RuntimeError("Experimental about/version label leaked into main: "+name)
         for required in (b'aoqatProfileBackupDownload',b'aoqatProfileBackupShare',
                          b'aoqatProfileBackupActions',b'profileBackupRestore',
                          b'profileBackupSave',b'PROFILE_BACKUP_DB'):
