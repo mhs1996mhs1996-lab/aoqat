@@ -63,9 +63,10 @@ jobs:
           pathlib.Path('/tmp/synthetic-main151-unsigned.json').write_text(json.dumps(body))
           PY
           openssl ecparam -name prime256v1 -genkey -noout -out /tmp/aoqat-test-only-fake.pem
+          openssl pkey -in /tmp/aoqat-test-only-fake.pem -pubout -out /tmp/aoqat-test-only-fake-public.pem
           python3 security/signed-update-manifest.py sign /tmp/synthetic-main151-unsigned.json /tmp/synthetic-main151-signed.json \
             --private-key /tmp/aoqat-test-only-fake.pem \
-            --public-key <(openssl pkey -in /tmp/aoqat-test-only-fake.pem -pubout)
+            --public-key /tmp/aoqat-test-only-fake-public.pem
           cp /tmp/synthetic-main151-signed.json security/main-b151-production-ota-signed-public.json
           if python3 security/verify-main-b151-production-ota-publish.py /tmp/aoqat-main151-fake; then
             echo "CRITICAL: fake publisher signature accepted"
