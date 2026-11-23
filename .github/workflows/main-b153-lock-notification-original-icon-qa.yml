@@ -1,0 +1,148 @@
+name: AOQAT main B153 exact orange hourglass bitmap and single native countdown - unsigned owner review
+on:
+  push:
+    branches: [fix/main-b153-lock-notification-original-orange-bitmap-20261123]
+    paths:
+      - android-native/app/build.gradle
+      - android-native/prepare-production-b153.py
+      - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/LockNotificationIcon.kt
+      - .github/workflows/main-b153-lock-notification-original-icon-qa.yml
+permissions:
+  contents: read
+jobs:
+  main-b153-owner-review:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Protect all B152 application content except the single icon painter and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin fix/main-b152-lock-notification-single-clock-hourglass-20261123
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess,importlib.util
+          base='origin/fix/main-b152-lock-notification-single-clock-hourglass-20261123'
+          changed=set(subprocess.check_output(
+            ['git','diff','--name-only',base+'...HEAD'],text=True).splitlines())
+          allowed={
+            'android-native/app/build.gradle',
+            'android-native/prepare-production-b153.py',
+            'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockNotificationIcon.kt',
+            '.github/workflows/main-b153-lock-notification-original-icon-qa.yml'
+          }
+          assert changed==allowed,(changed,allowed)
+          protected=[
+            'android-native/app/src/main/AndroidManifest.xml',
+            'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenIqama.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/StartupScreen.kt',
+            'android-native/app/src/main/java/com/aoqat/calendar/BackupDocuments.kt',
+            'android-native/app/src/main/res/layout/notification_lock_next.xml',
+            'android-native/app/src/main/res/drawable/aoqat_notification_hourglass_tile.xml',
+            'android-native/app/src/main/res/drawable/aoqat_notification_hourglass.xml',
+            'android-native/app/src/main/res/drawable/app_icon.xml',
+            'data/prayer-times-offline.json','js/quran-reader.js'
+          ]
+          for p in protected:
+              assert Path(p).read_bytes()==subprocess.check_output(['git','show',base+':'+p]),p
+          original=subprocess.check_output(['git','show',base+':android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt'],text=True)
+          updated=Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          expected=original.replace('''                .setLargeIcon(android.graphics.drawable.Icon.createWithResource(
+                    c,R.drawable.aoqat_notification_hourglass_tile))
+                .setColor(android.graphics.Color.rgb(255,149,37))''',
+                '''                // Full-color bitmap, not a tintable Android vector Icon:
+                // on this device B152's vector was washed out to pale beige.
+                .setLargeIcon(LockNotificationIcon.bitmap())''')
+          assert expected==updated,'B152 prayer widget changed outside icon'
+          lock=updated[updated.index('fun lockNotification(c:Context):Notification'):updated.index('override fun onBind(i:Intent?)',updated.index('fun lockNotification(c:Context):Notification'))]
+          assert lock.count('setChronometer(R.id.lock_prayer_clock')==1
+          assert '.setUsesChronometer(false)' in lock
+          assert '.setShowWhen(false)' in lock
+          assert '.setSmallIcon(R.drawable.aoqat_notification_hourglass)' in lock
+          assert '.setLargeIcon(LockNotificationIcon.bitmap())' in lock
+          assert '.setColor(android.graphics.Color.rgb' not in lock
+          bitmap=Path('android-native/app/src/main/java/com/aoqat/calendar/LockNotificationIcon.kt').read_text()
+          for s in ['Bitmap.createBitmap','LinearGradient','canvas.drawRoundRect','canvas.drawPath','Color.WHITE','Paint.ANTI_ALIAS_FLAG']:
+              assert s in bitmap,s
+          assert 'setTint' not in bitmap and 'ColorFilter' not in bitmap
+          gradle=Path('android-native/app/build.gradle').read_text()
+          assert "applicationId 'com.aoqat.calendar'" in gradle
+          assert 'versionCode 153' in gradle and "versionName '2.13.2'" in gradle
+          assert 'prepare-production-b153.py' in gradle
+          spec=importlib.util.spec_from_file_location('prod153','android-native/prepare-production-b153.py')
+          pkg=importlib.util.module_from_spec(spec);spec.loader.exec_module(pkg)
+          assert len(pkg.verify_approved_pilot())==88
+          assert 'النسخة الرئيسية 2.13.2 (بناء 153)' in pkg.PRODUCTION_ABOUT
+          print('PASS: untouched B152 data, native preferences, notification timer; full-color bitmap only')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Unit tests and assemble production B153 owner-signable APK
+        shell: bash
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease
+      - name: Verify exact B153 manifest, embedded offline Quran, source, and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$apk"
+          aapt=$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -1)
+          signer=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)
+          "$aapt" dump badging "$apk" | head -n1 | tee main-b153-package.txt
+          grep -F "name='com.aoqat.calendar'" main-b153-package.txt
+          grep -F "versionCode='153'" main-b153-package.txt
+          grep -F "versionName='2.13.2'" main-b153-package.txt
+          if "$signer" verify "$apk"; then echo "UNEXPECTED SIGNED APK" >&2; exit 1; fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import zipfile,json
+          p=Path('android-native/app/build/outputs/apk/release/app-release-unsigned.apk')
+          with zipfile.ZipFile(p) as z:
+              assert z.testzip() is None
+              assert z.read('classes.dex') and z.read('assets/splash-hawija-original.jpg')
+              fonts=[x for x in z.namelist() if x.startswith('assets/www/assets/qcf-v2-page-fonts/') and x.endswith('.woff2')]
+              assert len(fonts)==604
+              assert len(json.loads(z.read('assets/www/data/prayer-times-offline.json')))==366
+              for n in ('js/web-menu-order.js','js/apk-startup-bundle.js'):
+                  data=z.read('assets/www/'+n)
+                  assert 'النسخة الرئيسية 2.13.2 (بناء 153)'.encode() in data
+                  assert b'const PILOT_OTA_APK=false;' in data
+                  assert b'aoqatLockScreenNotificationTextStyle' in data
+                  assert b'aoqatProfileBackupDownload' in data
+              assert z.read('assets/www/js/quran-reader.js')
+          print('PASS: main B153 with unchanged splash, offline Quran, dates and backup UI')
+          PY
+          cp "$apk" aoqat-main-v2.13.2-b153-UNSIGNED.apk
+          sha256sum aoqat-main-v2.13.2-b153-UNSIGNED.apk > aoqat-main-v2.13.2-b153-UNSIGNED.apk.sha256
+          awk '{print $1}' aoqat-main-v2.13.2-b153-UNSIGNED.apk.sha256 > AOQAT-MAIN-B153-SHA256-64.txt
+          echo 'Sign B153 with same main P12 as installed B152; no uninstall; no OTA publication until phone approval.' > B153-READ-FIRST.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-MAIN-B153-ORIGINAL-ORANGE-HOURGLASS-UNSIGNED-OWNER-SIGNING
+          path: |
+            aoqat-main-v2.13.2-b153-UNSIGNED.apk
+            aoqat-main-v2.13.2-b153-UNSIGNED.apk.sha256
+            AOQAT-MAIN-B153-SHA256-64.txt
+            B153-READ-FIRST.txt
+            main-b153-package.txt
+          retention-days: 10
+          compression-level: 0
+          if-no-files-found: error
+      - name: Block unapproved production OTA/native code publication
+        run: echo 'Unsigned B153 owner review only. No changes to production-ota, main, pilot or aoqat-admin.'
