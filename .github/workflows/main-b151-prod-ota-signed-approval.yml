@@ -1,0 +1,69 @@
+name: AOQAT main B151 owner-signed production OTA release gate
+on:
+  push:
+    branches:
+      - release/main-v2-13-b151-reviewed-20261123
+    paths:
+      - security/main-b151-production-ota-signed-public.json
+permissions:
+  contents: write
+concurrency:
+  group: main-production-ota-b151-release
+  cancel-in-progress: false
+jobs:
+  publish-only-after-owner-signing:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate original-owner signature and exact production-only asset snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 -m py_compile security/verify-main-b151-production-ota-publish.py
+          python3 security/verify-main-b151-production-ota-publish.py /tmp/aoqat-main-b151-production-publish
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          root=pathlib.Path('/tmp/aoqat-main-b151-production-publish/android-updates/production/build-151')
+          m=json.loads((root/'manifest.json').read_text())
+          assert m['nativeBuild']==151 and m['sequence']==1 and len(m['files'])==88
+          assert set(m)=={'nativeBuild','sequence','expiresAt','revision','files','signature'}
+          for p,sha in m['files'].items():
+            assert hashlib.sha256((root/'files'/p).read_bytes()).hexdigest()==sha
+          print('PASS: 88 valid signed production files; pilot namespace absent')
+          PY
+      - name: Stage only signed B151 web assets in protected production-ota branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin production-ota:refs/remotes/origin/production-ota
+          git switch -c production-ota-publish origin/production-ota
+          test ! -e android-updates/production/build-151/manifest.json
+          mkdir -p android-updates/production/build-151
+          cp -R /tmp/aoqat-main-b151-production-publish/android-updates/production/build-151/. android-updates/production/build-151/
+          git add android-updates/production/build-151
+          python3 - <<'PY'
+          import subprocess
+          staged=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+          assert len(staged)==89,len(staged)
+          assert all(s.startswith('android-updates/production/build-151/') for s in staged)
+          assert 'android-updates/production/build-151/manifest.json' in staged
+          assert all('/files/' in s or s.endswith('/manifest.json') for s in staged)
+          print('PASS: exactly 88 web files and one signed production manifest; no native or pilot changes')
+          PY
+          git config user.name "AOQAT Signed Production OTA Gate"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "release(production-ota): owner-signed main B151 seq1 exact approved snapshot"
+          git push origin HEAD:production-ota
+      - name: Verify published build 151 is a separate OTA channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s android-updates/production/build-151/manifest.json
+          test -s android-updates/production/build-151/files/index.html
+          echo "PASS: signed main OTA in production-ota; no writes to main or owner-pilot-ota"
