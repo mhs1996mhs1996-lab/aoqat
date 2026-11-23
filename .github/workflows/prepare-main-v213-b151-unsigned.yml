@@ -7,6 +7,7 @@ on:
       - android-native/app/build.gradle
       - android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt
       - android-native/prepare-production-b151.py
+      - security/prepare-main-b151-about-ota.py
       - android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt
       - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
       - android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt
@@ -42,6 +43,7 @@ jobs:
             'android-native/app/build.gradle',
             'android-native/app/src/main/java/com/aoqat/calendar/WebUpdates.kt',
             'android-native/prepare-production-b151.py',
+            'security/prepare-main-b151-about-ota.py',
             'android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt',
             'android-native/app/src/main/java/com/aoqat/calendar/LockScreenTextStyle.kt',
@@ -103,6 +105,32 @@ jobs:
               assert v.PILOT_ABOUT_ACTION.encode('utf-8') not in a
           print('PASS: pilot seq22 signed with pinned publisher and 88 files verified')
           PY
+      - name: Stage verified UNSIGNED production B151 About OTA candidate (no live feed write)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile security/prepare-main-b151-about-ota.py
+          python3 security/prepare-main-b151-about-ota.py main-b151-about-ota-candidate
+          test -s main-b151-about-ota-candidate/AOQAT-PRODUCTION-151-ABOUT-UNSIGNED-OTA.zip
+          python3 - <<'PY'
+          import json,pathlib
+          r=pathlib.Path('main-b151-about-ota-candidate/android-updates/production/build-151')
+          m=json.loads((r/'manifest-UNSIGNED.json').read_text())
+          assert m['nativeBuild']==151 and m['sequence']==1
+          assert len(m['files'])==88 and 'signature' not in m and 'channel' not in m
+          for n,d in m['files'].items():
+            import hashlib
+            assert hashlib.sha256((r/'files'/n).read_bytes()).hexdigest()==d
+          print('PASS: production-only 88 assets; no unsigned publish')
+          PY
+      - name: Upload production B151 About OTA UNSIGNED candidate for owner's private signing
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOQAT-MAIN-B151-ABOUT-OTA-UNSIGNED-OWNER-SIGNING-ONLY
+          path: main-b151-about-ota-candidate/
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
