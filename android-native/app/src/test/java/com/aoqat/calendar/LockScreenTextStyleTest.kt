@@ -37,8 +37,8 @@ class LockScreenTextStyleTest {
         assertEquals(15,iqama.getInt("clock"))
         assertEquals(3,iqama.getInt("color"))
         assertEquals("kept",other.getString("prayer_settings",""))
-        assertEquals(16,LockScreenTextStyle.read(c,"prayer").getInt("title").coerceIn(12,24)
-            .let{if(it==19)16 else it}.takeUnless{it==16}?:16)
+        // An untouched Friday countdown still uses its previous native typography.
+        assertEquals(15,LockScreenTextStyle.read(c,"friday_first").getInt("title"))
     }
 
     @Test fun changingFontDoesNotReplaceSilentOngoingNotificationChannel(){
