@@ -1464,7 +1464,120 @@
     adhan:()=>{adhanIqamaView();openAdhanServices();},quiet:()=>{if(window.AndroidNative?.configureAdhan)openAlertSection('quiet');else openAdhanServices('alerts');},alerts:alertSettingsView,bag:openMuslimBagSection,
     drawer:id=>{mainView();document.querySelector('[data-drawer="'+id+'"]')?.click();}
   };
-  function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",install);}
+
+  // Owner-pilot first-launch privacy introduction. The Android native StartupScreen
+  // stays intact: this WebView surface is only created AFTER the web app is ready.
+  // This is a notice, not a broad consent grant or a replacement for OS permissions.
+  const PILOT_PRIVACY_WELCOME_KEY="pilotPrivacyWelcomeSeenV1";
+  let pilotPrivacyWelcomeQueued=false;
+  function showPilotPrivacyWelcome(){
+    if(!PILOT_OTA_APK || !window.AndroidNative?.readOwnerPilotOtaState ||
+       !document.body?.classList.contains("aoqat-ready") ||
+       !window.aoqatUIReady || document.hidden ||
+       document.getElementById("aoqatPilotPrivacyWelcome"))return;
+    try{if(localStorage.getItem(PILOT_PRIVACY_WELCOME_KEY)==="1")return;}catch(_){}
+    if(!document.getElementById("aoqatPilotPrivacyWelcomeStyle")){
+      const style=document.createElement("style");
+      style.id="aoqatPilotPrivacyWelcomeStyle";
+      style.textContent=[
+        "#aoqatPilotPrivacyWelcome{position:fixed!important;inset:0!important;z-index:2147483000!important;overflow:auto!important;overscroll-behavior:contain!important;box-sizing:border-box!important;padding:calc(15px + env(safe-area-inset-top,0px)) 14px calc(16px + env(safe-area-inset-bottom,0px))!important;background:var(--wt-bg,#f4ead5)!important;color:var(--wt-text,#4f3b20)!important;direction:rtl!important;display:flex!important;align-items:center!important;justify-content:center!important;font-family:Tahoma,Arial,sans-serif!important}",
+        "#aoqatPilotPrivacyWelcome [hidden]{display:none!important}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-card{box-sizing:border-box;width:min(100%,520px);max-height:100%;overflow:auto;border:1px solid var(--wt-border,#dbc28d);border-radius:18px;background:linear-gradient(145deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9));padding:20px 16px;box-shadow:0 5px 20px #0002;text-align:center}",
+        "#aoqatPilotPrivacyWelcome h2{font-size:22px!important;line-height:1.5!important;margin:8px 0!important;color:var(--wt-text,#4f3b20)!important}",
+        "#aoqatPilotPrivacyWelcome p{font-size:14px!important;line-height:1.85!important;margin:8px 0!important;color:var(--wt-text,#4f3b20)!important}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-icon{font-size:38px;line-height:1.3}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-points{text-align:right;font-size:13px;line-height:1.9;padding:9px 12px;margin:12px 0;border:1px solid var(--wt-border,#dbc28d);border-radius:12px;background:var(--wt-surface,#fffaf0)}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-action{display:block!important;box-sizing:border-box!important;width:100%!important;min-height:47px!important;margin:9px 0 0!important;padding:9px 12px!important;border:1px solid var(--wt-border,#dbc28d)!important;border-radius:10px!important;background:linear-gradient(90deg,var(--wt-surface,#fffaf0),var(--wt-surface2,#f8efd9))!important;color:var(--wt-text,#4f3b20)!important;font:700 15px Tahoma,Arial,sans-serif!important;box-shadow:none!important;text-shadow:none!important;cursor:pointer!important}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-action:focus-visible{outline:3px solid var(--wt-accent,#b58a35)!important;outline-offset:2px}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-notice{font-size:11px!important;opacity:.85}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-details{text-align:right;max-height:min(63vh,510px);overflow:auto;overscroll-behavior:contain}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-details section{padding:9px 0;border-bottom:1px solid var(--wt-border,#dbc28d)}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-details h3{font-size:14px!important;line-height:1.6!important;margin:0!important;color:var(--wt-text,#4f3b20)!important}",
+        "#aoqatPilotPrivacyWelcome .pilot-privacy-details p{font-size:12px!important;line-height:1.8!important}",
+        "@media (max-height:620px){#aoqatPilotPrivacyWelcome{align-items:flex-start!important}#aoqatPilotPrivacyWelcome .pilot-privacy-card{max-height:none!important}}"
+      ].join("");
+      document.head.appendChild(style);
+    }
+    const create=(tag,content,className)=>{
+      const el=document.createElement(tag);
+      if(content!==null)el.textContent=content;
+      if(className)el.className=className;
+      return el;
+    };
+    const overlay=create("section",null);
+    overlay.id="aoqatPilotPrivacyWelcome";
+    overlay.setAttribute("role","dialog");
+    overlay.setAttribute("aria-modal","true");
+    overlay.setAttribute("aria-labelledby","aoqatPilotPrivacyWelcomeTitle");
+    overlay.dir="rtl";
+    const card=create("div",null,"pilot-privacy-card");
+    const summary=create("div",null);
+    const shield=create("div","🛡️","pilot-privacy-icon");
+    shield.setAttribute("aria-hidden","true");
+    const title=create("h2","خصوصيتك تهمنا");
+    title.id="aoqatPilotPrivacyWelcomeTitle";
+    const intro=create("p","مرحباً بك في أوقات الصلاة في الحويجة وضواحيها. يمكنك التعرف على كيفية حفظ بياناتك واستخدام خدمات التطبيق.");
+    const points=create("div",null,"pilot-privacy-points");
+    [
+      "📱 تُحفظ إعدادات التطبيق وبيانات الملف الشخصي محلياً على هاتفك.",
+      "🧭 قد يُطلب الموقع عند استخدام ميزة اتجاه القبلة.",
+      "🔔 تُطلب أذونات التنبيهات عند الحاجة، بشكل منفصل."
+    ].forEach(line=>points.append(create("div",line)));
+    const read=create("button","📄 قراءة سياسة الخصوصية كاملة","pilot-privacy-action");
+    read.type="button";read.id="aoqatPilotPrivacyRead";
+    const continueBtn=create("button","متابعة إلى التطبيق","pilot-privacy-action");
+    continueBtn.type="button";continueBtn.id="aoqatPilotPrivacyContinue";
+    const hint=create("p","المتابعة لا تمنح إذن الموقع أو الإشعارات تلقائياً. تستطيع قراءة السياسة لاحقاً من الملف الشخصي ← المساعدة والخصوصية.","pilot-privacy-notice");
+    summary.append(shield,title,intro,points,read,continueBtn,hint);
+    const full=create("div",null);
+    full.hidden=true;
+    const fullTitle=create("h2","سياسة الخصوصية");
+    const fullText=create("div",null,"pilot-privacy-details");
+    for(const entry of PRIVACY_SECTIONS){
+      const section=create("section",null);
+      section.append(create("h3",entry.title));
+      for(const paragraph of entry.paragraphs)section.append(create("p",paragraph));
+      fullText.append(section);
+    }
+    const back=create("button","رجوع إلى الملخص","pilot-privacy-action");
+    back.type="button";back.id="aoqatPilotPrivacyBack";
+    const done=create("button","متابعة إلى التطبيق","pilot-privacy-action");
+    done.type="button";done.id="aoqatPilotPrivacyFinish";
+    full.append(fullTitle,fullText,back,done);
+    const finish=()=>{
+      try{localStorage.setItem(PILOT_PRIVACY_WELCOME_KEY,"1");}catch(_){}
+      overlay.remove();
+    };
+    read.onclick=()=>{summary.hidden=true;full.hidden=false;fullText.scrollTop=0;back.focus();};
+    back.onclick=()=>{full.hidden=true;summary.hidden=false;read.focus();};
+    continueBtn.onclick=finish;
+    done.onclick=finish;
+    overlay.addEventListener("keydown",event=>{
+      if(event.key==="Escape"){
+        event.preventDefault();event.stopPropagation();
+        if(!full.hidden)back.click();else finish();
+      }
+    });
+    card.append(summary,full);overlay.append(card);
+    document.body.appendChild(overlay);
+    read.focus();
+  }
+  function schedulePilotPrivacyWelcome(){
+    if(!PILOT_OTA_APK||!window.AndroidNative?.readOwnerPilotOtaState||pilotPrivacyWelcomeQueued)return;
+    try{if(localStorage.getItem(PILOT_PRIVACY_WELCOME_KEY)==="1")return;}catch(_){}
+    pilotPrivacyWelcomeQueued=true;
+    let tries=0;
+    const ready=setInterval(()=>{
+      if(++tries>450){clearInterval(ready);pilotPrivacyWelcomeQueued=false;return;}
+      // Android removes the original native splash after the ready WebView is painted.
+      if(!window.aoqatUIReady||!document.body?.classList.contains("aoqat-ready")||document.hidden)return;
+      clearInterval(ready);
+      // Give Android's startup image and first permission guide their own moment.
+      setTimeout(()=>{if(!document.hidden)showPilotPrivacyWelcome();else pilotPrivacyWelcomeQueued=false;},3200);
+    },200);
+  }
+
+  function start(){let n=0;const t=setInterval(()=>{if(install()||++n>80)clearInterval(t)},150);install();window.addEventListener("aoqatModulesReady",install);schedulePilotPrivacyWelcome();}
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
 
