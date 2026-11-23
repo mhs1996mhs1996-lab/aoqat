@@ -3,7 +3,12 @@ package com.aoqat.calendar
 import android.content.Intent
 import org.junit.Assert.*
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk=[34])
 class BackupDocumentsTest {
     private val valid = """{"format":"aoqat-local-backup","version":2,"data":{"aoqatQuranReaderV1":"saved","aoqatAdhanV1":"settings"}}"""
 
