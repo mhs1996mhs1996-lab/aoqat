@@ -293,8 +293,9 @@ class NextPrayerService:Service(){
             val iqamaSeconds=(iqamaMs+999L)/1000L
             val iqamaClock=String.format(java.util.Locale.US,"%02d:%02d",
                 iqamaSeconds/60L,iqamaSeconds%60L)
-            val lockDetail=if(iqama!=null)"${iqama.title} $iqamaClock" else ""
-            val description=if(iqama!=null)"$fallback • $lockDetail" else "$fallback — أوقات الصلاة في الحويجة"
+            // Native RemoteViews contains the only live timer. Avoid a
+            // second countdown in the system notification's header/text.
+            val description=if(iqama!=null)iqama.title else "مواقيت الصلاة في الحويجة"
             val views=RemoteViews(c.packageName,R.layout.notification_lock_next)
             views.setTextViewText(R.id.lock_prayer_title,title)
             views.setTextViewText(R.id.lock_prayer_fallback,fallback)
@@ -326,35 +327,30 @@ class NextPrayerService:Service(){
             }
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            val public=Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            // The hourglass is the approved icon for the upcoming-prayer
+            // countdown. Large icon preserves the visible amber tile on
+            // Android skins that show large notification icons.
+            fun builder()=Notification.Builder(c,LOCK_CHANNEL)
+                .setSmallIcon(R.drawable.aoqat_notification_hourglass)
+                .setLargeIcon(android.graphics.drawable.Icon.createWithResource(
+                    c,R.drawable.aoqat_notification_hourglass_tile))
+                .setColor(android.graphics.Color.rgb(255,149,37))
                 .setContentTitle(title)
                 .setContentText(description)
-                .setShowWhen(next!=null)
-                .setWhen(next?.at?:now)
-                .setUsesChronometer(next!=null)
-                .setChronometerCountDown(true)
+                // Only the RemoteViews Chronometer is allowed to run.
+                // Android's separate header chronometer duplicates the timer.
+                .setShowWhen(false)
+                .setUsesChronometer(false)
                 .setCustomContentView(views)
                 .setCustomBigContentView(views)
                 .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setOnlyAlertOnce(true)
-                .build()
-            return Notification.Builder(c,LOCK_CHANNEL)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-                .setContentTitle(title)
-                .setContentText(description)
-                .setShowWhen(next!=null)
-                .setWhen(next?.at?:now)
-                .setUsesChronometer(next!=null)
-                .setChronometerCountDown(true)
-                .setCustomContentView(views)
-                .setCustomBigContentView(views)
+            val public=builder().build()
+            return builder()
                 .setPublicVersion(public)
                 .setCategory(Notification.CATEGORY_STATUS)
-                .setVisibility(Notification.VISIBILITY_PUBLIC)
                 .setPriority(Notification.PRIORITY_DEFAULT)
                 .setOngoing(true)
-                .setOnlyAlertOnce(true)
                 .setContentIntent(tap)
                 .build()
         }
@@ -369,11 +365,11 @@ class NextPrayerService:Service(){
             ).apply{setSound(null,null)})
             val views=PrayerWidget.views(this,true)
             Notification.Builder(this,"next_prayer")
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(R.drawable.aoqat_notification_hourglass)
                 .setContentTitle("الصلاة القادمة")
                 .setCustomContentView(views).setCustomBigContentView(views)
                 .setPublicVersion(Notification.Builder(this,"next_prayer")
-                    .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                    .setSmallIcon(R.drawable.aoqat_notification_hourglass)
                     .setCustomContentView(views).build())
                 .setVisibility(Notification.VISIBILITY_PUBLIC).setOngoing(true)
                 .setOnlyAlertOnce(true)
