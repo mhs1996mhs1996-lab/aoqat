@@ -77,7 +77,7 @@ jobs:
           icons=[v for v in layout.iter() if v.tag=='ImageView' and v.attrib.get(ns+'id')=='@+id/lock_prayer_visual_icon']
           assert len(icons)==1
           assert icons[0].attrib[ns+'src']=='@drawable/aoqat_notification_hourglass_tile'
-          assert icons[0].attrib[ns+'layout_width']=='44dp'
+          assert icons[0].attrib[ns+'layout_width']=='40dp'
           assert layout.attrib[ns+'layoutDirection']=='rtl'
           assert sum(v.tag=='Chronometer' and v.attrib.get(ns+'id')=='@+id/lock_prayer_clock' for v in layout.iter())==1
           tile=ET.parse('android-native/app/src/main/res/drawable/aoqat_notification_hourglass_tile.xml').getroot()
