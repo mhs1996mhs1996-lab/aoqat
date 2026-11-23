@@ -1,0 +1,78 @@
+name: AOQAT main 151 production OTA publish gate negative security tests
+on:
+  push:
+    branches: [release/main-v2-13-b151-reviewed-20261123]
+    paths:
+      - security/verify-main-b151-production-ota-publish.py
+      - .github/workflows/main-b151-prod-ota-signed-approval.yml
+      - .github/workflows/main-b151-production-gate-safety-qa.yml
+permissions:
+  contents: read
+jobs:
+  do-not-publish-unsigned:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: No key material, no native or profile changes, only production 151 scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 -m py_compile security/verify-main-b151-production-ota-publish.py
+          python3 - <<'PY'
+          from pathlib import Path
+          import importlib.util
+          p=Path('android-native/prepare-production-b151.py')
+          spec=importlib.util.spec_from_file_location('base151',p)
+          m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+          verified=m.verify_approved_pilot()
+          assert len(verified)==88
+          for n in ('js/web-menu-order.js','js/apk-startup-bundle.js'):
+            a=m.produce_release_ui(verified[n])
+            assert m.PRODUCTION_ABOUT.encode('utf-8') in a
+            assert m.PILOT_ABOUT.encode('utf-8') not in a
+          print('PASS: source is signed pilot 22, all 88 files and main About validated')
+          PY
+      - name: Verify lack of approval never writes to production channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e security/main-b151-production-ota-signed-public.json
+          if python3 security/verify-main-b151-production-ota-publish.py /tmp/aoqat-main151-unapproved; then
+            echo "CRITICAL: publisher accepted absent owner signature"
+            exit 1
+          fi
+          test ! -e /tmp/aoqat-main151-unapproved
+      - name: Reject fake owner approval signed with unrelated EC key
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util,json,time,pathlib
+          p=pathlib.Path('android-native/prepare-production-b151.py')
+          s=importlib.util.spec_from_file_location('m',p)
+          m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+          assets=m.verify_approved_pilot()
+          from hashlib import sha256
+          files={k:sha256((m.produce_release_ui(v) if k in ('js/web-menu-order.js','js/apk-startup-bundle.js') else v)).hexdigest() for k,v in assets.items()}
+          revision=sha256('\n'.join(f'{k}:{files[k]}' for k in sorted(files)).encode()).hexdigest()
+          body={'nativeBuild':151,'sequence':1,'expiresAt':int(time.time()*1000)+7*86400000,'revision':revision,'files':files}
+          pathlib.Path('/tmp/synthetic-main151-unsigned.json').write_text(json.dumps(body))
+          PY
+          openssl ecparam -name prime256v1 -genkey -noout -out /tmp/aoqat-test-only-fake.pem
+          python3 security/signed-update-manifest.py sign /tmp/synthetic-main151-unsigned.json /tmp/synthetic-main151-signed.json \
+            --private-key /tmp/aoqat-test-only-fake.pem \
+            --public-key <(openssl pkey -in /tmp/aoqat-test-only-fake.pem -pubout)
+          cp /tmp/synthetic-main151-signed.json security/main-b151-production-ota-signed-public.json
+          if python3 security/verify-main-b151-production-ota-publish.py /tmp/aoqat-main151-fake; then
+            echo "CRITICAL: fake publisher signature accepted"
+            exit 1
+          fi
+          test ! -e /tmp/aoqat-main151-fake
+          rm -f security/main-b151-production-ota-signed-public.json
+          git status --porcelain
+          test ! -e /tmp/aoqat-main151-fake
+          echo "PASS: absent signature and unrelated owner signature both rejected"
