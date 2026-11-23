@@ -78,6 +78,13 @@ def produce_release_ui(data:bytes)->bytes:
     txt=replace_one(txt,WELCOME_START,WELCOME_RELEASE,"privacy splash gate")
     txt=replace_one(txt,WELCOME_TIMER_START,WELCOME_TIMER_RELEASE,"privacy scheduler gate")
     txt=replace_one(txt,OLD_KEY,NEW_KEY,"production privacy storage")
+    # The pilot-only lock typography button was accidentally withheld from
+    # production even though these same six tested views are in the release UI.
+    # Reveal it ONLY if the B151 native persistence bridge really exists.
+    pilot_guard='if(window.AndroidNative?.readOwnerPilotOtaState?.())'
+    main_guard='if(typeof window.AndroidNative?.readLockScreenTextStyle==="function" && typeof window.AndroidNative?.configureLockScreenTextStyle==="function")'
+    if txt.count(pilot_guard)!=2:raise RuntimeError("Pilot-only typography guard unexpectedly changed")
+    txt=txt.replace(pilot_guard,main_guard)
     if 'const PILOT_OTA_APK=false;' not in txt:raise RuntimeError("Pilot disabled check failed")
     if 'aoqatPrivacyWelcomeSeenV1' not in txt:raise RuntimeError("Privacy missing")
     return txt.encode("utf-8")
@@ -93,6 +100,19 @@ def main():
         release[name]=produce_release_ui(data) if name in ("js/web-menu-order.js","js/apk-startup-bundle.js") else data
     assert release["index.html"]==approved["index.html"]
     assert release["js/web-menu-button-theme.js"]==approved["js/web-menu-button-theme.js"]
+    for name in ("js/web-menu-order.js","js/apk-startup-bundle.js"):
+        file=release[name]
+        if file.count(b'aoqatLockScreenNotificationTextStyle')!=1:
+            raise RuntimeError("Lock text formatting feature was dropped from main: "+name)
+        if file.count(b'aoqatLockScreenFontFromLock')!=1:
+            raise RuntimeError("Nested lock text formatting feature was dropped: "+name)
+        if file.count(b'readLockScreenTextStyle')<3:
+            raise RuntimeError("Native bridge gate and state editor missing: "+name)
+        for required in (b'aoqatProfileBackupDownload',b'aoqatProfileBackupShare',
+                         b'aoqatProfileBackupActions',b'profileBackupRestore',
+                         b'profileBackupSave',b'PROFILE_BACKUP_DB'):
+            if required not in file:
+                raise RuntimeError("Backup feature omitted from main: "+str(required))
     if release["js/web-menu-order.js"].count(b"aoqatPrivacyWelcomeSeenV1")!=1:
         raise RuntimeError("Embedded production privacy gate missing")
     if release["js/apk-startup-bundle.js"].count(b"aoqatPrivacyWelcomeSeenV1")!=1:
