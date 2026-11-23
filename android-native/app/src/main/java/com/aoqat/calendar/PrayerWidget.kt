@@ -327,13 +327,12 @@ class NextPrayerService:Service(){
             }
             val tap=PendingIntent.getActivity(c,60501,Intent(c,MainActivity::class.java),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            // The hourglass is the approved icon for the upcoming-prayer
-            // countdown. Large icon preserves the visible amber tile on
-            // Android skins that show large notification icons.
+            // The approved rounded-square icon is drawn inside our own
+            // RemoteViews. NEVER setLargeIcon here: Huawei/Honor/Android
+            // notification hosts mask large icons into circular badges.
+            // The mandatory small icon remains a monochrome system glyph.
             fun builder()=Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(R.drawable.aoqat_notification_hourglass)
-                .setLargeIcon(android.graphics.drawable.Icon.createWithResource(
-                    c,R.drawable.aoqat_notification_hourglass_tile))
                 .setColor(android.graphics.Color.rgb(255,149,37))
                 .setContentTitle(title)
                 .setContentText(description)
