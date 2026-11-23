@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="56dp" android:height="56dp"
+    android:viewportWidth="56" android:viewportHeight="56">
+    <!-- Approved amber hourglass tile. Used only on lock notification large icon. -->
+    <path android:fillColor="#FFFF9425"
+        android:pathData="M12,2 L44,2 Q54,2 54,12 L54,44 Q54,54 44,54 L12,54 Q2,54 2,44 L2,12 Q2,2 12,2 Z"/>
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M16,10 L40,10 L40,14 L16,14 Z M16,42 L40,42 L40,46 L16,46 Z
+        M20,16 L36,16 L36,19 C36,23 32,25 29.5,28 C32,31 36,33 36,37 L36,40 L20,40 L20,37 C20,33 24,31 26.5,28 C24,25 20,23 20,19 Z"/>
+    <path android:fillColor="#FFFF9425"
+        android:pathData="M24,19 L32,19 L28,26 Z M28,31 L33,38 L23,38 Z"/>
+</vector>
