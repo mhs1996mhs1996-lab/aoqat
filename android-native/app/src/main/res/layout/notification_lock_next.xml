@@ -5,6 +5,14 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
         android:paddingTop="4dp" android:paddingBottom="4dp">
+        <!-- Keep the chosen icon in our RemoteViews rather than the Android
+             large-icon slot, which manufacturers crop to a circle. -->
+        <ImageView android:id="@+id/lock_prayer_visual_icon"
+            android:layout_width="44dp" android:layout_height="44dp"
+            android:layout_marginEnd="9dp"
+            android:contentDescription="@null"
+            android:src="@drawable/aoqat_notification_hourglass_tile"
+            android:scaleType="fitCenter"/>
         <TextView android:id="@+id/lock_prayer_title" android:layout_width="0dp"
             android:layout_weight="1" android:layout_height="wrap_content"
             android:textSize="16sp" android:textStyle="bold" android:textColor="#FF173747"
