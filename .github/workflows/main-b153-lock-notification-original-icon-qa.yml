@@ -64,7 +64,11 @@ jobs:
                 '''                // Full-color bitmap, not a tintable Android vector Icon:
                 // on this device B152's vector was washed out to pale beige.
                 .setLargeIcon(LockNotificationIcon.bitmap())''')
-          assert expected==updated,'B152 prayer widget changed outside icon'
+          if expected!=updated:
+              import difflib
+              diff=list(difflib.unified_diff(expected.splitlines(),updated.splitlines(),fromfile='expected',tofile='actual',lineterm=''))
+              print("DIFF\n"+"\n".join(diff[:35]))
+              raise AssertionError('B152 prayer widget changed outside icon')
           lock=updated[updated.index('fun lockNotification(c:Context):Notification'):updated.index('override fun onBind(i:Intent?)',updated.index('fun lockNotification(c:Context):Notification'))]
           assert lock.count('setChronometer(R.id.lock_prayer_clock')==1
           assert '.setUsesChronometer(false)' in lock
