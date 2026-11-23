@@ -59,7 +59,7 @@ def prepare():
             assert "window.AndroidNative?.readOwnerPilotOtaState" in extracted
             assert "fetch(" not in extracted and "location.href" not in extracted
             assert "startupScreen" not in extracted and "startupContainer" not in extracted
-            assert new==old.replace(OLD_START,extracted+NEW_START),("unexpected JS change",name)
+            assert new==old.replace(OLD_START,"\n"+extracted+NEW_START),("unexpected JS change",name)
             if block is None:block=extracted
             else:assert block==extracted,("menu and APK bundle differ",name)
         else:assert before==after,("unapproved asset change",name)
