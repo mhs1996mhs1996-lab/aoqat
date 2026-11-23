@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 150 // V2-signed 2.12 owner release candidate; signed exclusively on owner's phone
-        versionName '2.12'
+        versionCode 151 // V2 owner-signed production baseline; verified pilot seq22 web UI
+        versionName '2.13'
     }
 
     buildFeatures { buildConfig true }
@@ -130,6 +130,9 @@ tasks.register('syncWebAssets', Sync) {
                 indexFile.write(html, 'UTF-8')
             }
         }
+        // Main-only packaging: import exactly the verified pilot UI, disable pilot controls.
+        // No production signing keys in CI or repository. Never alter raw Quran or prayer data.
+        exec { commandLine 'python3', file("$rootProject.projectDir/prepare-production-b151.py"), webAssetDir }
     }
 }
 
