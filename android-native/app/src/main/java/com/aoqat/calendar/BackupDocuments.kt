@@ -16,7 +16,7 @@ object BackupDocuments {
 
     fun safeRequestId(requestId:String):Boolean = REQUEST_ID.matches(requestId)
 
-    fun filename(selected:String):String =
+    fun safeFileName(selected:String):String =
         if(SAFE_FILENAME.matches(selected)&&!selected.contains(".."))selected
         else "AOQAT-backup.json"
 
@@ -35,7 +35,7 @@ object BackupDocuments {
         Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
             type="application/json"
             addCategory(Intent.CATEGORY_OPENABLE)
-            putExtra(Intent.EXTRA_TITLE,filename(filename))
+            putExtra(Intent.EXTRA_TITLE,safeFileName(filename))
         }
 
     fun shareIntent(c:Context,json:String,filename:String):Intent {
@@ -51,7 +51,7 @@ object BackupDocuments {
         return Intent(Intent.ACTION_SEND).apply {
             type="application/json"
             putExtra(Intent.EXTRA_STREAM,uri)
-            putExtra(Intent.EXTRA_TITLE,filename(filename))
+            putExtra(Intent.EXTRA_TITLE,safeFileName(filename))
             clipData=ClipData.newUri(c.contentResolver,"AOQAT backup",uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
