@@ -22,7 +22,8 @@ jobs:
       - name: Verify exact reviewed B155 layout and manifest
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "991b2dccc6ab54a7b00690e308b6aae0ecc72163"
+          git merge-base --is-ancestor 991b2dccc6ab54a7b00690e308b6aae0ecc72163 HEAD
+          test "$(git diff --name-only 991b2dccc6ab54a7b00690e308b6aae0ecc72163 HEAD)" = ".github/workflows/main-b155-auto-ota.yml"
           python3 - <<'PY'
           import hashlib,json,pathlib,time
           root=pathlib.Path("android-updates/production/build-155")
@@ -40,7 +41,8 @@ jobs:
           PY
       - name: Sign with separate production key and verify pinned public fingerprint
         env:
-          PRODUCTION_SIGNING_PEM: ${{ secrets.AOQAT_PRODUCTION_OTA_SIGNING_PEM }}
+          PRODUCTION_SIGNING_PEM: ${{ secrets.AOQAT_MAIN_OTA_V2_PEM }}
+          AOQAT_V2_OTA_PASSPHRASE: ${{ secrets.AOQAT_MAIN_OTA_V2_PASSPHRASE }}
         run: |
           set -euo pipefail
           if [ -z "${PRODUCTION_SIGNING_PEM:-}" ]; then
@@ -52,7 +54,7 @@ jobs:
           trap 'rm -f "$key"' EXIT
           printf '%s\n' "$PRODUCTION_SIGNING_PEM" > "$key"
           unset PRODUCTION_SIGNING_PEM
-          openssl pkey -in "$key" -pubout -out "$RUNNER_TEMP/main-ota-public.pem"
+          openssl pkey -in "$key" -passin env:AOQAT_V2_OTA_PASSPHRASE -pubout -out "$RUNNER_TEMP/main-ota-public.pem"
           fingerprint="$(openssl pkey -pubin -in "$RUNNER_TEMP/main-ota-public.pem" -outform DER | sha256sum | cut -d' ' -f1)"
           test "$fingerprint" = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d" || { echo "::error::Wrong production key; publication blocked."; exit 1; }
           export KEY_PATH="$key"
@@ -64,7 +66,7 @@ jobs:
           payload="\n".join(["AOQAT-WEB-UPDATE-SIGNATURE-V1",str(m["nativeBuild"]),str(m["sequence"]),str(m["expiresAt"]),m["revision"],canonical]).encode()
           temp=pathlib.Path(os.environ["RUNNER_TEMP"])
           (temp/"ota-payload").write_bytes(payload)
-          signature=subprocess.check_output(["openssl","dgst","-sha256","-sign",os.environ["KEY_PATH"],str(temp/"ota-payload")])
+          signature=subprocess.check_output(["openssl","dgst","-sha256","-sign",os.environ["KEY_PATH"],"-passin","env:AOQAT_V2_OTA_PASSPHRASE",str(temp/"ota-payload")])
           (temp/"ota-signature").write_bytes(signature)
           subprocess.run(["openssl","dgst","-sha256","-verify",str(temp/"main-ota-public.pem"),"-signature",str(temp/"ota-signature"),str(temp/"ota-payload")],check=True)
           m["signature"]=base64.b64encode(signature).decode()
