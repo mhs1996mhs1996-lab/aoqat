@@ -74,12 +74,12 @@ object AdhanSchedule {
     // Immediate small preferences write, independent of the audio, widget,
     // Quran, network and reminder settings. Coalesce expensive alarm work.
     fun configureQuiet(c:Context,json:String):Boolean? = synchronized(quietSettingsLock) {
-        val incoming=try{JSONObject(json)}catch(_:Exception){return null}
+        val incoming=try{JSONObject(json)}catch(_:Exception){return@synchronized null}
         val current=settings(c)
         var newlyEnabled=false
         for(key in listOf("atAdhanSilent","afterIqamaSilent")){
-            val group=incoming.optJSONObject(key)?:return null
-            val minutes=group.optJSONObject("minutes")?:return null
+            val group=incoming.optJSONObject(key)?:return@synchronized null
+            val minutes=group.optJSONObject("minutes")?:return@synchronized null
             val old=current.optJSONObject(key)
             val enabled=group.optBoolean("enabled")
             newlyEnabled=newlyEnabled || (enabled && old?.optBoolean("enabled")!=true)
