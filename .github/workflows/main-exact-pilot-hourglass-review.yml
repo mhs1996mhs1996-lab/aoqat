@@ -1,0 +1,38 @@
+name: Main original pilot hourglass isolated QA
+on:
+  push:
+    branches: [fix/main-exact-pilot-hourglass-review-20261124]
+    paths:
+      - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/LockNotificationIcon.kt
+      - android-native/app/src/main/res/drawable-nodpi/pilot_notify_exact_wait.webp
+      - .github/workflows/main-exact-pilot-hourglass-review.yml
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Verify exact approved artwork and narrow scope
+        run: |
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+          changed=set(subprocess.check_output(['git','diff','--name-only','48da2b5c54e41c77789177bc8e2cf5c8480394b3','HEAD'],text=True).splitlines())
+          assert changed=={'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt','android-native/app/src/main/java/com/aoqat/calendar/LockNotificationIcon.kt','android-native/app/src/main/res/drawable-nodpi/pilot_notify_exact_wait.webp','.github/workflows/main-exact-pilot-hourglass-review.yml'},changed
+          assert subprocess.check_output(['git','hash-object','android-native/app/src/main/res/drawable-nodpi/pilot_notify_exact_wait.webp'],text=True).strip()=='d8b96e136965f2b362afc2d01286125918a4276b'
+          s=Path('android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt').read_text()
+          assert 'LockNotificationIcon.exactSmall(c)' in s and 'LockNotificationIcon.bitmap()' not in s
+          assert '.setUsesChronometer(false)' in s
+          PY
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Compile and test only, no publication or signing
+        run: gradle -p android-native --no-daemon testDebugUnitTest assembleRelease

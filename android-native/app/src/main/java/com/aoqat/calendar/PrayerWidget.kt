@@ -332,9 +332,10 @@ class NextPrayerService:Service(){
             // Android skins that show large notification icons.
             fun builder()=Notification.Builder(c,LOCK_CHANNEL)
                 .setSmallIcon(R.drawable.aoqat_notification_hourglass)
-                // Full-color bitmap, not a tintable Android vector Icon:
-                // on this device B152's vector was washed out to pale beige.
-                .setLargeIcon(LockNotificationIcon.bitmap())
+                // Use the byte-identical original pilot artwork through the
+                // same small-icon bitmap route that worked on the owner's phone.
+                // Do not supply a second large icon or redraw the approved art.
+                .apply { LockNotificationIcon.exactSmall(c)?.let { setSmallIcon(it) } }
                 .setContentTitle(title)
                 .setContentText(description)
                 // Only the RemoteViews Chronometer is allowed to run.
