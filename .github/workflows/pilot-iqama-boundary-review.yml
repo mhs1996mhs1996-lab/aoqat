@@ -29,5 +29,31 @@ jobs:
         with: {distribution: temurin, java-version: '17'}
       - uses: gradle/actions/setup-gradle@v4
         with: {gradle-version: '8.9'}
-      - name: Test iqama boundaries and compile pilot only
-        run: gradle -p android-native --no-daemon :app:testOwnerPilotUnitTest :app:assembleOwnerPilot
+      - name: Test only the notification boundary and phase behavior
+        run: |
+          gradle -p android-native --no-daemon :app:testOwnerPilotUnitTest \
+            --tests 'com.aoqat.calendar.LockScreenBoundaryRetentionTest' \
+            --tests 'com.aoqat.calendar.LockScreenIqamaTest' \
+            --tests 'com.aoqat.calendar.LockScreenSupplementTest' \
+            --tests 'com.aoqat.calendar.LockScreenPrayerTest'
+      - name: Assemble isolated pilot candidate (no signing or publication)
+        run: gradle -p android-native --no-daemon :app:assembleOwnerPilot
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-owner-pilot-iqama-review
+          path: android-native/app/build/outputs/apk/ownerPilot/*.apk
+          if-no-files-found: error
+  baseline-ota:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: a306a89e923f6975d0bcd2ef347a1765e58575ea
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Reproduce WebUpdatesTest failures on unchanged native baseline
+        run: gradle -p android-native --no-daemon :app:testOwnerPilotUnitTest --tests 'com.aoqat.calendar.WebUpdatesTest'
+
