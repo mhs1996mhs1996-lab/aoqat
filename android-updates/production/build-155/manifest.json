@@ -1,11 +1,11 @@
 {
   "nativeBuild": 155,
-  "sequence": 1,
+  "sequence": 2,
   "expiresAt": 1797897600000,
-  "revision": "3717c534a48c9ca4c3785ffa308856818082969cd793cf2ed4961a89ec562856",
+  "revision": "360c672fa5cca0be153a19d9dbb5205ea2f2f1ae671bc0448deca975808dcbc5",
   "files": {
     "index.html": "e9a045f8acf0fd6f66bfa6bbdd36dfb3a014a6474d700d840186f7fba682be1f",
-    "css\/adhan-modal.css": "2af8e6dbe8b7b40ab6c7c87b78b7854d190e5d8d18d5f522433a8ece544a8739"
+    "css\/adhan-modal.css": "a59fa28988e325eeaf888ab7d277fece0f00cdeac701b559cafca975628e6fb6"
   },
-  "signature": "MEYCIQC8wzGKlUOknLfTzUscPSWch+TWpUNpBWYMB8oqviIuVwIhAMtOfgo2tKjIrJuPp6xZ13eXGZj+bXkK5w4sIj3v6q\/q"
+  "signature": "MEQCIAdjT8AyDEoLPWQlCHZZpWhn6tp2pbFXal569MqQckD7AiBuBz8caKq2fA0xDd9\/N1gzI9u37+4ML9UbzXl\/KUxPOQ=="
 }
