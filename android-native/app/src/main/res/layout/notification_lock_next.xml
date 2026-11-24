@@ -7,29 +7,33 @@
         android:paddingTop="4dp" android:paddingBottom="4dp">
         <TextView android:id="@+id/lock_prayer_title" android:layout_width="0dp"
             android:layout_weight="1" android:layout_height="wrap_content"
-            android:textSize="16sp" android:textStyle="bold" android:textColor="#FF173747"
+            android:textSize="16sp" android:textStyle="bold" android:textColor="#FFFFFFFF"
             android:singleLine="true" android:ellipsize="end"/>
         <Chronometer android:id="@+id/lock_prayer_clock" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:layout_marginStart="9dp"
             android:textSize="17sp" android:textStyle="bold" android:singleLine="true"
-            android:textColor="#FF173747" android:layoutDirection="ltr"/>
+            android:textColor="#FFFFFFFF" android:layoutDirection="ltr"/>
         <TextView android:id="@+id/lock_prayer_fallback" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:layout_marginStart="9dp"
             android:textSize="17sp" android:textStyle="bold" android:singleLine="true"
-            android:textColor="#FF173747" android:layoutDirection="ltr"/>
+            android:textColor="#FFFFFFFF" android:layoutDirection="ltr"/>
     </LinearLayout>
     <LinearLayout android:id="@+id/lock_iqama_row"
         android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="horizontal" android:gravity="center_vertical"
         android:paddingTop="2dp" android:paddingBottom="4dp"
         android:visibility="gone">
+        <ImageView android:id="@+id/lock_iqama_state_icon"
+            android:layout_width="30dp" android:layout_height="24dp"
+            android:layout_marginEnd="7dp" android:scaleType="fitCenter"
+            android:contentDescription="@null"/>
         <TextView android:id="@+id/lock_iqama_title" android:layout_width="0dp"
             android:layout_weight="1" android:layout_height="wrap_content"
-            android:textSize="15sp" android:textStyle="bold" android:textColor="#FF173747"
+            android:textSize="15sp" android:textStyle="bold" android:textColor="#FFFFFFFF"
             android:singleLine="true" android:ellipsize="end"/>
         <Chronometer android:id="@+id/lock_iqama_clock" android:layout_width="wrap_content"
             android:layout_height="wrap_content" android:layout_marginStart="9dp"
             android:textSize="16sp" android:textStyle="bold" android:singleLine="true"
-            android:textColor="#FF173747" android:layoutDirection="ltr"/>
+            android:textColor="#FFFFFFFF" android:layoutDirection="ltr"/>
     </LinearLayout>
 </LinearLayout>

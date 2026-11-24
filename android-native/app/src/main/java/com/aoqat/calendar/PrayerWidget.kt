@@ -303,6 +303,8 @@ class NextPrayerService:Service(){
                 if(iqama!=null)android.view.View.VISIBLE else android.view.View.GONE)
             if(iqama!=null){
                 views.setTextViewText(R.id.lock_iqama_title,iqama.title)
+                views.setImageViewResource(R.id.lock_iqama_state_icon,
+                    LockNotificationIcon.phaseResource(iqama.phase==LockScreenIqama.Phase.REMAINING))
                 views.setChronometer(R.id.lock_iqama_clock,
                     if(iqama.phase==LockScreenIqama.Phase.REMAINING)
                         SystemClock.elapsedRealtime()+iqamaMs

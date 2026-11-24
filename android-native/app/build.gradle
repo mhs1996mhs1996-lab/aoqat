@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 153 // Full-color hourglass device compatibility correction; B151 signed baseline preserved
-        versionName '2.13.2'
+        versionCode 154 // Exact approved bitmap palette; isolated production candidate
+        versionName '2.13.3'
     }
 
     buildFeatures { buildConfig true }

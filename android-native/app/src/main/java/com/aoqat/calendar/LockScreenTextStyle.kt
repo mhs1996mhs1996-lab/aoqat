@@ -21,7 +21,7 @@ object LockScreenTextStyle {
     fun validState(state:String):Boolean = state in STATES
 
     private fun defaults(state:String):Style =
-        if(state == "prayer") Style(16,17,2) else Style(15,16,2)
+        if(state == "prayer") Style(16,17,0) else Style(15,16,0)
 
     fun read(c:Context,state:String):JSONObject {
         require(validState(state)) { "Invalid notification state" }

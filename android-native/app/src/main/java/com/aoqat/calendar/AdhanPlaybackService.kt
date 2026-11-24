@@ -338,6 +338,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
         val builder=Notification.Builder(this,"adhan_playback_silent_v2")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .apply { LockNotificationIcon.exactAdhan(this@AdhanPlaybackService)?.let { setSmallIcon(it) } }
             .setContentTitle(if(preview)"تجربة صوت الأذان" else if(prayer=="fridayFirst")
                 "حان أذان الجمعة الأول" else PrayerNotifications.title(prayer,intent?.getBooleanExtra("friday",false)==true))
             .setContentText("اضغط إيقاف لإنهاء الأذان")

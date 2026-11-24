@@ -90,6 +90,7 @@ object PrayerNotifications {
             Intent(c,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE)
         val alert=Notification.Builder(c, "prayer_due_system_v2")
             .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+            .apply { LockNotificationIcon.exactAdhan(c)?.let { setSmallIcon(it) } }
             .setContentTitle(if (preview) "تجربة صوت الإشعار" else title(id, friday))
             .setContentText("أوقات الصلاة في الحويجة")
             .setCategory(Notification.CATEGORY_ALARM)
