@@ -1,0 +1,93 @@
+name: Main B155 automatic OTA isolated signing
+on:
+  push:
+    branches: [stage/main-b155-ota1-quiet-layout-20261124]
+    paths:
+      - .github/workflows/main-b155-auto-ota.yml
+permissions:
+  contents: write
+concurrency:
+  group: main-production-ota-b155
+  cancel-in-progress: false
+jobs:
+  sign-and-publish:
+    if: github.repository == 'mhs1996mhs1996-lab/aoqat' && github.ref == 'refs/heads/stage/main-b155-ota1-quiet-layout-20261124'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    environment: production-ota-publish
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify exact reviewed B155 layout and manifest
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "991b2dccc6ab54a7b00690e308b6aae0ecc72163"
+          python3 - <<'PY'
+          import hashlib,json,pathlib,time
+          root=pathlib.Path("android-updates/production/build-155")
+          m=json.loads((root/"manifest.unsigned.json").read_text())
+          assert set(m)=={"nativeBuild","sequence","expiresAt","revision","files"}
+          assert m["nativeBuild"]==155 and m["sequence"]==1
+          assert m["expiresAt"]>time.time()*1000
+          assert set(m["files"])=={"index.html","css/adhan-modal.css"}
+          assert m["revision"]=="3717c534a48c9ca4c3785ffa308856818082969cd793cf2ed4961a89ec562856"
+          for p,h in m["files"].items():
+              assert hashlib.sha256((root/"files"/p).read_bytes()).hexdigest()==h
+          canonical="\n".join(p+":"+m["files"][p] for p in sorted(m["files"]))
+          assert hashlib.sha256(canonical.encode()).hexdigest()==m["revision"]
+          print("PASS: exact layout-only production B155 candidate")
+          PY
+      - name: Sign with separate production key and verify pinned public fingerprint
+        env:
+          PRODUCTION_SIGNING_PEM: ${{ secrets.AOQAT_PRODUCTION_OTA_SIGNING_PEM }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PRODUCTION_SIGNING_PEM:-}" ]; then
+            echo "::error::Production automatic OTA key is not configured. No update has been published."
+            exit 1
+          fi
+          umask 077
+          key="$RUNNER_TEMP/main-ota-key.pem"
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$PRODUCTION_SIGNING_PEM" > "$key"
+          unset PRODUCTION_SIGNING_PEM
+          openssl pkey -in "$key" -pubout -out "$RUNNER_TEMP/main-ota-public.pem"
+          fingerprint="$(openssl pkey -pubin -in "$RUNNER_TEMP/main-ota-public.pem" -outform DER | sha256sum | cut -d' ' -f1)"
+          test "$fingerprint" = "8f6f63bd3074209fa3b375adc455ecc5eeed96abca9e4a52144b49ddd8d7737d" || { echo "::error::Wrong production key; publication blocked."; exit 1; }
+          export KEY_PATH="$key"
+          python3 - <<'PY'
+          import pathlib,os,json,base64,subprocess
+          root=pathlib.Path("android-updates/production/build-155")
+          m=json.loads((root/"manifest.unsigned.json").read_text())
+          canonical="\n".join(p+":"+m["files"][p] for p in sorted(m["files"]))
+          payload="\n".join(["AOQAT-WEB-UPDATE-SIGNATURE-V1",str(m["nativeBuild"]),str(m["sequence"]),str(m["expiresAt"]),m["revision"],canonical]).encode()
+          temp=pathlib.Path(os.environ["RUNNER_TEMP"])
+          (temp/"ota-payload").write_bytes(payload)
+          signature=subprocess.check_output(["openssl","dgst","-sha256","-sign",os.environ["KEY_PATH"],str(temp/"ota-payload")])
+          (temp/"ota-signature").write_bytes(signature)
+          subprocess.run(["openssl","dgst","-sha256","-verify",str(temp/"main-ota-public.pem"),"-signature",str(temp/"ota-signature"),str(temp/"ota-payload")],check=True)
+          m["signature"]=base64.b64encode(signature).decode()
+          (root/"manifest.json").write_text(json.dumps(m,indent=2)+"\n")
+          PY
+      - name: Publish only the verified B155 production feed
+        run: |
+          set -euo pipefail
+          root=android-updates/production/build-155
+          candidate="$RUNNER_TEMP/production-feed-b155"
+          mkdir -p "$candidate"
+          cp -a "$root/files" "$root/manifest.json" "$candidate/"
+          git fetch origin production-ota
+          git switch --detach FETCH_HEAD
+          test ! -e "$root/manifest.json" || { echo "::error::Production sequence already exists; refuse overwrite."; exit 1; }
+          mkdir -p "$root"
+          cp -a "$candidate/." "$root/"
+          git add "$root/files/index.html" "$root/files/css/adhan-modal.css" "$root/manifest.json"
+          python3 - <<'PY'
+          import subprocess
+          root="android-updates/production/build-155/"
+          paths=set(subprocess.check_output(["git","diff","--cached","--name-only"],text=True).splitlines())
+          assert paths=={root+"files/index.html",root+"files/css/adhan-modal.css",root+"manifest.json"},paths
+          PY
+          git -c user.name="AOQAT Production OTA" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "release: signed production B155 OTA seq1 quiet layout only"
+          git push origin HEAD:production-ota
