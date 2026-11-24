@@ -187,6 +187,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
             if(!silentApplied && (preserveUserDnd || (!dndApplied &&
                 nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_NONE))) {
+                // Do not leave an unsuccessful attempt's DND side effect behind.
+                if(preserveUserDnd && nm.currentInterruptionFilter!=filterBefore)
+                    try{nm.setInterruptionFilter(filterBefore)}catch(_:Exception){}
                 auditQuiet(c,"failed",scheduledStart,end)
                 android.util.Log.e("IqamaQuiet","Unable to silence ringer or safely control DND")
                 return false

@@ -1,0 +1,30 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('android-native/apk-overrides/native-quiet-menu.js','utf8');
+assert.ok(!source.includes('.focus('));
+const marker='  window.AoqatApkQuietSettings={render,read};';
+const injected=source.replace(marker,'  window.__test={render,setPanel(v){panel=v},setState(v){state=v}};\n'+marker);
+let paints=0,seq=0,calls=[],pending=new Map(),events={},blurred=0,html='';
+const state={atAdhanSilent:{enabled:false,minutes:{fajr:10}},afterIqamaSilent:{enabled:true,minutes:{fajr:12}}};
+const doc={readyState:'loading',hidden:false,activeElement:null,addEventListener(k,v){events[k]=v}};
+const win={AndroidNative:{configureAdhan(){throw Error('full bridge forbidden')},configureQuietSettings(v){calls.push(JSON.parse(v));return true},readAdhanSettings(){return JSON.stringify(state)},hasQuietPolicyAccess(){return true}},addEventListener(k,v){events[k]=v}};
+function tick(){const jobs=[...pending.values()];pending.clear();jobs.forEach(f=>f());}
+function target(v){return {...v,h:{},addEventListener(k,f){this.h[k]=f}}}
+const input=target({value:'12',dataset:{quietKey:'afterIqamaSilent',quietPrayer:'fajr'}});
+const plus=target({dataset:{quietKey:'afterIqamaSilent',quietPrayer:'fajr',quietAdjust:'1'},parentElement:{querySelector(){return input}}});
+const minus=target({dataset:{quietKey:'afterIqamaSilent',quietPrayer:'fajr',quietAdjust:'-1'},parentElement:{querySelector(){return input}}});
+const times={hidden:false};
+const toggle=target({dataset:{quietEnabled:'afterIqamaSilent'},checked:true,closest(){return {querySelector(){return times}}}});
+const panel={set innerHTML(v){paints++;html=v},get innerHTML(){return html},querySelectorAll(k){return k==='[data-quiet-enabled]'?[toggle]:k==='input[data-quiet-prayer]'?[input]:[plus,minus]},querySelector(){return null}};
+vm.runInNewContext(injected,{window:win,document:doc,setTimeout(f){pending.set(++seq,f);return seq},clearTimeout(i){pending.delete(i)}});
+win.__test.setPanel(panel);win.__test.setState(state);win.__test.render(false);
+let prevented=false;plus.h.pointerdown({preventDefault(){prevented=true}});assert.ok(prevented);
+for(let i=0;i<8;i++)plus.h.click();assert.equal(input.value,'20');assert.equal(calls.length,0);assert.equal(paints,1);
+tick();assert.equal(calls.length,1);assert.equal(calls[0].afterIqamaSilent.minutes.fajr,20);
+for(let i=0;i<200;i++)plus.h.click();assert.equal(input.value,'120');
+for(let i=0;i<200;i++)minus.h.click();assert.equal(input.value,'0');
+events.pagehide();assert.equal(calls.at(-1).afterIqamaSilent.minutes.fajr,0);assert.equal(pending.size,0);
+toggle.checked=false;toggle.h.change();assert.ok(times.hidden);assert.equal(calls.at(-1).afterIqamaSilent.enabled,false);
+input.value='٢٥';input.h.change();doc.hidden=true;events.visibilitychange();assert.equal(input.value,'25');assert.equal(calls.at(-1).afterIqamaSilent.minutes.fajr,25);
+input.value='999';input.h.change();assert.equal(input.value,'25');assert.equal(paints,1);
+assert.ok(source.includes('width:36px!important'));console.log('PASS: immediate compact steppers, no keyboard focus, bounded/manual input, coalesced native writes and lifecycle save');

@@ -16,10 +16,11 @@ jobs:
           python3 security/check-no-private-keys.py
           python3 security/check-sacred-content.py
           node --check android-native/apk-overrides/native-quiet-menu.js
+          node tests/main-b155-quiet-controls.test.cjs
           python3 - <<'PY'
           import subprocess
           changed=subprocess.check_output(['git','diff','--name-only','3231033d5e1cfde50fe161a0ab2534167ec7fd47','HEAD'],text=True).splitlines()
-          assert set(changed)==set(["android-native/apk-overrides/native-quiet-menu.js","android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt","android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt","android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt","android-native/app/src/main/java/com/aoqat/calendar/AtAdhanQuiet.kt","android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt","android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt","android-native/app/build.gradle",".github/workflows/main-b155-quiet-review.yml"]),changed
+          assert set(changed)==set(["android-native/apk-overrides/native-quiet-menu.js","android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt","android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt","android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt","android-native/app/src/main/java/com/aoqat/calendar/AtAdhanQuiet.kt","android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt","android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt","android-native/app/build.gradle",".github/workflows/main-b155-quiet-review.yml","android-native/prepare-production-b153.py","tests/main-b155-quiet-controls.test.cjs"]),changed
           from pathlib import Path
           s=Path('android-native/apk-overrides/native-quiet-menu.js').read_text()
           assert '.focus(' not in s
@@ -31,6 +32,19 @@ jobs:
         with: {gradle-version: '8.9'}
       - name: Run all native main tests and assemble
         run: gradle -p android-native --no-daemon :app:testDebugUnitTest :app:assembleRelease
+      - name: Verify actual bundled APK contains quiet fix
+        run: |
+          python3 - <<'PY'
+          import zipfile
+          from pathlib import Path
+          apk=Path('android-native/app/build/outputs/apk/release/app-release-unsigned.apk')
+          fix=Path('android-native/apk-overrides/native-quiet-menu.js').read_text().strip()
+          with zipfile.ZipFile(apk) as z:
+              bundle=z.read('assets/www/js/apk-startup-bundle.js').decode()
+              standalone=z.read('assets/www/js/native-quiet-menu.js').decode()
+              assert bundle.count(fix)==1 and standalone.strip()==fix
+              assert 'النسخة الرئيسية 2.13.4 (بناء 155)' in bundle
+          PY
       - name: Prepare APK SHA256
         run: |
           cd android-native/app/build/outputs/apk/release

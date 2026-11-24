@@ -31,7 +31,7 @@ WELCOME_TIMER_RELEASE='if(!window.AndroidNative?.configureAdhan||pilotPrivacyWel
 OLD_KEY='pilotPrivacyWelcomeSeenV1'
 NEW_KEY='aoqatPrivacyWelcomeSeenV1'
 PILOT_ABOUT='أوقات الصلاة في الحويجة وضواحيها · التجريبي 2.12 (بناء 150)'
-PRODUCTION_ABOUT='أوقات الصلاة في الحويجة وضواحيها · النسخة الرئيسية 2.13.2 (بناء 153)'
+PRODUCTION_ABOUT='أوقات الصلاة في الحويجة وضواحيها · النسخة الرئيسية 2.13.4 (بناء 155)'
 PILOT_ABOUT_ACTION='النسخة التجريبية تستقبل تحديثات OTA الموقّعة تلقائياً عند اتصال التطبيق بالإنترنت.'
 PRODUCTION_ABOUT_ACTION='النسخة الرئيسية تستقبل تحديثات OTA الآمنة والموقّعة بعد اعتمادها ونشرها على القناة الرئيسية.'
 
@@ -106,6 +106,17 @@ def main():
     release={}
     for name,data in approved.items():
         release[name]=produce_release_ui(data) if name in ("js/web-menu-order.js","js/apk-startup-bundle.js") else data
+    # The signed source remains immutable. Replace only its exact quiet-menu
+    # component in the MAIN APK's standalone file AND the active startup bundle.
+    quiet_name="js/native-quiet-menu.js"
+    bundle_name="js/apk-startup-bundle.js"
+    original=approved[quiet_name].decode("utf-8").strip()
+    corrected=(ROOT/"android-native/apk-overrides/native-quiet-menu.js").read_text(encoding="utf-8").strip()
+    release[quiet_name]=(corrected+"\n").encode("utf-8")
+    bundle=release[bundle_name].decode("utf-8")
+    bundle=replace_one(bundle,original,corrected,"main-only quiet menu component")
+    release[bundle_name]=bundle.encode("utf-8")
+    assert "configureQuietSettings" in corrected and ".focus(" not in corrected
     assert release["index.html"]==approved["index.html"]
     assert release["js/web-menu-button-theme.js"]==approved["js/web-menu-button-theme.js"]
     for name in ("js/web-menu-order.js","js/apk-startup-bundle.js"):

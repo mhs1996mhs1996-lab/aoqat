@@ -15,22 +15,32 @@
     if(!s.afterIqamaSilent)s.afterIqamaSilent={enabled:false,minutes:{}};
     return s;
   }
-  let syncTimer;
-  function store(){
-    if(!state)return;
-    if(window.AndroidNative.configureQuietSettings){
-      // Persist the two quiet groups only. Native schedules on a worker.
-      window.AndroidNative.configureQuietSettings(JSON.stringify({
+  let syncTimer=null,dirty=false;
+  function flushSave(){
+    if(syncTimer!==null){clearTimeout(syncTimer);syncTimer=null;}
+    if(!state||!dirty)return;
+    dirty=false;
+    // Main B155 native bridge writes ONLY these groups and schedules off UI.
+    try{
+      const result=window.AndroidNative.configureQuietSettings(JSON.stringify({
         atAdhanSilent:state.atAdhanSilent,afterIqamaSilent:state.afterIqamaSilent
       }));
-    }else{
-      window.AndroidNative.configureAdhan(JSON.stringify(state));
+      if(result===false)throw Error('quiet save rejected');
+      window.aoqatNativeAdhanSettings?.(read());
+    }catch(_){
+      dirty=true;
+      const warning=panel?.querySelector('.aq-quiet-save-warning');
+      if(warning)warning.hidden=false;
     }
-    clearTimeout(syncTimer);
-    syncTimer=setTimeout(()=>{
-      try{window.aoqatNativeAdhanSettings?.(read());}catch(_){}
-    },300);
   }
+  function store(){
+    if(!state)return;
+    dirty=true;
+    if(syncTimer!==null)clearTimeout(syncTimer);
+    syncTimer=setTimeout(flushSave,120);
+  }
+  window.addEventListener('pagehide',flushSave);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)flushSave();});
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
   // WebView localizes number controls in Arabic. Text with a numeric keyboard
   // keeps ASCII digits on screen, without changing stored integer minutes.
@@ -90,19 +100,20 @@
   }
   function render(refresh=true){
     if(!panel)return;
-    if(refresh || !state)state=read();
+    if(refresh || !state){flushSave();if(!dirty)state=read();}
     panel.innerHTML='<h3 class="aq-quiet-title">🔕 تفعيل وضع الصامت</h3>'+
       section('atAdhanSilent','تفعيل وضع صامت عند الأذان',
         'يبدأ الصامت حسب وقت الأذان المسجّل بقاعدة البيانات، ويستمر للمدة المحددة. إذا كان صوت الأذان مفعّلاً يستمر صوت الأذان نفسه.',10)+
       section('afterIqamaSilent','تفعيل وضع صامت بعد الإقامة',
         'يبدأ فور وصول عدّاد باقي على الإقامة إلى الصفر، ويستمر للمدة المحددة لكل صلاة. صفر يعني تعطيل الصامت لتلك الصلاة.',0)+
-      (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
+      '<p class="aq-quiet-save-warning" hidden>تعذر حفظ إعدادات الصامت؛ أعد المحاولة.</p>'+ (permission()?'<p class="aq-quiet-ok">✓ صلاحية التحكم بوضع الصامت متاحة</p>':'<button type="button" class="aq-quiet-permission">منح صلاحية التحكم بوضع الصامت للهاتف</button><p class="aq-quiet-help">يتطلب تحويل الهاتف إلى صامت إذن أندرويد. إعداداتك محفوظة حتى قبل منح الإذن.</p>');
     // Detailed diagnostics remain available through native status APIs, but are not displayed in this simple settings page.
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
       const times=input.closest('.aq-quiet-card')?.querySelector('.aq-quiet-times');
       if(times)times.hidden=!input.checked;
       store();
+      flushSave();
     }));
     panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
       const group=state[input.dataset.quietKey];
@@ -167,6 +178,8 @@
       #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:44px!important;margin:2px 0!important;color:#234037!important}
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
+      #quietPanel .aq-quiet-save-warning{color:#a33!important;font-size:13px!important}
+      #quietPanel .aq-quiet-save-warning[hidden]{display:none!important}
       #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}
       /* Compact iqama list on phones without hiding any rows or user choices. */
       #webSubBody #iqamaPanel{box-sizing:border-box!important;width:100%!important;padding:10px 12px!important;margin:0!important;border-radius:12px!important;overflow:visible!important}

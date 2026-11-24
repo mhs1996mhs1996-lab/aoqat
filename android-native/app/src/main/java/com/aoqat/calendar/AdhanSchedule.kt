@@ -69,10 +69,11 @@ object AdhanSchedule {
         removeOnCancelPolicy=true
     }
     private var quietRefresh:java.util.concurrent.ScheduledFuture<*>?=null
+    private val quietSettingsLock=Any()
 
     // Immediate small preferences write, independent of the audio, widget,
     // Quran, network and reminder settings. Coalesce expensive alarm work.
-    @Synchronized fun configureQuiet(c:Context,json:String):Boolean? {
+    fun configureQuiet(c:Context,json:String):Boolean? = synchronized(quietSettingsLock) {
         val incoming=try{JSONObject(json)}catch(_:Exception){return null}
         val current=settings(c)
         var newlyEnabled=false
@@ -93,7 +94,7 @@ object AdhanSchedule {
             try { scheduleQuietOnly(app); reconcileQuiet(app) }
             catch(e:Exception){android.util.Log.e("IqamaQuiet","Quiet settings scheduling failed",e)}
         },180,java.util.concurrent.TimeUnit.MILLISECONDS)
-        return newlyEnabled
+        newlyEnabled
     }
 
     @Synchronized fun scheduleQuietOnly(c:Context) {
@@ -131,8 +132,10 @@ object AdhanSchedule {
         val s = try { JSONObject(json) } catch (_: Exception) { return }
         // Permission-dependent features must never appear enabled when Android refuses them.
         // Keep quiet-mode preferences saved even before the user grants the system permission.
-        if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).commit()
-        prefs(c).edit().putString("settings", s.toString()).commit()
+        synchronized(quietSettingsLock){
+            if (s.optBoolean("enabled") && !enabled(c)) prefs(c).edit().putLong("enabledAt",System.currentTimeMillis()).apply()
+            prefs(c).edit().putString("settings", s.toString()).apply()
+        }
         if (!s.optBoolean("enabled") || s.optJSONObject("modes")?.optString(AdhanPlaybackService.activePrayerId)=="silent") c.stopService(Intent(c, AdhanPlaybackService::class.java))
         if (s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")!=true && s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")!=true && s.optInt("afterSilent",0)==0) AdhanPlaybackService.restoreRinger(c)
         schedule(c)
