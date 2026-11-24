@@ -5,6 +5,7 @@ import org.json.JSONObject
 
 /** Uses saved prayer identity and iqama durations, never WebView countdown text. */
 object AfterIqamaQuiet {
+    @Suppress("UNUSED_PARAMETER")
     fun window(settings: JSONObject, prayerId: String, prayerAt: Long, iqamaMinutes: Int, elapsedMinutes: Int = 10): Pair<Long, Long>? {
         val quiet=settings.optJSONObject("afterIqamaSilent") ?: return null
         // This feature has its own switch. The adhan audio master switch only
@@ -13,8 +14,8 @@ object AfterIqamaQuiet {
         val duration=quiet.optJSONObject("minutes")?.optInt(prayerId,0)?.coerceIn(0,120) ?: 0
         if (duration==0 || prayerId !in PrayerTimes.ids || prayerAt<=0L) return null
         val start=prayerAt+iqamaMinutes.coerceIn(0,120)*60000L
-        // The silent window must never outlive the displayed "مضى على الإقامة".
-        return start to start+minOf(duration,elapsedMinutes.coerceIn(0,120))*60000L
+        // Display duration is not the user's silent duration.
+        return start to start+duration*60000L
     }
     /**
      * Independent confirmation from the notification countdown's exact zero point.
@@ -44,7 +45,12 @@ object AfterIqamaQuiet {
         }
         // Only change the ringtone, never substitute or overwrite the user's
         // scheduled Do Not Disturb policy (e.g. 23:20–07:00).
-        AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true)
+        val applied=AdhanPlaybackService.activateQuiet(c,times.second,times.first,preserveUserDnd=true,managedWindow=true)
+        // A transient OEM rejection must not silently drop an entire window.
+        // Retry against the same absolute end, never extend the user's time.
+        if(!applied && now+15000L<times.second)
+            AdhanSchedule.alarm(c,60590+PrayerTimes.ids.indexOf(prayerId),"IQAMA_QUIET",now+15000L,
+                PrayerTimes.Prayer(prayerId,prayerAt,false))
     }
 
     fun onCountdownComplete(c: Context, prayerAt: Long) {
@@ -56,13 +62,7 @@ object AfterIqamaQuiet {
             AdhanPlaybackService.restoreRingerIfExpired(c)
             return
         }
-        val saved=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
-        val deadline=saved.getLong("iqamaEnd",0L)
-        if(saved.getBoolean("changed",false) && deadline>0 &&
-            System.currentTimeMillis()>=deadline) {
-            AdhanPlaybackService.restoreRinger(c)
-        } else {
-            AdhanPlaybackService.restoreRingerIfExpired(c)
-        }
+        // A display-only completion must not restore sound early.
+        AdhanPlaybackService.restoreRingerIfExpired(c)
     }
 }

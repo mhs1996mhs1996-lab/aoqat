@@ -96,7 +96,7 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             }
             return am.ringerMode==target && nm.currentInterruptionFilter==before
         }
-        @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L, preserveUserDnd:Boolean=false): Boolean {
+        @Synchronized fun activateQuiet(c: Context, end: Long, scheduledStart:Long=0L, preserveUserDnd:Boolean=false, managedWindow:Boolean=false): Boolean {
             val nm=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if(!nm.isNotificationPolicyAccessGranted) {
                 auditQuiet(c,"permission_missing",scheduledStart,end)
@@ -114,14 +114,9 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             val already=p.getBoolean("changed",false)
             val ringerBefore=am.ringerMode
             val filterBefore=nm.currentInterruptionFilter
-            // Elapsed iqama countdown is a hard cap even if other quiet modes overlap.
-            val iqamaCap=p.getLong("iqamaEnd",0L).takeIf{it>System.currentTimeMillis()}
-            val until=when {
-                preserveUserDnd -> end
-                already && iqamaCap!=null -> minOf(maxOf(end,p.getLong("end",0L)),iqamaCap)
-                already -> maxOf(end,p.getLong("end",0L))
-                else -> end
-            }
+            // Overlapping selected quiet windows form a union, not a cap
+            // derived from a notification's visual lifetime.
+            val until=if(already)maxOf(end,p.getLong("end",0L)) else end
             if (until<=System.currentTimeMillis()) {
                 auditQuiet(c,"expired",scheduledStart,end)
                 return false
@@ -144,7 +139,11 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                     return false
                 }
                 p.edit().putLong("end",until)
-                    .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
+                    .apply {
+                    if(preserveUserDnd)putLong("iqamaEnd",end)
+                    if(managedWindow && (!already || p.getBoolean("managedWindow",false)))putBoolean("managedWindow",true)
+                    if(!managedWindow)putBoolean("managedWindow",false)
+                }.commit()
                 auditQuiet(c,"active",scheduledStart,until)
                 return true
             }
@@ -158,14 +157,21 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                 android.util.Log.e("IqamaQuiet","Unable to schedule ringer restoration",e)
                 return false
             }
-            val silentApplied=switchRingerPreservingDnd(
+            var silentApplied=switchRingerPreservingDnd(
                 am,nm,AudioManager.RINGER_MODE_SILENT)
+            if(!silentApplied && preserveUserDnd) {
+                // On OEMs that tie ringer SILENT to DND, restoring the filter
+                // immediately can undo SILENT. Request the actual ringer mode
+                // once more and track only the Android-induced change.
+                try{am.ringerMode=AudioManager.RINGER_MODE_SILENT}catch(_:Exception){}
+                silentApplied=am.ringerMode==AudioManager.RINGER_MODE_SILENT
+            }
             var dndApplied=p.getBoolean("dndApplied",false)
             // Some OEMs turn on DND as a side effect of changing ringer mode.
             // Record this as OUR change so the exact previous DND policy is restored.
             if(nm.currentInterruptionFilter==NotificationManager.INTERRUPTION_FILTER_NONE &&
                 oldFilter!=NotificationManager.INTERRUPTION_FILTER_NONE) dndApplied=true
-            if(!silentApplied) {
+            if(!silentApplied && !preserveUserDnd) {
                 // OEMs may refuse setting RINGER_MODE_SILENT under scheduled DND.
                 // A user-enabled quiet window must still silence notifications.
                 // Use DND-NONE only as a last resort and remember the original
@@ -179,8 +185,8 @@ class AdhanPlaybackService : Service(), SensorEventListener {
                     android.util.Log.w("IqamaQuiet","Android rejected the quiet-mode fallback",e)
                 }
             }
-            if(!silentApplied && !dndApplied &&
-                nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_NONE) {
+            if(!silentApplied && (preserveUserDnd || (!dndApplied &&
+                nm.currentInterruptionFilter!=NotificationManager.INTERRUPTION_FILTER_NONE))) {
                 auditQuiet(c,"failed",scheduledStart,end)
                 android.util.Log.e("IqamaQuiet","Unable to silence ringer or safely control DND")
                 return false
@@ -188,9 +194,27 @@ class AdhanPlaybackService : Service(), SensorEventListener {
             p.edit().putBoolean("changed",true).putInt("previous",prior)
                 .putBoolean("dndApplied",dndApplied).putInt("previousFilter",oldFilter)
                 .putLong("end",until)
-                .apply { if(preserveUserDnd)putLong("iqamaEnd",end) }.commit()
+                .apply {
+                    if(preserveUserDnd)putLong("iqamaEnd",end)
+                    if(managedWindow && (!already || p.getBoolean("managedWindow",false)))putBoolean("managedWindow",true)
+                    if(!managedWindow)putBoolean("managedWindow",false)
+                }.commit()
             auditQuiet(c,"applied",scheduledStart,until)
             return true
+        }
+        @Synchronized fun reconcileManagedQuiet(c:Context,end:Long?) {
+            val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)
+            if(!p.getBoolean("changed",false)||!p.getBoolean("managedWindow",false))return
+            if(end==null || end<=System.currentTimeMillis()){
+                restoreRinger(c)
+            }else{
+                // User edited the duration while this app owns the quiet mode.
+                // A shorter duration replaces, rather than extends, its alarm.
+                try{
+                    AdhanSchedule.alarm(c,60403,"RESTORE_SOUND",end)
+                    p.edit().putLong("end",end).commit()
+                }catch(e:Exception){android.util.Log.e("IqamaQuiet","Unable to update quiet end",e)}
+            }
         }
         @Synchronized fun restoreRinger(c: Context) {
             val p=c.getSharedPreferences("adhan_ringer",Context.MODE_PRIVATE)

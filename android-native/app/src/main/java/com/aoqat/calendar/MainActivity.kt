@@ -899,6 +899,11 @@ class MainActivity : Activity() {
         @JavascriptInterface fun stopPrayerAlarm(){stopService(Intent(this@MainActivity,PrayerAlarmService::class.java))}
         @JavascriptInterface fun choosePrayerAlarmTone(id:String,system:Boolean){runOnUiThread{if(id in PrayerAlarm.ids){prayerAlarmToneId=id;val pick=if(system)Intent(android.media.RingtoneManager.ACTION_RINGTONE_PICKER).putExtra(android.media.RingtoneManager.EXTRA_RINGTONE_TYPE,android.media.RingtoneManager.TYPE_ALARM) else Intent(Intent.ACTION_OPEN_DOCUMENT).apply{type="audio/*";addCategory(Intent.CATEGORY_OPENABLE)};startActivityForResult(pick,if(system)8202 else 8201)}}}
         @JavascriptInterface fun readAdhanSettings(): String = AdhanSchedule.settings(this@MainActivity).toString()
+        @JavascriptInterface fun configureQuietSettings(json:String):Boolean {
+            val newlyEnabled=AdhanSchedule.configureQuiet(this@MainActivity,json) ?: return false
+            if(newlyEnabled) runOnUiThread { requestExactAlarmAccessIfNeeded() }
+            return true
+        }
         @JavascriptInterface fun configureAdhan(json: String) { runOnUiThread {
             try {
                 val settings=org.json.JSONObject(json)

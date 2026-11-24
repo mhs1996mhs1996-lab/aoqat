@@ -65,6 +65,68 @@ object AdhanSchedule {
             PrayerTimes.Prayer(id,at,id=="dhuhr"&&LocalDate.now().dayOfWeek==DayOfWeek.FRIDAY))
     }
     fun enabled(c: Context) = settings(c).optBoolean("enabled", false)
+    private val quietWorker=java.util.concurrent.ScheduledThreadPoolExecutor(1).apply {
+        removeOnCancelPolicy=true
+    }
+    private var quietRefresh:java.util.concurrent.ScheduledFuture<*>?=null
+
+    // Immediate small preferences write, independent of the audio, widget,
+    // Quran, network and reminder settings. Coalesce expensive alarm work.
+    @Synchronized fun configureQuiet(c:Context,json:String):Boolean? {
+        val incoming=try{JSONObject(json)}catch(_:Exception){return null}
+        val current=settings(c)
+        var newlyEnabled=false
+        for(key in listOf("atAdhanSilent","afterIqamaSilent")){
+            val group=incoming.optJSONObject(key)?:return null
+            val minutes=group.optJSONObject("minutes")?:return null
+            val old=current.optJSONObject(key)
+            val enabled=group.optBoolean("enabled")
+            newlyEnabled=newlyEnabled || (enabled && old?.optBoolean("enabled")!=true)
+            val clean=JSONObject()
+            for(id in PrayerTimes.ids)clean.put(id,minutes.optInt(id,if(key=="atAdhanSilent")10 else 0).coerceIn(0,120))
+            current.put(key,JSONObject().put("enabled",enabled).put("minutes",clean))
+        }
+        prefs(c).edit().putString("settings",current.toString()).apply()
+        val app=c.applicationContext
+        quietRefresh?.cancel(false)
+        quietRefresh=quietWorker.schedule({
+            try { scheduleQuietOnly(app); reconcileQuiet(app) }
+            catch(e:Exception){android.util.Log.e("IqamaQuiet","Quiet settings scheduling failed",e)}
+        },180,java.util.concurrent.TimeUnit.MILLISECONDS)
+        return newlyEnabled
+    }
+
+    @Synchronized fun scheduleQuietOnly(c:Context) {
+        val s=settings(c);val now=System.currentTimeMillis()
+        val wanted=mutableSetOf<Pair<Int,String>>()
+        fun queue(slot:Int,action:String,at:Long,p:PrayerTimes.Prayer){
+            wanted.add(slot to action);alarm(c,slot,action,at,p)
+        }
+        for((i,p) in PrayerTimes.events(c).withIndex())if(i<40&&!FridaySchedule.suppress(c,p.id,p.at)){
+            AtAdhanQuiet.window(s,p.id,p.at)?.let{(start,end)->
+                if(end>now)queue(60700+i,"ADHAN_QUIET",maxOf(start,now+100L),p)
+            }
+            AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes)?.let{(start,end)->
+                if(end>now)queue(60500+i,"IQAMA_QUIET",maxOf(start,now+100L),p)
+            }
+        }
+        for(i in 0..39)for((slot,action) in listOf(60700+i to "ADHAN_QUIET",60500+i to "IQAMA_QUIET"))
+            if((slot to action) !in wanted)cancel(c,slot,action)
+        if(s.optJSONObject("atAdhanSilent")?.optBoolean("enabled")==true ||
+            s.optJSONObject("afterIqamaSilent")?.optBoolean("enabled")==true)
+            alarm(c,60301,"REFRESH",LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli())
+    }
+
+    private fun reconcileQuiet(c:Context){
+        val now=System.currentTimeMillis();val s=settings(c)
+        val windows=PrayerTimes.events(c,LocalDate.now().minusDays(1)).flatMap{p->
+            if(FridaySchedule.suppress(c,p.id,p.at))emptyList()
+            else listOfNotNull(AtAdhanQuiet.window(s,p.id,p.at),
+                AfterIqamaQuiet.window(s,p.id,p.at,IqamaNativeScheduler.durations(c,p.id).beforeMinutes))
+        }.filter{now in it.first until it.second}
+        val end=windows.maxOfOrNull{it.second}
+        AdhanPlaybackService.reconcileManagedQuiet(c,end)
+    }
     fun configure(c: Context, json: String) {
         val s = try { JSONObject(json) } catch (_: Exception) { return }
         // Permission-dependent features must never appear enabled when Android refuses them.

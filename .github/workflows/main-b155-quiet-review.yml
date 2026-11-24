@@ -1,0 +1,44 @@
+name: Main B155 isolated quiet controls and deadline QA
+on:
+  push:
+    branches: [fix/main-b155-quiet-native-controls-20261124]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Check exact scope and protect sacred content
+        run: |
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          node --check android-native/apk-overrides/native-quiet-menu.js
+          python3 - <<'PY'
+          import subprocess
+          changed=subprocess.check_output(['git','diff','--name-only','3231033d5e1cfde50fe161a0ab2534167ec7fd47','HEAD'],text=True).splitlines()
+          assert set(changed)==set(["android-native/apk-overrides/native-quiet-menu.js","android-native/app/src/main/java/com/aoqat/calendar/MainActivity.kt","android-native/app/src/main/java/com/aoqat/calendar/AdhanSchedule.kt","android-native/app/src/main/java/com/aoqat/calendar/AfterIqamaQuiet.kt","android-native/app/src/main/java/com/aoqat/calendar/AtAdhanQuiet.kt","android-native/app/src/main/java/com/aoqat/calendar/AdhanPlaybackService.kt","android-native/app/src/test/java/com/aoqat/calendar/AfterIqamaQuietTest.kt","android-native/app/build.gradle",".github/workflows/main-b155-quiet-review.yml"]),changed
+          from pathlib import Path
+          s=Path('android-native/apk-overrides/native-quiet-menu.js').read_text()
+          assert '.focus(' not in s
+          assert 'configureQuietSettings' in s and 'input.value=String(group.minutes[id])' in s
+          PY
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Run all native main tests and assemble
+        run: gradle -p android-native --no-daemon :app:testDebugUnitTest :app:assembleRelease
+      - name: Prepare APK SHA256
+        run: |
+          cd android-native/app/build/outputs/apk/release
+          sha256sum app-release-unsigned.apk > app-release-unsigned.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-main-b155-unsigned-review
+          path: |
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk
+            android-native/app/build/outputs/apk/release/app-release-unsigned.apk.sha256
+          if-no-files-found: error

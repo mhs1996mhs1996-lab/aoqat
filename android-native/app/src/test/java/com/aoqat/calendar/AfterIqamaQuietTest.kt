@@ -21,12 +21,12 @@ class AfterIqamaQuietTest {
         assertEquals(2500000L,times.first);assertEquals(2920000L,times.second)
         assertNull(AfterIqamaQuiet.window(settings(),"maghrib",1000000L,10))
     }
-    @Test fun silentCannotOutliveElapsedIqamaCounter() {
+    @Test fun silentDurationIsIndependentOfElapsedIqamaCounter() {
         val s=JSONObject("""{"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":30}}}""")
         val start=1000000L
         val win=AfterIqamaQuiet.window(s,"maghrib",start,10,5)!!
         assertEquals(start+10*60000L,win.first)
-        assertEquals("Elapsed counter ends five minutes after iqama",start+15*60000L,win.second)
+        assertEquals("User selected thirty minutes after iqama",start+40*60000L,win.second)
     }
     @Test fun quietSwitchIsIndependentOfAdhanAudioMaster() {
         val s=settings().put("enabled",false)
@@ -36,13 +36,13 @@ class AfterIqamaQuietTest {
         s.getJSONObject("afterIqamaSilent").put("enabled",false)
         assertNull(AfterIqamaQuiet.window(s,"asr",1000000L,25))
     }
-    @Test fun enabledToggleUsesSavedDurationsAndStopsExactlyAtElapsedCounter() {
+    @Test fun enabledToggleUsesIndependentSavedDuration() {
         val saved=JSONObject("""{"enabled":false,"afterIqamaSilent":{"enabled":true,"minutes":{"maghrib":13}}}""")
         val at=2_000_000L
         val win=AfterIqamaQuiet.window(saved,"maghrib",at,5,12)!!
         assertEquals(at+5*60_000L,win.first)
-        assertEquals(at+17*60_000L,win.second)
-        // A longer silent duration can never outlive the displayed 'مضى'.
+        assertEquals(at+18*60_000L,win.second)
+        // The display duration does not shorten the selected quiet period.
         saved.getJSONObject("afterIqamaSilent").put("enabled",false)
         assertNull(AfterIqamaQuiet.window(saved,"maghrib",at,5,12))
     }

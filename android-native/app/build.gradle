@@ -35,8 +35,8 @@ android {
         applicationId 'com.aoqat.calendar'
         minSdk 26
         targetSdk 34
-        versionCode 154 // Exact approved bitmap palette; isolated production candidate
-        versionName '2.13.3'
+        versionCode 155 // Main-only quiet settings and native deadline correction
+        versionName '2.13.4'
     }
 
     buildFeatures { buildConfig true }

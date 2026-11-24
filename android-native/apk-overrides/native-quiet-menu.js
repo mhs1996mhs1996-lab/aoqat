@@ -15,10 +15,21 @@
     if(!s.afterIqamaSilent)s.afterIqamaSilent={enabled:false,minutes:{}};
     return s;
   }
+  let syncTimer;
   function store(){
     if(!state)return;
-    window.AndroidNative.configureAdhan(JSON.stringify(state));
-    try{window.aoqatNativeAdhanSettings?.(state);}catch(_){}
+    if(window.AndroidNative.configureQuietSettings){
+      // Persist the two quiet groups only. Native schedules on a worker.
+      window.AndroidNative.configureQuietSettings(JSON.stringify({
+        atAdhanSilent:state.atAdhanSilent,afterIqamaSilent:state.afterIqamaSilent
+      }));
+    }else{
+      window.AndroidNative.configureAdhan(JSON.stringify(state));
+    }
+    clearTimeout(syncTimer);
+    syncTimer=setTimeout(()=>{
+      try{window.aoqatNativeAdhanSettings?.(read());}catch(_){}
+    },300);
   }
   const num=(n,fallback=0)=>Number.isFinite(Number(n))?Math.max(0,Math.min(120,Math.floor(Number(n)))):fallback;
   // WebView localizes number controls in Arabic. Text with a numeric keyboard
@@ -89,7 +100,9 @@
     // Detailed diagnostics remain available through native status APIs, but are not displayed in this simple settings page.
     panel.querySelectorAll('[data-quiet-enabled]').forEach(input=>input.addEventListener('change',()=>{
       state[input.dataset.quietEnabled].enabled=input.checked;
-      store();render(false);
+      const times=input.closest('.aq-quiet-card')?.querySelector('.aq-quiet-times');
+      if(times)times.hidden=!input.checked;
+      store();
     }));
     panel.querySelectorAll('input[data-quiet-prayer]').forEach(input=>input.addEventListener('change',()=>{
       const group=state[input.dataset.quietKey];
@@ -98,14 +111,23 @@
         input.value=String(num(group.minutes[input.dataset.quietPrayer]));return;
       }
       group.minutes[input.dataset.quietPrayer]=num(entered);
-      store();render(false);
+      input.value=String(group.minutes[input.dataset.quietPrayer]);
+      store();
     }));
-    panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>button.addEventListener('click',()=>{
-      const group=state[button.dataset.quietKey],id=button.dataset.quietPrayer;
-      group.minutes[id]=num(num(group.minutes[id])+Number(button.dataset.quietAdjust));
-      store();render(false);
-      panel.querySelector('input[data-quiet-key="'+button.dataset.quietKey+'"][data-quiet-prayer="'+id+'"]')?.focus({preventScroll:true});
-    }));
+    panel.querySelectorAll('[data-quiet-adjust]').forEach(button=>{
+      // Prevent tapping the button from focusing the adjacent editable field.
+      button.addEventListener('pointerdown',event=>event.preventDefault());
+      button.addEventListener('mousedown',event=>event.preventDefault());
+      button.addEventListener('click',()=>{
+        const group=state[button.dataset.quietKey],id=button.dataset.quietPrayer;
+        const input=button.parentElement.querySelector('input');
+        const active=document.activeElement;
+        if(active?.matches('input[data-quiet-prayer]'))active.blur();
+        group.minutes[id]=num(num(group.minutes[id])+Number(button.dataset.quietAdjust));
+        input.value=String(group.minutes[id]);
+        store();
+      });
+    });
     panel.querySelector('.aq-quiet-permission')?.addEventListener('click',()=>window.AndroidNative.requestQuietPolicyAccess?.());
   }
   function create(){
@@ -130,9 +152,9 @@
       #quietPanel .aq-quiet-times{display:grid!important;grid-template-columns:1fr!important;gap:5px!important}
       #quietPanel .aq-quiet-times[hidden]{display:none!important}
       #quietPanel .aq-quiet-caption{font-size:13px!important;margin:10px 0 5px!important;color:var(--wt-text,#355442)!important}
-      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:8px!important;direction:ltr!important;flex:0 0 auto!important;padding:5px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:13px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 4px #1d533b22!important}
-      #quietPanel .aq-quiet-stepper button{width:43px!important;height:45px!important;min-height:45px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:27px!important}
-      #quietPanel .aq-quiet-stepper input{width:52px!important;height:45px!important;min-height:45px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:23px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
+      #quietPanel .aq-quiet-stepper{display:flex!important;align-items:center!important;gap:3px!important;direction:ltr!important;flex:0 0 auto!important;padding:3px!important;border:1px solid var(--wt-border,#a9c5b6)!important;border-radius:13px!important;background:var(--wt-surface2,#edf3ef)!important;box-shadow:0 1px 4px #1d533b22!important}
+      #quietPanel .aq-quiet-stepper button{width:36px!important;height:36px!important;min-height:36px!important;border:1px solid var(--wt-border,#b8c9c3)!important;border-radius:8px!important;background:linear-gradient(135deg,#194a30,#4e916b)!important;color:white!important;padding:0!important;font-size:21px!important}
+      #quietPanel .aq-quiet-stepper input{width:38px!important;height:36px!important;min-height:36px!important;border:0!important;border-radius:7px!important;text-align:center!important;background:transparent!important;color:var(--wt-text,#234037)!important;font-size:19px!important;font-weight:700!important;padding:0!important;appearance:textfield!important}
       #quietPanel .aq-quiet-stepper input::-webkit-inner-spin-button{appearance:none!important}
       #quietPanel .aq-quiet-stepper input{font-family:Arial,Roboto,sans-serif!important;font-variant-numeric:lining-nums!important;unicode-bidi:isolate!important}
       #quietPanel .aq-quiet-stepper small{font-size:12px!important;white-space:nowrap!important;color:var(--wt-text,#234037)!important}
@@ -142,7 +164,7 @@
       #quietPanel .aq-quiet-card{background:var(--wt-surface,#fbfdf9)!important;border-color:var(--wt-border,#c4d5c7)!important}
       #quietPanel{background:var(--wt-surface,#fffefb)!important;color:var(--wt-text,#234037)!important;border-color:var(--wt-border,#cad7c8)!important}
 
-      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:63px!important;margin:4px 0!important;color:#234037!important}
+      #quietPanel .aq-quiet-minute{display:flex!important;justify-content:space-between!important;align-items:center!important;gap:10px!important;padding:2px 0!important;font-size:16px!important;min-height:44px!important;margin:2px 0!important;color:#234037!important}
       #quietPanel .aq-quiet-minute select{width:132px!important;max-width:48%!important;min-height:36px!important;height:38px!important;padding:5px!important;border:1px solid #b8c9c3!important;border-radius:8px!important;background:#f3f7f5!important;color:#193c38!important;text-align:right!important;font-size:15px!important}
       #quietPanel .aq-quiet-permission{display:block!important;width:100%!important;min-height:44px!important;margin:10px 0!important;padding:9px!important;border-radius:9px!important;background:#287b54!important;color:#fff!important;border:0!important}
       #quietPanel .aq-quiet-ok{color:#14744c!important;text-align:right!important;font-size:14px!important}\n      #quietPanel .aq-quiet-diagnostics{background:#f4f7f2!important;border:1px solid #b5cbbb!important;border-radius:10px!important;padding:10px!important;margin:14px 0 4px!important;color:#204533!important;font-size:13px!important;line-height:1.65!important}#quietPanel .aq-quiet-diagnostics p{margin:4px 0!important}

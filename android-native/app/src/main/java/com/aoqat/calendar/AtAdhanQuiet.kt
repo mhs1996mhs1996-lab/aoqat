@@ -36,7 +36,7 @@ object AtAdhanQuiet {
                 "ADHAN_QUIET",now+15000L,PrayerTimes.Prayer(prayerId,prayerAt,false))
             return
         }
-        AdhanPlaybackService.activateQuiet(c,end,begin)
+        AdhanPlaybackService.activateQuiet(c,end,begin,managedWindow=true)
     }
 
     fun ownsActiveRinger(c: Context, prayerId: String, prayerAt: Long): Boolean {
