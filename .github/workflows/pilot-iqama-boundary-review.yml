@@ -1,0 +1,33 @@
+name: Pilot iqama zero and end isolated QA
+on:
+  push:
+    branches: [fix/pilot-iqama-boundary-review-20261124]
+    paths:
+      - android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt
+      - android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt
+      - android-native/app/src/test/java/com/aoqat/calendar/LockScreenBoundaryRetentionTest.kt
+      - .github/workflows/pilot-iqama-boundary-review.yml
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Verify only lock notification scheduling changed
+        run: |
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 - <<'PY'
+          import subprocess
+          changed=set(subprocess.check_output(['git','diff','--name-only','a306a89e923f6975d0bcd2ef347a1765e58575ea','HEAD'],text=True).splitlines())
+          assert changed=={'android-native/app/src/main/java/com/aoqat/calendar/PrayerWidget.kt','android-native/app/src/main/java/com/aoqat/calendar/LockScreenPrayer.kt','android-native/app/src/test/java/com/aoqat/calendar/LockScreenBoundaryRetentionTest.kt','.github/workflows/pilot-iqama-boundary-review.yml'},changed
+          PY
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Test iqama boundaries and compile pilot only
+        run: gradle -p android-native --no-daemon :app:testOwnerPilotUnitTest :app:assembleOwnerPilot

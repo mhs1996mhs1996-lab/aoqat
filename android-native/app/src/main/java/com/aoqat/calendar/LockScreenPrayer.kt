@@ -5,6 +5,8 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
@@ -53,8 +55,9 @@ object LockScreenPrayer {
         if(!enabled(c) || !notificationsAllowed(c))return false
         return try {
             val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.notify(LOCK_NOTIFICATION_ID,NextPrayerService.lockNotification(c))
-            LockScreenIqamaBoundaryReceiver.schedule(c)
+            val renderedAt=System.currentTimeMillis()
+            manager.notify(LOCK_NOTIFICATION_ID,NextPrayerService.lockNotification(c, now=renderedAt))
+            LockScreenIqamaBoundaryReceiver.schedule(c, renderedAt)
             true
         }catch(e:Exception){
             android.util.Log.w("LockScreenPrayer","Unable to post lock-screen notification",e)
@@ -100,8 +103,20 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
         private const val REQUEST=60533
         private const val DISMISS_REQUEST=60534
         private const val REPOST_REQUEST=60535
-        private fun pending(c:Context,flags:Int):PendingIntent?=
-            PendingIntent.getBroadcast(c,REQUEST,
+        private const val ACTIVE_REQUEST=60536
+        private const val BOUNDARY_KEY="armed_boundary_at_v2"
+        private val handler by lazy { Handler(Looper.getMainLooper()) }
+        private var refreshTask:Runnable?=null
+        private fun boundaryPrefs(c:Context)=
+            c.getSharedPreferences("lockscreen_prayer_v1",Context.MODE_PRIVATE)
+
+        // Never replace an overdue or earlier pending transition with a later
+        // one merely because another component recalculated the schedule.
+        internal fun earliestBoundary(planned:Long?,armed:Long):Long? =
+            listOfNotNull(planned,armed.takeIf{it>0L}).minOrNull()
+
+        private fun pending(c:Context,flags:Int,request:Int=REQUEST):PendingIntent?=
+            PendingIntent.getBroadcast(c,request,
                 Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(ACTION),
                 flags or PendingIntent.FLAG_IMMUTABLE)
         fun deleteIntent(c:Context):PendingIntent =
@@ -114,9 +129,13 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
                 Intent(c,LockScreenIqamaBoundaryReceiver::class.java).setAction(REPOST),
                 flags or PendingIntent.FLAG_IMMUTABLE)
 
-        private fun cancelBoundary(c:Context){
+        @Synchronized private fun cancelBoundary(c:Context){
             val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            pending(c,PendingIntent.FLAG_NO_CREATE)?.let { alarm.cancel(it);it.cancel() }
+            for(request in listOf(REQUEST,ACTIVE_REQUEST))
+                pending(c,PendingIntent.FLAG_NO_CREATE,request)?.let { alarm.cancel(it);it.cancel() }
+            refreshTask?.let { handler.removeCallbacks(it) }
+            refreshTask=null
+            boundaryPrefs(c).edit().remove(BOUNDARY_KEY).apply()
         }
         fun cancel(c:Context){
             cancelBoundary(c)
@@ -146,48 +165,71 @@ class LockScreenIqamaBoundaryReceiver:BroadcastReceiver() {
                 alarm.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
             else alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
         }
-        fun schedule(c:Context){
-            // Do not cancel a pending post-swipe restoration when refreshing
-            // a prayer/iqama boundary; only cancel it if user opts out.
-            cancelBoundary(c)
-            if(!LockScreenPrayer.enabled(c) && !usesPilotPersistentCard(c))return
-            val now=System.currentTimeMillis()
-            // Schedule prayer start even when the WebView and service are closed.
-            // On the owner-pilot device recheck the persisted opt-in card even
-            // if Android/OEM terminated the app process. No WebView launch.
-            // Normal prayer/Friday/iqama alarms still refresh at their actual
-            // transition times and can fire sooner than this safety refresh.
-            val phase=LockScreenSupplement.nextRefreshAt(c,now)
-            val safety=if(BuildConfig.OWNER_PILOT_ENABLED) now+10*60_000L else null
-            // The blue adhan artwork is time-limited; restore the orange
-            // waiting artwork at the end of that exact display window.
+        @Synchronized fun schedule(c:Context,renderedAt:Long=System.currentTimeMillis()){
+            if(!LockScreenPrayer.enabled(c) && !usesPilotPersistentCard(c)){
+                cancelBoundary(c)
+                return
+            }
+            // Use the same timestamp as the rendered card when available.
+            // A notification rendered just before zero must not lose its
+            // zero transition if AlarmManager is armed just after zero.
+            val phase=LockScreenSupplement.nextRefreshAt(c,renderedAt)
+            val safety=if(BuildConfig.OWNER_PILOT_ENABLED) renderedAt+10*60_000L else null
             val adhanIconEnd=if(BuildConfig.OWNER_PILOT_ENABLED)
                 PrayerTimes.events(c,java.time.LocalDate.now().minusDays(1))
                     .asSequence().map { it.at+90_000L }
-                    .filter { it>now && it<=now+90_000L }.minOrNull()
+                    .filter { it>renderedAt && it<=renderedAt+90_000L }.minOrNull()
                 else null
-            val boundary=listOfNotNull(phase,safety,adhanIconEnd).minOrNull()?:return
-            val delay=boundary-now
-            if(delay<=0L)return
-            val pi=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
+            val planned=listOfNotNull(phase,safety,adhanIconEnd).minOrNull()
+            val armed=boundaryPrefs(c).getLong(BOUNDARY_KEY,0L)
+            val boundary=earliestBoundary(planned,armed)?:return
+            val now=System.currentTimeMillis()
+            val delay=(boundary-now).coerceAtLeast(1L)
+            val context=c.applicationContext
+
+            // A handler provides a live-process fallback. A separate regular
+            // exact alarm covers active-device delivery without the
+            // allow-while-idle quota. Keep the wakeup alarm for sleep/Doze.
+            refreshTask?.let { handler.removeCallbacks(it) }
+            val task=Runnable { refresh(context) }
+            refreshTask=task
+            handler.postDelayed(task,delay)
+            val existing=pending(c,PendingIntent.FLAG_NO_CREATE)
+            val existingActive=pending(c,PendingIntent.FLAG_NO_CREATE,ACTIVE_REQUEST)
+            if(armed==boundary && boundary>now && existing!=null && existingActive!=null)return
+
             val alarm=c.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val idle=pending(c,PendingIntent.FLAG_UPDATE_CURRENT)?:return
+            val active=pending(c,PendingIntent.FLAG_UPDATE_CURRENT,ACTIVE_REQUEST)?:return
             val at=SystemClock.elapsedRealtime()+delay
-            if(Build.VERSION.SDK_INT<Build.VERSION_CODES.S||alarm.canScheduleExactAlarms())
-                alarm.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
-            else alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,pi)
+            boundaryPrefs(c).edit().putLong(BOUNDARY_KEY,boundary).apply()
+            val exact=Build.VERSION.SDK_INT<Build.VERSION_CODES.S||alarm.canScheduleExactAlarms()
+            try {
+                if(exact) {
+                    alarm.setExact(AlarmManager.ELAPSED_REALTIME,at,active)
+                    alarm.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,idle)
+                } else {
+                    alarm.set(AlarmManager.ELAPSED_REALTIME,at,active)
+                    alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,idle)
+                }
+            } catch (_:SecurityException) {
+                // Permission may change between the check and scheduling.
+                alarm.set(AlarmManager.ELAPSED_REALTIME,at,active)
+                alarm.setAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP,at,idle)
+            }
+        }
+        private fun refresh(c:Context){
+            // All three delivery routes converge here; clear the consumed
+            // transition before rendering the current phase and arming its end.
+            cancelBoundary(c)
+            if(!LockScreenPrayer.notificationsAllowed(c))return
+            if(LockScreenPrayer.enabled(c)) LockScreenPrayer.showNow(c)
+            if(usesPilotPersistentCard(c)) NextPrayerService.start(c)
         }
     }
     override fun onReceive(c:Context,intent:Intent?){
         when(intent?.action){
-            ACTION,REPOST -> {
-                if(!LockScreenPrayer.notificationsAllowed(c))return
-                if(LockScreenPrayer.enabled(c)) LockScreenPrayer.showNow(c)
-                if(usesPilotPersistentCard(c)) {
-                    // Two separately opted-in cards retain their independent
-                    // notification IDs across phase changes and process restarts.
-                    NextPrayerService.start(c)
-                }
-            }
+            ACTION,REPOST -> refresh(c)
             DISMISSED -> scheduleAfterSwipe(c)
         }
     }

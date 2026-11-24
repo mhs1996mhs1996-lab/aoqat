@@ -268,9 +268,10 @@ class NextPrayerService:Service(){
                 // and AlarmManager, not WebView or an Activity.
                 if (!LockScreenPrayer.notificationsAllowed(c)) return
                 try {
+                    val renderedAt=System.currentTimeMillis()
                     (c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager)
-                        .notify(NOTIFICATION_ID,lockNotification(c,true))
-                    LockScreenIqamaBoundaryReceiver.schedule(c)
+                        .notify(NOTIFICATION_ID,lockNotification(c,true,renderedAt))
+                    LockScreenIqamaBoundaryReceiver.schedule(c,renderedAt)
                 } catch (e:Exception) {
                     android.util.Log.w("NextPrayer","Pilot notification post failed",e)
                 }
@@ -285,7 +286,7 @@ class NextPrayerService:Service(){
         }
         /** Android's native live countdown is readable on lock screens where
          * the owner allows public notification contents. No audio or wakeups. */
-        fun lockNotification(c:Context, persistent:Boolean=false):Notification {
+        fun lockNotification(c:Context, persistent:Boolean=false, now:Long=System.currentTimeMillis()):Notification {
             val manager=c.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(NotificationChannel(
                 LOCK_CHANNEL,"الصلاة القادمة على شاشة القفل",NotificationManager.IMPORTANCE_DEFAULT
@@ -296,7 +297,6 @@ class NextPrayerService:Service(){
                 lockscreenVisibility=Notification.VISIBILITY_PUBLIC
                 description="إشعار ثابت وصامت بمواقيت الصلاة وعدّاد رقمي متجدد"
             })
-            val now=System.currentTimeMillis()
             val next=PrayerTimes.events(c).firstOrNull{it.at>now}
             val prayerName=next?.let{PrayerTimes.names[it.id]}?:"الصلاة القادمة"
             val title=if(next!=null)"باقي على صلاة $prayerName" else "مواقيت الصلاة في الحويجة"
