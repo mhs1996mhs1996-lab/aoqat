@@ -1,0 +1,45 @@
+name: Pilot cloud pairing isolated QA
+on:
+  push:
+    branches: [fix/pilot-cloud-pairing-b150-20261125]
+permissions:
+  contents: read
+jobs:
+  qa:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with: {fetch-depth: 0}
+      - name: Verify scope
+        run: |
+          python3 security/check-no-private-keys.py
+          python3 security/check-sacred-content.py
+          python3 - <<'PY'
+          import subprocess,pathlib
+          assert set(subprocess.check_output(['git','diff','--name-only','6b7edb71b9b707330e139c018f3f0c67d9e78b4f','HEAD'],text=True).splitlines())==set(["android-native/app/src/main/java/com/aoqat/calendar/PilotCloud.kt","android-native/app/src/main/java/com/aoqat/calendar/OwnerPilotActivity.kt","android-native/app/build.gradle","android-native/app/src/main/java/com/aoqat/calendar/PilotPairing.kt","android-native/app/src/test/java/com/aoqat/calendar/PilotPairingTest.kt",".github/workflows/pilot-cloud-pairing-qa.yml"])
+          p=pathlib.Path('android-native/app/src/main/java/com/aoqat/calendar/PilotCloud.kt').read_text()
+          assert 'BuildConfig.OWNER_PILOT_ENABLED' in p and 'noBackupFilesDir' in p
+          assert 'AndroidKeyStore' in p and 'instanceFollowRedirects=false' in p
+          assert '/rest/v1/rpc/aoqat_pilot_report' in p and '/auth/v1/signup' not in p
+          assert 'trialConfirmed' in p and 'PilotPairing.id' in p
+          assert 'prayer_times' not in p and 'location' not in p.replace('or other personal data sent.','').replace('hardware ID, location, prayer','')
+          PY
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+        with: {gradle-version: '8.9'}
+      - name: Existing pilot notification tests
+        run: gradle -p android-native --no-daemon :app:testOwnerPilotUnitTest --tests 'com.aoqat.calendar.LockScreenBoundaryRetentionTest' --tests 'com.aoqat.calendar.LockScreenIqamaTest' --tests 'com.aoqat.calendar.PilotPairingTest'
+      - name: Build unsigned pilot only
+        run: |
+          gradle -p android-native --no-daemon :app:assembleOwnerPilot
+          mkdir -p output
+          cp android-native/app/build/outputs/apk/ownerPilot/*unsigned.apk output/aoqat-pilot-b150-cloud2-unsigned.apk
+          cd output
+          sha256sum aoqat-pilot-b150-cloud2-unsigned.apk > aoqat-pilot-b150-cloud2-unsigned.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aoqat-pilot-b150-cloud2-unsigned
+          path: output/
+          if-no-files-found: error

@@ -79,7 +79,7 @@ android {
         create('ownerPilot') {
             initWith(getByName('release'))
             applicationIdSuffix '.ownerpilot'
-            versionNameSuffix '-owner-test-cloud'
+            versionNameSuffix '-owner-test-cloud2'
             matchingFallbacks = ['release']
             buildConfigField 'boolean', 'OWNER_PILOT_ENABLED', 'true'
             signingConfig null

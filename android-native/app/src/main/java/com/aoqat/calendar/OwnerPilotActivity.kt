@@ -123,7 +123,7 @@ class OwnerPilotActivity : Activity() {
         }
         fun add(text:String,action:()->Unit){box.addView(Button(this).apply{this.text=text;setOnClickListener{if(!busy)action()}})}
         add("عرض حالة المشاركة"){runTask{PilotCloud.status(this,it)}}
-        add("تفعيل مشاركة الإحصائيات"){android.app.AlertDialog.Builder(this).setTitle("مشاركة اختيارية").setMessage("يُرسل معرّف عشوائي للتسجيل، رقم البناء، وتسلسل وحالة OTA فقط إلى خدمة الإدارة. لا يُرسل اسم أو موقع أو بيانات الصلاة. يمكنك الإيقاف وحذف التقرير. يحتاج اعتماد المالك.").setNegativeButton("إلغاء",null).setPositiveButton("موافق"){_,_->runTask{PilotCloud.register(this,it)}}.show()}
+        add("تفعيل مشاركة الإحصائيات"){android.app.AlertDialog.Builder(this).setTitle("مشاركة اختيارية").setMessage("يُنشأ معرّف مشاركة عشوائي محلياً. بعد اعتماد المالك، يُرسل إثبات الجهاز ورقم البناء وتسلسل وحالة OTA فقط إلى خدمة الإدارة. لا يُرسل اسم أو موقع أو بيانات الصلاة. يمكنك الإيقاف وحذف التقرير. يحتاج اعتماد المالك.").setNegativeButton("إلغاء",null).setPositiveButton("موافق"){_,_->runTask{PilotCloud.register(this,it)}}.show()}
         add("إرسال تقرير الآن"){runTask{PilotCloud.send(this,it)}}
         add("إيقاف المشاركة وحذف التقرير"){runTask{PilotCloud.stop(this,it)}}
         add("عرض المحتوى المعتمد للتجريبية"){runTask{PilotCloud.preview(this,it)}}
