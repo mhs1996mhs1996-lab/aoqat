@@ -421,6 +421,7 @@ class MainActivity : Activity() {
         // Recheck at each foreground entry, subject to the five-minute throttle.
         if (::webUpdates.isInitialized) webUpdates.check()
         if (BuildConfig.OWNER_PILOT_ENABLED) {
+            PilotCloud.maybeSend(this)
             ownerPilotOtaHandler.removeCallbacks(ownerPilotOtaPoll)
             ownerPilotOtaHandler.postDelayed(ownerPilotOtaPoll, WebUpdates.MIN_CHECK_INTERVAL_MS)
         }

@@ -103,13 +103,33 @@ class OwnerPilotActivity : Activity() {
         }
         select.visibility = View.GONE
         status.visibility = View.GONE
-        listOf(title, pilotState, inspect, reopen, advanced, select, status).forEach {
+        val cloud=Button(this).apply { text="اختبار الإدارة السحابية";setOnClickListener{openCloud()} }
+        listOf(title, pilotState, inspect, reopen, cloud, advanced, select, status).forEach {
             layout.addView(it, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
         scroll.addView(layout, android.widget.FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         setContentView(scroll)
+    }
+
+    private fun openCloud(){
+        val box=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setPadding(dp(12),dp(8),dp(12),dp(8));layoutDirection=View.LAYOUT_DIRECTION_RTL}
+        val result=TextView(this).apply{textSize=14f;setTextIsSelectable(true);setTextColor(ink);text="معاينة محتوى التجريبية وتقارير اختيارية."}
+        var busy=false
+        fun runTask(action:((String)->Unit)->Unit){
+            if(busy)return;busy=true;result.text="جارٍ الاتصال..."
+            action{message->runOnUiThread{busy=false;if(!isDestroyed&&!isFinishing)result.text=message}}
+        }
+        fun add(text:String,action:()->Unit){box.addView(Button(this).apply{this.text=text;setOnClickListener{if(!busy)action()}})}
+        add("عرض حالة المشاركة"){runTask{PilotCloud.status(this,it)}}
+        add("تفعيل مشاركة الإحصائيات"){android.app.AlertDialog.Builder(this).setTitle("مشاركة اختيارية").setMessage("يُرسل معرّف عشوائي للتسجيل، رقم البناء، وتسلسل وحالة OTA فقط إلى خدمة الإدارة. لا يُرسل اسم أو موقع أو بيانات الصلاة. يمكنك الإيقاف وحذف التقرير. يحتاج اعتماد المالك.").setNegativeButton("إلغاء",null).setPositiveButton("موافق"){_,_->runTask{PilotCloud.register(this,it)}}.show()}
+        add("إرسال تقرير الآن"){runTask{PilotCloud.send(this,it)}}
+        add("إيقاف المشاركة وحذف التقرير"){runTask{PilotCloud.stop(this,it)}}
+        add("عرض المحتوى المعتمد للتجريبية"){runTask{PilotCloud.preview(this,it)}}
+        box.addView(result)
+        val scroll=ScrollView(this).apply{addView(box)}
+        android.app.AlertDialog.Builder(this).setTitle("اختبار السحابة").setView(scroll).setPositiveButton("إغلاق",null).show()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
